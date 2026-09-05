@@ -2,6 +2,7 @@
 //!
 //! This module is available only with the `native-skia` feature.
 
+mod cache;
 mod equation_conv;
 mod fill;
 mod font_lookup;
@@ -11,6 +12,7 @@ mod image_conv;
 mod renderer;
 mod text_replay;
 
+pub use cache::{NativeSkiaCacheStats, NativeSkiaCacheUsage};
 pub use renderer::{
     native_skia_glyph_run_replay_proof, NativeGlyphRunReplayProof, NativeGlyphRunReplayProofReason,
     SkiaLayerRenderer,

@@ -3,7 +3,10 @@ use skia_safe::{
     canvas::SrcRectConstraint, color_filters, image::RequiredProperties, Color, ColorSpace, Data,
     FilterMode, IRect, Image, Matrix, MipmapMode, Paint, Rect, SamplingOptions, TileMode,
 };
+use std::cell::RefCell;
 use std::sync::{Arc, OnceLock};
+
+use super::cache::{byte_key, BoundedCache};
 
 use crate::model::image::ImageEffect;
 use crate::model::style::ImageFillMode;
@@ -11,6 +14,15 @@ use crate::renderer::image_resolver::{detect_image_mime_type, grayscale_jpeg_byt
 
 const MAX_SVG_FRAGMENT_BYTES: usize = 4 * 1024 * 1024;
 const MAX_SVG_RASTER_PIXELS: u64 = 67_108_864;
+
+#[derive(Clone)]
+pub(super) enum CachedImageResource {
+    Decoded(Image),
+    SvgPng(Arc<Vec<u8>>),
+    Effect(Option<skia_safe::ColorFilter>),
+}
+
+pub(super) type ImageResourceCache = RefCell<BoundedCache<CachedImageResource>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ImageSampling {
@@ -31,8 +43,9 @@ impl ImageSampling {
     }
 }
 
-pub fn draw_svg_fragment(
+pub(super) fn draw_svg_fragment(
     canvas: &skia_safe::Canvas,
+    cache: &ImageResourceCache,
     svg_fragment: &str,
     x: f32,
     y: f32,
@@ -45,12 +58,33 @@ pub fn draw_svg_fragment(
     // 직접 삽입·web_canvas 와 동일 계약). viewBox 원점에 조각의 페이지
     // 위치(x, y)를 넘겨 bbox 창만 래스터한다 — (0,0) 가정 시 창 밖 콘텐츠
     // 전부 클리핑 + bbox 재배치 이중 오프셋으로 차트가 잘렸다.
-    let Some(png) = rasterize_svg_fragment_to_png(svg_fragment, x, y, width, height, raster_scale)
-    else {
-        return false;
+    let key = byte_key(
+        b"raw-svg",
+        svg_fragment.as_bytes(),
+        &(x, y, width, height, raster_scale),
+    );
+    let cached = key.and_then(|key| cache.borrow_mut().get(key));
+    let png = if let Some(CachedImageResource::SvgPng(png)) = cached {
+        png
+    } else {
+        let Some(png) =
+            rasterize_svg_fragment_to_png(svg_fragment, x, y, width, height, raster_scale)
+        else {
+            return false;
+        };
+        let png = Arc::new(png);
+        if let Some(key) = key {
+            cache.borrow_mut().insert(
+                key,
+                CachedImageResource::SvgPng(png.clone()),
+                png.capacity(),
+            );
+        }
+        png
     };
     draw_image_bytes(
         canvas,
+        cache,
         &png,
         x,
         y,
@@ -67,8 +101,9 @@ pub fn draw_svg_fragment(
     )
 }
 
-pub fn draw_image_bytes(
+pub(super) fn draw_image_bytes(
     canvas: &skia_safe::Canvas,
+    cache: &ImageResourceCache,
     bytes: &[u8],
     x: f32,
     y: f32,
@@ -179,69 +214,94 @@ pub fn draw_image_bytes(
     // [#3460] HWPX BinData 는 SVG 를 그대로 담는다(`<hc:img>` → `Format="svg"`). skia 디코더는
     // SVG 를 읽지 못해 종전에는 회색 자리표시자만 남았다. 같은 모듈의 resvg 로 목적지 크기에
     // 맞춰 먼저 래스터화하면 이후 크롭·채움·효과 경로를 그대로 탈 수 있다.
-    let svg_raster = if crate::renderer::svg_fragment::is_svg_prefix(bytes) {
-        rasterize_svg_document_to_png(bytes, width, height, canvas_raster_scale(canvas))
+    let svg_size = crate::renderer::svg_fragment::is_svg_prefix(bytes)
+        .then(|| (width, height, canvas_raster_scale(canvas)));
+    let key = byte_key(b"decoded-image", bytes, &svg_size);
+    let cached = key.and_then(|key| cache.borrow_mut().get(key));
+    let image = if let Some(CachedImageResource::Decoded(image)) = cached {
+        image
     } else {
-        None
-    };
-    let bytes = svg_raster.as_deref().unwrap_or(bytes);
-
-    let normalized_bytes = if detect_image_mime_type(bytes) == "image/jpeg" {
-        grayscale_jpeg_bytes_to_png_bytes(bytes)
-    } else {
-        None
-    };
-    let encoded_bytes = normalized_bytes.as_deref().unwrap_or(bytes);
-
-    if let Some(adjusted) = crate::renderer::image_resolver::adjusted_picture_bytes(
-        encoded_bytes,
-        effect,
-        brightness,
-        contrast,
-    ) {
-        return draw_image_bytes(
-            canvas,
-            &adjusted,
-            x,
-            y,
-            width,
-            height,
-            fill_mode,
-            original_size,
-            crop,
-            crop_reference_size,
-            ImageEffect::RealPic,
-            0,
-            0,
-            sampling,
-        );
-    }
-
-    let Some(image) = Image::from_encoded(Data::new_copy(encoded_bytes)) else {
-        draw_missing_image_placeholder(x, y, width, height);
-        return false;
+        let svg_raster = svg_size.and_then(|(width, height, scale)| {
+            rasterize_svg_document_to_png(bytes, width, height, scale)
+        });
+        let bytes = svg_raster.as_deref().unwrap_or(bytes);
+        let normalized_bytes = if detect_image_mime_type(bytes) == "image/jpeg" {
+            grayscale_jpeg_bytes_to_png_bytes(bytes)
+        } else {
+            None
+        };
+        let encoded_bytes = normalized_bytes.as_deref().unwrap_or(bytes);
+        // 한컴 색조를 원본 픽셀에 먼저 확정하고 동일 캐시·배치 경로로 재생한다.
+        // 재귀 입력은 보정 PNG와 중립 효과이므로 색조를 두 번 적용하지 않는다.
+        if let Some(adjusted) = crate::renderer::image_resolver::adjusted_picture_bytes(
+            encoded_bytes,
+            effect,
+            brightness,
+            contrast,
+        ) {
+            return draw_image_bytes(
+                canvas,
+                cache,
+                &adjusted,
+                x,
+                y,
+                width,
+                height,
+                fill_mode,
+                original_size,
+                crop,
+                crop_reference_size,
+                ImageEffect::RealPic,
+                0,
+                0,
+                sampling,
+            );
+        }
+        let Some(image) = Image::from_encoded(Data::new_copy(encoded_bytes)) else {
+            draw_missing_image_placeholder(x, y, width, height);
+            return false;
+        };
+        if let Some(key) = key {
+            let cost = (image.width().max(0) as usize)
+                .saturating_mul(image.height().max(0) as usize)
+                .saturating_mul(4)
+                .saturating_add(encoded_bytes.len());
+            cache
+                .borrow_mut()
+                .insert(key, CachedImageResource::Decoded(image.clone()), cost);
+        }
+        image
     };
 
     let dst = Rect::from_xywh(x, y, width, height);
     let mut paint = Paint::default();
     paint.set_anti_alias(true);
-    let effect_filter = image_effect_filter(effect);
     let has_adjustments = brightness != 0 || contrast != 0;
-    // 회색조와 일반 그림만 SVG의 선형 RGB 보정을 재생한다. 이산 흑백과
-    // 패턴 효과는 별도 계약이므로 기존 Native 경로를 유지한다.
     let use_linear_adjustments =
         has_adjustments && matches!(effect, ImageEffect::RealPic | ImageEffect::GrayScale);
-    let adjustment_filter =
-        has_adjustments.then(|| brightness_contrast_filter(brightness, contrast));
-    let color_filter = match (effect_filter, adjustment_filter) {
-        (Some(effect), Some(adjustment)) if use_linear_adjustments => {
-            // SVG의 바깥 효과 그룹은 안쪽 밝기·대비 그룹의 결과를 받는다.
-            color_filters::compose(effect, adjustment)
+    let effect_key = byte_key(b"image-effect", &[], &(effect, brightness, contrast));
+    let cached_effect = effect_key.and_then(|key| cache.borrow_mut().get(key));
+    let color_filter = if let Some(CachedImageResource::Effect(filter)) = cached_effect {
+        filter
+    } else {
+        let effect_filter = image_effect_filter(effect);
+        let adjustment_filter = (brightness != 0 || contrast != 0)
+            .then(|| brightness_contrast_filter(brightness, contrast));
+        let filter = match (effect_filter, adjustment_filter) {
+            (Some(effect), Some(adjustment)) if use_linear_adjustments => {
+                color_filters::compose(effect, adjustment)
+            }
+            (Some(effect), Some(adjustment)) => color_filters::compose(adjustment, effect),
+            (Some(effect), None) => Some(effect),
+            (None, Some(adjustment)) => Some(adjustment),
+            (None, None) => None,
+        };
+        if let Some(key) = effect_key {
+            cache
+                .borrow_mut()
+                .insert(key, CachedImageResource::Effect(filter.clone()), 256);
         }
-        (Some(effect), Some(adjustment)) => color_filters::compose(adjustment, effect),
-        (Some(effect), None) => Some(effect),
-        (None, Some(adjustment)) => Some(adjustment),
-        (None, None) => None,
+        filter
     };
     if let Some(color_filter) = color_filter {
         // SVG 필터의 기본 색 공간은 linearRGB다. 검증한 일반 그림·회색조의
