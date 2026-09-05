@@ -8,66 +8,22 @@ use crate::renderer::base_family_without_weight_suffix;
 
 pub(super) type SystemFontFamilies = HashSet<String>;
 
-pub(super) type SuppliedTypefaces = HashMap<String, Vec<Typeface>>;
-
-/// CSS/Skia의 폭 → 기울임 → 굵기 순서로 공급 프로그램을 고른다.
-/// https://github.com/google/skia/blob/main/src/core/SkFontMgr.cpp (matchStyleCSS3)
-/// 같은 스타일의 프로그램은 공급 경로에서 먼저 지정한 파일을 보존한다.
-pub(super) fn match_supplied_family(
-    families: &SuppliedTypefaces,
-    family: &str,
-    requested: FontStyle,
-) -> Option<Typeface> {
-    let rank = |style: FontStyle| {
-        let rw = *requested.width();
-        let cw = *style.width();
-        let width = if rw <= 5 {
-            if cw <= rw {
-                (0, rw - cw)
-            } else {
-                (1, cw - rw)
-            }
-        } else if cw >= rw {
-            (0, cw - rw)
-        } else {
-            (1, rw - cw)
-        };
-        let slant_order = [[0, 2, 1], [2, 0, 1], [2, 1, 0]];
-        let slant = slant_order[requested.slant() as usize][style.slant() as usize];
-        let rw = *requested.weight();
-        let cw = *style.weight();
-        let weight = if rw < 400 {
-            if cw <= rw {
-                (0, rw - cw)
-            } else {
-                (1, cw - rw)
-            }
-        } else if rw <= 500 {
-            if (rw..=500).contains(&cw) {
-                (0, cw - rw)
-            } else if cw < rw {
-                (1, rw - cw)
-            } else {
-                (2, cw - 500)
-            }
-        } else if cw >= rw {
-            (0, cw - rw)
-        } else {
-            (1, rw - cw)
-        };
-        (width, slant, weight)
+pub(super) fn font_style_for_text(style: &crate::renderer::TextStyle) -> FontStyle {
+    let weight = match style.css_font_weight() {
+        Some("bold") => 700,
+        Some("300") => 300,
+        Some("500") => 500,
+        _ => 400,
     };
-    families
-        .get(family)?
-        .iter()
-        .reduce(|best, face| {
-            if rank(face.font_style()) < rank(best.font_style()) {
-                face
-            } else {
-                best
-            }
-        })
-        .cloned()
+    FontStyle::new(
+        skia_safe::font_style::Weight::from(weight),
+        skia_safe::font_style::Width::NORMAL,
+        if style.italic {
+            skia_safe::font_style::Slant::Italic
+        } else {
+            skia_safe::font_style::Slant::Upright
+        },
+    )
 }
 
 const TEXT_FALLBACK_FAMILIES: &[&str] = &[
