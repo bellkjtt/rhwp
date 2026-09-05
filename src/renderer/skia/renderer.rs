@@ -1,6 +1,6 @@
 use skia_safe::{
     paint, png_encoder, surfaces, Canvas, Color, Font, FontMgr, FontStyle, Matrix, Paint,
-    PathBuilder, PathEffect, Picture, PictureRecorder, RRect, Rect, Typeface,
+    PathBuilder, PathEffect, Picture, PictureRecorder, RRect, Rect,
 };
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -31,6 +31,7 @@ use super::cache::{
 };
 use super::equation_conv::{render_equation, EquationFonts};
 use super::fill_shader::shape_fill;
+use super::font_catalog::TypefaceCatalog;
 use super::font_lookup::{
     collect_system_families, legacy_typeface_for_style, match_supplied_family,
     match_system_family_style, SuppliedTypefaces, SystemFontFamilies,
@@ -390,15 +391,14 @@ struct CachedPicture {
 
 pub struct SkiaLayerRenderer {
     font_mgr: FontMgr,
-    /// 사용자 지정 폰트 디렉토리에서 미리 로드한 폰트 캐시.
-    /// key = primary or SFNT family name, value = the same supplied Typeface.
+    /// 사용자 지정 경로의 family별 TTC face·스타일 catalog.
     /// SVG 의 `--font-path` 와 같은 패턴으로 ttfs 디렉토리의 한컴 전용 폰트 (HY견명조 등) 도 사용 가능.
-    custom_typefaces: SuppliedTypefaces,
+    custom_typefaces: TypefaceCatalog,
     /// [#3300] 번들 최후-폴백 폰트(ttfs/opensource). custom 과 분리해 해석
     /// 체인에서 custom·시스템 매칭 **뒤**에만 선다 — custom 에 섞으면 깊은
     /// 폴백(Noto Sans KR)이 시스템 1순위(문서 지정 맑은 고딕 등)를 제치고
     /// 본문 전체를 폴백 서체로 렌더한다(r23 발산 −6.9pp).
-    bundled_typefaces: SuppliedTypefaces,
+    bundled_typefaces: TypefaceCatalog,
     /// 시스템에 실제 존재하는 font family 목록.
     /// headless macOS 에서 missing family 를 CoreText 에 넘기면 downloadable font
     /// lookup IPC가 영구 대기할 수 있어, match_family_style 호출 전 사전 필터로 사용한다.
@@ -424,8 +424,8 @@ impl SkiaLayerRenderer {
         }
         SKIA_FONT_BASE.with(|(font_mgr, system_families)| Self {
             font_mgr: font_mgr.clone(),
-            custom_typefaces: SuppliedTypefaces::new(),
-            bundled_typefaces: SuppliedTypefaces::new(),
+            custom_typefaces: TypefaceCatalog::default(),
+            bundled_typefaces: TypefaceCatalog::default(),
             system_families: system_families.clone(),
             picture_cache: RefCell::new(BoundedCache::new(
                 DEFAULT_CACHE_ENTRIES,
@@ -487,53 +487,7 @@ impl SkiaLayerRenderer {
         )
     }
 
-    fn load_typefaces_from_dirs(
-        font_mgr: &FontMgr,
-        dirs: &[std::path::PathBuf],
-        into: &mut SuppliedTypefaces,
-    ) {
-        for dir in dirs {
-            if !dir.exists() {
-                continue;
-            }
-            if let Ok(entries) = std::fs::read_dir(dir) {
-                let mut directory_faces = SuppliedTypefaces::new();
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    let ext = path
-                        .extension()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_lowercase());
-                    if !matches!(ext.as_deref(), Some("ttf") | Some("otf") | Some("ttc")) {
-                        continue;
-                    }
-                    if let Ok(data) = std::fs::read(&path) {
-                        let skia_data = skia_safe::Data::new_copy(&data);
-                        if let Some(typeface) = font_mgr.new_from_data(skia_data, None) {
-                            let family = typeface.family_name();
-                            for family in super::font_lookup::supplied_family_names(&data, &family)
-                            {
-                                let faces = directory_faces.entry(family).or_default();
-                                if !faces
-                                    .iter()
-                                    .any(|face| face.font_style() == typeface.font_style())
-                                {
-                                    faces.push(typeface.clone());
-                                }
-                            }
-                        }
-                    }
-                }
-                // 먼저 지정한 디렉터리의 family 공급을 유지하고,
-                // 그 디렉터리 안에서는 요청 스타일을 고를 수 있게 모두 보존한다.
-                for (family, faces) in directory_faces {
-                    into.entry(family).or_insert(faces);
-                }
-            }
-        }
-    }
-
-    /// 사용자 지정 폰트 디렉토리 (ttfs 등) 의 폰트를 로드하여 Skia 가 직접 사용 가능하게 한다.
+    /// 사용자 지정 폰트 파일/디렉토리의 모든 collection face를 로드한다.
     /// SVG 의 `--font-path` 와 동일한 패턴.
     pub fn with_font_paths(mut self, font_paths: &[std::path::PathBuf]) -> Self {
         // Static pictures may retain legacy font fallback decisions. A changed
@@ -543,9 +497,9 @@ impl SkiaLayerRenderer {
         // [#3300] custom(호출자+환경변수)과 번들 최후-폴백을 분리 적재한다 —
         // 시스템 디렉터리는 어느 쪽에도 넣지 않는다(스타일 매칭은 FontMgr 담당).
         let custom_dirs = crate::renderer::font_paths::custom_font_dirs(font_paths);
-        Self::load_typefaces_from_dirs(&self.font_mgr, &custom_dirs, &mut self.custom_typefaces);
+        self.custom_typefaces = TypefaceCatalog::load(&self.font_mgr, &custom_dirs);
         let bundled_dirs = crate::renderer::font_paths::bundled_font_dirs();
-        Self::load_typefaces_from_dirs(&self.font_mgr, &bundled_dirs, &mut self.bundled_typefaces);
+        self.bundled_typefaces = TypefaceCatalog::load(&self.font_mgr, &bundled_dirs);
         self
     }
 
@@ -1836,7 +1790,12 @@ impl SkiaLayerRenderer {
     fn make_form_font(&self, size: f32) -> Font {
         let style = FontStyle::default();
         for family in FORM_CJK_FAMILIES {
-            if let Some(tf) = match_supplied_family(&self.custom_typefaces, family, style) {
+            if let Some(tf) = self
+                .custom_typefaces
+                .candidates(family, style)
+                .into_iter()
+                .next()
+            {
                 return Font::new(tf, size);
             }
             if let Some(tf) =
@@ -1846,7 +1805,12 @@ impl SkiaLayerRenderer {
             }
             // [#3300] 시스템 폰트가 없는 headless 환경에서는 번들 폰트가
             // custom·system 뒤의 최후 폴백으로 form caption의 한국어를 구제한다.
-            if let Some(tf) = match_supplied_family(&self.bundled_typefaces, family, style) {
+            if let Some(tf) = self
+                .bundled_typefaces
+                .candidates(family, style)
+                .into_iter()
+                .next()
+            {
                 return Font::new(tf, size);
             }
         }
@@ -1926,7 +1890,11 @@ impl SkiaLayerRenderer {
                     skia_safe::font_style::Slant::Upright
                 },
             );
-            let typeface = match_supplied_family(&self.custom_typefaces, &label.font_family, style)
+            let typeface = self
+                .custom_typefaces
+                .candidates(&label.font_family, style)
+                .into_iter()
+                .next()
                 .or_else(|| {
                     match_system_family_style(
                         &self.font_mgr,
@@ -1936,7 +1904,10 @@ impl SkiaLayerRenderer {
                     )
                 })
                 .or_else(|| {
-                    match_supplied_family(&self.bundled_typefaces, &label.font_family, style)
+                    self.bundled_typefaces
+                        .candidates(&label.font_family, style)
+                        .into_iter()
+                        .next()
                 });
             let font = typeface
                 .map(|tf| Font::new(tf, label.font_size as f32))
