@@ -1208,6 +1208,15 @@ impl SkiaLayerRenderer {
                 result?;
             }
             LayerNodeKind::Leaf { ops } => {
+                let fallback_source_ids = ops
+                    .iter()
+                    .filter_map(|op| match op {
+                        PaintOp::TextRun { source, .. } => {
+                            source.as_ref().map(|source| source.id.0)
+                        }
+                        _ => None,
+                    })
+                    .collect::<HashSet<_>>();
                 let mut variant_order = 0usize;
                 let mut prepared_glyphs = HashMap::<usize, Arc<PreparedGlyph>>::new();
                 let mut preparation_budget = GlyphPreparationBudget::new();
@@ -1279,6 +1288,10 @@ impl SkiaLayerRenderer {
                         }
                     }
                 }
+                let glyph_variant_source_ids = glyph_variant_sources
+                    .values()
+                    .copied()
+                    .collect::<HashSet<_>>();
                 let mut selected_text_variants = HashMap::new();
                 let mut groups = glyph_variants.into_iter().collect::<Vec<_>>();
                 groups.sort_by_key(|(_, variants)| variants.values().map(|state| state.0).min());
@@ -1302,12 +1315,9 @@ impl SkiaLayerRenderer {
                     if let Some((id, _)) = &selected {
                         selected_text_variants.insert(group.clone(), id.clone());
                     }
-                    let fallback = ops.iter().any(|op| match op {
-                        PaintOp::TextRun { source, .. } => source.as_ref().is_some_and(|source| {
-                            glyph_variant_sources.get(&group) == Some(&source.id.0)
-                        }),
-                        _ => false,
-                    });
+                    let fallback = glyph_variant_sources
+                        .get(&group)
+                        .is_some_and(|source| fallback_source_ids.contains(source));
                     cache_context.diagnostics.borrow_mut().actual_selection(
                         &group,
                         selected.as_ref().map(|(id, kind)| (id.as_str(), *kind)),
@@ -1353,10 +1363,7 @@ impl SkiaLayerRenderer {
                         let source_id = source
                             .as_ref()
                             .map_or(next_text_source_id.saturating_sub(1), |source| source.id.0);
-                        if !glyph_variant_sources
-                            .values()
-                            .any(|candidate| *candidate == source_id)
-                        {
+                        if !glyph_variant_source_ids.contains(&source_id) {
                             cache_context.diagnostics.borrow_mut().actual_selection(
                                 &format!("text-{source_id}"),
                                 Some(("textRun", TextVariantKind::TextRun)),
