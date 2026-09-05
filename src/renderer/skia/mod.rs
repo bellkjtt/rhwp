@@ -5,6 +5,7 @@
 mod cache;
 mod equation_conv;
 mod fill;
+mod fill_shader;
 mod font_lookup;
 mod glyph_replay;
 mod hft_outline;

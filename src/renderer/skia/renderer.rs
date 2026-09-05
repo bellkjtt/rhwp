@@ -30,6 +30,7 @@ use super::cache::{
     DEFAULT_CACHE_BYTES, DEFAULT_CACHE_ENTRIES,
 };
 use super::equation_conv::{render_equation, EquationFonts};
+use super::fill_shader::shape_fill;
 use super::font_lookup::{
     collect_system_families, legacy_typeface_for_style, match_supplied_family,
     match_system_family_style, SuppliedTypefaces, SystemFontFamilies,
@@ -923,17 +924,6 @@ impl SkiaLayerRenderer {
                 }
             }
         };
-        let make_fill_paint = |style: &ShapeStyle| -> Option<Paint> {
-            let color = style
-                .pattern
-                .map(|pattern| pattern.background_color)
-                .or(style.fill_color)?;
-            let mut paint = Paint::default();
-            paint.set_anti_alias(true);
-            paint.set_style(paint::Style::Fill);
-            paint.set_color(colorref_to_skia(color, style.opacity as f32));
-            Some(paint)
-        };
         let make_stroke_paint = |style: &ShapeStyle| -> Option<Paint> {
             let mut paint = Paint::default();
             paint.set_anti_alias(true);
@@ -1294,17 +1284,16 @@ impl SkiaLayerRenderer {
                                 bbox.width as f32,
                                 bbox.height as f32,
                             );
-                            let gradient_fill = background.gradient.as_ref().and_then(|gradient| {
-                                super::fill::gradient_paint(gradient, bbox, 1.0)
-                            });
-                            if let Some(fill) = gradient_fill {
-                                canvas.draw_rect(rect, &fill);
-                            } else if let Some(color) = background.background_color {
-                                let mut fill = Paint::default();
-                                fill.set_anti_alias(true);
-                                fill.set_style(paint::Style::Fill);
-                                fill.set_color(colorref_to_skia(color, 1.0));
-                                canvas.draw_rect(rect, &fill);
+                            if let Some(paint) = shape_fill(
+                                rect,
+                                &ShapeStyle {
+                                    fill_color: background.background_color,
+                                    ..Default::default()
+                                },
+                                background.gradient.as_deref(),
+                                true,
+                            ) {
+                                canvas.draw_rect(rect, &paint);
                             }
                             if let Some(image) = &background.image {
                                 // 일반 RealPic 쪽 배경의 밝기·대비는 색조 조정일 뿐
@@ -1532,13 +1521,8 @@ impl SkiaLayerRenderer {
                                 bbox.width as f32,
                                 bbox.height as f32,
                             );
-                            if let Some(fill) = rect
-                                .gradient
-                                .as_ref()
-                                .and_then(|gradient| {
-                                    super::fill::gradient_paint(gradient, bbox, rect.style.opacity)
-                                })
-                                .or_else(|| make_fill_paint(&rect.style))
+                            if let Some(fill) =
+                                shape_fill(sk_rect, &rect.style, rect.gradient.as_deref(), true)
                             {
                                 if rect.corner_radius > 0.0 {
                                     canvas.draw_round_rect(
@@ -1577,21 +1561,8 @@ impl SkiaLayerRenderer {
                                 bbox.width as f32,
                                 bbox.height as f32,
                             );
-                            if let Some(fill) = ellipse
-                                .gradient
-                                .as_ref()
-                                .and_then(|gradient| gradient.colors.first().copied())
-                                .map(|color| {
-                                    let mut paint = Paint::default();
-                                    paint.set_anti_alias(true);
-                                    paint.set_style(paint::Style::Fill);
-                                    paint.set_color(colorref_to_skia(
-                                        color,
-                                        ellipse.style.opacity as f32,
-                                    ));
-                                    paint
-                                })
-                                .or_else(|| make_fill_paint(&ellipse.style))
+                            if let Some(fill) =
+                                shape_fill(oval, &ellipse.style, ellipse.gradient.as_deref(), true)
                             {
                                 canvas.draw_oval(oval, &fill);
                             }
@@ -1657,22 +1628,17 @@ impl SkiaLayerRenderer {
                                 }
                             }
                             let sk_path = builder.detach();
-                            if let Some(fill) = path
-                                .gradient
-                                .as_ref()
-                                .and_then(|gradient| gradient.colors.first().copied())
-                                .map(|color| {
-                                    let mut paint = Paint::default();
-                                    paint.set_anti_alias(true);
-                                    paint.set_style(paint::Style::Fill);
-                                    paint.set_color(colorref_to_skia(
-                                        color,
-                                        path.style.opacity as f32,
-                                    ));
-                                    paint
-                                })
-                                .or_else(|| make_fill_paint(&path.style))
-                            {
+                            if let Some(fill) = shape_fill(
+                                Rect::from_xywh(
+                                    bbox.x as f32,
+                                    bbox.y as f32,
+                                    bbox.width as f32,
+                                    bbox.height as f32,
+                                ),
+                                &path.style,
+                                path.gradient.as_deref(),
+                                true,
+                            ) {
                                 canvas.draw_path(&sk_path, &fill);
                             }
                             if let Some(stroke) = make_stroke_paint(&path.style) {
