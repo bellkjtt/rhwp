@@ -7,6 +7,7 @@ use std::cell::RefCell;
 use std::sync::{Arc, OnceLock};
 
 use super::cache::{byte_key, BoundedCache};
+use super::image_effect::binary_effect_png;
 
 use crate::model::image::ImageEffect;
 use crate::model::style::ImageFillMode;
@@ -230,7 +231,11 @@ pub(super) fn draw_image_bytes(
     // 맞춰 먼저 래스터화하면 이후 크롭·채움·효과 경로를 그대로 탈 수 있다.
     let svg_size = crate::renderer::svg_fragment::is_svg_prefix(bytes)
         .then(|| (width, height, canvas_raster_scale(canvas)));
-    let key = byte_key(b"decoded-image", bytes, &svg_size);
+    let binary_effect =
+        matches!(effect, ImageEffect::BlackWhite | ImageEffect::Pattern8x8).then_some(effect);
+    // 같은 원본의 중립 캐시가 색조 변환을 우회하지 않도록 변환 조건도 구분한다.
+    let tone = (brightness != 0 || contrast != 0).then_some((effect, brightness, contrast));
+    let key = byte_key(b"decoded-image", bytes, &(svg_size, binary_effect, tone));
     let cached = key.and_then(|key| cache.borrow_mut().get(key));
     let image = if let Some(CachedImageResource::Decoded(image)) = cached {
         image
@@ -271,6 +276,11 @@ pub(super) fn draw_image_bytes(
                 sampling,
             );
         }
+        // Binary effects are applied in source pixels before placement/filtering.
+        // Embedded SVG is keyed by destination and device scale above, so its
+        // raster-specific dither cannot leak to a differently sized placement.
+        let binary_png = binary_effect.and_then(|effect| binary_effect_png(encoded_bytes, effect));
+        let encoded_bytes = binary_png.as_deref().unwrap_or(encoded_bytes);
         let Some(image) = Image::from_encoded(Data::new_copy(encoded_bytes)) else {
             draw_missing_image_placeholder(x, y, width, height);
             return false;

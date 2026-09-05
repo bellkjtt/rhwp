@@ -10,6 +10,7 @@ mod font_lookup;
 mod glyph_replay;
 mod hft_outline;
 mod image_conv;
+mod image_effect;
 mod line_replay;
 mod renderer;
 mod replay_policy;
