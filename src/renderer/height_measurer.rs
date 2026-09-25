@@ -2593,10 +2593,19 @@ impl HeightMeasurer {
                 let Control::Table(nested) = ctrl else {
                     return None;
                 };
-                if crate::renderer::float_placement::nested_table_is_overlay(nested)
-                    || para_max_lh >= nested.common.height as i32
-                {
+                if crate::renderer::float_placement::nested_table_is_overlay(nested) {
                     return None;
+                }
+                if para_max_lh >= nested.common.height as i32 {
+                    // [#7419] 합성 줄은 중첩 표 선언만 담으므로 실제 성장분을 더한다.
+                    // 유효한 저장 줄의 기존 흡수 계약은 유지한다.
+                    if !crate::renderer::para_has_no_stored_line_segs(p) {
+                        return None;
+                    }
+                    let stretch = self.render_normalization.nested_table_width_scale(nested);
+                    let mt = self.measure_table_impl(nested, 0, 0, styles, depth + 1, stretch);
+                    let grown = mt.total_height - hwpunit_to_px(para_max_lh, self.dpi);
+                    return (grown > 0.5).then_some(grown);
                 }
                 let stretch = self.render_normalization.nested_table_width_scale(nested);
                 let mt = self.measure_table_impl(nested, 0, 0, styles, depth + 1, stretch);
@@ -4532,10 +4541,25 @@ impl HeightMeasurer {
         // 편집으로 셀이 자란 성장분까지 선언높이로 눌러 다른 행의 몫을 잠식한다
         // (셀 Enter 재현: 표가 선언 높이에 고정된 채 행 경계만 위로 밀림).
         // 편집 세션은 실측을 신뢰한다.
+        let generator_restated_height = !self.is_native_hwp5
+            && table.cells.iter().all(|c| {
+                c.paragraphs
+                    .iter()
+                    .all(crate::renderer::para_has_no_stored_line_segs)
+            })
+            && {
+                let declared: f64 = (0..row_count)
+                    .map(|r| declared_row_height_px(table, r, self.dpi))
+                    .sum::<f64>()
+                    + cell_spacing * row_count.saturating_sub(1) as f64;
+                (0..row_count).all(|r| declared_row_height_px(table, r, self.dpi) > 0.0)
+                    && (declared - common_h).abs() <= 0.5
+            };
         let table_height = if stored_rows.is_some() {
             raw_table_height
         } else if table.common.treat_as_char
             && !self.session_edited
+            && !generator_restated_height
             && common_h > 0.0
             && raw_table_height > common_h + shrink_threshold
             && raw_table_height <= common_h * TAC_SHRINK_MAX_OVERFLOW_RATIO
