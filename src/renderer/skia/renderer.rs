@@ -1553,6 +1553,9 @@ impl SkiaLayerRenderer {
                                 let suppress_effects = resolved
                                     .as_deref()
                                     .is_some_and(|payload| payload.suppress_effects);
+                                // Watermarks have a dedicated tone/opacity contract that
+                                // ordinary brightness/contrast cannot reproduce.
+                                let suppress_adjustments = suppress_effects || image.is_watermark();
                                 let effect = if suppress_effects {
                                     ImageEffect::RealPic
                                 } else {
@@ -1577,12 +1580,12 @@ impl SkiaLayerRenderer {
                                     image.crop,
                                     image.original_size_hu,
                                     effect,
-                                    if suppress_effects {
+                                    if suppress_adjustments {
                                         0
                                     } else {
                                         image.brightness
                                     },
-                                    if suppress_effects {
+                                    if suppress_adjustments {
                                         0
                                     } else {
                                         image.contrast
