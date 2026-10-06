@@ -146,6 +146,7 @@ type SkSurface = Surface;
 export interface CanvasKitLayerRendererOptions {
   defaultFontUrl?: string;
   symbolFallbackFontUrl?: string;
+  mathFallbackFontUrl?: string;
   oldHangulFontUrl?: string;
   requirePreparedFontFamilies?: boolean;
 }
@@ -483,6 +484,7 @@ export class CanvasKitLayerRenderer {
     private readonly webgpuDeviceContext: WebGPUDeviceContext | null = null,
     private readonly webgpuDevice: GPUDevice | null = null,
     private readonly webgpuInitFailure: string | null = null,
+    private readonly mathFallbackTypeface: Typeface | null = null,
   ) {
     this.glyphRunFonts = new CanvasKitGlyphRunFontCache(canvasKit);
     this.paragraphFonts = new CanvasKitParagraphFonts(canvasKit);
@@ -569,6 +571,19 @@ export class CanvasKitLayerRenderer {
     } catch (error) {
       console.warn('[CanvasKitLayerRenderer] 기호 폴백 폰트 로딩 실패:', error);
     }
+    let mathFallbackTypeface: Typeface | null = null;
+    try {
+      const response = await fetch(options.mathFallbackFontUrl ?? 'fonts/NotoSansMath-Regular.woff2');
+      if (response.ok) {
+        const bytes = await readBoundedResponseArrayBuffer(response, {
+          maxBytes: CanvasKitLayerRenderer.MAX_BUNDLED_FONT_BYTES,
+        });
+        mathFallbackTypeface = canvasKit.Typeface.MakeFreeTypeFaceFromData(bytes)
+          ?? canvasKit.Typeface.MakeTypefaceFromData(bytes);
+      }
+    } catch (error) {
+      console.warn('[CanvasKitLayerRenderer] 수학 기호 폴백 폰트 로딩 실패:', error);
+    }
     let oldHangulTypeface: CanvasKitLocalTypeface | null = null;
     const oldHangulFontUrl = options.oldHangulFontUrl
       ?? 'fonts/RHWPOldHangul-Regular.woff2';
@@ -619,6 +634,7 @@ export class CanvasKitLayerRenderer {
       webgpuDeviceContext,
       webgpuDevice,
       webgpuInitFailure,
+      mathFallbackTypeface,
     );
     for (const source of paragraphFontSources) renderer.paragraphFonts.remember(source.face, source.bytes);
     return renderer;
@@ -1383,6 +1399,7 @@ export class CanvasKitLayerRenderer {
     this.resetDocumentResources();
     this.defaultTypeface?.delete();
     this.symbolFallbackTypeface?.delete();
+    this.mathFallbackTypeface?.delete();
     this.defaultFontManager?.delete();
     this.oldHangulTypeface?.typeface?.delete?.();
     this.oldHangulTypeface?.fontManager?.delete?.();
@@ -4516,7 +4533,8 @@ export class CanvasKitLayerRenderer {
       || fontSize <= 0 || (targetWidth !== undefined && targetWidth < 0)) return false;
     const candidates = [...options.fontFamilies.map(family => this.findPreparedTypeface(family, { bold, italic })), this.oldHangulTypeface,
       { typeface: this.defaultTypeface, fontManager: this.defaultFontManager, fontFamily: this.defaultFontFamily },
-      { typeface: this.symbolFallbackTypeface, fontManager: null, fontFamily: null }];
+      { typeface: this.symbolFallbackTypeface, fontManager: null, fontFamily: null },
+      { typeface: this.mathFallbackTypeface, fontManager: null, fontFamily: null }];
     const seen = new Set<Typeface | null>();
     const combined = this.paragraphFonts.source(candidates.map(candidate => candidate?.paragraphTypefaces ?? candidate?.typeface ?? null));
     let triedCombined = false;

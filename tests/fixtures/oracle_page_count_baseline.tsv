@@ -554,3 +554,7 @@ samples/issue7622/curly_quote_tac_native.hwpx	1	1
 # #7419: 같은 원본의 한컴2024 1-up Print 전1쪽, Native/fresh WASM100%, Stage1 SHA·직접 판독.
 samples/issue7419/tac_two_line_cell_no_lineseg.hwpx	1	1
 samples/issue7419/tac_nested_two_line_cell_no_lineseg.hwpx	1	1
+# PR #7600: 같은 원본의 MCP2020 PrintMethod0/1-up PDF와 Native/fresh WASM 전체1쪽 확인.
+# 입력·PDF SHA-256과 실행 job은 mydocs/pr/archives/pr_7600_review.md에 기록한다.
+samples/issue7593/repro-dyad-min-no-script.hwpx	1	1
+samples/issue7593/repro-equation-issue7593.hwpx	1	1

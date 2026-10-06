@@ -41,3 +41,41 @@ source 보정의 선행 Native 전체1쪽은 공개 문항92.28714%, 최소 입�
 원 최소 입력/스크립트 제거 사본의 Native 전쪽 raster는 픽셀 동일(실루엣100%), 기존 기여자 Hancom2022 PDF/MCP2020 Print PDF도 픽셀 동일(실루엣100%)입니다. paired PNG를 직접 열어4행·화살표·번호 보존을 확인했습니다. 이는 원본 매크로 실행 또는 기존 PDF의 Print 절차 확인을 뜻하지 않습니다. 새 Print의 실제 MCP 실행 근거와 스크립트 없는 사본의 동일성으로 기준 출력 대응을 입증합니다. 자료는 각각 output의 min-original-vs-safe, min-old-vs-print-pdf와 compare 패널에 남겼습니다.
 
 MCP 산출 PDF는 원본 형식·엔진·상대 디렉터리의 canonical 짝짓기에 맞게 `pdf/issue7593/repro-equation-issue7593-hwpx-2020.pdf`, `pdf/issue7593/repro-dyad-min-no-script-hwpx-2020.pdf`로 보존하며 출력 바이트를 바꾸지 않았습니다. 원문은 samples/issue7593 아래 두 파일이며 원 기여자의 최소 입력/PDF도 기존 경로에 보존합니다. 최종 검증은 이 안정 경로에서 다시 실행합니다.
+
+## 정식 회귀와 Studio의 직접 누락 확인
+
+Native/fresh WASM에서 두 대응 Print의 최저92.28714%를 먼저 확인한 뒤
+`tests/cases/issue_7593_print_placement.rs`에 구분선의 바탕쪽 소유/프레임 관계,
+보기 ㄴ 수식의 저장 기준선/셀 소유, 선택지의 기본 탭 격자/순서/단 내부 포함을 추가했습니다.
+원래 source `a0db9c052`의 실제 실행은3FAIL이며 각각 선0개, Print의 기준선 순서 위반,
+탭 격자 비율3.5375(독립 Print는3)로 실패했습니다. 빌드 실패를 red로 세지 않았습니다.
+초기 테스트 작성 중 TextRun의 셀 문단 인덱스와 Equation의 최외곽 표 문단 인덱스를
+혼동한 assertion은 CellContext의 실제 소유 관계로 수정했습니다. 최초 harness 준비 뒤
+format으로 suite 배정이 바뀌어0tests가 실행된 결과도 통과로 세지 않았습니다.
+
+실제 Studio CanvasKit 캡처를 직접 열자 공개 원본의①/② 수식이 빠진 것을 확인했습니다.
+WASM render tree의7Equation 존재만 확인한 초기 browser 결과는 표시 성공 근거로 정정합니다.
+기본 Noto Sans KR에 U+2AFD glyph가 없으면 drawEquationText가 false를 반환하고,
+PictureRecorder가 정상 AB/CD·dyad 장식까지 포함한 수식 전체를 버렸습니다.
+기본 CJK → 기존 D2Coding → 실제 glyph를 가진 Noto Sans Math 순서로 font를 고르도록
+보정했고 문자를 다른 codepoint로 바꾸거나 실패한 수식을 숨기지 않았습니다.
+시스템 설치본의 전체 font를 WOFF2로 변환하고 SIL OFL1.1을 함께 보존했습니다.
+원 TTF SHA-256 `8242bd1e55368b27e32455260754cf9aa58f3ad7ea80664b66c21f1b09910d6c`,
+WOFF2 `6836027b99d29fd0e6f668cf0c2e89107de4131b91116cd96516ad4a7e19d66d`이며 subset/문자 매핑 변경은 없습니다.
+정확한 glyph 의미/한컴의 평행 기호 모양은#7594의 잔여 축이고 그 이슈를 종료하지 않습니다.
+
+보정 전 실제 browser는①/②의 내용0과 `equation:invalidLayout`을 검출했습니다.
+보정 후 실제 제품 loadDocument/font 준비/paint 경로의 Canvas2D·CanvasKit × 두 파일은4PASS,
+모든 수식에 내용이 있고 CanvasKit unexpectedUnsupportedOps가0이며 숨은 Canvas2D overlay는 없습니다.
+`rhwp-studio/e2e/issue-7593-dyad-display.test.mjs`가 이 실제 경로를 보존하고,
+기존 font coverage 검사도 Noto Sans Math의 U+2AFD/2225/2194 공급을 확인했습니다.
+실제 내려받은 WASM SHA는 `040ffe26e4de9a064e350c6264452e3b767c4808f798661907ec42b29ba22a34`입니다.
+Rust/lib source는1a7ad89e4와 같고 TS 보정은 이 WASM을 재사용하는 paint 경로의 변경입니다.
+
+신규 두 sample은 전체1쪽 Print/PDF/Native/fresh WASM 대조를 확인한 뒤 oracle 쪽수 원장에1/1로
+등록합니다. regenerate.py의 canonical 선택을 두 입력에 적용해 형식·상대 디렉터리·저장 제품별
+engine2020 짝이 실제 위 PDF로 결정됨을 확인했습니다. 기존 원장의 다른 행·허용치는 바꾸지 않습니다.
+모든 최종 필수 lint·전체 Rust/Skia 검증의 완료 여부는 다음 단계 결과에서 확정합니다.
+
+보정 복원 후 동일 정식 배치 검사3PASS/0FAIL(exit0)을 확인했습니다.
+로그 `output/pr-review/pr7600/logs/placement-red.log`, `placement-green.log`를 보존했습니다.
