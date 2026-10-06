@@ -918,3 +918,16 @@ HWPUNIT을 흐름이 이미 소비했지만 `should_preserve_endnote_title_gap`�
 같은 `build_single_column`을 호출하는 미주 scratch와 실제 출력에서 검증한다.
 좌표 수치를 구현 분기나 clamp에 사용하지 않는다. 새 head의 전체·직접
 비교 전 이 변경도 미검증이며, 제목 분할 휴리스틱을 다시 완화하지 않는다.
+
+
+`1c07e7439` 전체 18쪽의 Native는 p14 87.50342%, p15 55.68394%로
+개선됐고 p12 89.99724%, p13 93.82293%는 유지됐다. 원본·기준 PDF는
+동일하며 ignored `note-gap-once-native-all/`, `note-gap-once-native-review/`에
+전체 TSV·직접 review를 보존한다. 15쪽 문26/27의 시작 흐름은 개선됐지만
+문28 제목은 여전히 다음 단 상단이어서 Print의 앞 단 하단과 다르다.
+원본의 실제 출력 개선은 부분 결과이며 90% 통과·완료 판정이 아니다.
+
+4쪽 표 커서와 문28 단 이동에서 분기 후보를 더 추측해 완화하기 전에,
+표 차선 입력과 실제 단 이동 호출 위치를 환경 변수로 진단한다. 진단은
+`RHWP_TABLE_DRIFT`, `RHWP_FLOW_BREAK_DEBUG`에서만 stderr에 출력하며
+일반 출력·상태 전이에 영향을 주지 않는다. 로그는 ignored output에만 남긴다.

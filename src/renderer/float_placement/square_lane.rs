@@ -45,6 +45,14 @@ pub(crate) fn square_successor_starts_beside_table(
     table: &Table,
 ) -> bool {
     use crate::model::paragraph::LineSeg;
+    if std::env::var("RHWP_TABLE_DRIFT").is_ok() {
+        eprintln!(
+            "SQUARE_LANE_INPUT wrap={:?} tac={} first={:?} next={next:?}",
+            table.common.text_wrap,
+            table.common.treat_as_char,
+            host.line_segs.first()
+        );
+    }
     if table.common.treat_as_char || !matches!(table.common.text_wrap, TextWrap::Square) {
         return false;
     }

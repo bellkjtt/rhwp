@@ -554,7 +554,18 @@ impl TypesetState {
         }
     }
 
+    #[track_caller]
     pub(in crate::renderer::typeset) fn advance_column_or_new_page(&mut self) {
+        if std::env::var("RHWP_FLOW_BREAK_DEBUG").is_ok() {
+            eprintln!(
+                "FLOW_BREAK caller={} page={} column={} height={} next_note={:?}",
+                std::panic::Location::caller(),
+                self.data.pages.len(),
+                self.data.current_column,
+                self.data.current_height,
+                self.data.endnote_para_sources.last()
+            );
+        }
         self.flush_column();
         self.data.visible_float_exclusions.clear();
         if self.data.current_column + 1 < self.data.col_count {
