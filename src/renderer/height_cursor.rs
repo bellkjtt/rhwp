@@ -1944,9 +1944,25 @@ impl HeightCursor {
             self.shift_vpos_base_for_rendered_delta(result - end_y);
         }
         if compact_endnote_text_after_lazy_tall_equation_floor {
-            let inferred_extra =
-                hwpunit_to_px((seg.line_height - seg.line_spacing).max(0), self.dpi) * 0.4;
-            result = result.max(prev_content_bottom_y + inferred_extra + 0.25);
+            let stored_continuous = curr_first_vpos == Some(prev_vpos_end)
+                && !prev_para.stored_text_partition_is_dirty()
+                && seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+                && paragraphs.get(item_para).is_some_and(|paragraph| {
+                    !paragraph.stored_text_partition_is_dirty()
+                        && paragraph.line_segs.first().is_some_and(|line| {
+                            line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
+                                == 0
+                        })
+                });
+            if let Some(bottom) = measured_prev_content_bottom_y.filter(|_| stored_continuous) {
+                // 저장 다음 원점이 실제 수식 줄+간격의 끝과 연속이면 그 점유
+                // 결과를 소비한다. 수식 높이의 임의 비율을 빈 밴드로 더하지 않는다.
+                result = result.max(bottom);
+            } else {
+                let inferred_extra =
+                    hwpunit_to_px((seg.line_height - seg.line_spacing).max(0), self.dpi) * 0.4;
+                result = result.max(prev_content_bottom_y + inferred_extra + 0.25);
+            }
         }
         let compact_endnote_zero_gap_title_boundary_applied = if self.suppress_large_forward_jump
             && current_is_endnote_title
