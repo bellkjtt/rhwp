@@ -9088,7 +9088,12 @@ impl LayoutEngine {
                 // 다만 단 하단부 textless equation tail은 직전 content bottom 기준
                 // gap이 이미 충분한 경우가 있다. 이때 logical flow 기준으로 다시
                 // 보존하면 다음 문항 영역을 침범하므로 여기서 한 번 더 얹지 않는다.
-                let min_y = y_before_vpos + prev_endnote_title_gap_px;
+                // 이미 소비한 trailing은 실제 마지막 줄 점유 끝과 분리한다.
+                // 같은 미주 사이를 현재 커서 뒤에 다시 더하지 않는다.
+                let min_y = prev_item_content_bottom_y
+                    .map_or(y_before_vpos + prev_endnote_title_gap_px, |bottom| {
+                        (bottom + prev_endnote_title_gap_px).max(y_before_vpos)
+                    });
                 if y_offset < min_y {
                     let delta = min_y - y_offset;
                     y_offset = min_y;

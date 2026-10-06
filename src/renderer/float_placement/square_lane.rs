@@ -73,7 +73,7 @@ pub(crate) fn square_successor_starts_beside_table(
     let Some(last) = host.line_segs.last() else {
         return false;
     };
-    !host.stored_text_partition_is_dirty()
+    let continuous_lane = !host.stored_text_partition_is_dirty()
         && host.line_segs.iter().all(|line| {
             line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0 && line.line_height > 0
         })
@@ -93,5 +93,12 @@ pub(crate) fn square_successor_starts_beside_table(
             .line_segs
             .iter()
             .any(|line| i64::from(line.segment_width) > i64::from(last.segment_width))
-        && contains_successor(last)
+        && contains_successor(last);
+    if std::env::var("RHWP_TABLE_DRIFT").is_ok() {
+        eprintln!(
+            "SQUARE_LANE last={last:?} next={next:?} dirty={} continuous={continuous_lane}",
+            host.stored_text_partition_is_dirty()
+        );
+    }
+    continuous_lane
 }
