@@ -2090,7 +2090,10 @@ impl HeightCursor {
             && (stored_gap_px < -0.5
                 || (stored_gap_px > 0.5 && self.endnote_between_notes_hu > 3000))
         {
-            let delta_hu = ((result - y_offset) / self.dpi * 7200.0).round() as i32;
+            // 최종 제목 원점을 보존할 때 기준은 기존 저장 목표 end_y다.
+            // 중간 result에 더한 gap 보정은 이 반환에서 쓰지 않으므로,
+            // 그것을 기준으로 base를 덮어쓰면 뒤 본문의 상대 간격이 줄어든다.
+            let delta_hu = ((end_y - y_offset) / self.dpi * 7200.0).round() as i32;
             if delta_hu != 0 {
                 if is_page_path {
                     self.vpos_page_base = Some(base + delta_hu);
