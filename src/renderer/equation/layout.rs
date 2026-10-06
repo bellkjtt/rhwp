@@ -489,12 +489,17 @@ impl EqLayout {
             return layout;
         }
         // 수식의 빼기 기호는 문장용 하이픈과 다른 글리프다.
-        let display = if text == "-" { "−" } else { text };
+        let display = match text {
+            "-" => "−",
+            // 인용 문자열과 달리 수식 기호의 작은따옴표는 미분 prime이다.
+            "'" => "′",
+            _ => text,
+        };
         let w = estimate_text_width(display, fs, false);
         // 연산자 좌우 여백
         let pad = if matches!(text, "+" | "-" | "=" | "<" | ">" | "×" | "÷") {
             fs * 0.15
-        } else if matches!(text, "(" | ")" | "[" | "]") {
+        } else if matches!(text, "(" | ")" | "[" | "]" | "'" | "′" | "″" | "‴") {
             // 보통 크기의 구분자는 관계·이항 연산자 여백을 갖지 않는다.
             0.0
         } else {
@@ -1044,7 +1049,14 @@ impl EqLayout {
     }
 
     fn layout_cases(&self, rows: &[EqNode], fs: f64) -> LayoutBox {
-        let row_gap = fs * MATRIX_ROW_GAP;
+        // HYhwpEQ의 논리 줄간격: hhea/OS2 lineGap 152 / UPM 1024.
+        // 일반 cases 글자 줄의 독립 Print 기준선 간격도 이 leading과 일치한다.
+        let row_gap = fs
+            * if self.hancom_math_face {
+                152.0 / 1024.0
+            } else {
+                MATRIX_ROW_GAP
+            };
         let mut row_boxes: Vec<LayoutBox> = rows.iter().map(|r| self.layout_node(r, fs)).collect();
 
         let max_w = row_boxes.iter().map(|b| b.width).fold(0.0f64, f64::max);
