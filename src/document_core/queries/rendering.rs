@@ -5849,6 +5849,11 @@ impl DocumentCore {
                     _ => false,
                 })
             });
+            let math_textboxes = crate::renderer::render_normalization::math_textbox::normalize(
+                &section.paragraphs,
+                &self.styles,
+            );
+            let math_geometry_changed = math_textboxes.is_some();
             let unplaced_rows =
                 normalize_widthless_rows && section_has_unplaced_stored_rows(&section.paragraphs);
             let widthless: Vec<usize> = section
@@ -5882,11 +5887,12 @@ impl DocumentCore {
                 && !has_cell_stack
                 && widthless.is_empty()
                 && inline_frames.is_empty()
+                && !math_geometry_changed
             {
                 out.push(None);
                 continue;
             }
-            let mut np = section.paragraphs.clone();
+            let mut np = math_textboxes.unwrap_or_else(|| section.paragraphs.clone());
             let mut frame_changes = Vec::new();
             if !inline_frames.is_empty() {
                 let mut frames = inline_frames.into_iter().peekable();
@@ -5957,6 +5963,7 @@ impl DocumentCore {
                     if matches.binary_search(&i).is_ok()
                         || widthless.binary_search(&i).is_ok()
                         || frame_changes.binary_search(&i).is_ok()
+                        || math_geometry_changed
                     {
                         let mut c = crate::renderer::composer::compose_paragraph_in_context(
                             p,
@@ -5966,7 +5973,11 @@ impl DocumentCore {
                         // 그림 수만큼 줄을 합성(모두 char_start 동일)해 Stage2 stacked 게이트
                         // (comp.lines.len()==tac_controls) 가 발동하게 한다.
                         let npics = c.tac_controls.len();
-                        if npics >= 2 && c.lines.len() != npics && !c.lines.is_empty() {
+                        if matches.binary_search(&i).is_ok()
+                            && npics >= 2
+                            && c.lines.len() != npics
+                            && !c.lines.is_empty()
+                        {
                             let template = c.lines[0].clone();
                             let mut lines = Vec::with_capacity(npics);
                             for k in 0..npics {

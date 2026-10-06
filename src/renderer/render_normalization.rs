@@ -14,6 +14,8 @@ use crate::model::table::{Cell, Table, TablePageBreak};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+pub(crate) mod math_textbox;
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum RenderPathEntry {
     TableCell {

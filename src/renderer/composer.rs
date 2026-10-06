@@ -107,6 +107,7 @@ impl ComposedTextRun {
 mod auto_number_projection;
 mod equation_line_metrics;
 mod mapped_symbol_fonts;
+pub(crate) mod stored_row_projection;
 pub(crate) mod supplemental_clusters;
 
 /// 구성된 줄 (LineSeg 기반)
