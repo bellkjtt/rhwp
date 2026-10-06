@@ -53,3 +53,19 @@ pub(super) fn project_equation_rows<'a>(
         Cow::Borrowed(original)
     }
 }
+
+/// 실제 emit과 fit 재생이 같은 미주 시작점·간격 입력을 사용한다.
+pub(super) fn render_paragraph(
+    original: &crate::model::paragraph::Paragraph,
+    endnote_start: i32,
+    compact_spacing: bool,
+) -> crate::model::paragraph::Paragraph {
+    let mut paragraph = original.clone();
+    for line in &mut paragraph.line_segs {
+        if compact_spacing {
+            line.line_spacing = -(line.line_height / 10);
+        }
+        line.vertical_pos = line.vertical_pos.saturating_add(endnote_start);
+    }
+    paragraph
+}

@@ -102,17 +102,11 @@ impl TypesetEngine {
                 en_para
             };
             let en_para_idx = paragraphs.len() + st.endnote_paragraphs.len();
-            let mut en_para_copy = render_en_para.clone();
-            if compact_no_separator_spacing {
-                let divisor = 10;
-                for line_seg in &mut en_para_copy.line_segs {
-                    line_seg.line_spacing = -(line_seg.line_height / divisor);
-                }
-            }
-            // line_segs vpos를 endnote 시작점 기준으로 오프셋
-            for ls in &mut en_para_copy.line_segs {
-                ls.vertical_pos += endnote_start;
-            }
+            let mut en_para_copy = super::row_projection::render_paragraph(
+                render_en_para,
+                endnote_start,
+                compact_no_separator_spacing,
+            );
             // 첫 paragraph에 미주 번호 prepend
             if ep_idx == 0 {
                 prepend_endnote_marker_text(&mut en_para_copy, en_ctrl);
@@ -416,8 +410,33 @@ impl TypesetEngine {
                         (prev_en_bottom_vpos, this_first_offset),
                         (Some(prev), Some(first)) if first < prev
                     );
+            // 단독 문단이 아니라 같은 미주에 남은 전체 내용의 실제 점유를 확인한다.
+            // 다음 그림/다줄 본문이 넘치는 저장 단 경계는 유지한다.
+            let local_rewind_tail_fits = en_para.column_type
+                == crate::model::paragraph::ColumnBreakType::None
+                && matches!((prev_en_bottom_vpos, this_first_offset),
+                    (Some(previous), Some(first)) if first < previous)
+                && self
+                    .simulate_endnote_column_with_tail(
+                        st,
+                        paragraphs,
+                        styles,
+                        available,
+                        en_col_w,
+                        Some(en_para_idx),
+                        true,
+                        Some((
+                            &en_ctrl.paragraphs[ep_idx + 1..],
+                            endnote_start,
+                            compact_no_separator_spacing,
+                        )),
+                    )
+                    .is_some_and(|bottom| {
+                        bottom <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX
+                    });
             if st.col_count > 1
                 && !st.current_items.is_empty()
+                && !local_rewind_tail_fits
                 && (st.current_height > available * local_rewind_advance_threshold
                     || visible_separator_title_body_rewind_starts_next_column)
                 && !current_default_late_question_title

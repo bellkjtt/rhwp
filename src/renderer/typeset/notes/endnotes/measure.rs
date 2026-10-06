@@ -477,6 +477,30 @@ impl TypesetEngine {
         extra_para_full: Option<usize>,
         sequential_compact_rewind: bool,
     ) -> Option<f64> {
+        self.simulate_endnote_column_with_tail(
+            st,
+            paragraphs,
+            styles,
+            available,
+            en_col_w,
+            extra_para_full,
+            sequential_compact_rewind,
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(in crate::renderer::typeset) fn simulate_endnote_column_with_tail(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        available: f64,
+        en_col_w: f64,
+        extra_para_full: Option<usize>,
+        sequential_compact_rewind: bool,
+        future: Option<(&[Paragraph], i32, bool)>,
+    ) -> Option<f64> {
         if st.current_items.is_empty() {
             return None;
         }
