@@ -130,9 +130,7 @@ fn math_layout_has_line_break(value: &layout::LayoutBox) -> bool {
     match &value.kind {
         layout::LayoutKind::Newline => true,
         layout::LayoutKind::Row(items) => items.iter().any(math_layout_has_line_break),
-        layout::LayoutKind::FontStyle { body, .. } | layout::LayoutKind::Color { body, .. } => {
-            math_layout_has_line_break(body)
-        }
+        layout::LayoutKind::FontStyle { body, .. } => math_layout_has_line_break(body),
         _ => false,
     }
 }
@@ -147,9 +145,7 @@ fn simple_box_height(value: &layout::LayoutBox, fs: f64) -> Option<f64> {
             .iter()
             .filter_map(|item| simple_box_height(item, fs))
             .max_by(f64::total_cmp),
-        layout::LayoutKind::FontStyle { body, .. } | layout::LayoutKind::Color { body, .. } => {
-            simple_box_height(body, fs)
-        }
+        layout::LayoutKind::FontStyle { body, .. } => simple_box_height(body, fs),
         _ => None,
     }
 }
