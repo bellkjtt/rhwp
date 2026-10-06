@@ -497,3 +497,19 @@ HWP 선 종류 변환을 공통 helper로 옮겨 구분선에서도 같은 LineR
 compact 경로의 pagination 예약 생략과 paint의 후속 floor는 별도로 대조하며,
 visible/숨긴 선·단일/이중 선·위아래 여백 대조군을 확인해야 한다. 이 후보의 실제 결과는
 다음 source 빌드에서 재산출하며, 점수에 맞춘 문서 조건이나 테스트 변경은 추가하지 않는다.
+
+
+### 미주 제목과 본문을 묶는 조건의 독립 근거
+
+원본 p15 문28 제목(source 본문 305, 미주 내부 0)의 문단 속성은
+`keep_with_next = false`이고 한컴 Print는 제목을 왼쪽 단 하단에, 다음 본문을 오른쪽
+단에 출력한다. Native trace에서 제목의 fit는 12px, 앞 흐름 높이 948.7px,
+단 예산 1001.6px로 제목 자체는 들어가지만 `judge_default_question_title_tail_fits_by_line_height`가
+다음 본문 문단 전체까지 들어갈 것을 요구하여 `query_new_note_fit`의 조기 단 넘김을
+억제하지 못한다. 제목 자체의 수용 여부와 다음 문단의 수용 여부를 구분해야 한다.
+
+해당 tail 판정에서 실제 resolved 문단의 `keep_with_next = false`이면 다음 본문의
+전체 높이를 제목의 필수 fit 예산으로 묶지 않도록 보정한다. keep 속성이 있는 경우의
+기존 제한과 다음 본문의 실제 fit/줄 분할은 보존한다. source ID나 px 좌표로 문28을
+선택하는 조건은 추가하지 않는다. 저장 문단·다음 문단의 단 소속과 내용 보존을 Print와
+다시 대조한 뒤 전체 대조군에서 의도하지 않은 제목 분리 여부를 확인한다.
