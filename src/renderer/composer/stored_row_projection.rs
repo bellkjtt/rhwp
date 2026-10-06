@@ -18,7 +18,17 @@ pub(crate) fn project_equation_rows(
         if composed.lines.len() != paragraph.line_segs.len() {
             return None;
         }
-        for (source, actual) in paragraph.line_segs.iter_mut().zip(&composed.lines) {
+        let source_positions: Vec<_> = paragraph
+            .line_segs
+            .iter()
+            .map(|line| line.vertical_pos)
+            .collect();
+        for (index, (source, actual)) in paragraph
+            .line_segs
+            .iter_mut()
+            .zip(&composed.lines)
+            .enumerate()
+        {
             let source_vpos = source.vertical_pos;
             if previous_source_vpos.is_some_and(|previous| source_vpos < previous) {
                 // 저장 단/쪽 되감김은 새 좌표 원점이다. 앞 조각의 재조판량을
@@ -35,9 +45,19 @@ pub(crate) fn project_equation_rows(
             {
                 let height_delta = actual.line_height.saturating_sub(source.line_height);
                 let spacing_delta = actual.line_spacing.saturating_sub(source.line_spacing);
-                shift = shift
-                    .saturating_add(height_delta)
-                    .saturating_add(spacing_delta);
+                // 저장 사다리가 이미 실제 줄의 전진값이면 뒤 원점을 다시 당기지
+                // 않는다. 낡은 상자의 전진을 저장한 경우만 재조판량을 투영한다.
+                let already_projected = source_positions.get(index + 1).is_some_and(|next| {
+                    source_vpos
+                        .checked_add(actual.line_height)
+                        .and_then(|end| end.checked_add(actual.line_spacing))
+                        == Some(*next)
+                });
+                if !already_projected {
+                    shift = shift
+                        .saturating_add(height_delta)
+                        .saturating_add(spacing_delta);
+                }
                 source.line_height = actual.line_height;
                 source.text_height = actual.line_height;
                 source.baseline_distance = actual.baseline_distance;
