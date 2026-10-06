@@ -7695,6 +7695,13 @@ impl LayoutEngine {
                 crate::renderer::height_measurer::stored_seg_is_row_fragment(p, line_idx + 1)
             });
             if endnote_line_vpos_base.is_some() {
+                // 미주 끝의 줄 점유는 다음 미주 앞 간격과 별개다. fit 재생도
+                // 실제 paint가 소비한 마지막 줄 상자를 사용한다.
+                last_line_box_bottom = Some(if skip_advance_empty_line {
+                    y
+                } else {
+                    y + render_line_flow_height
+                });
                 let line_bottom = if skip_advance_empty_line {
                     y
                 } else {

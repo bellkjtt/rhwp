@@ -412,8 +412,8 @@ impl TypesetEngine {
                     );
             // 단독 문단이 아니라 같은 미주에 남은 전체 내용의 실제 점유를 확인한다.
             // 다음 그림/다줄 본문이 넘치는 저장 단 경계는 유지한다.
-            let local_rewind_tail_fits = en_para.column_type
-                == crate::model::paragraph::ColumnBreakType::None
+            let local_rewind_tail_fits = ep_idx > 0
+                && en_para.column_type == crate::model::paragraph::ColumnBreakType::None
                 && matches!((prev_en_bottom_vpos, this_first_offset),
                     (Some(previous), Some(first)) if first < previous)
                 && self
@@ -431,9 +431,7 @@ impl TypesetEngine {
                             compact_no_separator_spacing,
                         )),
                     )
-                    .is_some_and(|bottom| {
-                        bottom <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX
-                    });
+                    .is_some_and(|bottom| bottom <= available);
             if st.col_count > 1
                 && !st.current_items.is_empty()
                 && !local_rewind_tail_fits
