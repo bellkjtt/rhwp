@@ -6,6 +6,32 @@ use crate::renderer::typeset::{
 
 impl TypesetEngine {
     #[allow(clippy::too_many_arguments)]
+    pub(super) fn reflowed_endnote_whole_paragraph_fits(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        para_index: usize,
+        available: f64,
+        column_width: f64,
+    ) -> bool {
+        paragraph.column_type == ColumnBreakType::None
+            && self
+                .simulate_endnote_column_with_tail(
+                    st,
+                    paragraphs,
+                    styles,
+                    available,
+                    column_width,
+                    Some(para_index),
+                    true,
+                    Some((&[], 0, false)),
+                )
+                .is_some_and(|occupied_end| occupied_end <= available)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn reflowed_endnote_single_line_overflows(
         &self,
         st: &TypesetState,

@@ -110,9 +110,8 @@ pub(crate) fn normalized_simple_math_metrics(
         return None;
     }
     let single_font_line = (intrinsic.height - fs).abs() <= f64::EPSILON * fs * 4.0;
-    let simple_box_height = simple_box_height(&intrinsic, fs);
-    let single_box_line = simple_box_height
-        .is_some_and(|height| (intrinsic.height - height).abs() <= f64::EPSILON * fs * 4.0);
+    let single_box_line =
+        simple_box_height(&intrinsic, fs).is_some() && is_simple_box_expression(&intrinsic);
     if !single_font_line && !single_box_line {
         return None;
     }
@@ -146,7 +145,52 @@ fn simple_box_height(value: &layout::LayoutBox, fs: f64) -> Option<f64> {
             .filter_map(|item| simple_box_height(item, fs))
             .max_by(f64::total_cmp),
         layout::LayoutKind::FontStyle { body, .. } => simple_box_height(body, fs),
+        layout::LayoutKind::Decoration { body, .. }
+        | layout::LayoutKind::Sqrt { body, .. }
+        | layout::LayoutKind::Paren { body, .. } => simple_box_height(body, fs),
+        layout::LayoutKind::Superscript { base, sup } => {
+            simple_box_height(base, fs).or_else(|| simple_box_height(sup, fs))
+        }
+        layout::LayoutKind::Subscript { base, sub } => {
+            simple_box_height(base, fs).or_else(|| simple_box_height(sub, fs))
+        }
+        layout::LayoutKind::SubSup { base, sub, sup } => simple_box_height(base, fs)
+            .or_else(|| simple_box_height(sub, fs))
+            .or_else(|| simple_box_height(sup, fs)),
         _ => None,
+    }
+}
+
+/// BOX 여백을 소비하는 단일 표현식의 합성. 분수·배열·큰 연산자와
+/// 다줄의 저장 논리 프레임을 공개 글꼴 자연 높이로 재정의하지 않는다.
+fn is_simple_box_expression(value: &layout::LayoutBox) -> bool {
+    match &value.kind {
+        layout::LayoutKind::Row(items) => items.iter().all(is_simple_box_expression),
+        layout::LayoutKind::FontStyle { body, .. }
+        | layout::LayoutKind::Decoration { body, .. }
+        | layout::LayoutKind::Paren { body, .. } => is_simple_box_expression(body),
+        layout::LayoutKind::Sqrt { body, index } => {
+            is_simple_box_expression(body) && index.as_deref().is_none_or(is_simple_box_expression)
+        }
+        layout::LayoutKind::Superscript { base, sup } => {
+            is_simple_box_expression(base) && is_simple_box_expression(sup)
+        }
+        layout::LayoutKind::Subscript { base, sub } => {
+            is_simple_box_expression(base) && is_simple_box_expression(sub)
+        }
+        layout::LayoutKind::SubSup { base, sub, sup } => {
+            is_simple_box_expression(base)
+                && is_simple_box_expression(sub)
+                && is_simple_box_expression(sup)
+        }
+        layout::LayoutKind::Text(_)
+        | layout::LayoutKind::Number(_)
+        | layout::LayoutKind::Symbol(_)
+        | layout::LayoutKind::MathSymbol(_)
+        | layout::LayoutKind::Function(_)
+        | layout::LayoutKind::Space(_)
+        | layout::LayoutKind::Empty => true,
+        _ => false,
     }
 }
 

@@ -1847,10 +1847,20 @@ impl TypesetEngine {
             } else {
                 split_candidate
             };
-            // 렌더로 잰 분할 줄 수가 있으면 그 값을 쓴다 — 단 하단까지 실제로 들어가는 줄 수다.
-            // 렌더가 통째로 들어간다고 판정하면 누계 기반 분할 후보를 버린다. 저장 사다리
-            // 되감김 등 다른 분할 후보는 렌더 판정이 없을 때만 쓴다.
-            let split_candidate = if render_fits_whole {
+            // 내부 저장 단 경계도 현재 전체 줄이 실제로 들어가면 재조판한다.
+            // 한 줄만 남기는 컷을 유지해 다음 단을 불필요하게 일찍 시작하지 않는다.
+            let whole_internal_rewind_fits = internal_vpos_rewind
+                && split_candidate.is_some()
+                && self.reflowed_endnote_whole_paragraph_fits(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                );
+            let split_candidate = if render_fits_whole || whole_internal_rewind_fits {
                 None
             } else {
                 render_fit_split.or(split_candidate)
@@ -1918,7 +1928,7 @@ impl TypesetEngine {
                 prev_en_bottom_vpos = Some(last_line_bottom.unwrap_or(tb));
                 prev_en_content_bottom_vpos = this_content_bottom_offset.or(this_bottom_offset);
             }
-            if local_vpos_rewind {
+            if local_vpos_rewind || whole_internal_rewind_fits {
                 st.mark_compact_endnote_rewind();
             }
         }
