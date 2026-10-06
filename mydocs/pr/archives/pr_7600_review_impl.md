@@ -164,3 +164,33 @@ Rust 런타임 source9ee2878be와 동일한84fda6939에서 Native/fresh WASM 각
 Noto Sans Math의 OFL 전문·원 저작권 표기는 모든 배포본에서 원문 바이트 그대로 보존됐다.
 Vite ENOSPC는 저장소 루트에서 실행한 데 따른 것이며 사용자가 Studio 디렉터리에서 정상
 동작을 확인해 Vite 설정 수정은 범위에서 제외했다.
+
+최신 source 복원 후 같은6개 회귀도6PASS/0FAIL(exit0)로 종료했다.
+`logs/paint-green.log`의 실제 실행 count와 summary를 확인했다. 검증 후보는
+`31c1d4ecd6cfd0fce50658fccce158cf876b8077`이며9ee2878be 이후의 Rust 런타임 diff는 없다.
+필수 검증은 upstream/devel을 fetch해base a048da32d로 고정하고 순차로 실행한다.
+
+## 전체 회귀의 실패와 사용자 승인 범위 확장
+
+후보31c1d4ecd의 fmt/세 Clippy/workspace build/base 정책과 원 기여 focused3개는 통과했다.
+전체 nextest는10,517 실행,10,514PASS/3FAIL/50SKIP, exit100,730.063초로 실제 종료했다.
+Native Skia는 이 실패 뒤 실행하지 않았고 PR 생성/승인/merge로 보고하지 않는다.
+
+- #1139 문28의 고정 x/y 영역은 `(ii)` 소유인pi817의 두 인라인 수식까지 선택했다.
+  실제 앞 수식은pi816이며 점유 끝779.853, 다음pi817 시작789.853으로10의 분리 공간이 있다.
+  오류의801.853은 다음 문단 자체의 수식 끝이다. 원본 문단 소유·순서 관계로 바꿀 필요가 있다.
+- #1308의HWP/HWPX 두 검사는 SVG 수식을245..260 고정y 안에서 찾지 못했다.
+  문단/명시적 개행의 줄 소유·내어쓰기 관계로 선택하고 실제 Print에서 확인한다.
+- 사용자 추가 승인: #1139 파일 전체(86개 검사/3,731줄)의px 고정 검사를 검토·보정한다.
+  새로운 문서/원본의 시각 미달을 기존 차이라는 이유로 면제하지 않는다.
+
+기존2020 suffix PDF는 실제Creator2022이고 p15의 문28은왼쪽 단 끝으로 재배치돼
+현재 저장 문서의오른쪽 단 시작과 다르다. 새 Native/fresh WASM 대조35.87554%를 확인했다.
+기존원 PDF2024 p15와Native는84.63888%이며 이것도90% 충족으로 보고하지 않는다.
+둘의Print 실행 출처를Creator만으로추정하지않고 같은HWP를metadata2022에맞는MCP2020
+Print로다시출력한다. job15b90e11-d4b7-45f6-847a-baf3d0a67891은Hancom11.0.0.9136/
+PrintMethod0/one-up/18쪽 실제성공이다. 원본과실패증거를보존한다.
+
+Native TSV ZIP의GitHub첨부API는ZIP MIME형식을HTTP422로거절했다.
+이는자동승인거부가아닌서버첨부형식제한이며원시파일은output에그대로남아있다.
+파일형식을위장하거나Git에커밋하지않고PR게시시정상첨부/동일파일링크경로를확정한다.
