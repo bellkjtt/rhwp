@@ -138,3 +138,29 @@ Studio·Chrome·Firefox build, VS Code typecheck/webpack build, font/extension �
 이는 알려진 신규 자산의 재고 등록이고 renderer golden·래칫 오차 허용치 변경이 아닙니다.
 최신 Rust WASM의 렌더 검증과 font 배포 자산 검사를 구분하며 위 build만으로 새 WASM의
 시각 확인을 완료했다고 주장하지 않습니다.
+
+## 9ee2878be의 전쪽 재검증과 paint/간격 회귀
+
+최적화 fresh WASM build exit0(13분48초), pkg/public/실제 브라우저 download의
+WASM SHA-256은 `cf850c529720d37cef7953f6ef03d857662110d408e55a2decb9bd5029a43c18`이다.
+Rust 런타임 source9ee2878be와 동일한84fda6939에서 Native/fresh WASM 각각
+공개 원본92.98588%/최소 입력99.43478%, 대응 Print 전체1쪽 gate passed를 확인했다.
+전쪽 compare·review·standalone overlay와 실제 Studio Canvas2D/CanvasKit4경로를
+직접 확인했다. 실제 수식 내용·backend·download SHA 및 숨은 overlay 없음은4PASS다.
+원 최소 입력↔스크립트 제거 사본의 최신 Native 전쪽 raster도100%/픽셀 동일하다.
+원시 TSV 원본 두 개를 PR 첨부용 ZIP으로 묶었고 output 안에만 보존했다.
+
+이 독립 Print 및 Native/fresh WASM90% 선행 조건을 충족한 뒤
+`tests/cases/issue_7593_print_placement.rs`에 실제 SVG paint 장평 동일성, BOT/직접Unicode
+관계 기호의 양쪽 간격·내용 순서를 추가했다. 절대 px나 출력 해시를 기대값으로 쓰지 않는다.
+수정 소스 선행 GREEN6PASS(`logs/paint-green-initial.log`), 수정 전7a61272f1의
+실제 RED3PASS/3FAIL(exit100, `logs/paint-red.log`)을 확인했다. 장식 실제 폭
+39.99996 대20.02/20.02, BOT의 왼쪽 간격 부재, 직접Unicode의 MathSymbol0개가
+각각 의도한 결함으로 실패했다. 기존3개 기하/소유 검사는 RED 대조에서도 통과했다.
+최신 소스 복원 후 같은6개를 다시 실행하며 필수 lint·전체 Rust/Skia 게이트를 이어서 수행한다.
+
+최신 WASM으로 Studio/Chrome/Firefox/VS Code 배포본을 다시 빌드했다. typecheck/webpack과
+폰트·확장 배포 계약9PASS를 확인했다. Studio dist WASM도위cf850c52 해시와 일치한다.
+Noto Sans Math의 OFL 전문·원 저작권 표기는 모든 배포본에서 원문 바이트 그대로 보존됐다.
+Vite ENOSPC는 저장소 루트에서 실행한 데 따른 것이며 사용자가 Studio 디렉터리에서 정상
+동작을 확인해 Vite 설정 수정은 범위에서 제외했다.

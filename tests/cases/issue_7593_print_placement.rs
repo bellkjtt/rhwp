@@ -200,3 +200,144 @@ fn no_stored_rows_reflow_choice_equations_on_the_paragraph_tab_grid() {
     let last = equations.last().unwrap().0;
     assert!(last.bbox.x + last.bbox.width <= column.bbox.x + column.bbox.width);
 }
+
+#[test]
+fn same_base_unit_keeps_arrow_paint_width_when_reserved_frames_differ() {
+    let core = DocumentCore::from_bytes(ORIGINAL).unwrap();
+    let tree = core.build_page_render_tree(0).unwrap();
+    let mut nodes = Vec::new();
+    descendants(&tree.root, &mut nodes);
+    let equation = |script: &str| {
+        nodes
+            .iter()
+            .find_map(|node| match &node.node_type {
+                RenderNodeType::Equation(eq) if eq.script == script => Some((*node, eq)),
+                _ => None,
+            })
+            .unwrap()
+    };
+    let (first_node, first) = equation("rm dyadAB");
+    let (cell_node, cell) = equation("rm dyad AB");
+    assert_eq!(first.font_size, cell.font_size);
+    assert!(first_node.bbox.width > cell_node.bbox.width);
+    assert_eq!(first.layout_box.width, cell.layout_box.width);
+
+    // 독립 Print의 발문/보기 AB는 같은 BaseUnit과 같은 장식 폭이다.
+    // 생산 SVG의 모든 조상 transform을 반영해 실제 paint 폭을 비교한다.
+    let svg = core
+        .render_page_svg_layer_with_profile_native(0, rhwp::paint::RenderProfile::Print)
+        .unwrap();
+    let xml = roxmltree::Document::parse(&svg).unwrap();
+    let mut widths = Vec::new();
+    for group in xml.descendants().filter(|n| n.has_tag_name("g")) {
+        let texts: Vec<_> = group
+            .children()
+            .filter(|n| n.has_tag_name("text"))
+            .collect();
+        if texts.len() != 1 || texts[0].text() != Some("AB") {
+            continue;
+        }
+        let Some(line) = group.children().find(|n| n.has_tag_name("line")) else {
+            continue;
+        };
+        let x1: f64 = line.attribute("x1").unwrap().parse().unwrap();
+        let x2: f64 = line.attribute("x2").unwrap().parse().unwrap();
+        let mut scale = 1.0;
+        for parent in group.ancestors() {
+            for transform in
+                svgtypes::TransformListParser::from(parent.attribute("transform").unwrap_or(""))
+            {
+                match transform.unwrap() {
+                    svgtypes::TransformListToken::Scale { sx, .. } => scale *= sx,
+                    svgtypes::TransformListToken::Translate { .. } => {}
+                    other => panic!("원본 AB의 축 정렬 대조에 예상하지 않은 transform: {other:?}"),
+                }
+            }
+        }
+        widths.push((x2 - x1).abs() * scale);
+        assert_ne!(
+            texts[0].attribute("font-style"),
+            Some("italic"),
+            "rm은 정체다"
+        );
+    }
+    assert_eq!(widths.len(), 3, "발문·보기 ㄱ/ㄴ AB 장식 모두 보존");
+    for width in &widths[1..] {
+        assert!(
+            (widths[0] / width - 1.0).abs() <= f64::EPSILON * 128.0,
+            "같은 BaseUnit의 장식 폭 비율이 프레임 폭에 따라 달라지면 안 된다: {widths:?}"
+        );
+    }
+}
+
+fn assert_relation_space(marker: &str, expected_symbol: &str) {
+    use rhwp::renderer::equation::layout::{LayoutBox, LayoutKind};
+    use rhwp::renderer::equation::symbols::DecoKind;
+
+    fn collect(
+        layout: &LayoutBox,
+        parent_x: f64,
+        arrows: &mut Vec<(f64, f64)>,
+        relations: &mut Vec<(String, f64, f64)>,
+    ) {
+        let x = parent_x + layout.x;
+        match &layout.kind {
+            LayoutKind::Row(children) => {
+                for child in children {
+                    collect(child, x, arrows, relations);
+                }
+            }
+            LayoutKind::FontStyle { body, .. } => collect(body, x, arrows, relations),
+            LayoutKind::Decoration {
+                kind: DecoKind::Dyad,
+                body,
+            } => {
+                arrows.push((x + body.x, body.width));
+                collect(body, x, arrows, relations);
+            }
+            LayoutKind::MathSymbol(symbol) if symbol == "⊥" || symbol == "⫽" => {
+                relations.push((symbol.clone(), x, layout.width));
+            }
+            _ => {}
+        }
+    }
+
+    let core = DocumentCore::from_bytes(ORIGINAL).unwrap();
+    let tree = core.build_page_render_tree(0).unwrap();
+    let mut nodes = Vec::new();
+    descendants(&tree.root, &mut nodes);
+    {
+        let equation = nodes
+            .iter()
+            .find_map(|node| match &node.node_type {
+                RenderNodeType::Equation(eq) if eq.script.contains(marker) => Some(eq),
+                _ => None,
+            })
+            .unwrap();
+        let mut arrows = Vec::new();
+        let mut relations = Vec::new();
+        collect(&equation.layout_box, 0.0, &mut arrows, &mut relations);
+        assert_eq!(arrows.len(), 2, "양쪽 dyad의 내용 보존");
+        assert_eq!(relations.len(), 1, "직접 Unicode도 관계 기호로 보존");
+        let (symbol, x, width) = &relations[0];
+        assert_eq!(symbol, expected_symbol);
+        assert!(
+            *x > arrows[0].0 + arrows[0].1,
+            "Print처럼 왼쪽 수식과 기호 사이를 띄운다"
+        );
+        assert!(
+            *x + width < arrows[1].0,
+            "기호의 실제 점유 폭 뒤에 오른쪽 수식을 놓는다"
+        );
+    }
+}
+
+#[test]
+fn choice_perpendicular_keeps_operand_order_and_clear_space() {
+    assert_relation_space(" BOT ", "⊥");
+}
+
+#[test]
+fn choice_direct_unicode_relation_uses_the_same_math_spacing() {
+    assert_relation_space("⫽", "⫽");
+}
