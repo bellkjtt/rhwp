@@ -27,6 +27,7 @@ use crate::renderer::typeset::{
     ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX,
 };
 
+mod fit_split;
 mod initial_fit;
 mod new_note_fit;
 mod rewind_tail;
@@ -799,6 +800,7 @@ impl TypesetEngine {
                 .map(|height| raw_en_fit.max(height))
                 .unwrap_or(raw_en_fit);
             let total_advance_fit = line_advances_sum.max(non_tac_object_height.unwrap_or(0.0));
+            let fit_split_column = (st.pages.len(), st.current_column);
             let initial_fit::InitialFitResult {
                 remaining_height,
                 a2_overflow_with_para,
@@ -1728,6 +1730,14 @@ impl TypesetEngine {
                     .map(|gap| hwpunit_to_px(gap as i32, dpi))
                     .unwrap_or(0.0);
                 en_advance = en_advance.max(total_advance_fit + boundary_gap);
+            }
+            if fit_split_column != (st.pages.len(), st.current_column) {
+                split_endnote_to_fit = fit_split::refresh_after_column_change(
+                    &fmt,
+                    split_endnote_to_fit,
+                    (st.available_height() - st.current_height).max(0.0),
+                    total_advance_fit,
+                );
             }
             let compact_visible_last_column_non_reset_rewind_tail =
                 compact_endnote_separator_profile
