@@ -428,7 +428,7 @@ impl TypesetEngine {
                         styles,
                         available,
                         en_col_w,
-                        Some((en_para_idx, None)),
+                        Some(en_para_idx),
                         true,
                         Some((&[], endnote_start, compact_no_separator_spacing)),
                     )
@@ -1502,24 +1502,6 @@ impl TypesetEngine {
                 zero_question_title_tail_fits_by_line_height,
                 large_between_zero_above_whole_note_small_bleed_fits,
             });
-            // 제목이 다음 본문과 묶이지 않으면 실제 제목 줄의 점유로 판정한다.
-            // 본문 묶음 전체를 예약해 한컴의 단 하단 제목을 미리 넘기지 않는다.
-            let whole_new_note_head_fits = advance_for_new_endnote
-                && ep_idx == 0
-                && !styles
-                    .para_styles
-                    .get(en_para.para_shape_id as usize)
-                    .is_some_and(|style| style.keep_with_next)
-                && self.reflowed_endnote_whole_paragraph_fits(
-                    st,
-                    paragraphs,
-                    styles,
-                    en_para,
-                    en_para_idx,
-                    available,
-                    en_col_w,
-                );
-            let advance_for_new_endnote = advance_for_new_endnote && !whole_new_note_head_fits;
             if advance_for_new_endnote {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
@@ -1883,10 +1865,10 @@ impl TypesetEngine {
             } else {
                 render_fit_split.or(split_candidate)
             };
-            // 수용한 저장 경계 뒤에는 전체/각 prefix의 실제 점유로 컷을 정한다.
-            // 예산이 바뀐 뒤 이전 컷이나 saved-delta 누계로 넘침을 허용하지 않는다.
-            let measured_fragment_fit = if ep_idx > 0 {
-                self.reflowed_endnote_fragment_fit(
+            // 저장 되감김을 같은 단에 수용한 뒤에도 후속 줄의 실제 점유를
+            // 확인한다. 작아진 saved-delta 누계로 쪽 아래 넘침을 허용하지 않는다.
+            if ep_idx > 0
+                && self.reflowed_endnote_single_line_overflows(
                     st,
                     paragraphs,
                     styles,
@@ -1896,20 +1878,11 @@ impl TypesetEngine {
                     available,
                     en_col_w,
                 )
-            } else {
-                None
-            };
-            let split_candidate = match measured_fragment_fit {
-                Some(reflow_fit::EndnoteFragmentFit::Whole) => None,
-                Some(reflow_fit::EndnoteFragmentFit::Prefix(end)) => Some(end),
-                Some(reflow_fit::EndnoteFragmentFit::Move) => {
-                    st.advance_column_or_new_page();
-                    prev_en_bottom_vpos = None;
-                    prev_en_content_bottom_vpos = None;
-                    None
-                }
-                None => split_candidate,
-            };
+            {
+                st.advance_column_or_new_page();
+                prev_en_bottom_vpos = None;
+                prev_en_content_bottom_vpos = None;
+            }
             if self.emit_endnote_split(
                 st,
                 &fmt,
@@ -1955,7 +1928,7 @@ impl TypesetEngine {
                 prev_en_bottom_vpos = Some(last_line_bottom.unwrap_or(tb));
                 prev_en_content_bottom_vpos = this_content_bottom_offset.or(this_bottom_offset);
             }
-            if local_vpos_rewind || whole_internal_rewind_fits || whole_new_note_head_fits {
+            if local_vpos_rewind || whole_internal_rewind_fits {
                 st.mark_compact_endnote_rewind();
             }
         }

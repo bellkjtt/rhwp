@@ -483,7 +483,7 @@ impl TypesetEngine {
             styles,
             available,
             en_col_w,
-            extra_para_full.map(|index| (index, None)),
+            extra_para_full,
             sequential_compact_rewind,
             None,
         )
@@ -497,21 +497,13 @@ impl TypesetEngine {
         styles: &ResolvedStyleSet,
         available: f64,
         en_col_w: f64,
-        extra_para: Option<(usize, Option<usize>)>,
+        extra_para_full: Option<usize>,
         sequential_compact_rewind: bool,
         future: Option<(&[Paragraph], i32, bool)>,
     ) -> Option<f64> {
         if st.current_items.is_empty() {
             return None;
         }
-        let extra_item = extra_para.map(|(para_index, end_line)| match end_line {
-            Some(end_line) => PageItem::PartialParagraph {
-                para_index,
-                start_line: 0,
-                end_line,
-            },
-            None => PageItem::FullParagraph { para_index },
-        });
         let ssot_level = en_ssot_level();
         let ssot_debug = en_ssot_debug();
         let mut local_paras: Vec<Paragraph> = Vec::new();
@@ -520,7 +512,7 @@ impl TypesetEngine {
             .current_items
             .iter()
             .filter_map(page_item_para_index)
-            .chain(extra_para.map(|(index, _)| index))
+            .chain(extra_para_full)
         {
             if local_indices.iter().any(|(global, _)| *global == pi) {
                 continue;
@@ -544,6 +536,7 @@ impl TypesetEngine {
         // 저장 span/75% 되감김으로 순차 렌더(+69.7px)를 과소 계상해 알짜 풀이가
         // 용지 밖에 남았다. acc·A2 스냅은 그대로 휴리스틱.
         if ssot_level >= EnSsotLevel::A3 || sequential_compact_rewind {
+            let extra_item = extra_para_full.map(|pi| PageItem::FullParagraph { para_index: pi });
             return self
                 .simulate_endnote_column_extent(
                     st,
@@ -579,6 +572,7 @@ impl TypesetEngine {
         hc.endnote_note_first_paras =
             endnote_first_local_paras(paragraphs.len(), &st.endnote_para_sources, &local_indices);
         let mut y = st.current_start_height;
+        let extra_item = extra_para_full.map(|pi| PageItem::FullParagraph { para_index: pi });
         // [#5886] 한 번 compact 되감김이 나오면 렌더처럼 나머지도 순차 적층한다.
         let mut stack_sequential = false;
         for item in st.current_items.iter().chain(extra_item.as_ref()) {
