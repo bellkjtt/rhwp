@@ -414,8 +414,28 @@ impl TypesetEngine {
                         (prev_en_bottom_vpos, this_first_offset),
                         (Some(prev), Some(first)) if first < prev
                     );
+            // 저장 vpos의 되감김만으로 단을 바꾸기 전에 현재 단의 실제 배치를
+            // 재생한다. 문단 단독 fit와 누적 근사 높이로 paint 예산을 대신하지 않는다.
+            let local_rewind_payload_fits = en_para.column_type
+                == crate::model::paragraph::ColumnBreakType::None
+                && matches!((prev_en_bottom_vpos, this_first_offset),
+                    (Some(prev), Some(first)) if first < prev)
+                && self
+                    .simulate_endnote_column_bottom_y(
+                        st,
+                        paragraphs,
+                        styles,
+                        available,
+                        en_col_w,
+                        Some(en_para_idx),
+                        true,
+                    )
+                    .is_some_and(|bottom| {
+                        bottom <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX
+                    });
             if st.col_count > 1
                 && !st.current_items.is_empty()
+                && !local_rewind_payload_fits
                 && (st.current_height > available * local_rewind_advance_threshold
                     || visible_separator_title_body_rewind_starts_next_column)
                 && !current_default_late_question_title
