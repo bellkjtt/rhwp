@@ -91,8 +91,8 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
             super::px_to_hwpunit(height, super::DEFAULT_DPI).max(1) as u32,
             super::px_to_hwpunit(baseline, super::DEFAULT_DPI),
         )
-    } else if let Some((height, baseline)) = normalized_simple_math_metrics(equation) {
-        (equation.common.width, height, baseline)
+    } else if let Some(metrics) = normalized_simple_math_metrics(equation) {
+        metrics
     } else {
         (
             equation.common.width,
@@ -106,7 +106,7 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
 /// 복합 수식의 자연 글리프 높이를 유효한 저장 프레임과 동일시하지 않는다.
 pub(crate) fn normalized_simple_math_metrics(
     equation: &crate::model::control::Equation,
-) -> Option<(u32, i32)> {
+) -> Option<(u32, u32, i32)> {
     if equation.common.size_protect
         || equation.attr & 1 != 0
         || equation.font_size == 0
@@ -132,7 +132,19 @@ pub(crate) fn normalized_simple_math_metrics(
     if equation.common.height <= height {
         return None;
     }
-    Some((height, super::px_to_hwpunit(baseline, super::DEFAULT_DPI)))
+    // 무효인 논리 폰트 프레임은 너비도 이전 글리프 캐시와 구분한다.
+    // 같은 표시 LayoutBox의 전진폭을 측정과 paint가 함께 소비한다.
+    // 별도의 기존 BOX 계약은 저장된 외곽 너비를 유지한다.
+    let width = if font_frame.is_some() {
+        super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32
+    } else {
+        equation.common.width
+    };
+    Some((
+        width,
+        height,
+        super::px_to_hwpunit(baseline, super::DEFAULT_DPI),
+    ))
 }
 
 fn math_layout_has_line_break(value: &layout::LayoutBox) -> bool {
