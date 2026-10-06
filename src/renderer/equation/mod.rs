@@ -15,6 +15,7 @@ pub mod hancom_glyphs;
 pub(crate) mod inline_box;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
+mod logical_font_frame;
 pub mod parser;
 pub mod svg_render;
 pub mod symbols;
@@ -64,8 +65,8 @@ pub fn intrinsic_size_hwp(script: &str, font_size: u32) -> (u32, u32) {
 }
 
 /// 수학 글꼴 HYhwpEQ에는 한글 cmap이 없으므로 한글은 본문 대체 글꼴로 그린다.
-/// 일반 수식의 저장 프레임과 보호된 크기는 유지한다. 현재 한 글자 높이의
-/// 표현식/BOX에 남은 더 큰 캐시만 검증된 논리 상자로 다시 발행한다.
+/// 일반 수식의 저장 프레임과 보호된 크기는 유지한다. 독립 한컴 출력에서
+/// 확인한 글자 줄·윗줄·단일 위첨자·BOX의 낡은 캐시만 논리 상자로 재발행한다.
 pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u32, u32, i32) {
     if !equation.common.size_protect
         && equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
@@ -76,10 +77,19 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
     {
         let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
         let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
+        let font_frame = (equation.attr & 1 == 0 && equation.font_size > 0)
+            .then(|| {
+                logical_font_frame::metrics(
+                    &intrinsic,
+                    super::hwpunit_to_px(equation.font_size as i32, super::DEFAULT_DPI),
+                )
+            })
+            .flatten();
+        let (height, baseline) = font_frame.unwrap_or((intrinsic.height, intrinsic.baseline));
         (
             super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32,
-            super::px_to_hwpunit(intrinsic.height, super::DEFAULT_DPI).max(1) as u32,
-            super::px_to_hwpunit(intrinsic.baseline, super::DEFAULT_DPI),
+            super::px_to_hwpunit(height, super::DEFAULT_DPI).max(1) as u32,
+            super::px_to_hwpunit(baseline, super::DEFAULT_DPI),
         )
     } else if let Some((height, baseline)) = normalized_simple_math_metrics(equation) {
         (equation.common.width, height, baseline)
@@ -92,13 +102,14 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
     }
 }
 
-/// 한 글자 높이의 표현식과 같은 본체의 BOX가 가진 논리 상자 계약.
-/// 위첨자·분수·배열의 자연 글리프 높이를 유효한 저장 프레임과 동일시하지 않는다.
+/// 글자 줄·단일 위첨자·윗줄 및 기존 BOX의 논리 프레임 계약.
+/// 복합 수식의 자연 글리프 높이를 유효한 저장 프레임과 동일시하지 않는다.
 pub(crate) fn normalized_simple_math_metrics(
     equation: &crate::model::control::Equation,
 ) -> Option<(u32, i32)> {
     if equation.common.size_protect
         || equation.attr & 1 != 0
+        || equation.font_size == 0
         || !equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
     {
         return None;
@@ -112,17 +123,16 @@ pub(crate) fn normalized_simple_math_metrics(
     let single_font_line = (intrinsic.height - fs).abs() <= f64::EPSILON * fs * 4.0;
     let single_box_line =
         simple_box_height(&intrinsic, fs).is_some() && is_simple_box_expression(&intrinsic);
-    if !single_font_line && !single_box_line {
+    let font_frame = logical_font_frame::metrics(&intrinsic, fs);
+    if !single_font_line && !single_box_line && font_frame.is_none() {
         return None;
     }
-    let height = super::px_to_hwpunit(intrinsic.height, super::DEFAULT_DPI).max(1) as u32;
+    let (height, baseline) = font_frame.unwrap_or((intrinsic.height, intrinsic.baseline));
+    let height = super::px_to_hwpunit(height, super::DEFAULT_DPI).max(1) as u32;
     if equation.common.height <= height {
         return None;
     }
-    Some((
-        height,
-        super::px_to_hwpunit(intrinsic.baseline, super::DEFAULT_DPI),
-    ))
+    Some((height, super::px_to_hwpunit(baseline, super::DEFAULT_DPI)))
 }
 
 fn math_layout_has_line_break(value: &layout::LayoutBox) -> bool {
