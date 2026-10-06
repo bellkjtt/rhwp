@@ -323,6 +323,8 @@ fn render_box(
         LayoutKind::Limit {
             is_upper,
             name,
+            name_font_size,
+            sub_font_size,
             sub,
         } => {
             if let Some(name) = name {
@@ -332,24 +334,15 @@ fn render_box(
                 svg.push_str(&format!(
                     "<text x=\"{:.2}\" y=\"{:.2}\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>\n",
                     x,
-                    y + fs * 0.8,
-                    fs,
+                    y + lb.baseline,
+                    name_font_size,
                     color,
                     EQ_FONT_FAMILY,
                     name,
                 ));
             }
             if let Some(sub_box) = sub {
-                render_box(
-                    svg,
-                    sub_box,
-                    x,
-                    y,
-                    color,
-                    fs * super::layout::SCRIPT_SCALE,
-                    false,
-                    false,
-                );
+                render_box(svg, sub_box, x, y, color, *sub_font_size, false, false);
             }
         }
         LayoutKind::Matrix { cells, style } => {

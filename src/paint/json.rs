@@ -3063,9 +3063,15 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind) {
         LayoutKind::Limit {
             is_upper,
             name,
+            name_font_size,
+            sub_font_size,
             sub,
         } => {
-            let _ = write!(buf, "{{\"type\":\"limit\",\"isUpper\":{}", is_upper);
+            let _ = write!(
+                buf,
+                "{{\"type\":\"limit\",\"isUpper\":{},\"nameFontSize\":{},\"subFontSize\":{}",
+                is_upper, name_font_size, sub_font_size
+            );
             write_optional_equation_box(buf, "name", name.as_deref());
             write_optional_equation_box(buf, "sub", sub.as_deref());
             buf.push('}');

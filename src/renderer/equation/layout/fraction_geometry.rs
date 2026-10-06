@@ -12,10 +12,9 @@ pub(super) fn position(numer: &mut LayoutBox, denom: &mut LayoutBox, fs: f64) ->
     let gap = fs * 120.0 / 1000.0;
     // FractionNumeratorDisplayStyleShiftUp와 FractionDenominatorDisplayStyleShiftDown.
     // 복합 분수에서도 자식의 기준선·하강부를 소비해 괘선과 겹치지 않게 한다.
-    let numer_shift = (fs * 677.0 / 1000.0)
-        .max(axis + half_rule + gap + numer.height - numer.baseline);
-    let denom_shift = (fs * 686.0 / 1000.0)
-        .max(half_rule + gap + denom.baseline - axis);
+    let numer_shift =
+        (fs * 677.0 / 1000.0).max(axis + half_rule + gap + numer.height - numer.baseline);
+    let denom_shift = (fs * 686.0 / 1000.0).max(half_rule + gap + denom.baseline - axis);
     let ascent = (numer_shift + numer.baseline)
         .max(denom.baseline - denom_shift)
         .max(axis + half_rule);

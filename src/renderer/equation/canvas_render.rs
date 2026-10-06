@@ -241,6 +241,8 @@ fn render_box(
         LayoutKind::Limit {
             is_upper,
             name,
+            name_font_size,
+            sub_font_size,
             sub,
         } => {
             if let Some(name) = name {
@@ -248,12 +250,12 @@ fn render_box(
             } else {
                 // 일반 글꼴은 첨자를 포함한 전체 상자 높이를 글꼴 크기로 쓰지 않는다.
                 let name = if *is_upper { "Lim" } else { "lim" };
-                set_font(ctx, fs, false, false);
+                set_font(ctx, *name_font_size, false, false);
                 ctx.set_fill_style_str(color);
-                let _ = ctx.fill_text(name, x, y + fs * 0.8);
+                let _ = ctx.fill_text(name, x, y + lb.baseline);
             }
             if let Some(sub_box) = sub {
-                render_box(ctx, sub_box, x, y, color, fs * SCRIPT_SCALE, false, false);
+                render_box(ctx, sub_box, x, y, color, *sub_font_size, false, false);
             }
         }
         LayoutKind::Matrix { cells, style } => {

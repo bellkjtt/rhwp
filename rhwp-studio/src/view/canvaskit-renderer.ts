@@ -4396,7 +4396,7 @@ export class CanvasKitLayerRenderer {
         return symbolDrawn && supDrawn && subDrawn;
       }
       case 'limit': {
-        const size = this.equationFontSizeFromBox(layout, fontSize);
+        const size = layout.kind.nameFontSize ?? fontSize;
         // 이름의 글리프·폭·em 크기는 producer가 함께 정한다.
         const limitDrawn = layout.kind.name
           ? child(layout.kind.name, layout.kind.name.height, false, false)
@@ -4404,7 +4404,7 @@ export class CanvasKitLayerRenderer {
             canvas,
             layout.kind.isUpper ? 'Lim' : 'lim',
             x,
-            y + size * 0.8,
+            y + layout.baseline,
             size,
             color,
             false,
@@ -4414,7 +4414,7 @@ export class CanvasKitLayerRenderer {
             '함초롬바탕',
           );
         return limitDrawn && (layout.kind.sub
-          ? child(layout.kind.sub, fontSize * 0.7, false, false)
+          ? child(layout.kind.sub, layout.kind.subFontSize ?? fontSize * 0.7, false, false)
           : true);
       }
       case 'matrix': {

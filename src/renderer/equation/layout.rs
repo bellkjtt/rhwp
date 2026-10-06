@@ -5,8 +5,9 @@
 
 use super::ast::*;
 
-mod glyph_advances;
 mod fraction_geometry;
+mod glyph_advances;
+mod limit_geometry;
 mod script_geometry;
 mod symbol_advances;
 mod variable_style;
@@ -88,6 +89,8 @@ pub enum LayoutKind {
         is_upper: bool,
         /// 한컴 글꼴의 이름 글리프와 em 크기. 일반 글꼴 경로는 None이다.
         name: Option<Box<LayoutBox>>,
+        name_font_size: f64,
+        sub_font_size: f64,
         sub: Option<Box<LayoutBox>>,
     },
     /// 행렬
@@ -946,60 +949,6 @@ impl EqLayout {
                 symbol: symbol.to_string(),
                 sub: sub_laid.map(Box::new),
                 sup: sup_laid.map(Box::new),
-            },
-        }
-    }
-
-    fn layout_limit(&self, is_upper: bool, sub: &Option<Box<EqNode>>, fs: f64) -> LayoutBox {
-        let name = if is_upper { "Lim" } else { "lim" };
-        // 독립 한컴 Print의 HyhwpEQ ASCII 이름/PUA 본체는 같은 글자 크기에서
-        // em 크기가 다르다(11pt: 110/92, 16pt: 160/133). 일반 함수명 확대가 아니다.
-        // 이름의 폭·글리프·em 크기를 함께 생산하며 모든 painter가 이 상자를 소비한다.
-        let name_box = self
-            .layout_hancom_glyphs(
-                name,
-                super::hancom_glyphs::Role::Variable { italic: false },
-                fs * 1.2,
-                0.0,
-            )
-            .map(|mut name| {
-                // 이름과 첨자의 논리 기준선은 기본 수식 글줄에 정렬한다.
-                name.baseline = fs * TEXT_BASELINE;
-                name
-            });
-        let name_w = name_box
-            .as_ref()
-            .map(|name| name.width)
-            .unwrap_or_else(|| estimate_text_width(name, fs, false));
-        let name_h = fs;
-
-        let sub_box = sub.as_ref().map(|s| self.layout_node(s, fs * SCRIPT_SCALE));
-        let sub_h = sub_box
-            .as_ref()
-            .map(|b| b.height + fs * 0.05)
-            .unwrap_or(0.0);
-        let sub_w = sub_box.as_ref().map(|b| b.width).unwrap_or(0.0);
-
-        let w = name_w.max(sub_w);
-        let total_h =
-            (name_h + sub_h).max(name_box.as_ref().map(|name| name.height).unwrap_or(name_h));
-
-        let sub_laid = sub_box.map(|mut b| {
-            b.x = (w - b.width) / 2.0;
-            b.y = name_h;
-            b
-        });
-
-        LayoutBox {
-            x: 0.0,
-            y: 0.0,
-            width: w,
-            height: total_h,
-            baseline: fs * 0.8,
-            kind: LayoutKind::Limit {
-                is_upper,
-                name: name_box.map(Box::new),
-                sub: sub_laid.map(Box::new),
             },
         }
     }

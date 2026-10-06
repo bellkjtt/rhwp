@@ -365,6 +365,8 @@ fn render_box(
         LayoutKind::Limit {
             is_upper,
             name,
+            name_font_size,
+            sub_font_size,
             sub,
         } => {
             if let Some(name) = name {
@@ -376,8 +378,8 @@ fn render_box(
                     fonts,
                     name,
                     x,
-                    y + fs * 0.8,
-                    fs,
+                    y + lb.baseline,
+                    *name_font_size,
                     false,
                     false,
                     color,
@@ -392,7 +394,7 @@ fn render_box(
                     x,
                     y,
                     color,
-                    fs * SCRIPT_SCALE,
+                    *sub_font_size,
                     false,
                     false,
                 );
