@@ -2064,9 +2064,7 @@ impl HeightCursor {
             super::endnote_spacing::origin_after_gap(y_offset, Some(bottom), prev_line_spacing_px)
                 <= y_offset
         });
-        if injected_between_notes
-            && compact_endnote_question_title
-            && !compact_endnote_question_title_tail_backtrack
+        let legacy_single_line_gap_keep = !compact_endnote_question_title_tail_backtrack
             && !compact_endnote_question_title_tail_soft_backtrack
             && !compact_endnote_question_title_after_tall_tail_backtrack
             && !compact_endnote_question_title_after_tall_mid_backtrack
@@ -2075,12 +2073,17 @@ impl HeightCursor {
             && !compact_endnote_large_empty_spacer_collapse
             && !compact_endnote_large_between_title_tail_backtrack
             && !compact_no_separator_large_title_tail_gap
-            && !vpos_rewind
             && !prev_is_multiline
             && (stored_gap_px < -0.5
                 || (stored_gap_px > 0.5
-                    && (self.endnote_between_notes_hu > 3000 || measured_gap_already_reserved)))
+                    && (self.endnote_between_notes_hu > 3000 || measured_gap_already_reserved)));
+        if injected_between_notes
+            && compact_endnote_question_title
+            && !vpos_rewind
+            && (measured_gap_already_reserved || legacy_single_line_gap_keep)
         {
+            // 실제 점유 뒤에 설정 간격이 이미 있으면 하단 backtrack도 그
+            // 간격을 없앨 근거가 아니다. fit과 paint가 같은 순차 원점을 쓴다.
             // 최종 제목 원점을 보존할 때 기준은 기존 저장 목표 end_y다.
             // 중간 result에 더한 gap 보정은 이 반환에서 쓰지 않으므로,
             // 그것을 기준으로 base를 덮어쓰면 뒤 본문의 상대 간격이 줄어든다.

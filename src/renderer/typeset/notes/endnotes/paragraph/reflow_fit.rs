@@ -61,28 +61,14 @@ impl TypesetEngine {
             true,
             Some((&[], 0, false)),
         );
-        let with_head = self.simulate_endnote_column_with_tail(
-            st,
-            paragraphs,
-            styles,
-            available,
-            column_width,
-            Some(para_index),
-            true,
-            Some((&[], 0, false)),
-        );
-        previous.zip(with_head).is_some_and(|(bottom, head_bottom)| {
+        previous.is_some_and(|bottom| {
             if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
                 eprintln!(
-                    "EN_HEAD_OCCUPIED pi={para_index} previous={bottom:.3} with_head={head_bottom:.3} head_height={:.3} gap={:.3} available={available:.3}",
+                    "EN_HEAD_OCCUPIED pi={para_index} previous={bottom:.3} head_height={:.3} gap={:.3} available={available:.3}",
                     formatted.height_for_fit,
                     crate::renderer::hwpunit_to_px(st.endnote_between_notes_hu, self.dpi),
                 );
             }
-            // 저장 문단의 순차 원점은 따로 유지될 수 있다. 하단 보정이
-            // 실제 제목 상자를 앞 내용 안으로 되돌린 경우를 확인한 뒤 이월한다.
-            head_bottom < bottom + formatted.height_for_fit
-                &&
             bottom
                 + crate::renderer::hwpunit_to_px(st.endnote_between_notes_hu, self.dpi)
                 + formatted.height_for_fit
