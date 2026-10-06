@@ -414,8 +414,13 @@ impl TypesetEngine {
                         (prev_en_bottom_vpos, this_first_offset),
                         (Some(prev), Some(first)) if first < prev
                     );
+            let local_rewind_payload_fits = en_para.column_type
+                == crate::model::paragraph::ColumnBreakType::None
+                && st.current_height + fmt.height_for_fit
+                    <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX;
             if st.col_count > 1
                 && !st.current_items.is_empty()
+                && !local_rewind_payload_fits
                 && (st.current_height > available * local_rewind_advance_threshold
                     || visible_separator_title_body_rewind_starts_next_column)
                 && !current_default_late_question_title
