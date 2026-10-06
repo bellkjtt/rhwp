@@ -30,6 +30,43 @@ impl TypesetEngine {
                 )
                 .is_some_and(|occupied_end| occupied_end <= available)
     }
+    /// 하단 제목 보정이 앞 내용의 점유 영역과 미주 간격을 지울 수는 없다.
+    /// 기존 묶음 판정이 제목을 남긴 경우에도 같은 자연 점유 하한을 적용한다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn reflowed_endnote_new_head_overflows(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        formatted: &FormattedParagraph,
+        available: f64,
+        column_width: f64,
+    ) -> bool {
+        if st.current_items.is_empty()
+            || st.endnote_between_notes_hu <= 0
+            || formatted.line_count() != 1
+            || paragraph.column_type != ColumnBreakType::None
+        {
+            return false;
+        }
+        self.simulate_endnote_column_with_tail(
+            st,
+            paragraphs,
+            styles,
+            available,
+            column_width,
+            None,
+            true,
+            Some((&[], 0, false)),
+        )
+        .is_some_and(|bottom| {
+            bottom
+                + crate::renderer::hwpunit_to_px(st.endnote_between_notes_hu, self.dpi)
+                + formatted.height_for_fit
+                > available
+        })
+    }
 
     #[allow(clippy::too_many_arguments)]
     pub(super) fn reflowed_endnote_single_line_overflows(

@@ -1460,7 +1460,7 @@ impl TypesetEngine {
                     EndnoteRenderInkFit::Fits | EndnoteRenderInkFit::SplitAt(_)
                 );
             let new_note_fit::NewNoteFitResult {
-                advance_for_new_endnote,
+                mut advance_for_new_endnote,
                 advance_for_internal_rewind,
             } = self.query_new_note_fit(new_note_fit::NewNoteFitInput {
                 st,
@@ -1519,7 +1519,13 @@ impl TypesetEngine {
                 zero_question_title_tail_fits_by_line_height,
                 large_between_zero_above_whole_note_small_bleed_fits,
             });
+            let natural_new_head_overflows = ep_idx == 0
+                && self.reflowed_endnote_new_head_overflows(
+                    st, paragraphs, styles, en_para, &fmt, available, en_col_w,
+                );
+            advance_for_new_endnote |= natural_new_head_overflows;
             let kept_new_head = advance_for_new_endnote
+                && !natural_new_head_overflows
                 && ep_idx == 0
                 && self.reflowed_endnote_new_head_fits(
                     st,
