@@ -89,8 +89,7 @@ impl TypesetEngine {
         column_width: f64,
     ) -> bool {
         // 다줄의 분할 컷은 이 단일 줄 계약으로 바꾸지 않는다.
-        if !st.column_had_compact_endnote_rewind
-            || st.current_items.is_empty()
+        if st.current_items.is_empty()
             || formatted.line_heights.len() != 1
             || paragraph.line_segs.len() != 1
             || paragraph.column_type != ColumnBreakType::None

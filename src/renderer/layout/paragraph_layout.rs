@@ -2788,6 +2788,7 @@ const EMPTY_LINE_OWN_MARGIN_TOLERANCE_HU: i32 = 200;
 /// [#6761] 글자처럼 취급하는 개체가 공유 기준선 위에 두는 높이 비율(표 #7049 과 같다).
 const TAC_OBJECT_ASCENT_RATIO: f64 = 0.85;
 
+mod endnote_prefix;
 mod inline_picture_alignment;
 
 /// [#7548] 문단의 전폭 저장 줄(가장 넓은 원본 줄)의 시작 cs 와 끝(cs+sw).
