@@ -32,12 +32,17 @@ pub(super) fn project_equation_rows<'a>(
             source.vertical_pos = projected_vpos;
             if actual.line_height != source.line_height
                 || actual.baseline_distance != source.baseline_distance
+                || actual.line_spacing != source.line_spacing
             {
                 let height_delta = actual.line_height.saturating_sub(source.line_height);
-                shift = shift.saturating_add(height_delta);
+                let spacing_delta = actual.line_spacing.saturating_sub(source.line_spacing);
+                shift = shift
+                    .saturating_add(height_delta)
+                    .saturating_add(spacing_delta);
                 source.line_height = actual.line_height;
                 source.text_height = actual.line_height;
                 source.baseline_distance = actual.baseline_distance;
+                source.line_spacing = actual.line_spacing;
                 changed = true;
             }
         }

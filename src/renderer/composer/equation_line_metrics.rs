@@ -19,7 +19,8 @@ pub(super) fn refresh_equation_rows(
             .map_or(para.text.chars().count(), |line| line.char_start);
         let line = &mut composed.lines[line_index];
         let mut old_ascent = 0_i32;
-        let mut old_descent = 0_i32;
+        let mut old_logical_height = 0_i32;
+        let mut new_logical_height = 0_i32;
         let mut new_ascent = 0_i32;
         let mut new_descent = 0_i32;
         let mut changed = false;
@@ -40,10 +41,12 @@ pub(super) fn refresh_equation_rows(
                         crate::renderer::equation::flow_metrics_hwp(equation);
                     let height = height as i32;
                     old_ascent = old_ascent.max(old_baseline);
-                    old_descent = old_descent.max(old_height - old_baseline);
+                    old_logical_height = old_logical_height.max(old_height);
+                    new_logical_height = new_logical_height.max(height);
                     new_ascent = new_ascent.max(baseline);
                     new_descent = new_descent.max(height - baseline);
-                    changed |= height != old_height;
+                    changed |= crate::renderer::equation::normalized_simple_math_metrics(equation)
+                        .is_some();
                 }
                 Control::Picture(_) | Control::Table(_) | Control::Shape(_) => supported = false,
                 _ => {}
@@ -65,15 +68,22 @@ pub(super) fn refresh_equation_rows(
         let text_ascent = (f64::from(text_height) * 0.85).round() as i32;
         let text_descent = text_height - text_ascent;
         old_ascent = old_ascent.max(text_ascent);
-        old_descent = old_descent.max(text_descent);
+        old_logical_height = old_logical_height.max(text_height);
+        new_logical_height = new_logical_height.max(text_height);
         new_ascent = new_ascent.max(text_ascent);
         new_descent = new_descent.max(text_descent);
         // 저장 줄이 이 개체 합집합에서 나온 경우만 메트릭을 다시 발행한다.
         // 별도 줄 높이·수직 정렬 계약을 실제 상자의 대용으로 덮어쓰지 않는다.
-        if line.line_height == old_ascent + old_descent
+        if line.line_height == old_logical_height
             && (line.baseline_distance - old_ascent).abs() <= 1
         {
-            line.line_height = new_ascent + new_descent;
+            let occupied_height = new_ascent + new_descent;
+            // 저장 간격은 논리 상자 높이 뒤의 leading이다. 실제 기준선 합집합이
+            // 더 크면 그 차이는 leading에서 소비해 상자/간격을 이중 예약하지 않는다.
+            line.line_spacing = line
+                .line_spacing
+                .saturating_add(new_logical_height.saturating_sub(occupied_height));
+            line.line_height = occupied_height;
             line.baseline_distance = new_ascent;
             debug_assert!(hwpunit_to_px(line.line_height, DEFAULT_DPI) > 0.0);
         }

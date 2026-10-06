@@ -63,44 +63,95 @@ pub fn intrinsic_size_hwp(script: &str, font_size: u32) -> (u32, u32) {
     )
 }
 
-/// 보호되지 않은 수식의 실제 표시 상자를 측정과 paint가 함께 소비한다.
-/// 폭은 저장된 글줄의 개체 전진 계약을 유지한다. 한글 대체 경로는 기존처럼
-/// 같은 AST의 새 전진폭을 사용하며, 보호된 프레임은 원본 크기를 유지한다.
+/// 수학 글꼴 HYhwpEQ에는 한글 cmap이 없으므로 한글은 본문 대체 글꼴로 그린다.
+/// 일반 수식의 저장 프레임과 보호된 크기는 유지한다. 현재 한 글자 높이의
+/// 표현식/BOX에 남은 더 큰 캐시만 검증된 논리 상자로 다시 발행한다.
 pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u32, u32, i32) {
-    let cached = (
-        equation.common.width,
-        equation.common.height,
-        (equation.common.height as i32)
-            .saturating_mul(i32::from(equation.baseline))
-            .saturating_div(100),
-    );
-    // 글자 크기보다 작은 저장 프레임은 기존 stored_vertical_scale의
-    // 명시적 세로 압축 계약이다. 보호 속성과 별개로 이 배율을 보존한다.
-    if equation.common.size_protect
-        || (equation.common.height > 0 && equation.common.height < equation.font_size)
-    {
-        return cached;
-    }
-    let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
-    let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
-    let height = super::px_to_hwpunit(intrinsic.height, super::DEFAULT_DPI).max(1) as u32;
-    let has_cjk_fallback = equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
+    if !equation.common.size_protect
+        && equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
         && equation
             .script
             .chars()
-            .any(|ch| matches!(ch, '\u{AC00}'..='\u{D7A3}'));
-    if height == cached.1 && !has_cjk_fallback {
-        return cached;
+            .any(|ch| matches!(ch, '\u{AC00}'..='\u{D7A3}'))
+    {
+        let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
+        let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
+        (
+            super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32,
+            super::px_to_hwpunit(intrinsic.height, super::DEFAULT_DPI).max(1) as u32,
+            super::px_to_hwpunit(intrinsic.baseline, super::DEFAULT_DPI),
+        )
+    } else if let Some((height, baseline)) = normalized_simple_math_metrics(equation) {
+        (equation.common.width, height, baseline)
+    } else {
+        (
+            equation.common.width,
+            equation.common.height,
+            (equation.common.height as i32).saturating_mul(i32::from(equation.baseline)) / 100,
+        )
     }
-    (
-        if has_cjk_fallback {
-            super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32
-        } else {
-            cached.0
-        },
+}
+
+/// 한 글자 높이의 표현식과 같은 본체의 BOX가 가진 논리 상자 계약.
+/// 위첨자·분수·배열의 자연 글리프 높이를 유효한 저장 프레임과 동일시하지 않는다.
+pub(crate) fn normalized_simple_math_metrics(
+    equation: &crate::model::control::Equation,
+) -> Option<(u32, i32)> {
+    if equation.common.size_protect
+        || equation.attr & 1 != 0
+        || !equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
+    {
+        return None;
+    }
+    let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
+    let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
+    let fs = super::hwpunit_to_px(equation.font_size.max(1) as i32, super::DEFAULT_DPI);
+    if intrinsic.width <= 0.0 || math_layout_has_line_break(&intrinsic) {
+        return None;
+    }
+    let single_font_line = (intrinsic.height - fs).abs() <= f64::EPSILON * fs * 4.0;
+    let simple_box_height = simple_box_height(&intrinsic, fs);
+    let single_box_line = simple_box_height
+        .is_some_and(|height| (intrinsic.height - height).abs() <= f64::EPSILON * fs * 4.0);
+    if !single_font_line && !single_box_line {
+        return None;
+    }
+    let height = super::px_to_hwpunit(intrinsic.height, super::DEFAULT_DPI).max(1) as u32;
+    if equation.common.height <= height {
+        return None;
+    }
+    Some((
         height,
         super::px_to_hwpunit(intrinsic.baseline, super::DEFAULT_DPI),
-    )
+    ))
+}
+
+fn math_layout_has_line_break(value: &layout::LayoutBox) -> bool {
+    match &value.kind {
+        layout::LayoutKind::Newline => true,
+        layout::LayoutKind::Row(items) => items.iter().any(math_layout_has_line_break),
+        layout::LayoutKind::FontStyle { body, .. } | layout::LayoutKind::Color { body, .. } => {
+            math_layout_has_line_break(body)
+        }
+        _ => false,
+    }
+}
+
+fn simple_box_height(value: &layout::LayoutBox, fs: f64) -> Option<f64> {
+    match &value.kind {
+        layout::LayoutKind::Decoration {
+            kind: symbols::DecoKind::Box,
+            body,
+        } if (body.height - fs).abs() <= f64::EPSILON * fs * 4.0 => Some(value.height),
+        layout::LayoutKind::Row(items) => items
+            .iter()
+            .filter_map(|item| simple_box_height(item, fs))
+            .max_by(f64::total_cmp),
+        layout::LayoutKind::FontStyle { body, .. } | layout::LayoutKind::Color { body, .. } => {
+            simple_box_height(body, fs)
+        }
+        _ => None,
+    }
 }
 
 pub(crate) fn flow_width_hwp(equation: &crate::model::control::Equation) -> u32 {
