@@ -1122,3 +1122,39 @@ ignored `output/pr-review/pr7600/single-line-vpos-diagnostic.log`에 보존했�
 판정 일치 여부를 확인할 구현 후보이며, 새 원본 출력과 전체 TSV로
 검증하기 전에는 완료로 판정하지 않는다. 정식 회귀 검사·기대값은
 아직 변경하지 않았다.
+
+`ff6d0cb0d7bfe1a9feff39fbc39b82a79af42131`의 Native 재출력 전체 TSV는
+`output/pr-review/pr7600/gap-roundoff-debug-all/case-gap-roundoff-debug/silhouette.tsv`에
+보존했다. 16쪽은 62.40037%에서 85.08534%, 17쪽은 47.22169%에서
+92.56532%로 개선됐다. '조건 (가)에서'가 16쪽 오른쪽 단으로 옮겨져
+Print와 같은 소속임을 새 `review_016.png`에서 확인했다. 전체 18쪽 중
+6·11·14·15·16쪽은 여전히 90% 미만이며 정식 회귀 변경의 선행 조건을
+충족하지 않았다. 진단용 Native dev 빌드 결과이므로 최종 Native 및
+fresh WASM 검증을 대신하지 않는다. 이미지 출처는 같은 출력의
+`gap-roundoff-debug-panels/capture-source.json`에 고정했다.
+
+### 분수 자식의 기준선과 표시 글꼴 MATH 메트릭
+
+14쪽 문24의 단순 분수에서 독립 Print의 분자와 분모 기준선은
+856.320/872.000으로 간격이 15.680이다. 기존 Native는
+858.120/870.600으로 간격이 12.480이다. 분자·분모 모두 글자 크기는
+12이며, 저장 줄 원점 및 본문 기준선 차이와 수식 내부 간격 차이를
+별도로 확인했다. 기존 구현은 분자와 분모의 전체 글자 상자를 고정
+비율로 쌓아서 표시 글꼴의 기준선 이동과 괘선 주변 간격을 소비하지 않았다.
+
+공개 `LatinModernMath-Regular.woff2`의 MATH 테이블을 직접 읽었다.
+UPM은 1000이고 FractionNumeratorDisplayStyleShiftUp=677,
+FractionDenominatorDisplayStyleShiftDown=686, AxisHeight=250,
+FractionRuleThickness=40, 분자·분모의 표시 스타일 최소 간격은 각각 120이다.
+원본 폰트 SHA와 추출값은 ignored `fraction-math-constants.json`에 보존한다.
+[표준 분수 배치 규칙](https://www.w3.org/TR/mathml-core/#fraction-with-nonzero-line-thickness)에
+따라 이 이동량과 자식 기준선·하강부가 요구하는 최소 간격 중 큰 값을
+사용한다. 새 `fraction_geometry::position`이 자식 원점과 전체 점유·기준선을
+동시에 생산하고 EqLayout의 같은 LayoutBox를 각 출력 backend가 소비한다.
+수평 여백, 원본 저장 프레임과 크기 보호 계약은 이 후보에서 변경하지 않는다.
+
+단순 분수뿐 아니라 중첩 분수·분수 안 첨자·정상 대조군의 실제 출력을
+대조한다. 표준 수학 배치를 한컴의 저장 프레임 재발행 근거로 대체하지
+않으며, 본문 이월이나 괘선 겹침이 생기면 같은 실제 소비 경로에서 다시
+검토한다. 검증 전에는 개선 완료로 판정하지 않으며 정식 회귀·golden은
+변경하지 않는다.
