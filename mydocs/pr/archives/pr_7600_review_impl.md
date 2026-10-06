@@ -239,3 +239,89 @@ Native/fresh WASM의 같은 내용·배율로 확대해 수식 모양·장평·�
 연결했다. 페이지 점수와 판독 결과를 구분하고, 확인된 결함은 점수 통과로 면제하거나 정상
 기대값으로 고정하지 않는다. 미해결 결함·미검증은 해당 범위의 완료·회귀 추가/변경·승인·통합
 보류 사유로 기록하며, 출력 보정 뒤 새 source에서 영향 영역과 관련 페이지를 다시 검증한다.
+
+## #1308 원본 수식의 기준선 원인 분석과 보정 계획
+
+기준 입력 `samples/eq-002.hwp`와 `samples/hwpx/eq-002.hwpx`는 저장 제품 2020이며,
+기존 MCP 2020 Print 두 파일을 보존한다. 저장 프레임의 기준선과 현재 AST의 위첨자 배치를
+대조했다. 분수가 포함된 위첨자의 깊이를 반영하지 않고 높이의 0.7배로 본체 기준선을 정하는
+`layout_superscript` 때문에 본체가 위첨자 아래에서 충분히 내려오지 않는다. HWP 원본의 두 번째
+줄에서 실제 Print 숫자 3의 잉크 하단은 266.18이고, 현재 paint의 본체 기준선은 약 257.87이다.
+이 좌표는 진단 관측값이며 회귀 기대값이나 특정 문서 분기에 사용하지 않는다.
+
+독립 규칙은 OpenType MATH의 위첨자 기준선 올림과 위첨자 하단의 최소 여유다.
+[OpenType MATH](https://learn.microsoft.com/en-us/typography/opentype/spec/math)와
+[Noto 수학 폰트 제작 문서](https://github.com/notofonts/math/blob/main/documentation/building-math-fonts/index.md)를
+확인했고, 배포 `LatinModernMath-Regular.woff2`의 UPM 1,000에서 SuperscriptShiftUp 363,
+SuperscriptBottomMin 108, ScriptPercentScaleDown 70을 읽었다. 본체/위첨자의 기준선·깊이에서
+배치 결과를 계산하는 공통 helper를 마련하고 기존 첨자 크기 비율은 유지한다.
+
+호출 경로는 수식 AST → EqLayout의 위첨자/Row 결과 → inline_baseline_px와 EquationNode →
+SVG/Canvas2D/Skia/CanvasKit이다. 저장 흐름 프레임을 글자 장평으로 확대하는 예외나 페이지별
+좌표 보정은 추가하지 않는다. 단순 지수·분수 지수·키 큰 본체 및 #7593 두 원본을 대조하고,
+Native/fresh WASM 90%와 확대 판독을 충족하기 전에는 회귀 테스트·golden을 변경하지 않는다.
+
+## 위첨자 후보 재검토 결과와 원본 Print 자료 보존
+
+지침 변경은 `4acd0aa11db57e1078694501fdc95e5018b747c3`로 커밋했다. 그 뒤 미커밋
+위첨자 보정 후보를 Native에서 빌드하고 독립 Print와 대조했다. HWP/HWPX 각각의 전체 1쪽은
+77.29227%에서 **84.55997%**로 개선됐지만 90%에 미달했다. 공개 #7593 대조군은
+92.98588%를 유지했고, #1139 문28의 MCP Print 대조군 p15는 35.98720%였다.
+확대 판독에서 근호·분수 지수·글자 폭과 내부 간격, 원본 `eq-002`의 자동 번호 누락이 남았다.
+원본 HWPX의 자동 번호는 `num=11`, 앞 장식 `문`, 뒤 장식 `）`이며 Print에 표시된다.
+
+기존 위첨자 검사는 12건 중 11건 통과, `test_superscript_tall_base_no_overshoot` 1건 실패
+(exit 101)였다. 이는 기존 계약 실패의 실행 증거이며, 한컴의 정상 동작에 대한 최종 판정과
+구분한다. 시각 선행 조건과 기존 계약을 충족하지 않아 이 후보를 채택하지 않았고, 에이전트가
+추가한 helper와 부모 모듈 변경만 실험 전 source로 복원했다. 기존 회귀·기대값은 변경하지 않았다.
+후보 patch·helper·실행 파일·로그·review PNG는 `output/pr-review/pr7600/`에 보존한다.
+미커밋 후보의 실행 결과를 커밋 `4acd0aa11` 자체의 검증 결과로 보고하지 않는다.
+
+브라우저의 `CSS.getPlatformFontsForNode`로 실제 수식 face가 Times New Roman임을 확인했다.
+설치되지 않은 Latin Modern Math의 local 선언 때문에 배포 웹폰트 공급이 선택되지 않았다.
+배포 폰트를 넣은 **진단 SVG**만 따로 캡처한 보조값은 85.01772%였다. 이는 source 수정이나
+정식 Visual Sweep 통과가 아니며, 다른 face의 MATH 상수 적용만으로 완전한 보정을 주장하지 않는다.
+
+#1139 파일 전체의 86개 검사에서 사용하는 원본 19개를 보존한 채, 저장 제품별 MCP engine을
+명시해 Print PDF를 확보했다. 모두 `pdf_print_method=0`·1-up 출력이며 입력 preprocessing은
+없다. engine 2020의 실제 빌드는 11.0.0.9136, engine 2024는 13.0.0.3901이다. 다음 PDF는
+**독립 비교 자료**이며 RHWP의 기대값·golden을 갱신하거나 쪽수 차이를 승인하는 자료가 아니다.
+입력 SHA와 실제 Print 상태·로그·TSV·향후 실행 목록은 ignored output에 보존하고 Git에 넣지 않는다.
+
+| 입력 ID | 원본 | 독립 Print | RHWP / Print 전체 쪽수 | MCP job | PDF SHA-256 |
+| --- | --- | --- | --- | --- | --- |
+| `input-01` | [`samples/3-09월_교육_통합_2022.hwp`](../../../samples/3-09월_교육_통합_2022.hwp) | [2020 Print PDF](../assets/pr_7600_control_print_20261006/input-01-3-09월_교육_통합_2022-2020.pdf) | 23 / 23 | `40c81c4e-94c4-4949-9139-840389147099` | `523477f1bd0572f95665c3f3651d1deb4fb94701e96301abe8835edaee69dd04` |
+| `input-02` | [`samples/3-09월_교육_통합_2022.hwpx`](../../../samples/3-09월_교육_통합_2022.hwpx) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-02-3-09월_교육_통합_2022-2024.pdf) | 23 / 23 | `7fb180e8-77a5-47bc-bb39-4bad74738062` | `052f390b36e53a2374b3883a82c96164802784497259f1e7d5e3fe06b9a163f6` |
+| `input-03` | [`samples/3-09월_교육_통합_2023.hwp`](../../../samples/3-09월_교육_통합_2023.hwp) | [2020 Print PDF](../assets/pr_7600_control_print_20261006/input-03-3-09월_교육_통합_2023-2020.pdf) | 20 / 20 | `ec4e2d74-ad11-4f59-9b20-e84df82dbb38` | `9e28de788c17853eedc49d08b0f5e8f0a6907a5034d5270e44967c9a56d49853` |
+| `input-04` | [`samples/3-09월_교육_통합_2024-구분선아래20.hwp`](../../../samples/3-09월_교육_통합_2024-구분선아래20.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-04-3-09월_교육_통합_2024-구분선아래20-2024.pdf) | 23 / 23 | `ef0fc6d0-23f4-4741-9deb-4c30a6e50263` | `aff11a7842cc517da8e1104a799a9ce788765fccddcba7d74131cc1de41f0eba` |
+| `input-05` | [`samples/3-09월_교육_통합_2024-구분선아래20구분선위20.hwp`](../../../samples/3-09월_교육_통합_2024-구분선아래20구분선위20.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-05-3-09월_교육_통합_2024-구분선아래20구분선위20-2024.pdf) | 23 / 23 | `8f6a8721-a89f-457a-a61f-8615637e2591` | `729936c1e0d1ca0fe90924b8a396fcbbf871fd39f5c465081fffe63bb7545b28` |
+| `input-06` | [`samples/3-09월_교육_통합_2024-구분선아래20구분선위20.hwpx`](../../../samples/3-09월_교육_통합_2024-구분선아래20구분선위20.hwpx) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-06-3-09월_교육_통합_2024-구분선아래20구분선위20-2024.pdf) | 23 / 23 | `ec29c101-6145-48a8-a5c5-b1044659f4d5` | `56e352f4aa3748b952460176c6bdb1d2d1bcae242e00a214ac9084c5826d2fc3` |
+| `input-07` | [`samples/3-09월_교육_통합_2024-미주사이20.hwp`](../../../samples/3-09월_교육_통합_2024-미주사이20.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-07-3-09월_교육_통합_2024-미주사이20-2024.pdf) | 24 / 24 | `b17db545-d449-442b-a8f7-1d27d9950dcc` | `444f9338d0987130ffa850d755d90c95c4e3ae60d6b032c7c1dee69215a988e4` |
+| `input-08` | [`samples/3-10월_교육_통합_2022.hwp`](../../../samples/3-10월_교육_통합_2022.hwp) | [2020 Print PDF](../assets/pr_7600_control_print_20261006/input-08-3-10월_교육_통합_2022-2020.pdf) | 18 / 18 | `15b90e11-d4b7-45f6-847a-baf3d0a67891` | `91255993eb9fe5a9aa598ed42ea4d2ffcebf346f0f446bd80af31f43a439cbba` |
+| `input-09` | [`samples/3-11월_실전_통합_2022.hwp`](../../../samples/3-11월_실전_통합_2022.hwp) | [2020 Print PDF](../assets/pr_7600_control_print_20261006/input-09-3-11월_실전_통합_2022-2020.pdf) | 21 / 21 | `cc8b4953-2dbd-4bfd-b46a-4a3db2d8fc30` | `b5dc3580c0c3716963c9686ec62fd779cedfea97f50d8f49eb98a2ec8fae369a` |
+| `input-10` | [`samples/3-11월_실전_통합_2024-구분선없음구분선위20미주사이20구분선아래20.hwp`](../../../samples/3-11월_실전_통합_2024-구분선없음구분선위20미주사이20구분선아래20.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-10-3-11월_실전_통합_2024-구분선없음구분선위20미주사이20구분선아래20-2024.pdf) | 23 / 22 | `6ecebecb-7e6f-418a-8964-f126c12897cb` | `12f3b28ca1339359fd295b89d5c2a99994a12efbced8444f293b374190616eaf` |
+| `input-11` | [`samples/3-11월_실전_통합_2024-구분선위0미주사이0구분선아래0.hwp`](../../../samples/3-11월_실전_통합_2024-구분선위0미주사이0구분선아래0.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-11-3-11월_실전_통합_2024-구분선위0미주사이0구분선아래0-2024.pdf) | 21 / 21 | `c80861fa-691f-4707-9295-2154f1a55f59` | `d62195ebee8adb8694ba69d89d989f7d03166bd0c76f5bbca1375aeb06c0de6c` |
+| `input-12` | [`samples/3-11월_실전_통합_2024-구분선위0미주사이7구분선아래2.hwp`](../../../samples/3-11월_실전_통합_2024-구분선위0미주사이7구분선아래2.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-12-3-11월_실전_통합_2024-구분선위0미주사이7구분선아래2-2024.pdf) | 21 / 21 | `405acaad-e56e-4918-b2c5-078718d66841` | `7b434e2943eebd19e330452a92c9f9f1a74c5e16cd54e453c43c9f377a398b32` |
+| `input-13` | [`samples/3-11월_실전_통합_2024-구분선위0미주사이7구분선아래20.hwp`](../../../samples/3-11월_실전_통합_2024-구분선위0미주사이7구분선아래20.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-13-3-11월_실전_통합_2024-구분선위0미주사이7구분선아래20-2024.pdf) | 21 / 21 | `601c0352-2e86-4170-8bf8-f0ef92a98c0b` | `41c62d023d66e36d21a9913762b4e063fd7179c95ae1757da1fe98c0d22b61de` |
+| `input-14` | [`samples/3-11월_실전_통합_2024-구분선위20미주사이0구분선아래20.hwp`](../../../samples/3-11월_실전_통합_2024-구분선위20미주사이0구분선아래20.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-14-3-11월_실전_통합_2024-구분선위20미주사이0구분선아래20-2024.pdf) | 21 / 21 | `09e82f65-e333-4bb7-a2a6-2cc68fbb2e38` | `063a7ac10fccbb63096c6d09b934fce77c7e723a103e1fb36124588750924218` |
+| `input-15` | [`samples/3-11월_실전_통합_2024-구분선위20미주사이7구분선아래2.hwp`](../../../samples/3-11월_실전_통합_2024-구분선위20미주사이7구분선아래2.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-15-3-11월_실전_통합_2024-구분선위20미주사이7구분선아래2-2024.pdf) | 21 / 21 | `7c995fc0-505b-4fec-b76b-e5109db308ea` | `0d77e32e483ed383056554ef4963ce2ca0b234cf2fd2a23e1a0859449803017f` |
+| `input-16` | [`samples/3-11월_실전_통합_2024-구분선위9미주사이8구분선아래7.hwp`](../../../samples/3-11월_실전_통합_2024-구분선위9미주사이8구분선아래7.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-16-3-11월_실전_통합_2024-구분선위9미주사이8구분선아래7-2024.pdf) | 21 / 21 | `4ae4bd30-54bc-433b-9728-a1f5d9fc0717` | `244ec011e7dbff3c8b62889d50ed4858181a8fb9d15b484217fece8d04a98cc1` |
+| `input-17` | [`samples/hwp3-sample16-hwp5.hwp`](../../../samples/hwp3-sample16-hwp5.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-17-hwp3-sample16-hwp5-2024.pdf) | 65 / 64 | `228402de-7723-4344-8823-9a71a65c2ead` | `e25441458879234dee150af856cc45a38a576e607fa44e0630a13e1883112967` |
+| `input-18` | [`samples/test-image.hwp`](../../../samples/test-image.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-18-test-image-2024.pdf) | 5 / 5 | `0b39bf1a-dd27-4737-8e94-43e49bc9dbfc` | `c50cd5e6421d026385670aa631917c3d5b635c4539fa24cfadac8fcd75e88e3c` |
+| `input-19` | [`samples/수식-문자처럼취급-아님.hwp`](../../../samples/수식-문자처럼취급-아님.hwp) | [2024 Print PDF](../assets/pr_7600_control_print_20261006/input-19-수식-문자처럼취급-아님-2024.pdf) | 1 / 1 | `17eb2cf2-ac78-444a-9367-5aaf5325b11a` | `a195e2377cc542a5611cd967aaa4f40b760aea4360c1873ff4028e6c85b6148c` |
+
+쪽수가 다른 원본은 구분선 없는 2024 실전 문서(23 / 22)와 hwp3-sample16-hwp5(65 / 64)다.
+차이를 기대값 변경이나 글꼴 예외로 숨기지 않는다. 전체 범위의 Native/fresh WASM 90%와
+직접 판독을 충족하기 전까지 #1139 전체의 px 고정 검사 및 #1308 검사는 변경 보류 상태다.
+
+#1308의 두 독립 PDF도 같은 자료 폴더에 보존한다:
+[HWP Print PDF](../assets/pr_7600_control_print_20261006/pr7600-eq002-hwp-print-2020.pdf),
+[HWPX Print PDF](../assets/pr_7600_control_print_20261006/pr7600-eq002-hwpx-print-2020.pdf).
+
+사용자에게 최신 보정 후보의 `eq002-sup-hwp/review/review_001.png`(84.55997%)와
+공개 입력 `sup-public-control/review/review_001.png`(92.98588%)를 직접 표시했다. 두 이미지는
+실험 후보의 증적이며 이후 source의 최종 head 증적으로 재사용하지 않는다. 최종 판정은
+전체 검증 완료 전까지 머지 보류다.
+
+실험 전 source로 복원한 뒤 같은 기존 위첨자 검사 12건이 모두 통과했다(exit 0).
+이는 복원 확인이며 기존 전체 nextest의 #1139 1건·#1308 2건 실패를 해결한 결과가 아니다.
