@@ -404,3 +404,36 @@ MCP 2020 job `b4f7a1ba-7454-4b03-b269-b4b1c6db485a`의 다시 저장한 HWP는 �
 변경되어 진행 중인 fresh WASM 빌드는 최신 base 재정렬을 위해 종료했다(exit 143).
 출력 공백이나 검사 실패로 중단한 것이 아니며, 이 실행은 완료 증거가 아니다. 새 head에서
 Native/fresh WASM을 재산출하고 관련 모든 페이지의 90% 및 확대 판독을 확인한 뒤 회귀 검사를 변경한다.
+
+
+### 최신 base 재검증과 BOX 수식 보정
+
+최신 `upstream/devel` `48ff4bb9353bf8d29b7e1c0ac44df9bc5800dce8` 위로 기존
+체리픽과 보정 commit을 재배치했다. source `a4e94f55c8b1812d6d234839e44893c3f6f574d3`의
+Native와 fresh WASM을 새로 빌드해 비교했다. 원본 `eq-002.hwp`와 `eq-002.hwpx`의
+전체 1쪽은 두 출력 경로 모두 **94.02474%**였다. 공개 #7593 원본은 두 경로 모두
+92.66991%, 최소 입력은 96.81195%였다. 자동 점수 통과와 확대 판독 완료는 구분한다.
+
+#1139의 `3-10월_교육_통합_2022.hwp` 전체 18쪽도 두 경로에서 산출했다.
+18쪽 중 13쪽이 90% 미만이고 최저값은 p15 **35.91820%**다. p2/4/6/9/10/11/12/13/14/15/16/17/18이
+미달이며, 이 상태에서 #1139의 검사·기대값·baseline은 변경하지 않았다. 원본과 독립 Print를
+그대로 보존하고 실제 출력 보정을 계속한다. 페이지별 TSV·명령·빌드 해시는 ignored
+`output/pr-review/pr7600/rebased-case-native-all/`과 `rebased-case-wasm-all/`에 있다.
+
+p2의 같은 배율 review에서 한컴은 사각 테두리로 출력한 `BOX{…}`가 Native에서는
+문자 `BOX`로 표시됨을 확인했다. 원본 raw 수식 script에 BOX가 7개 있으며 영문과
+한글 payload가 모두 있다. 수식 fallback 표에 BOX가 없어 Text로 넘어가는 parser 결함이다.
+독립 Print의 사각 테두리와 MCP 재저장본의 일반 글자 BOX 높이(BaseUnit 900, 상자 높이 1080)가
+내용을 둘러싼 0.1em 여유의 근거다. 재저장본은 메트릭 진단이며 원본 대체 입력이 아니다.
+
+수정 범위는 `DECORATIONS → EqNode::Decoration → EqLayout::layout_decoration`의
+내용 폭·높이·기준선과 SVG/Canvas2D/Skia/CanvasKit의 동일 상자 테두리 출력이다.
+JSON decoration 이름과 CanvasKit 지원 판정도 함께 연결한다. 위쪽 장식인 bar/dyad와
+사각 테두리인 BOX를 구분하고, 원문 script·일반 장식의 상자 계약은 보존한다.
+문서 ID·절대 px·점수에 맞춘 조건은 사용하지 않는다. 영문/한글·분수 BOX와 중첩 BOX,
+일반 bar/dyad를 대조해야 하며, 원본 시각 선행 조건 충족 전에는 새 회귀를 추가하지 않는다.
+
+초기 BOX Native 빌드는 기존 `release-test` 대신 `release`를 지정한 실행 오류로
+중단했다(exit 143). 공유 캐시는 보존하고 올바른 profile로 다시 실행했다. 이 중단을
+컴파일 결함이나 통과 증거로 기록하지 않는다. BOX 수정 후의 수치·확대 판독·회귀 결과는
+새 source에서 산출하며 위 source의 점수를 재사용하지 않는다.

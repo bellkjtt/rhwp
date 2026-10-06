@@ -1317,6 +1317,25 @@ impl EqLayout {
         fs: f64,
     ) -> LayoutBox {
         let b = self.layout_node(body, fs);
+        // BOX는 위쪽 장식이 아니라 내용 전체를 감싼다. 원본 한컴 Print의
+        // 일반 글자 상자는 글자 높이에 양쪽 0.1em 여유를 더한 높이다.
+        if kind == super::symbols::DecoKind::Box {
+            let padding = fs * 0.1;
+            let mut body_box = b;
+            body_box.x = padding;
+            body_box.y = padding;
+            return LayoutBox {
+                x: 0.0,
+                y: 0.0,
+                width: body_box.width + 2.0 * padding,
+                height: body_box.height + 2.0 * padding,
+                baseline: padding + body_box.baseline,
+                kind: LayoutKind::Decoration {
+                    kind,
+                    body: Box::new(body_box),
+                },
+            };
+        }
         let deco_h = fs * 0.25;
 
         let mut body_box = b;

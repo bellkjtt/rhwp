@@ -2057,7 +2057,8 @@ fn canvaskit_equation_layout_is_supported(layout: &LayoutBox) -> bool {
             LayoutKind::Decoration { kind, body } => {
                 matches!(
                     kind,
-                    DecoKind::Hat
+                    DecoKind::Box
+                        | DecoKind::Hat
                         | DecoKind::Dot
                         | DecoKind::DDot
                         | DecoKind::Bar

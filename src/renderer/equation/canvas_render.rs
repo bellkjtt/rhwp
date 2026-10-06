@@ -322,9 +322,15 @@ fn render_box(
         }
         LayoutKind::Decoration { kind, body } => {
             render_box(ctx, body, x, y, color, fs, italic, bold);
-            let deco_y = y + fs * 0.05;
-            let mid_x = x + body.x + body.width / 2.0;
-            draw_decoration(ctx, *kind, mid_x, deco_y, body.width, color, fs);
+            if *kind == DecoKind::Box {
+                ctx.set_stroke_style_str(color);
+                ctx.set_line_width(fs * 0.03);
+                ctx.stroke_rect(x, y, lb.width, lb.height);
+            } else {
+                let deco_y = y + fs * 0.05;
+                let mid_x = x + body.x + body.width / 2.0;
+                draw_decoration(ctx, *kind, mid_x, deco_y, body.width, color, fs);
+            }
         }
         LayoutKind::FontStyle { style, body } => {
             let (new_italic, new_bold) = match style {

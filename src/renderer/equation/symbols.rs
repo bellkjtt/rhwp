@@ -481,6 +481,7 @@ static FUNCTIONS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
 /// 글자 장식 명령어
 pub static DECORATIONS: LazyLock<HashMap<&'static str, DecoKind>> = LazyLock::new(|| {
     HashMap::from([
+        ("box", DecoKind::Box),
         ("hat", DecoKind::Hat),
         ("check", DecoKind::Check),
         ("tilde", DecoKind::Tilde),
@@ -654,6 +655,7 @@ pub fn lookup_equation_pua(ch: char) -> Option<&'static str> {
 /// 글자 장식 종류
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum DecoKind {
+    Box,           // 내용 전체를 감싸는 사각 테두리
     Hat,           // ^
     Check,         // ˇ
     Tilde,         // ~

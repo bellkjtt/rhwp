@@ -4448,6 +4448,14 @@ export class CanvasKitLayerRenderer {
             ? this.drawEquationBracket(canvas, layout.kind.right, x + layout.width, y, layout.height, color, fontSize)
             : true);
       case 'decoration':
+        if (layout.kind.decoration === 'box') {
+          const strokeWidth = fontSize * 0.03;
+          return child(layout.kind.body)
+            && this.drawEquationLine(canvas, x, y, x + layout.width, y, color, strokeWidth)
+            && this.drawEquationLine(canvas, x + layout.width, y, x + layout.width, y + layout.height, color, strokeWidth)
+            && this.drawEquationLine(canvas, x + layout.width, y + layout.height, x, y + layout.height, color, strokeWidth)
+            && this.drawEquationLine(canvas, x, y + layout.height, x, y, color, strokeWidth);
+        }
         return child(layout.kind.body)
           && this.drawEquationDecoration(
             canvas,

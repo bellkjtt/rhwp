@@ -3196,6 +3196,7 @@ fn equation_matrix_style(style: MatrixStyle) -> &'static str {
 
 fn equation_decoration(kind: DecoKind) -> &'static str {
     match kind {
+        DecoKind::Box => "box",
         DecoKind::Hat => "hat",
         DecoKind::Check => "check",
         DecoKind::Tilde => "tilde",

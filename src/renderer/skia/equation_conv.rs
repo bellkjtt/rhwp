@@ -494,9 +494,21 @@ fn render_box(
         }
         LayoutKind::Decoration { kind, body } => {
             render_box(canvas, fonts, body, x, y, color, fs, italic, bold);
-            let deco_y = y + fs * 0.05;
-            let mid_x = x + body.x + body.width / 2.0;
-            draw_decoration(canvas, *kind, mid_x, deco_y, body.width, color, fs);
+            if *kind == DecoKind::Box {
+                canvas.draw_rect(
+                    skia_safe::Rect::from_xywh(
+                        x as f32,
+                        y as f32,
+                        lb.width as f32,
+                        lb.height as f32,
+                    ),
+                    &stroke_paint(color, fs * 0.03),
+                );
+            } else {
+                let deco_y = y + fs * 0.05;
+                let mid_x = x + body.x + body.width / 2.0;
+                draw_decoration(canvas, *kind, mid_x, deco_y, body.width, color, fs);
+            }
         }
         LayoutKind::FontStyle { style, body } => {
             let (new_italic, new_bold) = match style {

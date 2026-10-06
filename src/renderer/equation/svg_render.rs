@@ -425,9 +425,16 @@ fn render_box(
         }
         LayoutKind::Decoration { kind, body } => {
             render_box(svg, body, x, y, color, fs, italic, bold);
-            let deco_y = y + fs * 0.05;
-            let mid_x = x + body.x + body.width / 2.0;
-            draw_decoration(svg, *kind, mid_x, deco_y, body.width, color, fs);
+            if *kind == DecoKind::Box {
+                svg.push_str(&format!(
+                    "<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
+                    x, y, lb.width, lb.height, color, fs * 0.03,
+                ));
+            } else {
+                let deco_y = y + fs * 0.05;
+                let mid_x = x + body.x + body.width / 2.0;
+                draw_decoration(svg, *kind, mid_x, deco_y, body.width, color, fs);
+            }
         }
         LayoutKind::FontStyle { style, body } => {
             let (new_italic, new_bold) = match style {
