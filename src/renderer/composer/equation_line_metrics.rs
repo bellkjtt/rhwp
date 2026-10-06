@@ -51,8 +51,9 @@ pub(super) fn refresh_equation_rows(
                     new_logical_height = new_logical_height.max(height);
                     new_ascent = new_ascent.max(baseline);
                     new_descent = new_descent.max(height - baseline);
-                    changed |= crate::renderer::equation::normalized_simple_math_metrics(equation)
-                        .is_some();
+                    // 한글 대체 글꼴 경로도 같은 flow 메트릭을 발행한다.
+                    // 특정 정규화 helper의 실행 여부 대신 실제 변경을 소비한다.
+                    changed |= height != old_height || baseline != old_baseline;
                 }
                 Control::Picture(_) | Control::Table(_) | Control::Shape(_) => supported = false,
                 _ => {}
