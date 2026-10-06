@@ -26,6 +26,11 @@ fn normalize_host(paragraph: &mut Paragraph, styles: &ResolvedStyleSet) -> Optio
     };
     let common = &rectangle.common;
     let geometry = &rectangle.drawing.shape_attr;
+    let extent_scale = |scale: f64, current: u32, original: u32| {
+        original > 0
+            && (scale - f64::from(current) / f64::from(original)).abs()
+                <= f64::EPSILON * scale.abs().max(1.0) * 4.0
+    };
     if !common.treat_as_char
         || common.size_protect
         || geometry.rotation_angle != 0
@@ -33,8 +38,16 @@ fn normalize_host(paragraph: &mut Paragraph, styles: &ResolvedStyleSet) -> Optio
         || geometry.vert_flip
         || geometry.render_b != 0.0
         || geometry.render_c != 0.0
-        || geometry.render_sx != 1.0
-        || geometry.render_sy != 1.0
+        || !extent_scale(
+            geometry.render_sx,
+            geometry.current_width,
+            geometry.original_width,
+        )
+        || !extent_scale(
+            geometry.render_sy,
+            geometry.current_height,
+            geometry.original_height,
+        )
     {
         return None;
     }
@@ -77,6 +90,8 @@ fn normalize_host(paragraph: &mut Paragraph, styles: &ResolvedStyleSet) -> Optio
     rectangle.drawing.text_box.as_mut()?.paragraphs = projected;
     rectangle.drawing.shape_attr.current_height = new_height as u32;
     rectangle.drawing.shape_attr.rotation_center.y = new_height / 2;
+    rectangle.drawing.shape_attr.render_sy =
+        f64::from(new_height) / f64::from(rectangle.drawing.shape_attr.original_height);
     let host = &mut paragraph.line_segs[0];
     let old_line_height = host.line_height;
     host.line_height = host.line_height.saturating_add(delta);
