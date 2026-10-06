@@ -3678,6 +3678,7 @@ pub struct LayoutEngine {
 
 mod anchor_box_flow;
 mod border_rendering;
+mod column_separators;
 mod fill_background;
 mod fixed_textbox_flow;
 mod hidden_paragraph_marker;
@@ -6228,6 +6229,21 @@ impl LayoutEngine {
                                         ),
                                     );
                                 }
+                                Control::ColumnDef(definition) => {
+                                    for mut line in column_separators::master_page_lines(
+                                        mp, definition, layout, self.dpi,
+                                    ) {
+                                        line.section_index = Some(section_index);
+                                        line.para_index = Some(pi);
+                                        line.control_index = Some(ci);
+                                        let bbox = line.ink_bbox();
+                                        target_node.children.push(RenderNode::new(
+                                            tree.next_id(),
+                                            RenderNodeType::Line(line),
+                                            bbox,
+                                        ));
+                                    }
+                                }
                                 _ => {}
                             }
                             if let (Some(layer), Some(temp_parent)) = (layer, temp_parent.as_mut())
@@ -7267,51 +7283,10 @@ impl LayoutEngine {
         y_start: f64,
         y_end: f64,
     ) {
-        // [Task #1333 v2] 콘텐츠 높이(y_end)가 body 영역 하단을 넘으면 하단에서 자른다.
-        // 꽉 찬 페이지에서 prev_zone_y_end 가 trailing 간격 등으로 body 를 초과해 구분선이
-        // 페이지 밖까지 그려지던 결함(예: 대상문서 p22 105%) 정정. 부분 페이지(콘텐츠 < body
-        // 하단)와 sub-page zone 은 영향 없음.
-        let body_bottom = zone_layout.body_area.y + zone_layout.body_area.height;
-        let y_end = y_end.min(body_bottom);
-        if zone_layout.column_areas.len() < 2 || zone_layout.separator_type == 0 || y_end <= y_start
-        {
-            return;
-        }
-        let line_width = border_width_to_px(zone_layout.separator_width).max(0.5);
-        let dash = match zone_layout.separator_type {
-            2 => StrokeDash::Dash,
-            3 => StrokeDash::Dot,
-            4 => StrokeDash::DashDot,
-            5 => StrokeDash::DashDotDot,
-            6 => StrokeDash::Dash,
-            7 => StrokeDash::Dot,
-            _ => StrokeDash::Solid,
-        };
-        for i in 0..zone_layout.column_areas.len() - 1 {
-            let left = &zone_layout.column_areas[i];
-            let right = &zone_layout.column_areas[i + 1];
-            let (left, right) = if left.x <= right.x {
-                (left, right)
-            } else {
-                (right, left)
-            };
-            let sep_x = (left.x + left.width + right.x) / 2.0;
-            let sep_id = tree.next_id();
-            let sep_line = LineNode::new(
-                sep_x,
-                y_start,
-                sep_x,
-                y_end,
-                LineStyle {
-                    color: zone_layout.separator_color,
-                    width: line_width,
-                    dash,
-                    ..Default::default()
-                },
-            );
-            let sep_bbox = sep_line.ink_bbox();
-            let sep_node = RenderNode::new(sep_id, RenderNodeType::Line(sep_line), sep_bbox);
-            body_node.children.push(sep_node);
+        for line in column_separators::separator_lines(zone_layout, y_start, y_end) {
+            let bbox = line.ink_bbox();
+            let node = RenderNode::new(tree.next_id(), RenderNodeType::Line(line), bbox);
+            body_node.children.push(node);
         }
     }
 

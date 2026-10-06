@@ -135,6 +135,26 @@ pub(crate) fn flow_height_hwp(equation: &crate::model::control::Equation) -> u32
     flow_metrics_hwp(equation).1
 }
 
+/// 줄 측정과 실제 인라인 원점이 같은 수식 기준선 거리를 소비한다.
+/// 저장 기준선이 없는 입력만 실제 수식 메트릭으로 되돌아간다.
+pub(crate) fn inline_baseline_px(
+    equation: &crate::model::control::Equation,
+    intrinsic: &layout::LayoutBox,
+    dpi: f64,
+) -> f64 {
+    let (_, height, baseline) = flow_metrics_hwp(equation);
+    if height > 0 && equation.baseline > 0 && equation.baseline <= 100 {
+        super::hwpunit_to_px(baseline, dpi)
+    } else {
+        intrinsic.baseline
+            * stored_vertical_scale(
+                super::hwpunit_to_px(height as i32, dpi),
+                intrinsic.height,
+                super::hwpunit_to_px(equation.font_size as i32, dpi),
+            )
+    }
+}
+
 /// 측정한 한글 전진폭을 그대로 글자 원점에 적용한다. 글리프 자체 크기는 바꾸지 않는다.
 /// CJK가 아닌 문자는 기존 추정 폭을 보존한다.
 pub(crate) fn positioned_cjk_text(text: &str, font_size: f64, width: f64) -> Vec<(char, f64)> {

@@ -540,7 +540,13 @@ fn compose_paragraph_scoped(
         numbering_text: None,
         tac_controls,
         footnote_positions,
-        tab_extended: para.tab_extended.clone(),
+        // 탭의 저장 전진폭은 저장 줄에 속한다. 줄이 없거나 합성 줄이면 현재
+        // 커서와 문단 TabDef로 다시 배치해야 인라인 개체 폭을 이중 반영하지 않는다.
+        tab_extended: if super::para_has_no_stored_line_segs(para) {
+            Vec::new()
+        } else {
+            para.tab_extended.clone()
+        },
         horizontal_shaping: None,
         frame_geometry: None,
     };

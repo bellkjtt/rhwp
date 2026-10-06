@@ -48,6 +48,8 @@ use base64::Engine;
 
 #[cfg(not(target_arch = "wasm32"))]
 mod font_file_lookup;
+#[cfg(not(target_arch = "wasm32"))]
+mod system_fonts;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 use font_file_lookup::FontFileName;
 #[cfg(not(target_arch = "wasm32"))]

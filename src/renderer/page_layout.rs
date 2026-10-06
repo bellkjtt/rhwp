@@ -208,7 +208,7 @@ impl PageLayoutInfo {
 }
 
 /// 다단 영역 계산
-fn calculate_column_areas(
+pub(crate) fn calculate_column_areas(
     body_area: &LayoutRect,
     column_def: &ColumnDef,
     dpi: f64,

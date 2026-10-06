@@ -5101,22 +5101,14 @@ impl LayoutEngine {
                     } else {
                         layout_box.height
                     };
-                    let eq_baseline = layout_box.baseline
-                        * crate::renderer::equation::stored_vertical_scale(
-                            eq_h,
-                            layout_box.height,
-                            font_size_px,
-                        );
+                    let eq_baseline =
+                        crate::renderer::equation::inline_baseline_px(eq, &layout_box, self.dpi);
                     let tac_row = tac_row_for(tac_k).min(row_inline_x.len() - 1);
                     let row_y = (y + tac_row as f64 * (line_height + line_spacing_px)
                         - zero_endnote_boundary_result_shift)
                         .max(col_area_y);
                     let inline_x = row_inline_x[tac_row];
-                    let eq_y = if cell_ctx.is_some() {
-                        (row_y + baseline - eq_baseline).max(row_y)
-                    } else {
-                        row_y + baseline - eq_baseline
-                    };
+                    let eq_y = row_y + baseline - eq_baseline;
                     let (eq_cell_idx, eq_cell_para_idx) = if let Some(ref ctx) = cell_ctx {
                         (
                             ctx.path.first().map(|e| e.cell_index),
@@ -9200,23 +9192,14 @@ impl LayoutEngine {
                             } else {
                                 layout_box.height
                             };
-                            let eq_baseline = layout_box.baseline
-                                * crate::renderer::equation::stored_vertical_scale(
-                                    eq_h,
-                                    layout_box.height,
-                                    font_size_px,
-                                );
-                            // 텍스트와 섞인 인라인 수식뿐 아니라 공백 run 안의 TAC 수식도
-                            // baseline을 맞춘다. 일반 수식은 intrinsic 기준선을 유지하고
-                            // 압축 프레임은 backend와 같은 비율을 적용한 기준선을 쓴다.
-                            let eq_y = if cell_ctx.is_none()
-                                && comp_line.runs.iter().all(|r| {
-                                    !r.text.chars().any(|c| c > '\u{001F}' && c != '\u{FFFC}')
-                                }) {
-                                y + baseline - eq_baseline
-                            } else {
-                                (y + baseline - eq_baseline).max(y)
-                            };
+                            let eq_baseline = crate::renderer::equation::inline_baseline_px(
+                                eq,
+                                &layout_box,
+                                self.dpi,
+                            );
+                            // 측정한 기준선 거리로 원점을 정한다. 저장 상자 안의 빈 높이도
+                            // 기준선의 일부이므로 줄 상단 clamp로 다시 덮어쓰지 않는다.
+                            let eq_y = y + baseline - eq_baseline;
                             let (eq_cell_idx, eq_cell_para_idx) = if let Some(ref ctx) = cell_ctx {
                                 (
                                     ctx.path.first().map(|e| e.cell_index),
