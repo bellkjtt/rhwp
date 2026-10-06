@@ -361,7 +361,9 @@ pub(super) fn prepare(
 ) -> Option<StoredTacPlan> {
     // 완전한 저장 줄 계약은 표별 높이를 합산하지 않고, 같은 pen/end를 배치에도 전달한다.
     if !page.profile.session_edited()
-        && (page.profile.hwp5_stored_pagination_layout() || page.profile.hwpx_stored_layout())
+        && (page.profile.hwp5_container()
+            || page.profile.hwp5_stored_pagination_layout()
+            || page.profile.hwpx_stored_layout())
         && page.side_wrap_empty
     {
         // 저장 단일 개체 줄은 캡션과 바깥 여백도 소유한다. 같은 줄의 공백은
@@ -559,7 +561,8 @@ pub(super) fn prepare(
             });
             if measured_fits && fits {
                 let source_origin = (single_saved_line
-                    && page.profile.hwp5_stored_pagination_layout())
+                    && (page.profile.hwp5_container()
+                        || page.profile.hwp5_stored_pagination_layout()))
                 .then(|| {
                     let seg = &para.line_segs[0];
                     // Authenticate the shared coordinate axis at the original

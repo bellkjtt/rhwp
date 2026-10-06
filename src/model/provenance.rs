@@ -60,6 +60,7 @@ pub struct LayoutCompatibilityProfile {
     hwpx_container: bool,
     hwp5_origin_hwpx: bool,
     native_hwp5_layout: bool,
+    hwp5_container: bool,
     hangul2024_layout: bool,
     /// 이 세션에서 편집 명령이 문서를 변조했다(native HWP5 섹션의 raw_stream 소실).
     /// 저장 시점 형상 전용 보정(선언 높이 fit-down 등)은 편집 문서에서 꺼야 한다 —
@@ -84,9 +85,21 @@ impl LayoutCompatibilityProfile {
             hwpx_container,
             hwp5_origin_hwpx,
             native_hwp5_layout,
+            hwp5_container: native_hwp5_layout,
             hangul2024_layout: false,
             session_edited: false,
         }
+    }
+
+    /// 계보와 별개로 입력이 실제 HWP5 바이너리 컨테이너인지 확인한다.
+    /// 옛 작성일이 남은 저장본도 유효한 현재 저장 줄 상자를 가질 수 있다.
+    pub fn hwp5_container(&self) -> bool {
+        self.hwp5_container
+    }
+
+    pub(crate) fn with_hwp5_container(mut self, enabled: bool) -> Self {
+        self.hwp5_container = enabled;
+        self
     }
 
     /// 이 세션의 편집 변조를 표시한다. `Document::layout_profile` 만 이 값을

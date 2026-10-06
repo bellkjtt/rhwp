@@ -408,6 +408,7 @@ impl Document {
                 && !self.provenance.hwp3_lineage
                 && !self.provenance.hwpx_lineage,
         )
+        .with_hwp5_container(self.provenance.format == SourceFormat::Hwp5)
         .with_hwp3_password_layout(
             self.provenance.format == SourceFormat::Hwp3 && self.header.encrypted,
         )
