@@ -862,12 +862,7 @@ impl TypesetEngine {
             && fmt.line_heights.len() == 1
             && st.current_height > available * 0.92
             && st.current_height + h4f <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX
-            && (en_ctrl.paragraphs.first().is_some_and(|head| {
-                styles
-                    .para_styles
-                    .get(head.para_shape_id as usize)
-                    .is_some_and(|style| !style.keep_with_next)
-            }) || en_ctrl
+            && en_ctrl
                 .paragraphs
                 .get(1)
                 .map(|next_para| {
@@ -888,7 +883,7 @@ impl TypesetEngine {
                         };
                     st.current_height + fmt.line_advance(0) + next_h <= title_body_limit
                 })
-                .unwrap_or(true))
+                .unwrap_or(true)
             && endnote_has_visible_payload
     }
 
