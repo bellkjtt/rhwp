@@ -3,7 +3,6 @@
 //! 같은 스크립트의 독립 MCP 2020 재저장에서 일반 줄은 BaseUnit과
 //! 86% 기준선, 단일 글자 줄의 bar는 1.2배 높이와 88% 기준선을,
 //! 단일 글자 위첨자는 7/6배 높이와 88% 기준선을 기록한다.
-//! 글자 줄만 있는 분자·분모의 분수는 2.3배 높이와 66% 기준선이다.
 //! 대체 글꼴의 글리프 상자와 저장 흐름 프레임을 구분한다.
 
 use super::layout::{LayoutBox, LayoutKind};
@@ -40,9 +39,6 @@ fn frame(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
         {
             Some((fs * 7.0 / 6.0, fs * 7.0 / 6.0 * 0.88))
         }
-        LayoutKind::Fraction { numer, denom } if font_line(numer, fs) && font_line(denom, fs) => {
-            Some((fs * 2.3, fs * 2.3 * 0.66))
-        }
         LayoutKind::FontStyle { body, .. } => frame(body, fs),
         LayoutKind::Row(items) => {
             let mut ascent = 0.0_f64;
@@ -58,7 +54,7 @@ fn frame(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
     }
 }
 
-/// 중첩 분수·배열·아래첨자·복합 첨자·근호·다줄·다중 장식은 이 계약이 아니다.
+/// 분수·배열·아래첨자·복합 첨자·근호·다줄·다중 장식은 이 계약이 아니다.
 pub(super) fn metrics(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
     frame(value, fs)
 }
