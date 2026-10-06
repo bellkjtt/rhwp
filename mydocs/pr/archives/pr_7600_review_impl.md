@@ -124,3 +124,17 @@ CanvasKit이 같은 원점을 소비합니다. ⊥/⊤의 추정 advance는 해�
 역산한 px 값이 아니라 독립 글꼴 메트릭의 차원 없는 비율입니다. 다섯 선택지의 문단 탭 위치·
 수식/글자 순서·누락과 최소 정상 입력을 다시 확인합니다. width 수정 전 WASM build는
 새 source 검증으로 오인하지 않도록 종료했고 원시 로그만 보존했습니다.
+
+Native 간격 보정의 재출력은 공개 원본92.98588%, 최소 입력99.43478%로 모두 전체1쪽 gate를
+통과했습니다. ①/② 관계 기호와 양쪽 수식의 간격, 다섯 선택지/뒤 정답의 순서·누락,
+④/⑤ 탭 원점을 전체 페이지와 확대 패널에서 직접 대조했습니다. 수식/글자 획·작은 font 원점
+차이는 남아 있고 완전 동일 출력이라고 쓰지 않습니다. 새 source는 `9ee2878be`입니다.
+
+사용자 요청에 따라 `THIRD_PARTY_LICENSES.md`에 폰트의2.001 버전·저작권·OFL 전문·출처를
+등록했습니다. 실제 배포에서 전문이 빠지지 않도록 Chrome/Firefox의 OFL text/집계 문서 복사와
+VS Code의 math font/라이선스/집계 문서 및 실제 webview URI를 보완했습니다.
+Studio·Chrome·Firefox build, VS Code typecheck/webpack build, font/extension 배포 계약9PASS입니다.
+새37번째 폰트의226,456bytes 추가만큼 inventory는37개/22,877,752bytes로 변경했습니다.
+이는 알려진 신규 자산의 재고 등록이고 renderer golden·래칫 오차 허용치 변경이 아닙니다.
+최신 Rust WASM의 렌더 검증과 font 배포 자산 검사를 구분하며 위 build만으로 새 WASM의
+시각 확인을 완료했다고 주장하지 않습니다.
