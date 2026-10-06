@@ -56,6 +56,8 @@ impl TypesetEngine {
         vars: EndnoteEmitVars,
         flow: EndnoteFlowState,
     ) -> EndnoteFlowState {
+        let projected_endnote = super::row_projection::project_equation_rows(en_ctrl, styles);
+        let en_ctrl = projected_endnote.as_ref();
         let EndnoteEmitVars {
             boundary_prev_endnote_had_vpos_rewind,
             endnote_has_vpos_rewind,

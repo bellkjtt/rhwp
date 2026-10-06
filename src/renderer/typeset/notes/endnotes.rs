@@ -17,6 +17,7 @@ pub(in crate::renderer::typeset) mod metrics;
 pub(in crate::renderer::typeset) mod paragraph;
 pub(in crate::renderer::typeset) mod prepare;
 pub(in crate::renderer::typeset) mod profile;
+pub(in crate::renderer::typeset) mod row_projection;
 pub(in crate::renderer::typeset) mod types;
 
 impl TypesetEngine {

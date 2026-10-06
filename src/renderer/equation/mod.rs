@@ -74,7 +74,11 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
             .saturating_mul(i32::from(equation.baseline))
             .saturating_div(100),
     );
-    if equation.common.size_protect {
+    // 글자 크기보다 작은 저장 프레임은 기존 stored_vertical_scale의
+    // 명시적 세로 압축 계약이다. 보호 속성과 별개로 이 배율을 보존한다.
+    if equation.common.size_protect
+        || (equation.common.height > 0 && equation.common.height < equation.font_size)
+    {
         return cached;
     }
     let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
