@@ -842,8 +842,7 @@ impl LayoutEngine {
             let tokens = super::super::equation::tokenizer::tokenize(&eq.script);
             let ast = super::super::equation::parser::EqParser::new(tokens).parse();
             let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
-            let layout_box =
-                super::super::equation::layout::EqLayout::for_equation(eq, self.dpi).layout(&ast);
+            let layout_box = super::super::equation::layout_for_paint(eq, &ast, self.dpi);
             let color_str = super::super::equation::svg_render::eq_color_to_svg(eq.color);
             let svg_content = super::super::equation::svg_render::render_equation_svg(
                 &layout_box,
@@ -4011,10 +4010,7 @@ impl LayoutEngine {
                             let ast = super::super::equation::parser::EqParser::new(tokens).parse();
                             let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                             let layout_box =
-                                super::super::equation::layout::EqLayout::for_equation(
-                                    eq, self.dpi,
-                                )
-                                .layout(&ast);
+                                super::super::equation::layout_for_paint(eq, &ast, self.dpi);
                             let color_str =
                                 super::super::equation::svg_render::eq_color_to_svg(eq.color);
                             let svg_content =
