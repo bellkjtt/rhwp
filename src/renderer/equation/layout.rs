@@ -491,13 +491,37 @@ impl EqLayout {
             };
         }
         let w = estimate_text_width(text, fs, false);
-        LayoutBox {
+        let symbol = LayoutBox {
             x: 0.0,
             y: 0.0,
             width: w,
             height: fs,
             baseline: fs * 0.8,
             kind: LayoutKind::MathSymbol(text.to_string()),
+        };
+        if super::symbols::is_relation_symbol(text) {
+            // 관계 기호의 glyph와 양쪽 여백을 공통 배치 결과로 보존한다.
+            let padding = fs * 0.15;
+            let space = |x| LayoutBox {
+                x,
+                y: 0.0,
+                width: padding,
+                height: fs,
+                baseline: fs * 0.8,
+                kind: LayoutKind::Space(padding),
+            };
+            let mut glyph = symbol;
+            glyph.x = padding;
+            LayoutBox {
+                x: 0.0,
+                y: 0.0,
+                width: w + padding * 2.0,
+                height: fs,
+                baseline: fs * 0.8,
+                kind: LayoutKind::Row(vec![space(0.0), glyph, space(padding + w)]),
+            }
+        } else {
+            symbol
         }
     }
 
@@ -1421,7 +1445,9 @@ fn estimate_unicode_char_width(ch: char) -> f64 {
         '⋯' | '…' | '⋮' | '⋱' => 0.8,
         // 기타 수학 기호 — 좁은 것
         '∂' | '∅' | '∇' | '∞' | '∠' | '∡' | '∢' | '⊾' => 0.6,
-        '⊥' | '⊤' | '°' | '‰' | '‱' | '♯' => 0.5,
+        // 실제 수학 face의 ⊥/⊤ advance는 약0.78em이며 좁은 기호와 다르다.
+        '⊥' | '⊤' => 0.8,
+        '°' | '‰' | '‱' | '♯' => 0.5,
         'ℵ' | 'ℏ' | 'ı' | 'ȷ' | 'ℓ' | '℘' | 'ℑ' | 'ℜ' | 'ℒ' | 'Å' | '℧' => 0.6,
         '℃' | '℉' => 0.9,
         '△' | '▽' | '○' | '◇' | '⋄' => 0.7,

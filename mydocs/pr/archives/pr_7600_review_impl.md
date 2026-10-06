@@ -79,3 +79,48 @@ engine2020 짝이 실제 위 PDF로 결정됨을 확인했습니다. 기존 원�
 
 보정 복원 후 동일 정식 배치 검사3PASS/0FAIL(exit0)을 확인했습니다.
 로그 `output/pr-review/pr7600/logs/placement-red.log`, `placement-green.log`를 보존했습니다.
+
+## 발문 수식의 저장 프레임과 실제 paint 폭 분리
+
+사용자가 발문 첫 수식이 Print와 너무 다르다고 지적했습니다. 원본 `rm dyadAB`의
+common.width3000HWPUNIT은 흐름 예약 폭40(96DPI), 동일 BaseUnit1100의 intrinsic AB 장식 폭은
+20.02이며 SVG의 최종 transform이약1.998배 확대했습니다. 독립 PDF의 실제 AB·화살표 glyph는
+약20 폭이고 뒤 본문은 예약 폭을 지나 시작합니다. 같은 보기의 `rm dyad AB`는 저장 폭1500이므로
+기존 강제 확대가 거의 없어 같은 글자가 문맥에 따라2배 다른 장평이 됐습니다.
+
+생산 `Equation.font_size/BaseUnit → EqLayout::for_equation의 공통 glyph/장식 layout`과
+흐름 측정 `flow_metrics_hwp → tac_w/줄 커서 → EquationNode.bbox`를 구분합니다.
+SVG/web_canvas/Skia/Studio CanvasKit은 현재 bbox.width/layout.width로 paint만 다시 늘립니다.
+최종 paint에서 이 가로 확대를 제거하고 BaseUnit과 공통 intrinsic layout을 그대로 소비합니다.
+예약 bbox와 뒤 텍스트의 위치·내용 소유는 보존하고, 기존 압축 높이의 공통 세로 비율은 유지합니다.
+문서 ID·dyad 전용 폭·특정 비율 조건·clamp는 추가하지 않습니다.
+
+먼저 동일 두 문서를 Native로 다시 대조하고 발문의 실제 glyph/화살표·뒤 글자 및 선택지를 직접
+확인합니다. Native/fresh WASM 최저90% 이후 동일 글자의 paint 장평/본문 예약 관계를 정식
+회귀에 추가합니다. 수정 전 red와 수정 후 green, normal 최소 입력·숫자 대조와 필수 lint·전체
+회귀·Skia를 새 source에서 검증합니다. 이전 source의 시각/CI 결과로 완료를 선언하지 않습니다.
+
+Native 선행 재출력은 공개 원본92.29683%, 최소 입력96.24413%, 모두 gate passed/전체1쪽입니다.
+발문 glyph/화살표 폭의 이중 확대가 없어졌고 흐름 예약 폭과 뒤 글자 위치는 보존됐습니다.
+전후·독립 Print의 확대 패널 `output/pr-review/pr7600/equation-first-line-before-after-print.png`를
+직접 열어 확인했습니다. 전체 보조값의 변화와 별개로 표시 장평의 결함이 해결됐음을 구분합니다.
+CanvasKit의 Text 기본 이탤릭 처리가 명시적 Roman을 다시 덮던 경로도, 기본 상태와 명시적 상태를
+구분해 rm의 정체·it의 이탤릭을 상속하도록 보정합니다. 수식 글자 자체의 backend별 폰트와 작은
+획/원점 차이는 여전히 남아 있으며 이 선행 결과는 전체 검증 완료 문구로 쓰지 않습니다.
+
+## 선택지의 내부 관계 기호 간격
+
+새 출력에서④/⑤의 문단 탭 원점을 독립 Print와 같은 좌표계로 확인했습니다.
+사용자가 지적한①/②의 수식 안 간격은 별도로 남았습니다. 일반 공백은 tokenizer가 명령 경계로
+제거하며, layout_row는 형제를 간격0으로 붙입니다. BOT는 MathSymbol이지만 옆 여백이 없고
+⊥의 advance를0.5em으로 추정해 실제 수학 글꼴의 advance(배포 Latin Modern Math0.778em,
+시스템 DejaVu Math0.788em)보다 작습니다. 다음 dyad가 관계 기호와 붙거나 겹칩니다.
+직접 U+2AFD는 Text로 취급되어 관계 기호의 정체·간격 계약도 소비하지 못합니다.
+
+공통 관계 기호 분류를 parser/layout에 적용하고 기존 연산자 여백 계약0.15em을 관계 기호의
+양쪽에도 소비하게 합니다. glyph/간격을 명시적인 공통 Row 결과로 만들어 SVG/Canvas2D/Skia/
+CanvasKit이 같은 원점을 소비합니다. ⊥/⊤의 추정 advance는 해당 실제 수학 글꼴 폭에 맞는
+0.8em 계열로 분리하고 °/‰ 등의 기존 좁은 폭은 보존합니다. 이 값은 원본 페이지 좌표에서
+역산한 px 값이 아니라 독립 글꼴 메트릭의 차원 없는 비율입니다. 다섯 선택지의 문단 탭 위치·
+수식/글자 순서·누락과 최소 정상 입력을 다시 확인합니다. width 수정 전 WASM build는
+새 source 검증으로 오인하지 않도록 종료했고 원시 로그만 보존했습니다.

@@ -4080,9 +4080,6 @@ export class CanvasKitLayerRenderer {
       record('failed', !this.boundsAreDrawable(op.bbox) ? 'invalidEquationBounds' : 'invalidLayout');
       return;
     }
-    const scaleX = op.scaleX !== undefined && Number.isFinite(op.scaleX) ? op.scaleX : op.layoutBox.width > 0 && op.bbox.width > 0
-      ? op.bbox.width / op.layoutBox.width
-      : 1;
     const budget: EquationRenderBudget = {
       remainingNodes: CanvasKitLayerRenderer.MAX_EQUATION_LAYOUT_NODES,
     };
@@ -4092,11 +4089,10 @@ export class CanvasKitLayerRenderer {
     let replayed = false;
     try {
       const recordingCanvas = recorder.beginRecording(this.rect({
-        ...op.bbox, width: Math.max(op.bbox.width, op.layoutBox.width * scaleX),
+        ...op.bbox, width: Math.max(op.bbox.width, op.layoutBox.width),
       }));
       recordingCanvas.save();
       recordingCanvas.translate(op.bbox.x, op.bbox.y);
-      if (Math.abs(scaleX - 1) > 0.01) recordingCanvas.scale(scaleX, 1);
       try {
         replayed = this.renderEquationBox(
           recordingCanvas,
@@ -4105,7 +4101,7 @@ export class CanvasKitLayerRenderer {
           0,
           op.color ?? '#000000',
           Math.max(1, op.fontSize ?? op.bbox.height),
-          false,
+          undefined,
           false,
           0,
           budget,
@@ -4252,7 +4248,7 @@ export class CanvasKitLayerRenderer {
     parentY: number,
     color: string,
     fontSize: number,
-    italic: boolean,
+    italic: boolean | undefined,
     bold: boolean,
     depth: number,
     budget: EquationRenderBudget,
@@ -4312,7 +4308,7 @@ export class CanvasKitLayerRenderer {
           y + layout.baseline,
           this.equationFontSizeFromBox(layout, fontSize),
           color,
-          layout.kind.type === 'text' || italic,
+          italic ?? layout.kind.type === 'text',
           bold,
           layout.width,
           layout.kind.type === 'symbol',
@@ -4326,7 +4322,7 @@ export class CanvasKitLayerRenderer {
           y + layout.baseline,
           this.equationFontSizeFromBox(layout, fontSize),
           color,
-          italic,
+          italic ?? false,
           bold,
           layout.width,
           false,

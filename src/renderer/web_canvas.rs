@@ -1227,13 +1227,12 @@ impl WebCanvasRenderer {
     }
 
     fn render_equation(&mut self, bbox: &BoundingBox, eq: &EquationNode) {
-        let scale_x = super::equation::stored_horizontal_scale(bbox.width, &eq.layout_box);
         let scale_y =
             super::equation::stored_vertical_scale(bbox.height, eq.layout_box.height, eq.font_size);
         self.ctx.save();
         let _ = self.ctx.translate(bbox.x, bbox.y);
-        if (scale_x - 1.0).abs() > 0.01 || (scale_y - 1.0).abs() > 0.01 {
-            let _ = self.ctx.scale(scale_x, scale_y);
+        if (scale_y - 1.0).abs() > 0.01 {
+            let _ = self.ctx.scale(1.0, scale_y);
         }
         super::equation::canvas_render::render_equation_canvas(
             &self.ctx,

@@ -4,6 +4,30 @@
 //! 참조: openhwp/docs/hwpx/appendix-i-formula.md
 
 use std::collections::HashMap;
+
+/// 피연산자를 비교하는 관계 기호. 명령 표기와 직접 Unicode 표기에 같은 간격을 준다.
+pub(crate) fn is_relation_symbol(symbol: &str) -> bool {
+    matches!(
+        symbol,
+        "=" | "<"
+            | ">"
+            | "≤"
+            | "≥"
+            | "≠"
+            | "≈"
+            | "≡"
+            | "∼"
+            | "∝"
+            | "⊂"
+            | "⊃"
+            | "⊆"
+            | "⊇"
+            | "⊥"
+            | "⊤"
+            | "∥"
+            | "⫽"
+    )
+}
 use std::sync::LazyLock;
 
 /// 그리스 문자 (소문자, 대소문자 구분)

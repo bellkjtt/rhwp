@@ -463,11 +463,17 @@ impl Tokenizer {
             return Token::new(TokenType::Symbol, sym, start);
         }
 
+        // Unicode 관계 기호는 비-ASCII 피연산자와 붙어도 독립 기호다.
+        if !ch.is_ascii() && super::symbols::is_relation_symbol(&ch.to_string()) {
+            self.pos += 1;
+            return Token::new(TokenType::Symbol, ch.to_string(), start);
+        }
+
         // 기타 문자 (한글 등) — 연속 비-ASCII 문자를 하나의 Text 토큰으로
         if !ch.is_ascii() {
             let mut value = String::new();
             while let Some(c) = self.current() {
-                if c.is_ascii() || c == ' ' {
+                if c.is_ascii() || c == ' ' || super::symbols::is_relation_symbol(&c.to_string()) {
                     break;
                 }
                 value.push(c);

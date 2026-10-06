@@ -2049,18 +2049,14 @@ impl SkiaLayerRenderer {
                         }
                         PaintOp::Equation { bbox, equation } => {
                             canvas.save();
-                            let scale_x = crate::renderer::equation::stored_horizontal_scale(
-                                bbox.width,
-                                &equation.layout_box,
-                            );
                             let scale_y = crate::renderer::equation::stored_vertical_scale(
                                 bbox.height,
                                 equation.layout_box.height,
                                 equation.font_size,
                             );
-                            if (scale_x - 1.0).abs() > 0.01 || (scale_y - 1.0).abs() > 0.01 {
+                            if (scale_y - 1.0).abs() > 0.01 {
                                 canvas.translate((bbox.x as f32, bbox.y as f32));
-                                canvas.scale((scale_x as f32, scale_y as f32));
+                                canvas.scale((1.0, scale_y as f32));
                                 render_equation(
                                     canvas,
                                     &equation_fonts,

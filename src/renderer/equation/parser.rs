@@ -236,13 +236,20 @@ impl EqParser {
                 // -> 는 →로 변환
                 if val == "->" {
                     EqNode::MathSymbol("→".to_string())
+                } else if !val.is_ascii() && super::symbols::is_relation_symbol(&val) {
+                    EqNode::MathSymbol(val)
                 } else {
                     EqNode::Symbol(val)
                 }
             }
             TokenType::Text => {
                 self.pos += 1;
-                self.try_parse_scripts(EqNode::Text(val))
+                let node = if super::symbols::is_relation_symbol(&val) {
+                    EqNode::MathSymbol(val)
+                } else {
+                    EqNode::Text(val)
+                };
+                self.try_parse_scripts(node)
             }
             TokenType::Quoted => {
                 self.pos += 1;

@@ -918,21 +918,18 @@ impl SvgRenderer {
             }
             RenderNodeType::Equation(eq) => {
                 // 수식 SVG 조각을 bbox 위치에 배치
-                // HWP 저장 영역(bbox)과 레이아웃 산출 크기(layout_box)가 다를 수 있으므로
-                // bbox 너비에 맞춰 스케일링한다. 일반 높이는 줄 여백을 포함하므로
-                // 유지하고, 기본 글자보다 낮은 압축 프레임만 공통 세로 비율을 쓴다.
-                let scale_x =
-                    super::equation::stored_horizontal_scale(node.bbox.width, &eq.layout_box);
+                // 저장 프레임은 흐름 예약 영역이고 글자 장평이 아니다. BaseUnit으로
+                // 만든 공통 글자·장식 폭을 유지하며 압축 프레임의 세로 비율만 적용한다.
                 let scale_y = super::equation::stored_vertical_scale(
                     node.bbox.height,
                     eq.layout_box.height,
                     eq.font_size,
                 );
-                let needs_scale = (scale_x - 1.0).abs() > 0.01 || (scale_y - 1.0).abs() > 0.01;
+                let needs_scale = (scale_y - 1.0).abs() > 0.01;
                 if needs_scale {
                     self.output.push_str(&format!(
-                        "<g transform=\"translate({},{}) scale({:.4},{:.4})\">\n",
-                        node.bbox.x, node.bbox.y, scale_x, scale_y,
+                        "<g transform=\"translate({},{}) scale(1,{:.4})\">\n",
+                        node.bbox.x, node.bbox.y, scale_y,
                     ));
                 } else {
                     self.output.push_str(&format!(
