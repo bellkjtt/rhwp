@@ -5,6 +5,7 @@
 
 use super::ast::*;
 
+mod glyph_advances;
 mod script_geometry;
 mod variable_style;
 pub(crate) use variable_style::is_styled_variable;
@@ -420,6 +421,8 @@ impl EqLayout {
                 '\u{3000}'..='\u{9FFF}' | '\u{F900}'..='\u{FAFF}' | '\u{AC00}'..='\u{D7AF}'
             )
         });
+        let display_text =
+            variable_style::display_text(text, self.variable_italic, self.variable_bold);
         let w = if has_cjk && self.hancom_cjk_advance {
             let advance = (fs * 48.0 / self.dpi).round().max(1.0) * self.dpi / 48.0;
             text.chars()
@@ -431,8 +434,11 @@ impl EqLayout {
                     }
                 })
                 .sum()
+        } else if !has_cjk {
+            glyph_advances::text_width(&display_text, fs)
+                .unwrap_or_else(|| estimate_text_width(text, fs, self.variable_italic))
         } else {
-            estimate_text_width(text, fs, self.variable_italic && !has_cjk)
+            estimate_text_width(text, fs, false)
         };
         LayoutBox {
             x: 0.0,
@@ -440,11 +446,7 @@ impl EqLayout {
             width: w,
             height: fs,
             baseline: fs * 0.8,
-            kind: LayoutKind::Text(variable_style::display_text(
-                text,
-                self.variable_italic,
-                self.variable_bold,
-            )),
+            kind: LayoutKind::Text(display_text),
         }
     }
 
@@ -560,7 +562,8 @@ impl EqLayout {
     }
 
     fn layout_function(&self, name: &str, fs: f64) -> LayoutBox {
-        let w = estimate_text_width(name, fs, false);
+        let w = glyph_advances::text_width(name, fs)
+            .unwrap_or_else(|| estimate_text_width(name, fs, false));
         LayoutBox {
             x: 0.0,
             y: 0.0,
