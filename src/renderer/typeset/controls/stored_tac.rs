@@ -353,6 +353,7 @@ pub(super) fn prepare(
     measured_tables: &[MeasuredTable],
     page: StoredTacPage,
     shared_spacing_before: f64,
+    previous_para: Option<&Paragraph>,
     next_para: Option<&Paragraph>,
     next_spacing_before: f64,
     available_height: impl Fn() -> f64,
@@ -492,7 +493,35 @@ pub(super) fn prepare(
                     page.current_height + fmt.spacing_before - shared_spacing_before;
                 let same_frame = (saved_origin - page.current_height).abs() <= dpi / 7200.0
                     || (saved_origin - unreserved_origin).abs() <= dpi / 7200.0;
-                if !same_frame {
+                // 앞 저장 글줄의 후행 간격은 표의 진입 밴드다. 수용 커서가
+                // 그 글줄의 내용 끝에 있으면 같은 좌표축에서 표 원점까지 연결한다.
+                let inherited_trailing_band = previous_para.is_some_and(|previous| {
+                    if previous.stored_text_partition_is_dirty()
+                        || previous.cell_format_vpos_dirty
+                        || !previous.controls.is_empty()
+                    {
+                        return false;
+                    }
+                    let Some(last) = previous.line_segs.last() else {
+                        return false;
+                    };
+                    let next = &para.line_segs[0];
+                    let valid = last.tag
+                        & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
+                        == 0
+                        && last.line_spacing >= 0
+                        && last
+                            .vertical_pos
+                            .checked_add(last.line_height)
+                            .and_then(|end| end.checked_add(last.line_spacing))
+                            == Some(next.vertical_pos);
+                    let content_end = page.vpos_col_anchor
+                        + hwpunit_to_px(last.vertical_pos.saturating_add(last.line_height), dpi);
+                    valid
+                        && (content_end - page.current_height).abs() <= dpi / 7200.0
+                        && saved_origin >= page.current_height
+                });
+                if !same_frame && !inherited_trailing_band {
                     return None;
                 }
             }

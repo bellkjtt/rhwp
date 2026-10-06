@@ -563,6 +563,9 @@ pub(super) fn try_place_stored_tac_paragraph(
         measured_tables,
         st.stored_tac_page(paragraphs),
         shared_spacing_before,
+        para_idx
+            .checked_sub(1)
+            .and_then(|index| paragraphs.get(index)),
         paragraphs.get(para_idx + 1),
         paragraphs
             .get(para_idx + 1)
