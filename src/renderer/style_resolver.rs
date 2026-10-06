@@ -450,6 +450,8 @@ impl Default for ResolvedBorderStyle {
 /// 해소된 스타일 세트 (DocInfo에서 변환)
 #[derive(Debug, Default, Clone)]
 pub struct ResolvedStyleSet {
+    /// px 형태의 해소된 스타일을 원본 HWPUNIT으로 환산할 때의 배율.
+    pub(crate) resolved_dpi: Option<f64>,
     /// 문서의 `쪽 번호` 스타일이 참조하는 글자 모양. 자동 쪽번호는 본문
     /// 기본 글꼴이 아닌 이 스타일로 출력된다.
     pub page_number_char_style_id: Option<usize>,
@@ -646,6 +648,7 @@ pub fn resolve_styles_with_variant(
         .is_some_and(|face| face.alt_type == 2);
 
     ResolvedStyleSet {
+        resolved_dpi: Some(dpi),
         page_number_char_style_id,
         page_number_font_is_hft,
         char_styles,

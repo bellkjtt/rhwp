@@ -63,33 +63,40 @@ pub fn intrinsic_size_hwp(script: &str, font_size: u32) -> (u32, u32) {
     )
 }
 
-/// 수학 글꼴 HYhwpEQ에는 한글 cmap이 없으므로 한글은 본문 대체 글꼴로 그린다.
-/// 보호된 크기와 한글 대체가 없는 수식은 저장 상자 계약을 유지한다.
-/// 대체 경로는 폭·높이·기준선을 같은 AST에서 얻어 측정과 paint가 함께 소비한다.
+/// 보호되지 않은 수식의 실제 표시 상자를 측정과 paint가 함께 소비한다.
+/// 폭은 저장된 글줄의 개체 전진 계약을 유지한다. 한글 대체 경로는 기존처럼
+/// 같은 AST의 새 전진폭을 사용하며, 보호된 프레임은 원본 크기를 유지한다.
 pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u32, u32, i32) {
-    if !equation.common.size_protect
-        && equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
+    let cached = (
+        equation.common.width,
+        equation.common.height,
+        (equation.common.height as i32)
+            .saturating_mul(i32::from(equation.baseline))
+            .saturating_div(100),
+    );
+    if equation.common.size_protect {
+        return cached;
+    }
+    let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
+    let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
+    let height = super::px_to_hwpunit(intrinsic.height, super::DEFAULT_DPI).max(1) as u32;
+    let has_cjk_fallback = equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
         && equation
             .script
             .chars()
-            .any(|ch| matches!(ch, '\u{AC00}'..='\u{D7A3}'))
-    {
-        let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
-        let layout = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
-        (
-            super::px_to_hwpunit(layout.width, super::DEFAULT_DPI).max(1) as u32,
-            super::px_to_hwpunit(layout.height, super::DEFAULT_DPI).max(1) as u32,
-            super::px_to_hwpunit(layout.baseline, super::DEFAULT_DPI),
-        )
-    } else {
-        (
-            equation.common.width,
-            equation.common.height,
-            (equation.common.height as i32)
-                .saturating_mul(i32::from(equation.baseline))
-                .saturating_div(100),
-        )
+            .any(|ch| matches!(ch, '\u{AC00}'..='\u{D7A3}'));
+    if height == cached.1 && !has_cjk_fallback {
+        return cached;
     }
+    (
+        if has_cjk_fallback {
+            super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32
+        } else {
+            cached.0
+        },
+        height,
+        super::px_to_hwpunit(intrinsic.baseline, super::DEFAULT_DPI),
+    )
 }
 
 pub(crate) fn flow_width_hwp(equation: &crate::model::control::Equation) -> u32 {

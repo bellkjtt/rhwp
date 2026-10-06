@@ -105,6 +105,7 @@ impl ComposedTextRun {
 }
 
 mod auto_number_projection;
+mod equation_line_metrics;
 mod mapped_symbol_fonts;
 pub(crate) mod supplemental_clusters;
 
@@ -568,6 +569,10 @@ fn compose_paragraph_scoped(
         horizontal_shaping: None,
         frame_geometry: None,
     };
+
+    if let Some(styles) = metric_styles {
+        equation_line_metrics::refresh_equation_rows(&mut composed, para, styles);
+    }
 
     // CharOverlap 글자를 조합된 텍스트에 삽입
     inject_char_overlap_text(&mut composed, para);
