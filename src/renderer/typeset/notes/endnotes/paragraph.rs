@@ -1521,7 +1521,14 @@ impl TypesetEngine {
             });
             let natural_new_head_overflows = ep_idx == 0
                 && self.reflowed_endnote_new_head_overflows(
-                    st, paragraphs, styles, en_para, &fmt, available, en_col_w,
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
                 );
             advance_for_new_endnote |= natural_new_head_overflows;
             let kept_new_head = advance_for_new_endnote
