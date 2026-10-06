@@ -5095,8 +5095,7 @@ impl LayoutEngine {
                     let ast = crate::renderer::equation::parser::EqParser::new(tokens).parse();
                     let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                     let layout_box =
-                        crate::renderer::equation::layout::EqLayout::for_equation(eq, self.dpi)
-                            .layout(&ast);
+                        crate::renderer::equation::layout_for_paint(eq, &ast, self.dpi);
                     let color_str =
                         crate::renderer::equation::svg_render::eq_color_to_svg(eq.color);
                     let svg_content = crate::renderer::equation::svg_render::render_equation_svg(
@@ -9201,10 +9200,7 @@ impl LayoutEngine {
                                 crate::renderer::equation::parser::EqParser::new(tokens).parse();
                             let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                             let layout_box =
-                                crate::renderer::equation::layout::EqLayout::for_equation(
-                                    eq, self.dpi,
-                                )
-                                .layout(&ast);
+                                crate::renderer::equation::layout_for_paint(eq, &ast, self.dpi);
                             let color_str =
                                 crate::renderer::equation::svg_render::eq_color_to_svg(eq.color);
                             let svg_content =
