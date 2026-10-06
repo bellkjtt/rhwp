@@ -2788,6 +2788,8 @@ const EMPTY_LINE_OWN_MARGIN_TOLERANCE_HU: i32 = 200;
 /// [#6761] 글자처럼 취급하는 개체가 공유 기준선 위에 두는 높이 비율(표 #7049 과 같다).
 const TAC_OBJECT_ASCENT_RATIO: f64 = 0.85;
 
+mod inline_picture_alignment;
+
 /// [#7548] 문단의 전폭 저장 줄(가장 넓은 원본 줄)의 시작 cs 와 끝(cs+sw).
 /// 모든 줄이 같은 폭이면(좁혀진 줄이 없으면) None — 기준으로 쓸 대비가 없다.
 fn stored_full_width_line_box(para: &Paragraph) -> Option<(i32, i32)> {
@@ -4815,7 +4817,14 @@ impl LayoutEngine {
                             let box_h = tac_object_box_height_px(pic_h, &pic.caption, self.dpi)
                                 + margin_top
                                 + margin_bottom;
-                            let img_y = (y + baseline - box_h).max(y) + margin_top;
+                            let img_y = self.inline_picture_top(
+                                para,
+                                tac_offsets_px,
+                                col_area,
+                                y,
+                                baseline,
+                                box_h,
+                            ) + margin_top;
                             let bin_data_id = pic.image_attr.bin_data_id;
                             let image_data = find_bin_data_bytes(bdc, bin_data_id);
                             let crop = pic.render_crop_rect();
@@ -5085,7 +5094,8 @@ impl LayoutEngine {
                     let ast = crate::renderer::equation::parser::EqParser::new(tokens).parse();
                     let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                     let layout_box =
-                        crate::renderer::equation::layout_for_paint(eq, &ast, self.dpi);
+                        crate::renderer::equation::layout::EqLayout::for_equation(eq, self.dpi)
+                            .layout(&ast);
                     let color_str =
                         crate::renderer::equation::svg_render::eq_color_to_svg(eq.color);
                     let svg_content = crate::renderer::equation::svg_render::render_equation_svg(
@@ -7347,7 +7357,7 @@ impl LayoutEngine {
                 comp_line,
                 para,
                 bin_data_content,
-                tac_offsets_px,
+                &line_tac_offsets,
                 col_area,
                 cell_ctx.as_ref(),
                 &mut current_line_reserved_tac_picture_height,
@@ -9082,7 +9092,14 @@ impl LayoutEngine {
                                         tac_object_box_height_px(pic_h, &pic.caption, self.dpi)
                                             + margin_top
                                             + margin_bottom;
-                                    (y + baseline - box_h).max(y)
+                                    self.inline_picture_top(
+                                        para,
+                                        line_tac_offsets,
+                                        col_area,
+                                        y,
+                                        baseline,
+                                        box_h,
+                                    )
                                 };
                                 let img_y = base_img_y + sibling_reserved_px + margin_top;
                                 let bin_data_id = pic.image_attr.bin_data_id;
@@ -9176,7 +9193,10 @@ impl LayoutEngine {
                                 crate::renderer::equation::parser::EqParser::new(tokens).parse();
                             let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                             let layout_box =
-                                crate::renderer::equation::layout_for_paint(eq, &ast, self.dpi);
+                                crate::renderer::equation::layout::EqLayout::for_equation(
+                                    eq, self.dpi,
+                                )
+                                .layout(&ast);
                             let color_str =
                                 crate::renderer::equation::svg_render::eq_color_to_svg(eq.color);
                             let svg_content =
@@ -10579,40 +10599,14 @@ impl LayoutEngine {
                                 let box_h = tac_object_box_height_px(pic_h, &pic.caption, self.dpi)
                                     + margin_top
                                     + margin_bottom;
-                                // [#6761] 같은 줄에 더 높은 글자처럼 그림이 있으면 그 줄의 기준선은
-                                // 가장 높은 상자가 정한다(저장 줄 bl = 0.85 × lh, 1480000-201900042
-                                // 문단 4.195: lh 11206 · bl 9525). 낮은 상자는 글자처럼 그 기준선에
-                                // 85/15 로 앉는다 — 정본 그림 위 끝 226.7 / 216.9px(차 9.8 =
-                                // 0.85 × 11.3). 하단을 기준선에 붙이면 줄 상단으로 clamp 되어
-                                // 가장 높은 상자와 위 끝이 같아진다. 표의 같은 줄 공유 기준선
-                                // 규칙(#7049·#7150)과 같은 비율이다. 줄에 그림이 하나뿐이거나 이
-                                // 상자가 가장 높으면 종전 식이다.
-                                let tallest_box_h = line_tac_offsets
-                                    .iter()
-                                    .filter_map(|&(_, _, ci)| match p.controls.get(ci) {
-                                        Some(Control::Picture(other)) => {
-                                            let (_, other_h) =
-                                                self.resolve_inline_picture_size(other, col_area);
-                                            let (_, _, other_top, other_bottom) =
-                                                tac_picture_outer_margins_px(other, self.dpi);
-                                            Some(
-                                                tac_object_box_height_px(
-                                                    other_h,
-                                                    &other.caption,
-                                                    self.dpi,
-                                                ) + other_top
-                                                    + other_bottom,
-                                            )
-                                        }
-                                        _ => None,
-                                    })
-                                    .fold(box_h, f64::max);
-                                if tallest_box_h > box_h + 0.5 {
-                                    (vars.y + vars.baseline - tallest_box_h).max(vars.y)
-                                        + (tallest_box_h - box_h) * TAC_OBJECT_ASCENT_RATIO
-                                } else {
-                                    (vars.y + vars.baseline - box_h).max(vars.y)
-                                }
+                                self.inline_picture_top(
+                                    para,
+                                    line_tac_offsets,
+                                    col_area,
+                                    vars.y,
+                                    vars.baseline,
+                                    box_h,
+                                )
                             };
                             let img_y = base_img_y + sibling_reserved_px + margin_top;
                             let bin_data_id = pic.image_attr.bin_data_id;

@@ -156,25 +156,6 @@ pub(crate) fn inline_baseline_px(
     }
 }
 
-/// 저장 상자에서 줄 배치가 소비한 기준선에 실제 수식 내용의 기준선을 맞춘다.
-/// 모든 painter가 LayoutBox의 원점을 소비하므로 출력 경로별 보정은 필요하지 않다.
-pub(crate) fn layout_for_paint(
-    equation: &crate::model::control::Equation,
-    ast: &ast::EqNode,
-    dpi: f64,
-) -> layout::LayoutBox {
-    let mut result = layout::EqLayout::for_equation(equation, dpi).layout(ast);
-    let height = super::hwpunit_to_px(flow_height_hwp(equation) as i32, dpi);
-    let scale = stored_vertical_scale(
-        height,
-        result.height,
-        super::hwpunit_to_px(equation.font_size as i32, dpi),
-    );
-    let baseline = inline_baseline_px(equation, &result, dpi);
-    result.y = baseline / scale - result.baseline;
-    result
-}
-
 /// 측정한 한글 전진폭을 그대로 글자 원점에 적용한다. 글리프 자체 크기는 바꾸지 않는다.
 /// CJK가 아닌 문자는 기존 추정 폭을 보존한다.
 pub(crate) fn positioned_cjk_text(text: &str, font_size: f64, width: f64) -> Vec<(char, f64)> {
