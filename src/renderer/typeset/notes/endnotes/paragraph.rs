@@ -30,6 +30,7 @@ use crate::renderer::typeset::{
 mod fit_split;
 mod initial_fit;
 mod new_note_fit;
+mod reflow_fit;
 mod rewind_tail;
 mod tail_fit;
 
@@ -410,10 +411,14 @@ impl TypesetEngine {
                         (prev_en_bottom_vpos, this_first_offset),
                         (Some(prev), Some(first)) if first < prev
                     );
-            // 단독 문단이 아니라 같은 미주에 남은 전체 내용의 실제 점유를 확인한다.
-            // 다음 그림/다줄 본문이 넘치는 저장 단 경계는 유지한다.
+            // 저장 경계의 재조판 fit는 실제 점유 끝으로 판단한다. 다음 문단과
+            // 묶지 않는 문단을 미주 전체와 임의로 하나의 keep 그룹으로 만들지 않는다.
             let local_rewind_tail_fits = ep_idx > 0
                 && en_para.column_type == crate::model::paragraph::ColumnBreakType::None
+                && !styles
+                    .para_styles
+                    .get(en_para.para_shape_id as usize)
+                    .is_some_and(|style| style.keep_with_next)
                 && matches!((prev_en_bottom_vpos, this_first_offset),
                     (Some(previous), Some(first)) if first < previous)
                 && self
@@ -425,11 +430,7 @@ impl TypesetEngine {
                         en_col_w,
                         Some(en_para_idx),
                         true,
-                        Some((
-                            &en_ctrl.paragraphs[ep_idx + 1..],
-                            endnote_start,
-                            compact_no_separator_spacing,
-                        )),
+                        Some((&[], endnote_start, compact_no_separator_spacing)),
                     )
                     .is_some_and(|bottom| bottom <= available);
             if st.col_count > 1
@@ -1854,6 +1855,24 @@ impl TypesetEngine {
             } else {
                 render_fit_split.or(split_candidate)
             };
+            // 저장 되감김을 같은 단에 수용한 뒤에도 후속 줄의 실제 점유를
+            // 확인한다. 작아진 saved-delta 누계로 쪽 아래 넘침을 허용하지 않는다.
+            if ep_idx > 0
+                && self.reflowed_endnote_single_line_overflows(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                )
+            {
+                st.advance_column_or_new_page();
+                prev_en_bottom_vpos = None;
+                prev_en_content_bottom_vpos = None;
+            }
             if self.emit_endnote_split(
                 st,
                 &fmt,

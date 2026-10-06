@@ -27,9 +27,13 @@ fn normalize_host(paragraph: &mut Paragraph, styles: &ResolvedStyleSet) -> Optio
     let common = &rectangle.common;
     let geometry = &rectangle.drawing.shape_attr;
     let extent_scale = |scale: f64, current: u32, original: u32| {
+        // 현재 크기는 정수 HWPUNIT, 저장 변환은 실수다. 내용 끝과 같은
+        // 1 HWPUNIT 저장 반올림을 extent 좌표계에서 확인한다.
+        let scaled_extent = scale * f64::from(original);
         original > 0
-            && (scale - f64::from(current) / f64::from(original)).abs()
-                <= f64::EPSILON * scale.abs().max(1.0) * 4.0
+            && scale > 0.0
+            && (scaled_extent - f64::from(current)).abs()
+                <= 1.0 + f64::EPSILON * scaled_extent.abs().max(1.0) * 4.0
     };
     if !common.treat_as_char
         || common.size_protect
@@ -90,8 +94,8 @@ fn normalize_host(paragraph: &mut Paragraph, styles: &ResolvedStyleSet) -> Optio
     rectangle.drawing.text_box.as_mut()?.paragraphs = projected;
     rectangle.drawing.shape_attr.current_height = new_height as u32;
     rectangle.drawing.shape_attr.rotation_center.y = new_height / 2;
-    rectangle.drawing.shape_attr.render_sy =
-        f64::from(new_height) / f64::from(rectangle.drawing.shape_attr.original_height);
+    rectangle.drawing.shape_attr.render_sy +=
+        f64::from(delta) / f64::from(rectangle.drawing.shape_attr.original_height);
     let host = &mut paragraph.line_segs[0];
     let old_line_height = host.line_height;
     host.line_height = host.line_height.saturating_add(delta);
@@ -105,6 +109,15 @@ pub(crate) fn normalize(
     original: &[Paragraph],
     styles: &ResolvedStyleSet,
 ) -> Option<Vec<Paragraph>> {
+    if !original.iter().any(|paragraph| {
+        paragraph.controls.iter().any(|control| {
+            matches!(control, Control::Shape(shape)
+                if matches!(shape.as_ref(), ShapeObject::Rectangle(rectangle)
+                    if rectangle.common.treat_as_char && rectangle.drawing.text_box.is_some()))
+        })
+    }) {
+        return None;
+    }
     let mut result = original.to_vec();
     let mut shift = 0_i32;
     let mut previous_vpos = None;
