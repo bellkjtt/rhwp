@@ -1917,38 +1917,6 @@ impl HeightCursor {
         } else {
             y_offset
         };
-        let title_after_equation_tail_extra_gap = if self.suppress_large_forward_jump
-            && current_is_endnote_title
-            && !vpos_rewind
-            && self.endnote_between_notes_hu > 0
-            && self.endnote_between_notes_hu <= 2500
-            && y_offset > self.col_area_y + self.col_area_height * 0.55
-            && y_offset < col_bottom - 180.0
-            && y_offset + current_line_height_px <= col_bottom - 2.0
-            && prev_line_carries_note_gap
-            && (para_is_treat_as_char_equation_only(prev_para)
-                || (prev_para.text.trim().is_empty()
-                    && prev_para.controls.iter().any(
-                        |ctrl| matches!(ctrl, Control::Equation(eq) if eq.common.treat_as_char),
-                    )))
-            && result <= y_offset + 0.5
-        {
-            // 기본 7mm 미주에서 수식 tail 뒤 새 문항 제목은 저장 vpos가
-            // 수식 visual bottom보다 살짝 위쪽으로 compact되는 경우가 있다.
-            // 이 gap floor가 없으면 문18→문19, 문19→문20처럼 뒤 문항 전체가
-            // 위로 당겨져 다음 수식 줄이 이전 본문 검색 영역에 걸린다.
-            if follows_tall_inline_item {
-                8.0
-            } else {
-                0.0
-            }
-        } else {
-            0.0
-        };
-        if title_after_equation_tail_extra_gap > 0.0 {
-            result = (result + title_after_equation_tail_extra_gap).min(col_bottom);
-            self.shift_vpos_base_for_rendered_delta(title_after_equation_tail_extra_gap);
-        }
         // [#6550] 새 문항 제목을 **직전 미주의 콘텐츠 하단 위**로 스냅하면 앞 풀이의
         // 마지막 줄과 겹친다(2023-09 18쪽 문26: 흐름 1044.3 → 저장 1035.9, 앞 줄 하단
         // 1043.9 — `overlap 142.51×11.63px` + `text-overlap` 7건).
