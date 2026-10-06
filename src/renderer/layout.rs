@@ -9071,7 +9071,11 @@ impl LayoutEngine {
                 && (prev_endnote_title_gap_from_continued_partial
                     || y_offset > y_before_vpos + 0.5);
             if textless_equation_tail_gap_already_visible {
-                let min_y = y_before_vpos + prev_endnote_title_gap_px;
+                let min_y = super::endnote_spacing::origin_after_gap(
+                    y_before_vpos,
+                    prev_item_content_bottom_y,
+                    prev_endnote_title_gap_px,
+                );
                 if y_offset < min_y {
                     if let Some(source) = current_endnote_source.clone() {
                         pending_textless_equation_tail_gap_restore =
@@ -9090,10 +9094,11 @@ impl LayoutEngine {
                 // 보존하면 다음 문항 영역을 침범하므로 여기서 한 번 더 얹지 않는다.
                 // 이미 소비한 trailing은 실제 마지막 줄 점유 끝과 분리한다.
                 // 같은 미주 사이를 현재 커서 뒤에 다시 더하지 않는다.
-                let min_y = prev_item_content_bottom_y
-                    .map_or(y_before_vpos + prev_endnote_title_gap_px, |bottom| {
-                        (bottom + prev_endnote_title_gap_px).max(y_before_vpos)
-                    });
+                let min_y = super::endnote_spacing::origin_after_gap(
+                    y_before_vpos,
+                    prev_item_content_bottom_y,
+                    prev_endnote_title_gap_px,
+                );
                 if y_offset < min_y {
                     let delta = min_y - y_offset;
                     y_offset = min_y;

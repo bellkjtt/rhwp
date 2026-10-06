@@ -1267,7 +1267,11 @@ impl HeightCursor {
             compact_endnote_stale_note_gap.then_some(if compact_endnote_top_stale_note_gap {
                 y_offset
             } else {
-                y_offset + prev_line_spacing_px
+                super::endnote_spacing::origin_after_gap(
+                    y_offset,
+                    measured_prev_content_bottom_y,
+                    prev_line_spacing_px,
+                )
             });
         let compact_endnote_tac_picture_gap = self.suppress_large_forward_jump
             && !is_page_path

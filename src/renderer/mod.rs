@@ -15,6 +15,7 @@ pub mod canvas_text_font;
 pub mod canvaskit_policy;
 pub(crate) mod cell_paragraph_spacing;
 pub mod composer;
+pub(crate) mod endnote_spacing;
 pub mod equation;
 pub(crate) mod equation_tac_flow;
 pub mod float_placement;
