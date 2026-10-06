@@ -9071,7 +9071,11 @@ impl LayoutEngine {
                 && (prev_endnote_title_gap_from_continued_partial
                     || y_offset > y_before_vpos + 0.5);
             if textless_equation_tail_gap_already_visible {
-                let min_y = y_before_vpos + prev_endnote_title_gap_px;
+                let min_y = super::endnote_spacing::origin_after_gap(
+                    y_before_vpos,
+                    prev_item_content_bottom_y,
+                    prev_endnote_title_gap_px,
+                );
                 if y_offset < min_y {
                     if let Some(source) = current_endnote_source.clone() {
                         pending_textless_equation_tail_gap_restore =

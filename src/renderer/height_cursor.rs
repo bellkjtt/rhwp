@@ -2042,6 +2042,12 @@ impl HeightCursor {
         // 별개 경로라 아래 #1246 rescue(+prev_ls)가 담당.
         let injected_between_notes =
             self.endnote_between_notes_hu > 0 && seg.line_spacing >= self.endnote_between_notes_hu;
+        // 실제 마지막 줄 점유 뒤의 간격이 순차 흐름에 이미 예약됐으면,
+        // 새 미주 저장 원점의 전방 이동으로 같은 간격을 다시 소비하지 않는다.
+        let measured_gap_already_reserved = measured_prev_content_bottom_y.is_some_and(|bottom| {
+            super::endnote_spacing::origin_after_gap(y_offset, Some(bottom), prev_line_spacing_px)
+                <= y_offset
+        });
         if injected_between_notes
             && compact_endnote_question_title
             && !compact_endnote_question_title_tail_backtrack
@@ -2056,7 +2062,8 @@ impl HeightCursor {
             && !vpos_rewind
             && !prev_is_multiline
             && (stored_gap_px < -0.5
-                || (stored_gap_px > 0.5 && self.endnote_between_notes_hu > 3000))
+                || (stored_gap_px > 0.5
+                    && (self.endnote_between_notes_hu > 3000 || measured_gap_already_reserved)))
         {
             // 최종 제목 원점을 보존할 때 기준은 기존 저장 목표 end_y다.
             // 중간 result에 더한 gap 보정은 이 반환에서 쓰지 않으므로,
