@@ -475,3 +475,25 @@ p9의 답안 표 다음 빈 문단은 독립 Print와 원본 저장 사다리에
 최초 앞 간격 후보의 fresh WASM 빌드는 원본에서 적용 경로가 제외된 사실을 확인해
 후속 source 보정을 위해 중단했다. 이 빌드는 최종 검증 증거가 아니며, 새 source에서
 다시 빌드한다. 조판 개선 완료나 회귀 검사 변경은 아직 선언하지 않는다.
+
+
+### 저장 표 경로의 적용 확인과 미주 구분선 보정
+
+source `5c6d605c0e1a2510afe1571ddc17ff40bd157477`의 Native를 새로 빌드했다.
+p9 실행 trace에서 원본 표 417 뒤 문단의 끝이 336.8px에서 333.1px로 바뀌어
+원본 저장 사다리의 18177HU와 일치했다. 이는 독립 Print와 대조한 관측 좌표이며
+회귀 테스트의 절대 px 기대값이 아니다. p9 실루엣은 **72.53738%**로 개선됐지만,
+p14 **48.90900%**, p15 **35.75830%**로 여전히 미달이다. 같은 배율 review PNG를
+직접 열어 표 뒤 흐름 개선과 남은 미주 문단·수식 차이를 구별했다. raw 증적은
+`output/pr-review/pr7600/container-stored-band-native-review/`에 보존한다.
+
+원본 미주 구분선 종류는 10(굵은선-가는선 이중선)인데 기존 layout은 선 종류를
+무시하고 단일 실선으로 만들었다. 독립 Print에서 이중 획을 확인했다. 일반 도형의
+HWP 선 종류 변환을 공통 helper로 옮겨 구분선에서도 같은 LineRenderType을 소비한다.
+또한 LineNode와 모든 painter의 획은 경로 중심의 양쪽으로 그려지므로 아래 여백은
+경로에서 전 굵기만큼 내려간 지점이 아니라 아래쪽 잉크 경계에서 시작해야 한다.
+`NoteSeparatorGeometry → EndnoteFlowProfile::separator_height_px / layout_endnote_separator_item
+→ endnote_sep_body_floor → 실제 다음 문단`으로 같은 advance를 소비하도록 연결한다.
+compact 경로의 pagination 예약 생략과 paint의 후속 floor는 별도로 대조하며,
+visible/숨긴 선·단일/이중 선·위아래 여백 대조군을 확인해야 한다. 이 후보의 실제 결과는
+다음 source 빌드에서 재산출하며, 점수에 맞춘 문서 조건이나 테스트 변경은 추가하지 않는다.

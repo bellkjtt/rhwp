@@ -472,29 +472,8 @@ pub(crate) fn drawing_to_line_style(drawing: &crate::model::shape::DrawingObjAtt
     //   bit 31:    끝 화살표 채움
     let shape_line_type = attr & 0x3F;
 
-    let (dash, line_render_type) = match shape_line_type {
-        0 | 1 => (StrokeDash::Solid, super::super::LineRenderType::Single),
-        2 => (StrokeDash::Dash, super::super::LineRenderType::Single),
-        3 => (StrokeDash::Dot, super::super::LineRenderType::Single),
-        4 => (StrokeDash::DashDot, super::super::LineRenderType::Single),
-        5 => (StrokeDash::DashDotDot, super::super::LineRenderType::Single),
-        6 => (StrokeDash::Dash, super::super::LineRenderType::Single), // LongDash
-        7 => (StrokeDash::Dot, super::super::LineRenderType::Single),  // CircleDot
-        8 => (StrokeDash::Solid, super::super::LineRenderType::Double),
-        9 => (
-            StrokeDash::Solid,
-            super::super::LineRenderType::ThinThickDouble,
-        ),
-        10 => (
-            StrokeDash::Solid,
-            super::super::LineRenderType::ThickThinDouble,
-        ),
-        11 => (
-            StrokeDash::Solid,
-            super::super::LineRenderType::ThinThickThinTriple,
-        ),
-        _ => (StrokeDash::Solid, super::super::LineRenderType::Single),
-    };
+    let (dash, line_render_type) =
+        crate::renderer::line_style::hwp_line_type(shape_line_type as u8);
 
     // 화살표 시작 모양: bit 10-15
     let start_arrow_val = (attr >> 10) & 0x3F;

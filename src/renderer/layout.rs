@@ -11964,7 +11964,7 @@ impl LayoutEngine {
         tree: &mut PageLayoutContext,
         col_node: &mut RenderNode,
         col_area: &LayoutRect,
-        mut y_offset: f64,
+        y_offset: f64,
         separator_length: i32,
         margin_above: i16,
         margin_below: i16,
@@ -11972,21 +11972,28 @@ impl LayoutEngine {
         line_width_raw: u8,
         color: crate::model::ColorRef,
     ) -> f64 {
-        y_offset += hwpunit_to_px(margin_above as i32, self.dpi);
-        let has_separator = line_type != 0 && line_width_raw != 0;
-        if has_separator {
-            let line_width = border_width_to_px(line_width_raw).max(0.5);
+        let geometry = super::note_separator::NoteSeparatorGeometry::new(
+            margin_above as i32,
+            margin_below as i32,
+            line_type != 0 && line_width_raw != 0,
+            line_width_raw,
+            self.dpi,
+        );
+        let center_y = y_offset + geometry.center_offset;
+        if geometry.width > 0.0 {
+            let (dash, line_type) = super::line_style::hwp_line_type(line_type);
             let sep_length = note_separator_length_px(separator_length, col_area.width, self.dpi);
             let line_id = tree.next_id();
             let sep_line = LineNode::new(
                 col_area.x,
-                y_offset,
+                center_y,
                 col_area.x + sep_length,
-                y_offset,
+                center_y,
                 LineStyle {
                     color,
-                    width: line_width,
-                    dash: StrokeDash::Solid,
+                    width: geometry.width,
+                    dash,
+                    line_type,
                     ..Default::default()
                 },
             );
@@ -11994,9 +12001,7 @@ impl LayoutEngine {
             let line_node = RenderNode::new(line_id, RenderNodeType::Line(sep_line), sep_bbox);
             col_node.children.push(line_node);
         }
-        // [#6574] 첫 미주는 구분선 자리 + 아래 여백에서 시작한다 — 선 굵기는 흐름에 더하지
-        // 않는다(조판 `EndnoteFlowProfile::separator_height_px` 와 같은 값).
-        y_offset + hwpunit_to_px(margin_below as i32, self.dpi)
+        y_offset + geometry.advance
     }
 
     /// [Task #2091] 표 컨트롤(anchor/TAC/float) 블록 배치 — 원본 무변경 통이동.

@@ -44,6 +44,8 @@ pub mod layer_renderer;
 pub mod layout;
 pub(crate) mod layout_frame;
 pub(crate) mod legacy_font_advances;
+pub(crate) mod line_style;
+pub(crate) mod note_separator;
 pub mod page_layout;
 pub mod page_number;
 pub mod pagination;
