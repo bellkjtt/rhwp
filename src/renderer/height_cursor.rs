@@ -2061,8 +2061,7 @@ impl HeightCursor {
         // 실제 마지막 줄 점유 뒤의 간격이 순차 흐름에 이미 예약됐으면,
         // 새 미주 저장 원점의 전방 이동으로 같은 간격을 다시 소비하지 않는다.
         let measured_gap_already_reserved = measured_prev_content_bottom_y.is_some_and(|bottom| {
-            super::endnote_spacing::origin_after_gap(y_offset, Some(bottom), prev_line_spacing_px)
-                <= y_offset
+            super::endnote_spacing::gap_is_reserved(y_offset, bottom, prev_line_spacing_px)
         });
         let legacy_single_line_gap_keep = !compact_endnote_question_title_tail_backtrack
             && !compact_endnote_question_title_tail_soft_backtrack
