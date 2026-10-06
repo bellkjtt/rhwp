@@ -89,6 +89,12 @@ impl TypesetEngine {
         column_width: f64,
     ) -> bool {
         // 다줄의 분할 컷은 이 단일 줄 계약으로 바꾸지 않는다.
+        if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
+            eprintln!(
+                "EN_SINGLE_FIT pi={para_index} items={} formatted_lines={} stored_lines={} break={:?} available={available:.3}",
+                st.current_items.len(), formatted.line_heights.len(), paragraph.line_segs.len(), paragraph.column_type,
+            );
+        }
         if st.current_items.is_empty()
             || formatted.line_heights.len() != 1
             || paragraph.line_segs.len() != 1
@@ -96,7 +102,7 @@ impl TypesetEngine {
         {
             return false;
         }
-        self.simulate_endnote_column_with_tail(
+        let occupied = self.simulate_endnote_column_with_tail(
             st,
             paragraphs,
             styles,
@@ -105,8 +111,13 @@ impl TypesetEngine {
             Some(para_index),
             true,
             Some((&[], 0, false)),
-        )
-        .is_some_and(|occupied_end| occupied_end > available)
+        );
+        if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
+            eprintln!(
+                "EN_SINGLE_OCCUPIED pi={para_index} bottom={occupied:?} available={available:.3}"
+            );
+        }
+        occupied.is_some_and(|occupied_end| occupied_end > available)
     }
     /// 제목의 실제 paint가 하단 보정을 쓰더라도 자연 점유 하한을 먼저 확인한다.
     /// keep 그룹이 아닌 한 줄 제목만 기존 묶음 판정에서 분리할 수 있다.
