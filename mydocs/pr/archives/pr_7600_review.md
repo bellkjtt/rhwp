@@ -9,11 +9,16 @@ last_verified: 2026-10-06
 
 ## 최종 판정
 
-**머지 보류 — 원래 실패 입력의 시각 증거와 기준 PDF의 Print 출력 근거가 부족합니다.**
+**머지 보류 — 발문 수식의 가로 확대 보정 및 최종 검증 진행 중.** 원 기여 체리픽에 보정 source `1a7ad89e4d6aba5a1da8a7aec359cf220ef644ba`를 추가했고, 공개 원본과 최소 입력 모두 대응 MCP Print PDF의 Native 전체1쪽에서90% gate를 통과했습니다. fresh WASM·정식 배치 회귀3개 red/green과 실제 Studio4경로는 완료했습니다. Rust 필수 lint·전체 검증은 완료 전입니다. GitHub approve/merge 판정으로 쓰지 않습니다.
 
-새로 실행한 최소 입력 Native 1쪽은 96.46055%, 집중 회귀 3개는 PASS입니다. 이 결과를 원래 실패 입력의 개선이나 전체 수용으로 확대하지 않습니다. 원 PR head의 CI 성공과 최신 devel 체리픽의 로컬 결과를 구분합니다.
+| 검증 범위 | 수정 전 Native | 보정 후 Native | 현재 근거 |
+| --- | --- | --- | --- |
+| 공개 #7593 전체 문항 |79.58463%|92.28714%|원본의 바탕쪽 선·그림·보기·수식·다섯 선택지를 보존한 MCP2020 Print 대조|
+| 원 PR의 최소 입력/스크립트 없는 사본 |96.46055% (초기 공급)|96.47259%|같은 조판 entry와 실제 Native raster 동일성을 확인한 사본의 MCP2020 Print|
+| 원 최소 HWPX ↔ 스크립트 없는 사본 |해당 없음|100%, 픽셀 동일|최신 Native 원본/사본 전쪽 PNG pair|
+| 기존 기여자 PDF ↔ 새 MCP Print PDF |해당 없음|100%, 픽셀 동일|독립 PDF 두 파일의96DPI 전쪽 raster|
 
-보류 해제 조건: 79.8%·64.3%로 보고한 원본/실패 입력·대응 Print PDF·실패 결과를 보존하고, 문서/영역 제거로 대체하지 않은 해당 범위의 출력을 개선해 새 head에서 90% gate와 직접 판독을 충족해야 합니다. 기존 기준 PDF의 실제 Print 출력 방법/설정도 확인해야 합니다. 이후 통합 후보의 fresh WASM·영향 경계·최신 required CI를 확인하며 실제 원격 push·PR 생성·review 게시·merge는 승인 범위에 따라 수행합니다.
+원 PR 본문의 과거79.8%/64.3% 파일은 별도로 없다는 사용자 확인에 따라 공개 이슈 원본을 보존·재현했습니다. 이 공개 파일을 미제공 과거 파일과 동일하다고 추정하지 않습니다. 원본 매크로 실행을 허용하지 않았고, 기본 빈 스크립트만 제거한 사본의 변경 entry·모든 조판 entry 동일성과 실제 출력 동일성을 입증했습니다.
 
 ## 접수 정보
 
@@ -30,13 +35,13 @@ last_verified: 2026-10-06
 
 PR 규모는 원 head 18개 파일·121줄 추가/6줄 삭제입니다. 부모 workflow·선택표·위 자식 절차와 review_template을 읽었습니다. 주 작업공간의 clean devel에서 최신 base 위에 단일 기능 commit을 누적 적용했습니다. 별도 worktree와 원격 통합 PR은 만들지 않았습니다.
 
-## 발견 사항
+## 초기 발견 사항 (보정 전 head의 기록)
 
 ### P1 — 실패 입력을 제거한 대조군만으로 원본의 시각 조건을 충족할 수 없음
 
 [원 PR 본문](https://github.com/edwardkim/rhwp/pull/7600)의 「남은 차이 / 최소 재현을 쓴 이유」는 전체 문항 79.8%, 첫 최소 입력 64.3%, 마스터쪽 단 구분선을 끈 재생성 입력 96.21277%를 기록합니다. 현재 PR에는 마지막 입력과 그 PDF만 있고 두 실패 입력·기준 PDF·실패 TSV/PNG가 없습니다. 이 값들은 작성자의 보고이며 이번 검토에서 재현한 실패로 기록하지 않습니다.
 
-실패 범위를 기존 차이 또는 별개 결함으로 분류했다는 이유만으로 gate를 면제할 수 없습니다. `dyad` 자체의 독립 최소 재현은 유용하지만, 삭제한 구분선과 실제 문항의 미달 원인이 해결됐다는 증거는 아닙니다. 실패 입력의 보존·전후 대조와 실제 출력 개선이 필요합니다. 자료가 없으므로 본 검토도 그 원인이나 최종 일치율을 추정하지 않았습니다.
+실패 범위를 기존 차이 또는 별개 결함으로 분류했다는 이유만으로 gate를 면제할 수 없습니다. `dyad` 자체의 독립 최소 재현은 유용하지만, 삭제한 구분선과 실제 문항의 미달 원인이 해결됐다는 증거는 아닙니다. 실패 입력의 보존·전후 대조와 실제 출력 개선이 필요합니다. 초기 검토 당시에는 자료가 없어 원인/최종 일치율을 추정하지 않았습니다. 이후 공개 입력의 실제 Print에서 누락을 재현하고 원본을 유지한 채 보정했습니다.
 
 ### P2 — 한컴 PDF의 Print 인쇄 계약 미확인
 
@@ -62,7 +67,7 @@ PR 규모는 원 head 18개 파일·121줄 추가/6줄 삭제입니다. 부모 w
 
 작성자가 제시한 수정 전 3 FAIL은 직접 재실행하지 않았습니다. 당시 base와 최신 검토 base 사이의 equation 디렉터리 및 skia/equation_conv.rs diff가 비어 있어 해당 코드의 변화를 확인했지만, 이 확인을 실제 red 실행으로 기록하지 않습니다. 작성자 CanvasKit 일회용 점검에서 ① 줄이 안 보인다고 한 경로는 정상 제품 분기를 우회한 점검이라 새 회귀로 단정하지 않습니다.
 
-## 검증 입력과 결과
+## 초기 검증 입력과 결과 (보정 전)
 
 수용 판정에 사용할 최소 입력과 PDF는 원 PR head와 체리픽 commit에 바이트 동일하게 포함돼 있습니다.
 
@@ -93,3 +98,78 @@ PR 규모는 원 head 18개 파일·121줄 추가/6줄 삭제입니다. 부모 w
 ## 사용자 승인 후 실제 원본 경계 재현
 
 사용자가 메인터너 보정을 지시했고 다른 과거 문서는 없다고 확인했습니다. 공개 이슈 입력의 masterpage0.xml에는 colPr/colLine이 남아 있습니다. 이 입력의 MCP engine2020 Print(job `c0af74c9-1bcf-454d-b177-08ab91b24e59`)은 Hancom11.0.0.9136·PrintMethod0·1-up 실행 근거를 반환했습니다. 같은 입력의 새 Native Sweep은79.58463%/exit1이고 단 구분선 누락을 직접 판독했습니다. 이 실제 실행으로 해당 경계의 검증을 진행하며 과거79.8%/64.3%와 같은 파일이라고 주장하지 않습니다. [실행 기록](pr_7600_review_impl.md)에 보정 계약·검증 순서를 연결했습니다. 원시 TSV는 이미 local output 분리 보정했습니다.
+
+## 메인터너 보정의 실제 입력과 Print 계약
+
+| 보존 파일 | SHA-256 | 역할 |
+| --- | --- | --- |
+| `samples/issue7593/repro-equation-issue7593.hwpx` | `88a3683c34e92f8887e54b9b379f8c399a8ec844e46e127793c6486cba8d31ec` | 공개 이슈 원본, 원본 바이트 유지 |
+| `samples/issue7593/repro-dyad-min-no-script.hwpx` | `7f12969bce23d268cd2cc1d1ebd20f64582755373afd91035e2278ecf0aa7e69` | 기본 빈 스크립트만 제거한 검증 사본 |
+| `pdf/issue7593/repro-equation-issue7593-hwpx-2020.pdf` | `206b9fc127a8f40e63fc49ba86ebd455f7d4e651e1f32dbf68d3915052d9f8db` | 공개 원본의 MCP2020 Print |
+| `pdf/issue7593/repro-dyad-min-no-script-hwpx-2020.pdf` | `ba0df59511f46087b7b08bd93fa02e2fe216207a355ebc1fefe8f5413bf3b7cb` | 사본의 MCP2020 Print |
+
+네 파일은 `1a7ad89e4`에 포함했고 실제 실행 바이트와 commit의 동일성을 확인했습니다. 두 PDF는 Hancom11.0.0.9136, `pdf_print_method:0`, `hancom2020_pdf_driver_one_up`의 성공·다운로드를 확인했습니다. 공통 PDF 메타데이터는 Creator Hwp2020 0.0.0.0, Producer HancomPDF1.3.0.550, 전체1쪽입니다. 기준값 생성·PDF2022와의 호환성은 실제 출력으로 확인했고 Creator 연도만으로 기존 PDF를 거부하지 않았습니다.
+
+초기 fc-match 확인만으로 실제 SVG 공급을 확인했다고 쓴 부분은 정정합니다. SVG data-URI의 name table을 확인하니 Noto ExtraLight/다른 바탕 폴백이었습니다. 시스템 등록 family를 파일명 폴백 전에 조회한 보정 후 Han Santteut Dotum Regular/Bold와 HCR Batang이 실제 내장됐습니다. 최종 실행에서 RHWP_FONT_PATH와 별도 font-path를 지정하지 않았습니다.
+
+실행 source와 출력 경로, 전후 원인, 같은 메트릭의 측정/배치 소비 위치는 [보정 기록](pr_7600_review_impl.md)에 연결했습니다. 최종 Native는 output의 final-native-issue / final-native-min / final-native-original-min, 각 전쪽 TSV는 대응 *-scores / original-min/silhouette.tsv에 있습니다. 로그·TSV·JSON은 Git 제외합니다. 수식 글리프 장평/획·발문 간격의 잔여 차이는 남아 있고 실루엣90% 통과를 전체 glyph fidelity로 확대하지 않습니다.
+
+## 최신 후보의 추가 검증 (557a1c91c, 전체 gate 진행 중)
+
+보정 후보 `557a1c91cd5ed5db2ba0c00a37ea62fd8986dd18`의 Rust/lib source는
+`1a7ad89e4d6aba5a1da8a7aec359cf220ef644ba`와 동일합니다. fresh 최적화 WASM은
+루트에서 `CARGO_TARGET_DIR=target/pr-review scripts/wasm-pack-locked.sh --target web --out-dir pkg`로
+성공했고 최종 후보에서 네 시각 실행을 다시 출력했습니다.
+
+| 입력 전체1쪽 | Native | fresh WASM | gate |
+| --- | --- | --- | --- |
+| 공개 #7593 원본 ↔ MCP2020 Print |92.28714%|92.28714%|passed, 누락/90% 미만0|
+| 스크립트 없는 최소 입력 ↔ MCP2020 Print |96.47259%|96.47259%|passed, 누락/90% 미만0|
+
+최종 산출은 `output/pr-review/pr7600/validated-{native,wasm}-{issue,min}/`와
+대응 `validated-*-scores/silhouette.tsv`에 있습니다. font 예외·점수 임계값 변경은 없습니다.
+실행 manifest의 gate와 전쪽 TSV, 실제 compare/review/overlay를 확인하며 TSV-only의
+not_evaluated를 수용 판정으로 대신하지 않습니다.
+
+[공개 원본 Native review](../assets/pr_7600_review_20261006/native-issue-review.png),
+[Native overlay](../assets/pr_7600_review_20261006/native-issue-overlay.png),
+[fresh WASM review](../assets/pr_7600_review_20261006/wasm-issue-review.png),
+[WASM overlay](../assets/pr_7600_review_20261006/wasm-issue-overlay.png),
+[최소 입력 Native review](../assets/pr_7600_review_20261006/native-min-review.png),
+[최소 입력 WASM review](../assets/pr_7600_review_20261006/wasm-min-review.png)를 보존합니다.
+구분선·그림/보기 외곽, 보기 ㄴ의 높이/소유, 다섯 선택지의 순서/누락과 단 내부 포함을 직접 확인했습니다.
+잔여 수식 글리프 장평·획과 발문 간격 차이는 남아 있고 전체 glyph 일치로 확대하지 않습니다.
+
+- 관계 기반 정식 배치 회귀: 보정 전 `a0db9c052`3FAIL, 복원 후3PASS. 각각 선0개,
+  기준선 순서 위반, 기본 탭 격자 비율3.5375(독립 Print는3)로 검출했습니다.
+  `logs/placement-red.log`·`placement-green.log`이며 빌드 실패·0tests는 red/pass로 세지 않습니다.
+- 실제 Studio CanvasKit에서 초기7Equation 존재 검사는 표시를 입증하지 못했습니다.
+  직접 캡처로①/② 내용 누락과 `equation:invalidLayout`을 확인하고 math glyph 폴백을 보정했습니다.
+  정식 `issue-7593-dyad-display.test.mjs`는 Canvas2D/CanvasKit × 두 문서4PASS,
+  모든 수식의 실제 내용 존재·정확한 backend·숨은 Canvas2D overlay 없음·unexpectedUnsupportedOps0을 확인했습니다.
+  `logs/browser-formal.log`, `browser/results.json`,
+  [공개 원본 Studio CanvasKit](../assets/pr_7600_review_20261006/studio-canvaskit-issue.png)와
+  [최소 입력 Studio CanvasKit](../assets/pr_7600_review_20261006/studio-canvaskit-min.png).
+- 새 Noto Sans Math2.001 WOFF2는 설치된 오픈소스 전체 TTF를 변환한 것이며 실제 누락 U+2AFD의
+  glyph를 공급합니다. 폰트의 Copyright2018 Google LLC/name ID13 SIL OFL1.1을 확인했고
+  `assets/fonts/NotoSansMath-OFL.txt`, `assets/fonts/FONTS.md`, `THIRD_PARTY_LICENSES.md`에
+  저작권·라이선스·출처·재배포 조건을 기록했습니다. 글리프를 다른 codepoint로 치환하지 않습니다.
+  #7594의 평행 기호 모양/의미 축을 이 PR에서 종료하지 않습니다.
+- actual Studio download/root pkg/public WASM SHA-256
+  `040ffe26e4de9a064e350c6264452e3b767c4808f798661907ec42b29ba22a34` 일치,
+  JS `70cde06a369fa7fd4fc8bc8f3d6acaee158596ba1a116a2c72159002b0b5654e` 일치.
+  public/rhwp.js는 이미 추적되며 fresh build 후 기존 commit과 byte 동일해 추가 diff가 없습니다.
+- `npx tsc --noEmit` PASS, Studio tests1,815PASS/0FAIL/2SKIP,
+  실 CanvasKit font coverage PASS, E2E MANIFEST150파일/150행 PASS.
+- `svg/system_fonts.rs`는 Native에서 fontdb의 시스템 family/weight 조회를 공통 사용합니다.
+  Linux 실행을 확인했고 macOS/Windows 실행은 미실행입니다. WASM cfg에는 포함하지 않으며
+  기존 embed 계약 때문에 TTC face index0 이외는 건너뜁니다.
+- 새 입력의 layout-anomaly는 두 파일 모두 offCanvas/overflow/textOverlap/emptyPage/storedLineEscape0입니다.
+  독립 Print 전체쪽수/본문 확인 후 oracle 원장에 두 경로1/1만 추가했습니다.
+  canonical engine 선택을 실제 재사용해 PDF 짝을 확인했고 다른 baseline·golden 허용치를 바꾸지 않았습니다.
+
+최종 필수 Rust lint·전체 nextest·Skia 실행 종료 결과는 다음 단계에서 확정합니다.
+
+사용자의 직접 비교 지적으로 발문 첫 `rm dyadAB`가 저장 프레임40에 맞춰 약2배 늘어나는 미충족을 확인했습니다.
+92% 보조값 통과를 이 차이의 면제로 사용하지 않습니다. 앞선 시각 자료는 해당 보정 전 source의 기록이며
+필수 광범위 검증은 이 표시 차이를 고친 새 source에서 다시 확정합니다.

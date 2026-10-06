@@ -335,6 +335,7 @@ USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
 | Pretendard (9종) | SIL Open Font License 1.1 | github.com/orioncactus/pretendard | Sans-serif fallback |
 | Noto Serif KR (2종) | SIL Open Font License 1.1 | Google Fonts | Serif fallback |
 | Noto Sans KR (3종) | SIL Open Font License 1.1 | Google Fonts | Sans-serif fallback |
+| Noto Sans Math Regular 2.001 | SIL Open Font License 1.1 | Google LLC / Ubuntu `fonts-noto-core`; [공식 라이선스](https://github.com/google/fonts/blob/main/ofl/notosansmath/OFL.txt) | CanvasKit 수학 기호 fallback; [라이선스 전문](assets/fonts/NotoSansMath-OFL.txt) 동봉 |
 | Nanum Myeongjo (3종) | SIL Open Font License 1.1 | Google Fonts | Serif fallback |
 | Nanum Gothic (3종) | SIL Open Font License 1.1 | Google Fonts | Sans-serif fallback |
 | Nanum Gothic Coding (2종) | SIL Open Font License 1.1 | Google Fonts | Monospace fallback |
@@ -358,6 +359,11 @@ USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
 | `tests/fixtures/native_font_family_names/family-contract.ttf` | Adobe Noto Sans KR 수정본, SIL OFL 1.1 | [출처](tests/fixtures/native_font_family_names/README.md), [전문](tests/fixtures/native_font_family_names/OFL.txt) |
 | `tests/fixtures/native_font_styles/*.ttf` (2개) | Adobe Noto Sans KR 수정본, SIL OFL 1.1 | [출처·재생성](tests/fixtures/native_font_styles/README.md), [전문](tests/fixtures/native_font_styles/OFL.txt) |
 | 나머지 `tests/fixtures/fonts/`의 TTF·TTC (7개) | 저장소 생성기의 직접 작성 윤곽선, MIT | 각 `*.LICENSE.md`에 생성기·용도 기록. 외부 폰트 수정본과 구별 |
+
+`assets/fonts/NotoSansMath-Regular.woff2`는 Ubuntu 설치본의 전체 TTF를 WOFF2로 변환한
+파일이다. 이 버전의 `Copyright 2018 Google LLC. All Rights Reserved.`와 SIL OFL 1.1
+정보를 폰트 내부 및 동봉 라이선스에 보존한다. 소프트웨어와 함께 재배포하며 폰트 자체는
+SIL OFL 1.1을 유지한다. 원본 경로·SHA-256·변환 방법은 [폰트 목록](assets/fonts/FONTS.md)에 기록한다.
 
 ---
 

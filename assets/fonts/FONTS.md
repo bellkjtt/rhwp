@@ -124,6 +124,8 @@ OFL 1.1 전문과 Reserved Font Name을 명시한다. 이 네 WOFF2는 공식 `H
 
 Noto Sans Math는 `/usr/share/fonts/truetype/noto/NotoSansMath-Regular.ttf`의 전체 glyph를
 fontTools `TTFont`의 `flavor='woff2'`로 변환했다. subset·문자 매핑 변경은 없다.
+원 TTF의 SHA-256은 `8242bd1e55368b27e32455260754cf9aa58f3ad7ea80664b66c21f1b09910d6c`,
+WOFF2의 SHA-256은 `6836027b99d29fd0e6f668cf0c2e89107de4131b91116cd96516ad4a7e19d66d`다.
 CanvasKit 수식은 기본 Noto Sans KR → D2Coding → Noto Sans Math 순으로 실제 glyph ID가
 0이 아닌 face를 사용한다. U+2AFD 하나가 기본 face에 없다는 이유로 정상 AB/CD와
 dyad 장식을 포함한 수식 전체를 버리지 않는다. 폴백 실패는 여전히 진단으로 남는다.
