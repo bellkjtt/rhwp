@@ -7,6 +7,7 @@ use super::ast::*;
 
 mod glyph_advances;
 mod script_geometry;
+mod symbol_advances;
 mod variable_style;
 pub(crate) use variable_style::is_styled_variable;
 
@@ -526,7 +527,8 @@ impl EqLayout {
                 kind: LayoutKind::MathSymbol(text.to_string()),
             };
         }
-        let w = estimate_text_width(text, fs, false);
+        let w = glyph_advances::text_width(text, fs)
+            .unwrap_or_else(|| estimate_text_width(text, fs, false));
         let symbol = LayoutBox {
             x: 0.0,
             y: 0.0,

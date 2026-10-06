@@ -42,7 +42,7 @@ fn advance_units(ch: char) -> Option<u16> {
         0x210E => Some(ITALIC_LOWER[(b'h' - b'a') as usize]),
         0x1D468..=0x1D481 => Some(BOLD_ITALIC_UPPER[(code - 0x1D468) as usize]),
         0x1D482..=0x1D49B => Some(BOLD_ITALIC_LOWER[(code - 0x1D482) as usize]),
-        _ => None,
+        _ => super::symbol_advances::advance_units(code),
     }
 }
 
