@@ -79,6 +79,7 @@ impl TypesetEngine {
             mut current_endnote_had_inline_object_vpos_overestimate,
         } = flow;
         let mut pre_emitted_endnote_para_indices = std::collections::HashSet::new();
+        let mut kept_new_head_in_current_column = false;
         for (ep_idx, en_para) in en_ctrl.paragraphs.iter().enumerate() {
             if pre_emitted_endnote_para_indices.remove(&ep_idx) {
                 emitted_endnote_count += 1;
@@ -138,6 +139,22 @@ impl TypesetEngine {
                 .unwrap_or(st.layout.body_area.width);
             let fmt =
                 self.format_endnote_paragraph(en_para, Some(&composed), &styles, Some(en_col_w));
+            if kept_new_head_in_current_column
+                && ep_idx == 1
+                && self.reflowed_endnote_head_successor_first_line_overflows(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    st.available_height(),
+                    en_col_w,
+                )
+            {
+                st.advance_column_or_new_page();
+                prev_en_bottom_vpos = None;
+                prev_en_content_bottom_vpos = None;
+            }
             if std::env::var("RHWP_ENDNOTE_LINE_DEBUG").is_ok() {
                 debug_print_endnote_line_segments(
                     en_ref.number,
@@ -1502,7 +1519,22 @@ impl TypesetEngine {
                 zero_question_title_tail_fits_by_line_height,
                 large_between_zero_above_whole_note_small_bleed_fits,
             });
-            if advance_for_new_endnote {
+            let kept_new_head = advance_for_new_endnote
+                && ep_idx == 0
+                && self.reflowed_endnote_new_head_fits(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                );
+            if kept_new_head {
+                kept_new_head_in_current_column = true;
+            }
+            if advance_for_new_endnote && !kept_new_head {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
                 prev_en_content_bottom_vpos = None;

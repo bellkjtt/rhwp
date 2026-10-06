@@ -4949,15 +4949,17 @@ impl TypesetEngine {
             // 저장 줄이 없는 host 면 뒤 재조판 문단이 표 상자를 직접 피한다.
             st.register_page_anchored_square_table(para_idx, ctrl_idx, para, table);
         } else if is_wrap_around_table
-            && pre_height > 0.0
             && crate::renderer::float_placement::square_successor_starts_beside_table(
                 para,
                 st.next_para_lane_probe,
                 table,
             )
         {
-            // [#7548] 다음 문단이 표 옆 차선에서 시작하면 표 높이를 흐름에 예약하지
-            // 않는다 — layout 의 같은 판정과 짝(host 본문 끝에서 잇는다).
+            // 뒤 소유 항목이 host 텍스트를 소비해도 표는 배타 영역을 남긴다.
+            // 같은 host 줄을 표 앞에서 다시 전진시키지 않는다.
+            if pre_height <= 0.0 {
+                st.register_square_band(st.current_height, st.current_height + table_total_height);
+            }
             st.advance_flow_by(pre_height);
         } else if is_wrap_around_table && pre_height > 0.0 {
             let v_off_px = crate::renderer::hwpunit_to_px(vertical_offset as i32, self.dpi);
