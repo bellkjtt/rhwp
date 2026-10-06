@@ -70,12 +70,17 @@ fn render_box(
             // CJK/한글 텍스트는 이탤릭 없이 렌더링 (수학 변수명만 이탤릭).
             // FontStyle::Roman(`rm` 적용)으로 italic=false 가 전달된 경우에도 이탤릭을 적용하지 않는다.
             let has_cjk = super::text_has_cjk(text);
-            let italic_attr = if !has_cjk && italic {
+            let styled = is_styled_variable(text);
+            let italic_attr = if !has_cjk && italic && !styled {
                 " font-style=\"italic\""
             } else {
                 ""
             };
-            let weight_attr = if bold { " font-weight=\"bold\"" } else { "" };
+            let weight_attr = if bold && !styled {
+                " font-weight=\"bold\""
+            } else {
+                ""
+            };
             if has_cjk && (lb.width - estimate_text_width(text, fi, false)).abs() > 0.01 {
                 for (ch, offset) in super::positioned_cjk_text(text, fi, lb.width) {
                     svg.push_str(&format!(
@@ -199,7 +204,7 @@ fn render_box(
                     sign_x,
                     y,
                     color,
-                    fs * super::layout::SCRIPT_SCALE,
+                    fs * super::layout::RADICAL_DEGREE_SCALE,
                     false,
                     false,
                 );

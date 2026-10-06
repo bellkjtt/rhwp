@@ -5,6 +5,10 @@
 
 use super::ast::*;
 
+mod script_geometry;
+mod variable_style;
+pub(crate) use variable_style::is_styled_variable;
+
 /// 수식 레이아웃 박스
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct LayoutBox {
@@ -131,10 +135,15 @@ pub struct EqLayout {
     hancom_cjk_advance: bool,
     hancom_latin: bool,
     latin_italic: bool,
+    hancom_math_face: bool,
+    variable_italic: bool,
+    variable_bold: bool,
 }
 
 /// 비율 상수
 pub(crate) const SCRIPT_SCALE: f64 = 0.7; // 첨자 크기 비율
+/// 근 지수는 일반 첨자보다 작은 수학 scriptscript 크기다(MATH 50%).
+pub(crate) const RADICAL_DEGREE_SCALE: f64 = 0.5;
 const FRAC_LINE_PAD: f64 = 0.2; // 분수선 상하 여백 (font_size 비율)
 const FRAC_LINE_THICK: f64 = 0.04; // 분수선 두께 (font_size 비율)
 const SQRT_PAD: f64 = 0.1; // 제곱근 내부 상단 여백
@@ -210,6 +219,9 @@ impl EqLayout {
             hancom_cjk_advance: false,
             hancom_latin: false,
             latin_italic: true,
+            hancom_math_face: false,
+            variable_italic: true,
+            variable_bold: false,
         }
     }
 
@@ -223,6 +235,9 @@ impl EqLayout {
             hancom_latin: !equation.common.size_protect
                 && equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
             latin_italic: true,
+            hancom_math_face: equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
+            variable_italic: true,
+            variable_bold: false,
         }
     }
 
@@ -417,7 +432,7 @@ impl EqLayout {
                 })
                 .sum()
         } else {
-            estimate_text_width(text, fs, !has_cjk)
+            estimate_text_width(text, fs, self.variable_italic && !has_cjk)
         };
         LayoutBox {
             x: 0.0,
@@ -425,7 +440,11 @@ impl EqLayout {
             width: w,
             height: fs,
             baseline: fs * 0.8,
-            kind: LayoutKind::Text(text.to_string()),
+            kind: LayoutKind::Text(variable_style::display_text(
+                text,
+                self.variable_italic,
+                self.variable_bold,
+            )),
         }
     }
 
@@ -435,7 +454,17 @@ impl EqLayout {
         {
             return layout;
         }
-        let w = estimate_text_width(text, fs, false);
+        // 기본 수학 face와 HYhwpEQ의 수학 숫자는 모두 반각 전진폭을 갖는다.
+        let w = text
+            .chars()
+            .map(|ch| {
+                if ch.is_ascii_digit() {
+                    fs * 0.5
+                } else {
+                    estimate_text_width(&ch.to_string(), fs, false)
+                }
+            })
+            .sum();
         LayoutBox {
             x: 0.0,
             y: 0.0,
@@ -452,10 +481,15 @@ impl EqLayout {
         {
             return layout;
         }
-        let w = estimate_text_width(text, fs, false);
+        // 수식의 빼기 기호는 문장용 하이픈과 다른 글리프다.
+        let display = if text == "-" { "−" } else { text };
+        let w = estimate_text_width(display, fs, false);
         // 연산자 좌우 여백
         let pad = if matches!(text, "+" | "-" | "=" | "<" | ">" | "×" | "÷") {
             fs * 0.15
+        } else if matches!(text, "(" | ")" | "[" | "]") {
+            // 보통 크기의 구분자는 관계·이항 연산자 여백을 갖지 않는다.
+            0.0
         } else {
             fs * 0.05
         };
@@ -465,7 +499,7 @@ impl EqLayout {
             width: w + pad * 2.0,
             height: fs,
             baseline: fs * 0.8,
-            kind: LayoutKind::Symbol(text.to_string()),
+            kind: LayoutKind::Symbol(display.to_string()),
         }
     }
 
@@ -614,21 +648,31 @@ impl EqLayout {
     fn layout_sqrt(&self, index: &Option<Box<EqNode>>, body: &EqNode, fs: f64) -> LayoutBox {
         let b = self.layout_node(body, fs);
         let pad = fs * SQRT_PAD;
-        let sign_w = fs * 0.6; // √ 기호 폭
+        // 수식 face의 논리 전진폭. HYhwpEQ의 수학 radical은 1em,
+        // 배포 Latin Modern Math의 U+221A는 833/1000em이다.
+        let sign_w = fs * if self.hancom_math_face { 1.0 } else { 0.833 };
         let body_w = b.width + pad;
         let body_h = b.height + pad * 2.0;
 
         let idx = index.as_ref().map(|i| {
-            let mut ib = self.layout_node(i, fs * SCRIPT_SCALE);
-            ib.x = 0.0;
-            ib.y = 0.0;
+            let mut ib = self.layout_node(i, fs * RADICAL_DEGREE_SCALE);
+            // MATH RadicalKernBeforeDegree=278/1000em.
+            ib.x = fs * 0.278;
+            // MATH RadicalDegreeBottomRaisePercent=60: 근 지수 하단을
+            // radical 높이의 60%만큼 올린다.
+            ib.y = body_h * 0.4 - ib.height;
             ib
         });
-        let idx_w = idx.as_ref().map(|i| i.width).unwrap_or(0.0);
-        let total_w = idx_w.max(sign_w * 0.5) + sign_w * 0.5 + body_w;
+        // MATH RadicalKernAfterDegree=-556/1000em은 근 지수와 기호의
+        // 겹쳐 쓸 수 있는 폭이다. 그 폭을 넘는 지수만 추가 공간을 점유한다.
+        let degree_extension = idx
+            .as_ref()
+            .map(|i| (i.x + i.width - fs * 0.556).max(0.0))
+            .unwrap_or(0.0);
+        let total_w = degree_extension + sign_w + body_w;
 
         let mut body_box = b;
-        body_box.x = total_w - body_w + pad * 0.5;
+        body_box.x = total_w - body_w;
         body_box.y = pad;
 
         LayoutBox {
@@ -640,54 +684,6 @@ impl EqLayout {
             kind: LayoutKind::Sqrt {
                 index: idx.map(Box::new),
                 body: Box::new(body_box),
-            },
-        }
-    }
-
-    fn layout_superscript(&self, base: &EqNode, sup: &EqNode, fs: f64) -> LayoutBox {
-        let b = self.layout_node(base, fs);
-        let s = self.layout_node(sup, fs * SCRIPT_SCALE);
-
-        // sup_shift: 기준선으로부터 위첨자 상단까지의 거리 (양수 = base 상단 아래)
-        let sup_shift = b.baseline - s.height * 0.7;
-
-        let (base_y, sup_y, total_h);
-        if sup_shift >= 0.0 {
-            // [Task #1300] 위첨자 상단을 base 상단에 맞춘다 (한컴 정합).
-            // 기존엔 base 를 sup_shift(=b.baseline 비례) 만큼 아래로 밀어 위첨자를
-            // 박스 최상단에 두었는데, 키 큰 base(괄호 분수 등)에서 위첨자가 base 상단
-            // 위로 과하게 치솟아 윗줄을 침범했다(#1300). base 를 밀지 않고(상단 정렬)
-            // 위첨자 상단이 base 상단과 같은 높이에 오도록 한다.
-            // base 가 sup 보다 낮은 경우만 sup 를 담도록 base 를 내린다.
-            sup_y = 0.0;
-            base_y = (s.height - b.height).max(0.0);
-            total_h = (base_y + b.height).max(s.height);
-        } else {
-            // 위첨자가 base 상단 위로 확장 — sup를 상단에, base를 |sup_shift|만큼 내림
-            sup_y = 0.0;
-            base_y = -sup_shift;
-            total_h = (base_y + b.height).max(s.height);
-        }
-
-        let mut base_box = b;
-        base_box.x = 0.0;
-        base_box.y = base_y;
-
-        let mut sup_box = s;
-        sup_box.x = base_box.width;
-        sup_box.y = sup_y;
-
-        let total_w = base_box.width + sup_box.width;
-
-        LayoutBox {
-            x: 0.0,
-            y: 0.0,
-            width: total_w,
-            height: total_h,
-            baseline: base_box.y + base_box.baseline,
-            kind: LayoutKind::Superscript {
-                base: Box::new(base_box),
-                sup: Box::new(sup_box),
             },
         }
     }
@@ -1345,13 +1341,27 @@ impl EqLayout {
         body: &EqNode,
         fs: f64,
     ) -> LayoutBox {
-        let mut context = *self;
+        use super::symbols::FontStyleKind;
+        let (variable_italic, variable_bold) = match style {
+            FontStyleKind::Roman | FontStyleKind::SansSerif | FontStyleKind::Monospace => {
+                (false, false)
+            }
+            FontStyleKind::Italic => (true, self.variable_bold),
+            FontStyleKind::Bold => (self.variable_italic, true),
+            FontStyleKind::Blackboard => (false, true),
+            FontStyleKind::Calligraphy | FontStyleKind::Fraktur => (false, false),
+        };
+        let mut styled = Self {
+            variable_italic,
+            variable_bold,
+            ..*self
+        };
         match style {
-            super::symbols::FontStyleKind::Roman => context.latin_italic = false,
-            super::symbols::FontStyleKind::Italic => context.latin_italic = true,
-            _ => context.hancom_latin = false,
+            FontStyleKind::Roman => styled.latin_italic = false,
+            FontStyleKind::Italic => styled.latin_italic = true,
+            _ => styled.hancom_latin = false,
         }
-        let b = context.layout_node(body, fs);
+        let b = styled.layout_node(body, fs);
         LayoutBox {
             x: 0.0,
             y: 0.0,
@@ -1391,7 +1401,12 @@ pub(crate) fn is_integral_symbol(symbol: &str) -> bool {
 pub(crate) fn estimate_text_width(text: &str, font_size: f64, italic: bool) -> f64 {
     let mut w = 0.0;
     for ch in text.chars() {
-        let ratio = if ch.is_ascii() {
+        let ratio = if matches!(ch, '(' | ')') {
+            // 함께 제공하는 Latin Modern Math의 보통 괄호 전진폭: UPM 1000, 389 단위.
+            0.389
+        } else if ch == '−' {
+            0.778
+        } else if ch.is_ascii() {
             if ch.is_ascii_uppercase() {
                 0.65
             } else if ch.is_ascii_lowercase() {

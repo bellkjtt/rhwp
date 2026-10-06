@@ -61,6 +61,15 @@ pub struct ComposedTextRun {
 }
 
 impl ComposedTextRun {
+    /// 원문 scalar가 없는 control 표제는 뒤 본문의 문자 좌표를 전진시키지 않는다.
+    pub(crate) fn source_scalar_count(&self) -> usize {
+        if self.inserted_control_text && self.char_overlap.is_none() {
+            0
+        } else {
+            self.text.chars().count()
+        }
+    }
+
     pub(crate) fn text_style(&self, styles: &ResolvedStyleSet) -> TextStyle {
         let mut style = resolved_to_text_style(styles, self.char_style_id, self.lang_index);
         if mapped_symbol_fonts::owns_shadowed_circle_font(self) {
@@ -95,6 +104,7 @@ impl ComposedTextRun {
     }
 }
 
+mod auto_number_projection;
 mod mapped_symbol_fonts;
 pub(crate) mod supplemental_clusters;
 
@@ -203,7 +213,15 @@ impl SingleLineOverflowCache {
 
 /// 구역의 문단 목록을 구성한다.
 pub fn compose_section(section: &Section) -> Vec<ComposedParagraph> {
-    section.paragraphs.iter().map(compose_paragraph).collect()
+    section
+        .paragraphs
+        .iter()
+        .map(|para| {
+            let mut composed = compose_paragraph(para);
+            auto_number_projection::project(&mut composed, para);
+            composed
+        })
+        .collect()
 }
 
 /// Exact-font contexts가 준비된 DocumentCore 파생-state 경계만 사용하는 opt-in
@@ -579,6 +597,8 @@ pub(crate) fn compose_paragraph_with_horizontal_shaping(
     styles: &ResolvedStyleSet,
 ) -> ComposedParagraph {
     let mut composed = compose_paragraph_in_context(para, styles);
+    // 본문 최초 composition과 편집 후 재조판이 같은 표제 투영을 소비한다.
+    auto_number_projection::project(&mut composed, para);
     composed.horizontal_shaping =
         line_breaking::compose_horizontal_shaping_handoff(para, &composed, styles);
     composed
@@ -2188,13 +2208,13 @@ fn inject_char_overlap_text(composed: &mut ComposedParagraph, para: &Paragraph) 
     insertions.sort_by_key(|(pos, _)| std::cmp::Reverse(*pos));
 
     for (text_pos, overlap_run) in insertions {
-        insert_overlap_run(composed, text_pos, overlap_run);
+        insert_control_text_run(composed, text_pos, overlap_run);
     }
 }
 
 /// 조합된 라인들에서 text_pos 위치에 CharOverlap 런을 삽입한다.
 /// 기존 텍스트 런을 필요시 분할한다.
-fn insert_overlap_run(
+pub(super) fn insert_control_text_run(
     composed: &mut ComposedParagraph,
     text_pos: usize,
     overlap_run: ComposedTextRun,
@@ -2205,7 +2225,7 @@ fn insert_overlap_run(
         let line_char_count: usize = line
             .runs
             .iter()
-            .filter(|r| r.char_overlap.is_none())
+            .filter(|r| r.char_overlap.is_none() && !r.inserted_control_text)
             .map(|r| r.text.chars().count())
             .sum();
 
@@ -2216,7 +2236,7 @@ fn insert_overlap_run(
 
             for run_idx in 0..line.runs.len() {
                 // CharOverlap 런은 건너뜀 (이미 삽입된 것)
-                if line.runs[run_idx].char_overlap.is_some() {
+                if line.runs[run_idx].inserted_control_text {
                     continue;
                 }
 

@@ -2729,7 +2729,8 @@ impl LayoutEngine {
                             hwpunit_to_px(shape.common().width as i32, self.dpi)
                         }
                         Control::Equation(eq) => hwpunit_to_px(
-                            crate::renderer::equation::inline_advance_width_hwp(eq),
+                            crate::renderer::equation::inline_box::horizontal_metrics(eq)
+                                .occupied_width_hwp(),
                             self.dpi,
                         ),
                         _ => 0.0,
@@ -2752,7 +2753,8 @@ impl LayoutEngine {
                             Control::Equation(eq) => (
                                 true,
                                 hwpunit_to_px(
-                                    crate::renderer::equation::inline_advance_width_hwp(eq),
+                                    crate::renderer::equation::inline_box::horizontal_metrics(eq)
+                                        .occupied_width_hwp(),
                                     self.dpi,
                                 ),
                             ),
@@ -3001,7 +3003,8 @@ impl LayoutEngine {
                                 Some(hwpunit_to_px(shape.common().width as i32, self.dpi))
                             }
                             Control::Equation(eq) => Some(hwpunit_to_px(
-                                crate::renderer::equation::inline_advance_width_hwp(eq),
+                                crate::renderer::equation::inline_box::horizontal_metrics(eq)
+                                    .occupied_width_hwp(),
                                 self.dpi,
                             )),
                             _ => None,
@@ -3845,7 +3848,8 @@ impl LayoutEngine {
                             Control::Equation(eq) => {
                                 // 분할 표 내 수식: 항상 글자처럼 인라인 배치
                                 let eq_w = hwpunit_to_px(
-                                    crate::renderer::equation::inline_advance_width_hwp(eq),
+                                    crate::renderer::equation::inline_box::horizontal_metrics(eq)
+                                        .occupied_width_hwp(),
                                     self.dpi,
                                 );
                                 let eq_h = hwpunit_to_px(
@@ -3911,11 +3915,12 @@ impl LayoutEngine {
                                         cell_para_index: Some(cp_idx),
                                         note_ref: None,
                                     }),
-                                    crate::renderer::equation::inline_content_box(
-                                        eq,
-                                        BoundingBox::new(eq_x, eq_y, eq_w, eq_h),
-                                        self.dpi,
-                                    ),
+                                    BoundingBox::new(
+                    crate::renderer::equation::inline_box::horizontal_metrics(eq).content_origin_x(eq_x, self.dpi),
+                    eq_y,
+                    hwpunit_to_px(crate::renderer::equation::inline_box::horizontal_metrics(eq).content_width_hwp, self.dpi),
+                    eq_h,
+                ),
                                 );
                                 cell_node.children.push(eq_node);
                             }

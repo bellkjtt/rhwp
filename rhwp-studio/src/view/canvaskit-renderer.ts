@@ -4300,7 +4300,9 @@ export class CanvasKitLayerRenderer {
       case 'text':
       case 'number':
       case 'symbol':
-      case 'mathSymbol':
+      case 'mathSymbol': {
+        // 수학 알파벳에는 글리프 자체의 기울임·굵기를 그대로 사용한다.
+        const styled = layout.kind.type === 'text' && /^[\u{1D400}-\u{1D7FF}\u{210E}]+$/u.test(layout.kind.text);
         return this.drawEquationText(
           canvas,
           layout.kind.text,
@@ -4308,12 +4310,13 @@ export class CanvasKitLayerRenderer {
           y + layout.baseline,
           this.equationFontSizeFromBox(layout, fontSize),
           color,
-          italic ?? layout.kind.type === 'text',
-          bold,
+          styled ? false : (italic ?? layout.kind.type === 'text'),
+          styled ? false : bold,
           layout.width,
           layout.kind.type === 'symbol',
           layout.kind.type === 'text' || layout.kind.type === 'number' ? '함초롬바탕' : 'Latin Modern Math',
         );
+      }
       case 'function':
         return this.drawEquationText(
           canvas,
@@ -4355,7 +4358,7 @@ export class CanvasKitLayerRenderer {
           && this.drawEquationLine(canvas, midX, midY, bodyLeft, y, color, fontSize * 0.04)
           && this.drawEquationLine(canvas, bodyLeft, y, x + layout.width, y, color, fontSize * 0.04);
         const indexDrawn = layout.kind.index
-          ? child(layout.kind.index, fontSize * 0.7, false, false)
+          ? child(layout.kind.index, fontSize * 0.5, false, false)
           : true;
         return linesDrawn && indexDrawn && child(layout.kind.body);
       }

@@ -14,7 +14,7 @@ use crate::renderer::equation::layout::{
 use crate::renderer::equation::symbols::{DecoKind, FontStyleKind};
 
 const EQ_FONT_FAMILY: &str =
-    "Latin Modern Math, STIX Two Math, Cambria Math, DejaVu Sans, Times New Roman, serif";
+    "Latin Modern Math, STIX Two Math, Cambria Math, DejaVu Math TeX Gyre, DejaVu Sans, Times New Roman, serif";
 
 /// Font resources supplied to body text and every recursive equation branch.
 pub(super) struct EquationFonts<'a> {
@@ -41,7 +41,7 @@ pub(super) fn render_equation(
         origin_y,
         colorref_to_skia(color, 1.0),
         base_font_size,
-        false,
+        true,
         false,
     );
 }
@@ -145,8 +145,8 @@ fn render_box(
                 x,
                 y + lb.baseline,
                 font_size_from_box(lb, fs),
-                true,
-                bold,
+                italic && !crate::renderer::equation::layout::is_styled_variable(text),
+                bold && !crate::renderer::equation::layout::is_styled_variable(text),
                 color,
                 false,
             );
@@ -255,7 +255,7 @@ fn render_box(
                     sign_x,
                     y,
                     color,
-                    fs * SCRIPT_SCALE,
+                    fs * crate::renderer::equation::layout::RADICAL_DEGREE_SCALE,
                     false,
                     false,
                 );

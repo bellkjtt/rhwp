@@ -63,7 +63,7 @@ fn terminal_tracking_after_inline_picture(
         + line
             .runs
             .iter()
-            .map(|run| run.text.chars().count())
+            .map(|run| run.source_scalar_count())
             .sum::<usize>();
     // 문자열 뒤 개체에는 실제로 자간 다음 내용이 있으므로 기존 전진 폭을 쓴다.
     if tac_offsets.iter().any(|(pos, _, _)| *pos >= text_end)
@@ -1144,7 +1144,7 @@ fn composed_line_char_end(comp: &ComposedParagraph, line_idx: usize) -> usize {
         + line
             .runs
             .iter()
-            .map(|run| run.text.chars().count())
+            .map(|run| run.source_scalar_count())
             .sum::<usize>()
         + usize::from(line.has_line_break)
 }
@@ -1433,7 +1433,9 @@ pub(crate) fn trailing_space_width_after_last_inline_object(
     stop_on_underline: bool,
 ) -> f64 {
     let run_chars = |r: &crate::renderer::composer::ComposedTextRun| -> usize {
-        if r.char_overlap.is_some() {
+        if r.inserted_control_text && r.char_overlap.is_none() {
+            0
+        } else if r.char_overlap.is_some() {
             let chars: Vec<char> = r.text.chars().collect();
             crate::renderer::composer::char_overlap_advance_units(&chars)
         } else {
@@ -1513,7 +1515,7 @@ fn tac_offsets_for_line_width(
         + line
             .runs
             .iter()
-            .map(|run| run.text.chars().count())
+            .map(|run| run.source_scalar_count())
             .sum::<usize>();
     let is_last_line = comp.lines.get(line_idx + 1).is_none();
     let next_starts_at_run_end = comp
@@ -4794,7 +4796,7 @@ impl LayoutEngine {
                     + comp_line
                         .runs
                         .iter()
-                        .map(|r| r.text.chars().count())
+                        .map(|r| r.source_scalar_count())
                         .sum::<usize>();
                 for &(tac_pos, tac_w, tac_ci) in tac_offsets_px {
                     if tac_pos <= run_char_pos || tac_pos > line_end_char {
@@ -5108,6 +5110,10 @@ impl LayoutEngine {
                         - zero_endnote_boundary_result_shift)
                         .max(col_area_y);
                     let inline_x = row_inline_x[tac_row];
+                    let inline_metrics =
+                        crate::renderer::equation::inline_box::horizontal_metrics(eq);
+                    let content_x = inline_metrics.content_origin_x(inline_x, self.dpi);
+                    let content_width = hwpunit_to_px(inline_metrics.content_width_hwp, self.dpi);
                     let eq_y = row_y + baseline - eq_baseline;
                     let (eq_cell_idx, eq_cell_para_idx) = if let Some(ref ctx) = cell_ctx {
                         (
@@ -5149,11 +5155,7 @@ impl LayoutEngine {
                             cell_para_index: eq_cell_para_idx,
                             note_ref,
                         }),
-                        crate::renderer::equation::inline_content_box(
-                            eq,
-                            BoundingBox::new(inline_x, eq_y, tac_w, eq_h),
-                            self.dpi,
-                        ),
+                        BoundingBox::new(content_x, eq_y, content_width, eq_h),
                     );
                     line_node.children.push(eq_node);
                     tree.set_inline_shape_position(
@@ -5161,12 +5163,7 @@ impl LayoutEngine {
                         para_index,
                         tac_ci,
                         cell_ctx.as_ref(),
-                        crate::renderer::equation::inline_content_box(
-                            eq,
-                            BoundingBox::new(inline_x, eq_y, tac_w, eq_h),
-                            self.dpi,
-                        )
-                        .x,
+                        content_x,
                         eq_y,
                     );
                     row_inline_x[tac_row] += tac_w;
@@ -5389,6 +5386,11 @@ impl LayoutEngine {
                                     tac_object_outer_margins_px(shape.common(), self.dpi);
                                 Some(hwpunit_to_px(*w_hu, self.dpi) + margin_left + margin_right)
                             }
+                            Control::Equation(eq) => Some(hwpunit_to_px(
+                                crate::renderer::equation::inline_box::horizontal_metrics(eq)
+                                    .occupied_width_hwp(),
+                                self.dpi,
+                            )),
                             _ => None,
                         })
                         .unwrap_or_else(|| hwpunit_to_px(*w_hu, self.dpi));
@@ -5578,7 +5580,7 @@ impl LayoutEngine {
         let mut char_offset: usize = 0;
         for li in 0..start_line.min(composed.lines.len()) {
             for run in &composed.lines[li].runs {
-                char_offset += run.text.chars().count();
+                char_offset += run.source_scalar_count();
             }
             // 강제 줄바꿈(\n)은 run 텍스트에서 제거되었으므로 별도 가산
             if composed.lines[li].has_line_break {
@@ -5815,7 +5817,7 @@ impl LayoutEngine {
                 if comp_line.segment_width > 0 && (comp_line.segment_width - col_w).abs() > 200 {
                     // char_offset만 진행하고 렌더링 건너뜀
                     for run in &comp_line.runs {
-                        char_offset += run.text.chars().count();
+                        char_offset += run.source_scalar_count();
                     }
                     if comp_line.has_line_break {
                         char_offset += 1;
@@ -8387,12 +8389,15 @@ impl LayoutEngine {
             // 각주/TAC/탭은 최종 TextRun 경계를 추가로 만든다. whole-run pair를
             // 먼저 적용하면 그 경계를 가로지르는 delta가 남으므로, sub-run
             // producer가 연결될 때까지 이 특수 run은 원자적으로 K0로 닫는다.
-            let run_char_count_for_boundary = if run.char_overlap.is_some() {
-                let chars: Vec<char> = run.text.chars().collect();
-                crate::renderer::composer::char_overlap_advance_units(&chars)
-            } else {
-                run.text.chars().count()
-            };
+            let run_char_count_for_boundary =
+                if run.inserted_control_text && run.char_overlap.is_none() {
+                    0
+                } else if run.char_overlap.is_some() {
+                    let chars: Vec<char> = run.text.chars().collect();
+                    crate::renderer::composer::char_overlap_advance_units(&chars)
+                } else {
+                    run.text.chars().count()
+                };
             let run_char_end_for_boundary = run_char_pos + run_char_count_for_boundary;
             let has_tac_boundary = tac_offsets_px.iter().any(|(position, _, _)| {
                 *position >= run_char_pos && *position <= run_char_end_for_boundary
@@ -8515,7 +8520,9 @@ impl LayoutEngine {
             {
                 pending_right_leader_digit_render = true;
             }
-            let run_char_count = if run.char_overlap.is_some() {
+            let run_char_count = if run.inserted_control_text && run.char_overlap.is_none() {
+                0
+            } else if run.char_overlap.is_some() {
                 // 글자겹침(CharOverlap)은 HWP char_offset 공간에서 1개 위치만 차지
                 let chars: Vec<char> = run.text.chars().collect();
                 crate::renderer::composer::char_overlap_advance_units(&chars)
@@ -9200,6 +9207,11 @@ impl LayoutEngine {
                             // 측정한 기준선 거리로 원점을 정한다. 저장 상자 안의 빈 높이도
                             // 기준선의 일부이므로 줄 상단 clamp로 다시 덮어쓰지 않는다.
                             let eq_y = y + baseline - eq_baseline;
+                            let inline_metrics =
+                                crate::renderer::equation::inline_box::horizontal_metrics(eq);
+                            let content_x = inline_metrics.content_origin_x(x, self.dpi);
+                            let content_width =
+                                hwpunit_to_px(inline_metrics.content_width_hwp, self.dpi);
                             let (eq_cell_idx, eq_cell_para_idx) = if let Some(ref ctx) = cell_ctx {
                                 (
                                     ctx.path.first().map(|e| e.cell_index),
@@ -9245,11 +9257,7 @@ impl LayoutEngine {
                                         note_ref,
                                     },
                                 ),
-                                crate::renderer::equation::inline_content_box(
-                                    eq,
-                                    BoundingBox::new(x, eq_y, tac_w, eq_h),
-                                    self.dpi,
-                                ),
+                                BoundingBox::new(content_x, eq_y, content_width, eq_h),
                             );
                             line_node.children.push(eq_node);
                             // 인라인 좌표 등록 → shape_layout에서 이 수식을 스킵
@@ -9258,12 +9266,7 @@ impl LayoutEngine {
                                 para_index,
                                 tac_ci,
                                 cell_ctx.as_ref(),
-                                crate::renderer::equation::inline_content_box(
-                                    eq,
-                                    BoundingBox::new(x, eq_y, tac_w, eq_h),
-                                    self.dpi,
-                                )
-                                .x,
+                                content_x,
                                 eq_y,
                             );
                         }
@@ -10099,7 +10102,9 @@ impl LayoutEngine {
         // cross-run 탭 감지용 inline_tabs(composed.tab_extended) 커서 — Task #290
         let mut inline_tab_cursor_est = stored_tab_index_before_line(composed, comp_line);
         for (run_idx_est, run) in comp_line.runs.iter().enumerate() {
-            let run_char_count_est = if run.char_overlap.is_some() {
+            let run_char_count_est = if run.inserted_control_text && run.char_overlap.is_none() {
+                0
+            } else if run.char_overlap.is_some() {
                 let chars: Vec<char> = run.text.chars().collect();
                 crate::renderer::composer::char_overlap_advance_units(&chars)
             } else {
@@ -10216,7 +10221,7 @@ impl LayoutEngine {
                 >= comp_line
                     .runs
                     .iter()
-                    .map(|r| r.text.chars().count())
+                    .map(|r| r.source_scalar_count())
                     .sum::<usize>()
                     + comp_line.char_start;
             for &(tac_abs_pos, tac_w, _) in
@@ -10320,7 +10325,7 @@ impl LayoutEngine {
                 >= comp_line
                     .runs
                     .iter()
-                    .map(|r| r.text.chars().count())
+                    .map(|r| r.source_scalar_count())
                     .sum::<usize>()
                     + comp_line.char_start;
             for &(fpos, fnum, ctrl_idx) in composed.footnote_positions.iter() {

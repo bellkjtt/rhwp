@@ -88,7 +88,8 @@ fn render_box(
                     super::CJK_EQUATION_FONT_FAMILY
                 ));
             } else {
-                set_font(ctx, fi, italic, bold);
+                let styled = is_styled_variable(text);
+                set_font(ctx, fi, italic && !styled, bold && !styled);
             }
             ctx.set_fill_style_str(color);
             if has_cjk && (lb.width - estimate_text_width(text, fi, false)).abs() > 0.01 {
@@ -174,7 +175,16 @@ fn render_box(
             ctx.stroke();
 
             if let Some(idx) = index {
-                render_box(ctx, idx, sign_x, y, color, fs * SCRIPT_SCALE, false, false);
+                render_box(
+                    ctx,
+                    idx,
+                    sign_x,
+                    y,
+                    color,
+                    fs * RADICAL_DEGREE_SCALE,
+                    false,
+                    false,
+                );
             }
             render_box(ctx, body, x, y, color, fs, italic, bold);
         }
