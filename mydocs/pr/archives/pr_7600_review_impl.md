@@ -1657,3 +1657,16 @@ emit_line_runs가 실제 방출하지만, is_blank_spacer_line은 반열림 TAC
 그린 수식까지 포함하며 HeightCursor가 설정된 미주 간격을 그 뒤에
 한 번 예약한다. 문서 ID나 절대 위치로 분기하지 않는다. 다음 줄
 선두·문단 끝 수식·진짜 빈 줄과 원본 10월의 경계를 재출력해 확인한다.
+
+98개 수식 역할의 함초롬돋움 라벨 대조군 기준 PDF도 커밋에 포함한다.
+파일은 pdf/pr7600-equation-font-frame-diagnostic/
+equation-font-frame-roles-hcr-print-2020.pdf이며 SHA-256은
+`5bd19d79405f45bb28d01e91891467a26c14ca0435a6c74387948ba83827d9d9`다.
+MCP Print job `9371d3c0-5402-4011-809a-9fdc45a3c983`, engine 2020,
+Hancom 11.0.0.9136, PrintMethod 0의 3쪽 출력이다. source `1be719b47`의
+fresh WASM과 `8edd3f8c2` Native는 각각 99.78707%/98.77101%/96.48090%
+였다. 별도 3쪽 review PNG에서 분수·첨자·윗줄·prime을 직접 판독했다.
+이전 runtime의 결과를 새 source의 검증으로 바꾸지 않는다. 현재
+점유 판정 보정 source에서도 Native 전체를 다시 출력하고 있다.
+진단용 HWP/HWPX와 로그는 아직 output에 있어 최종 제출 증적의
+재현 입력 커밋 확인은 미완료다. 이를 정식 회귀 통과로 보고하지 않는다.
