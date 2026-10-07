@@ -7339,6 +7339,7 @@ impl LayoutEngine {
         (separator_above_hu, between_notes_hu, separator_below_hu): (i32, i32, i32),
         (source_base, sources): (usize, &[EndnoteParaSource]),
         placements: EndnoteColumnPlacements,
+        measured_tables: &[MeasuredTable],
     ) -> (f64, Option<f64>) {
         // 실제 렌더 셋업(`set_endnote_shape_margins_hu`)과 같은 미주 모양 여백을 싣는다.
         // 사이 간격만 실으면 위·아래 여백이 0 으로 남아 영 여백 프로필로 오인된다.
@@ -7413,7 +7414,7 @@ impl LayoutEngine {
             composed,
             styles,
             &[],
-            &[],
+            measured_tables,
             &layout_info,
             &layout_info,
             col_area,

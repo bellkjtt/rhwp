@@ -1,8 +1,8 @@
 //! 수용한 저장 되감김 뒤의 단일 줄은 같은 실제 점유 결과로 fit한다.
 
 use crate::renderer::typeset::{
-    ColumnBreakType, FormattedParagraph, PageItem, Paragraph, ResolvedStyleSet, TypesetEngine,
-    TypesetState,
+    ColumnBreakType, FormattedParagraph, MeasuredTable, PageItem, Paragraph, ResolvedStyleSet,
+    TypesetEngine, TypesetState,
 };
 
 impl TypesetEngine {
@@ -18,8 +18,12 @@ impl TypesetEngine {
         saved_split: usize,
         available: f64,
         column_width: f64,
+        measured_tables: &[MeasuredTable],
     ) -> Option<usize> {
+        let style = styles.para_styles.get(paragraph.para_shape_id as usize)?;
         if paragraph.column_type != ColumnBreakType::None
+            || style.keep_lines
+            || style.keep_with_next
             || paragraph.controls.iter().any(|control| {
                 matches!(
                     control,
@@ -34,10 +38,15 @@ impl TypesetEngine {
         (saved_split + 1..paragraph.line_segs.len())
             .rev()
             .find(|&end_line| {
+                if style.widow_orphan
+                    && (end_line < 2 || paragraph.line_segs.len() - end_line < 2)
+                {
+                    return false;
+                }
                 let occupied = self.simulate_endnote_column_with_item(
                     st, paragraphs, styles, available, column_width,
                     Some(PageItem::PartialParagraph { para_index, start_line: 0, end_line }),
-                    true, None,
+                    true, None, measured_tables,
                 );
                 if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
                     eprintln!("EN_PREFIX_OCCUPIED pi={para_index} end={end_line} bottom={occupied:?} available={available:.3}");

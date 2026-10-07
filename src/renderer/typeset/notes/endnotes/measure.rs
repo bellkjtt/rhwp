@@ -6,7 +6,7 @@ use crate::renderer::typeset::notes::endnotes::profile::{
 use crate::renderer::typeset::{
     compose_paragraph, endnote_first_local_paras, first_text_line, hwpunit_to_px,
     page_item_para_index, para_has_treat_as_char_picture_or_shape, paragraph_by_global_index,
-    ComposedParagraph, HeightCursor, PageItem, Paragraph, ResolvedStyleSet, TypesetEngine,
+    ComposedParagraph, HeightCursor, MeasuredTable, PageItem, Paragraph, ResolvedStyleSet, TypesetEngine,
     TypesetState,
 };
 
@@ -442,6 +442,7 @@ impl TypesetEngine {
             ),
             (source_base, &local_sources),
             placements,
+            &[],
         );
         if ssot_debug {
             eprintln!(
@@ -510,6 +511,7 @@ impl TypesetEngine {
             extra_para_full.map(|para_index| PageItem::FullParagraph { para_index }),
             sequential_compact_rewind,
             future,
+            &[],
         )
     }
 
@@ -526,6 +528,7 @@ impl TypesetEngine {
         extra_item: Option<PageItem>,
         sequential_compact_rewind: bool,
         future: Option<(&[Paragraph], i32, bool)>,
+        measured_tables: &[MeasuredTable],
     ) -> Option<f64> {
         if st.current_items.is_empty() {
             return None;

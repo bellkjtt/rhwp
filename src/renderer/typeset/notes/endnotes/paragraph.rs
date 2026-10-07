@@ -452,9 +452,35 @@ impl TypesetEngine {
                         Some((&[], endnote_start, compact_no_separator_spacing)),
                     )
                     .is_some_and(|bottom| bottom <= available);
+            // 저장 경계가 문단 사이에 있어도 실제 줄이 작아졌다면 앞부분을
+            // 현재 단에 둘 수 있다. keep 계약과 실제 표 측정도 같은 경로로 확인한다.
+            let local_rewind_prefix_split = (!local_rewind_tail_fits
+                && ep_idx > 0
+                && !st.profile.session_edited()
+                && matches!((prev_en_bottom_vpos, this_first_offset),
+                    (Some(previous), Some(first)) if first < previous)
+                && crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                    &original_endnote.paragraphs[ep_idx],
+                    &composed,
+                ))
+            .then(|| {
+                self.reflowed_endnote_prefix_split(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    en_para_idx,
+                    0,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                )
+            })
+            .flatten();
             if st.col_count > 1
                 && !st.current_items.is_empty()
                 && !local_rewind_tail_fits
+                && local_rewind_prefix_split.is_none()
                 && (st.current_height > available * local_rewind_advance_threshold
                     || visible_separator_title_body_rewind_starts_next_column)
                 && !current_default_late_question_title
@@ -913,6 +939,9 @@ impl TypesetEngine {
                 allow_default_late_question_tail,
                 has_treat_as_char_picture_shape,
             });
+            if let Some(split) = local_rewind_prefix_split {
+                split_endnote_to_fit = Some(split);
+            }
             if ssot_level >= EnSsotLevel::A2
                 && a2_overflow_with_para == Some(true)
                 && split_endnote_to_fit.is_none()
@@ -1949,6 +1978,7 @@ impl TypesetEngine {
                         split,
                         available,
                         en_col_w,
+                        measured_tables,
                     )
                     .unwrap_or(split)
                 } else {
