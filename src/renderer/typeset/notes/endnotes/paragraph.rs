@@ -459,10 +459,10 @@ impl TypesetEngine {
                 && !st.profile.session_edited()
                 && matches!((prev_en_bottom_vpos, this_first_offset),
                     (Some(previous), Some(first)) if first < previous)
-                && crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                && (crate::renderer::composer::stored_row_projection::reissued_equation_rows(
                     &original_endnote.paragraphs[ep_idx],
                     &composed,
-                ))
+                ) || self.endnote_column_has_reissued_rows(st, paragraphs, styles)))
             .then(|| {
                 self.reflowed_endnote_prefix_split(
                     st,
@@ -1964,10 +1964,10 @@ impl TypesetEngine {
             let split_candidate = split_candidate.map(|split| {
                 if internal_vpos_rewind
                     && !st.profile.session_edited()
-                    && crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                    && (crate::renderer::composer::stored_row_projection::reissued_equation_rows(
                         &original_endnote.paragraphs[ep_idx],
                         &composed,
-                    )
+                    ) || self.endnote_column_has_reissued_rows(st, paragraphs, styles))
                 {
                     self.reflowed_endnote_prefix_split(
                         st,

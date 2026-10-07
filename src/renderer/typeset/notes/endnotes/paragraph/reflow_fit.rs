@@ -6,6 +6,40 @@ use crate::renderer::typeset::{
 };
 
 impl TypesetEngine {
+    /// 저장 단의 잔여 높이는 현재 문단뿐 아니라 앞서 방출한 수식 줄에도 의존한다.
+    pub(super) fn endnote_column_has_reissued_rows(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+    ) -> bool {
+        st.current_items.iter().any(|item| {
+            let Some(para_index) = crate::renderer::typeset::page_item_para_index(item) else {
+                return false;
+            };
+            let Some(source) = para_index
+                .checked_sub(paragraphs.len())
+                .and_then(|local| st.endnote_para_sources.get(local))
+            else {
+                return false;
+            };
+            let Some(crate::model::control::Control::Endnote(note)) = paragraphs
+                .get(source.para_index)
+                .and_then(|parent| parent.controls.get(source.control_index))
+            else {
+                return false;
+            };
+            let Some(original) = note.paragraphs.get(source.note_para_index) else {
+                return false;
+            };
+            let composed =
+                crate::renderer::composer::compose_paragraph_in_context(original, styles);
+            crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                original, &composed,
+            )
+        })
+    }
+
     /// 메트릭이 바뀐 저장 줄의 분할은 실제 앞부분의 점유로 확인한다.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn reflowed_endnote_prefix_split(
