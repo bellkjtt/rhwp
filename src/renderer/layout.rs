@@ -16541,6 +16541,7 @@ impl LayoutEngine {
                             // (3-11월_실전_통합_2022 page 1 우측 단 pi=69 picture
                             //  pic_emit_x=767 > col_right=759 → +274px advance → 문9 처짐)
                             // Picture 의 좌측 edge (x) 가 col_area 우측을 초과하면 advance skip.
+                            let mut picture_outside_column = false;
                             if matches!(pic.common.horz_rel_to, HorzRelTo::Column) {
                                 // [Issue #1230] emit 폭 판정은 layout_body_picture 와 동일한
                                 // 프레임 크기를 사용해야 skip 판정이 실제 배치와 일치한다.
@@ -16564,6 +16565,7 @@ impl LayoutEngine {
                                     }
                                 };
                                 if pic_emit_x >= col_area.x + col_area.width {
+                                    picture_outside_column = true;
                                     result_y = saved_y_offset;
                                 }
                             }
@@ -16572,7 +16574,9 @@ impl LayoutEngine {
                             // 그림 다음에 paragraph 의 line baseline 1줄(line_height + line_spacing)
                             // 을 추가 진행하나 rhwp 기본 layout 은 image_height 만 진행하여
                             // cluster 거리가 1 line 부족 (pr-149.hwp 18864 HU vs 17280 HU 결함).
-                            if matches!(
+                            // 단 밖 그림은 물리 띠를 예약하지 않는다. 호스트가 이미
+                            // 예약한 줄을 그림 높이의 뒤 간격으로 다시 더하지 않는다.
+                            if !picture_outside_column && matches!(
                                 pic.common.text_wrap,
                                 crate::model::shape::TextWrap::TopAndBottom
                             ) && matches!(

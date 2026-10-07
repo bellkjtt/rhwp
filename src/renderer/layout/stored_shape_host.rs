@@ -36,6 +36,7 @@ pub(super) fn preserves_line_origin(
         || !matches!(
             common.text_wrap,
             TextWrap::Square
+                | TextWrap::TopAndBottom
                 | TextWrap::Tight
                 | TextWrap::Through
                 | TextWrap::InFrontOfText
