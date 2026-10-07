@@ -114,7 +114,7 @@ Issue: [#7642](https://github.com/edwardkim/rhwp/issues/7642)
   `font_metrics_data` → 공통 글자 폭 측정 → composer의 텍스트·TAC 위치 →
   paragraph layout의 글리프 원점·수식 원점이 이 폭을 소비합니다. Native와 WASM은
   같은 정적 메트릭을 사용합니다. 다른 family의 기존 메트릭과 미등록 fallback은 유지합니다.
-- 이 변경의 Native 재출력·대조군 및 이후 fresh WASM은 아직 미실행입니다.
+- 이 변경의 Native 재출력은 아래 새 브랜치 결과로 확인했습니다. 이후 fresh WASM은 아직 미실행입니다.
   기존 74.88730% 결과를 수정 후 결과로 사용하지 않으며, 새 회귀 기대값도 추가하지 않습니다.
   원본 PDF의 미분 기호는 `HYhwpEQ`에 없는 `′`를 `Haansoft Batang`으로 출력하므로,
   본문 폭 연결 이후 수식 자체의 glyph·간격과 해당 대체 글꼴도 계속 대조합니다.
@@ -130,4 +130,73 @@ Issue: [#7642](https://github.com/edwardkim/rhwp/issues/7642)
 - 문서 add/add 충돌은 과거 로컬 검토 이력을 순차 재적용한 뒤 원 PR review를 upstream의
   실제 병합 판정으로 복원했다. 원 PR의 완료 판정과 새 작업의 미완료 상태를 분리한다.
 - 최신 base의 #7608 및 해당 table command·회귀 변경을 포함한 ancestry를 확인했다.
-  새 font metric과 새 base의 Native 재출력은 아직 수행하지 않았다.
+  새 font metric과 새 base의 Native 재출력은 아래와 같이 확인했다.
+
+## 새 브랜치 Native 재출력과 대조군
+
+- source: `baea3726639a5cc6532c60debe457d6f2ddf65c9`, base는 위 `b34fa18d`이다.
+- 명령: `cargo build --locked --profile release-test --target-dir target/pr-review --bin rhwp`.
+  build exit 0, 5분 13초. 실행 바이너리 SHA-256은
+  `33a7ca8e5c2af6b1bcb618272e3a6ec7aa7cff7dce0f3d1bb5d45e57787a7796`이다.
+- 수식 96개의 전체 3쪽은 98.55316 / 94.28874 / 96.98509%로, 최저값이
+  기존 74.88730%에서 94.28874%로 개선됐다. 같은 캡처의 2쪽 compare·overlay·review를
+  직접 확인했다. 큰 본문 시작 위치 차이는 줄었으나 큰 수식의 내부 간격·모양 차이는 남는다.
+  숫자 통과만으로 미세한 수식 차이의 해결 완료를 판정하지 않는다.
+- 원본·대조군 9개 문서의 전체 Native 페이지 비교도 종료했다.
+
+| 입력 | 비교 쪽수 | Native 최저 | 실행 판정 |
+| --- | ---: | ---: | --- |
+| 원본 11월 | 21 | 41.16275% | 18~21쪽 미달 |
+| 원본 9월 | 23 | 90.78108% | 수치 통과 |
+| 원본 10월 | 18 | 91.24244% | 수치 통과 |
+| eq-002 HWP | 1 | 92.51376% | 수치 통과 |
+| eq-002 HWPX | 1 | 92.51376% | 수치 통과 |
+| dyad 원본 | 1 | 96.39319% | 수치 통과 |
+| dyad 최소 입력 | 1 | 97.56681% | 수치 통과 |
+| HCR 역할 대조군 | 3 | 96.48090% | 수치 통과 |
+| 복합 적분 대조군 | 1 | 100.00000% | 수치 통과 |
+
+- 실행 명령·입력/PDF 해시·전체 TSV는 ignored
+  `output/pr-review/pr7600/issue7642-font-metrics-native-controls/progress.json`에 연결했다.
+  수식 96개 TSV와 패널은 `issue7642-font-metrics-native/prime-width/` 및
+  `issue7642-font-metrics-native-panels/`에 보존했다. 전체 쪽수는 각 입력의 PDF와 같다.
+- 새 데이터 색인에서 SFNT family(1/16)로 확인한 한국어/영문 이름만 유지한다.
+  근거 없는 `HanSantteutDotum`과 style이 붙은 PostScript 이름의 family 등록은 제거한다.
+  글꼴 별칭·대체 규칙 registry나 해당 projection을 변경하는 작업은 아니다.
+
+## 미분 기호 대체 face의 측정·표시 연결
+
+- 원본 11월 Print 18쪽에서 `′`는 HYhwpEQ가 아니라 `Haansoft Batang`으로 출력된다.
+  HYhwpEQ의 cmap에는 U+2032가 없고, PDF subset과 시스템 `HBATANG.TTF`의
+  전진폭은 모두 276/1024 em이다. 글꼴 바이트·윤곽은 포함하지 않는다.
+- HYhwpEQ의 미분 기호를 `source_font_symbol`에서 같은 실제 전진폭과
+  `FontGlyph`의 face 선택으로 발행한다. 일반 공개 수학 face와 인용 텍스트에는 적용하지 않는다.
+  배수 미분 기호·다른 누락 기호까지 검증했다고 주장하지 않는다.
+- SVG, Canvas2D, Skia는 이 레이아웃 결과의 face·원점·기준선을 그대로 소비한다.
+  Skia의 텍스트·괄호 표시는 자식 모듈로 분리해 Skia 수식 모듈을 1,000줄 이하로 유지한다.
+- CanvasKit의 이 face SFNT 조달은 아직 입증하지 않았다. Rust 지원 정책과 Studio는
+  명시 face 글리프를 수학 기본 글꼴로 바꾸지 않고 기존 SVG fallback 경로로 반환한다.
+  CanvasKit의 exact face 사용 성공으로 보고하지 않는다. JSON은 선택된 face를 보존한다.
+- 첫 빌드에서 새 결과 타입의 JSON·CanvasKit 정책 소비 누락을 검출했고 두 경로를 보정했다.
+  이 후속 후보는 Native 재빌드 중이다. 앞의 `baea3726` 결과를 후속 후보의 결과로 재사용하지 않는다.
+  저장 프레임 폭의 유효성과 원본 11월 줄바꿈은 별도로 계속 보정한다.
+
+### 대체 face 연결 후보의 Native 확인
+
+- build exit 0(4분 31초), 실행 바이너리 SHA-256
+  `35e1f9a798d0e3c20ad947b1f26c6f9264898e74d044f80199c14be9ac314abc`.
+  Native Skia의 `cargo check --locked --features native-skia --lib --target-dir target/pr-review`
+  exit 0(1분 8초), Studio의 `npx tsc --noEmit` exit 0이다.
+- 수식 96개 전체 3쪽의 Native 최저는 94.00834%다. 같은 캡처 2쪽의 review·overlay를
+  다시 생성해 미분 기호와 주변 글리프를 직접 확인했다. 올바른 face 선택과 숫자 통과는
+  확인했으나 긴 수식 내부 간격의 완전한 일치를 주장하지 않는다.
+- 원본 11월은 21쪽이며 최저 41.15967%로 여전히 미달이다. 글꼴 교체만으로 저장 폭과
+  줄바꿈 문제를 해결했다고 판정하지 않는다. 회귀 기대값·래칫·90% gate는 변경하지 않았다.
+- 전체 TSV와 실행 출처는 ignored `issue7642-prime-fallback-native-controls/` 및
+  `issue7642-prime-fallback-native-provenance.json`이다. 새 후보는 `baea3726` 위의 worktree
+  변경이며 다음 일반 커밋으로 고정한다. fresh WASM과 전체 필수 lint·회귀는 아직 미실행이다.
+- 별도 FreeType 원인 진단에서 공식 `HBATANG.TTF`의 힌팅된 U+2032 전진폭이
+  BaseUnit 600/700/900/1000/1200/1800에서 150/225/300/300/375/450HU였다.
+  독립 한컴 재생성 `rmP`/`rmP'` 폭 차이와 모두 같았다. 이는 폰트의 전진폭과
+  크기별 힌팅 근거이며 절대 문서 위치·회귀 기대값이 아니다. raw hmtx 전진폭과
+  source의 힌팅된 논리 전진폭은 구분하고, 저장 캐시 폭을 높이만으로 무효화하지 않는다.

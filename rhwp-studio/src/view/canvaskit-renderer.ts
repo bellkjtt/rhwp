@@ -4321,6 +4321,9 @@ export class CanvasKitLayerRenderer {
           layout.kind.type === 'text' || layout.kind.type === 'number' ? '함초롬바탕' : 'Latin Modern Math',
         );
       }
+      // 명시 face의 SFNT 조달 전에는 SVG fallback에서 같은 글꼴로 표시한다.
+      case 'fontGlyph':
+        return false;
       case 'function':
         return this.drawEquationText(
           canvas,

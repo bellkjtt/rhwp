@@ -13,6 +13,7 @@ mod integral_placement;
 mod limit_geometry;
 mod matrix_geometry;
 mod script_geometry;
+mod source_font_symbol;
 mod source_font_text;
 mod symbol_advances;
 mod symbol_spacing;
@@ -362,6 +363,11 @@ impl EqLayout {
         {
             return layout;
         }
+        if self.hancom_math_face {
+            if let Some(result) = source_font_symbol::layout(text, fs) {
+                return result;
+            }
+        }
         // 수식의 빼기 기호는 문장용 하이픈과 다른 글리프다.
         let display = match text {
             "-" => "−",
@@ -395,6 +401,11 @@ impl EqLayout {
             self.layout_hancom_glyphs(text, super::hancom_glyphs::Role::Operator, fs, 0.0)
         {
             return layout;
+        }
+        if self.hancom_math_face {
+            if let Some(result) = source_font_symbol::layout(text, fs) {
+                return result;
+            }
         }
         // 적분 기호: 큰 크기로 렌더링 (INTEGRAL_SCALE 적용 — Task #1313)
         // Task #1317: 글리프를 path 로 그리므로 advance 는 path 폭(geom.width)을 쓴다.

@@ -128,6 +128,12 @@ fn render_box(
                 text_x, text_y, fi, color, EQ_FONT_FAMILY, esc,
             ));
         }
+        LayoutKind::FontGlyph { text, font_family } => {
+            svg.push_str(&format!(
+                "<text x=\"{:.2}\" y=\"{:.2}\" font-size=\"{:.2}\" fill=\"{}\" font-family=\"{}\">{}</text>\n",
+                x, y + lb.baseline, fs, color, escape_xml(font_family), escape_xml(text),
+            ));
+        }
         LayoutKind::MathSymbol(text) => {
             // 적분 기호(∫): 공통 공개 글리프 윤곽을 사용한다.
             // 폰트 미임베딩 SVG 에서 뷰어 대체 폰트의 글리프 bbox 편차로 상·하한이

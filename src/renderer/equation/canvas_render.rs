@@ -117,6 +117,12 @@ fn render_box(
             let _ = ctx.fill_text(text, x + lb.width / 2.0, y + lb.baseline);
             ctx.set_text_align("start");
         }
+        LayoutKind::FontGlyph { text, font_family } => {
+            ctx.set_font(&format!("{fs:.1}px {font_family}"));
+            ctx.set_fill_style_str(color);
+            ctx.set_text_align("start");
+            let _ = ctx.fill_text(text, x, y + lb.baseline);
+        }
         LayoutKind::MathSymbol(text) => {
             // [Issue #900] svg_render.rs MathSymbol arm 과 동기화 (commit 292dbbef).
             // Task #1317: 적분 기호(∫)는 폰트 text 가 아닌 stroke path 로 렌더(geom SSOT,

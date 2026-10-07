@@ -72,7 +72,9 @@ static BOLD_RANGES: [LatinRange; 2] = [
     },
 ];
 
-pub(super) static METRICS: [FontMetric; 8] = [
+// 같은 설치본의 SFNT family(1/16) 이름만 직접 색인한다.
+// PostScript 이름을 family 별칭이나 Bold face로 간주하지 않는다.
+pub(super) static METRICS: [FontMetric; 4] = [
     FontMetric {
         name: "한컴산뜻돋움",
         bold: false,
@@ -99,38 +101,6 @@ pub(super) static METRICS: [FontMetric; 8] = [
     },
     FontMetric {
         name: "Han Santteut Dotum",
-        bold: true,
-        italic: false,
-        em_size: 1000,
-        latin_ranges: &BOLD_RANGES,
-        hangul: Some(&HANGUL),
-    },
-    FontMetric {
-        name: "HanSantteutDotum",
-        bold: false,
-        italic: false,
-        em_size: 1000,
-        latin_ranges: &REGULAR_RANGES,
-        hangul: Some(&HANGUL),
-    },
-    FontMetric {
-        name: "HanSantteutDotum",
-        bold: true,
-        italic: false,
-        em_size: 1000,
-        latin_ranges: &BOLD_RANGES,
-        hangul: Some(&HANGUL),
-    },
-    FontMetric {
-        name: "HanSantteutDotumRegular",
-        bold: false,
-        italic: false,
-        em_size: 1000,
-        latin_ranges: &REGULAR_RANGES,
-        hangul: Some(&HANGUL),
-    },
-    FontMetric {
-        name: "HanSantteutDotumRegular",
         bold: true,
         italic: false,
         em_size: 1000,

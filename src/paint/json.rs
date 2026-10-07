@@ -3013,6 +3013,14 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
         LayoutKind::Text(text) => write_equation_text_kind(buf, "text", text),
         LayoutKind::Number(text) => write_equation_text_kind(buf, "number", text),
         LayoutKind::Symbol(text) => write_equation_text_kind(buf, "symbol", text),
+        LayoutKind::FontGlyph { text, font_family } => {
+            let _ = write!(
+                buf,
+                "{{\"type\":\"fontGlyph\",\"text\":{},\"fontFamily\":{}}}",
+                json_escape(text),
+                json_escape(font_family),
+            );
+        }
         LayoutKind::MathSymbol(text) => {
             if crate::renderer::equation::layout::is_integral_symbol(text) {
                 let _ = write!(

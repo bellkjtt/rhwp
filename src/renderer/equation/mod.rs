@@ -207,6 +207,7 @@ fn is_simple_box_expression(value: &layout::LayoutBox) -> bool {
         | layout::LayoutKind::Number(_)
         | layout::LayoutKind::Symbol(_)
         | layout::LayoutKind::MathSymbol(_)
+        | layout::LayoutKind::FontGlyph { .. }
         | layout::LayoutKind::Function(_)
         | layout::LayoutKind::Space(_)
         | layout::LayoutKind::Empty => true,

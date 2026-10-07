@@ -76,6 +76,7 @@ fn font_line(value: &LayoutBox, fs: f64) -> bool {
         | LayoutKind::Number(_)
         | LayoutKind::Symbol(_)
         | LayoutKind::MathSymbol(_)
+        | LayoutKind::FontGlyph { .. }
         | LayoutKind::Function(_)
         | LayoutKind::Space(_) => true,
         LayoutKind::Row(items) => items.iter().all(|item| font_line(item, fs)),
@@ -86,7 +87,9 @@ fn font_line(value: &LayoutBox, fs: f64) -> bool {
 
 fn contains_prime(value: &LayoutBox) -> bool {
     match &value.kind {
-        LayoutKind::Symbol(s) | LayoutKind::MathSymbol(s) => {
+        LayoutKind::Symbol(s)
+        | LayoutKind::MathSymbol(s)
+        | LayoutKind::FontGlyph { text: s, .. } => {
             s.chars().any(|ch| matches!(ch, '′' | '″' | '‴'))
         }
         LayoutKind::Row(items) => items.iter().any(contains_prime),

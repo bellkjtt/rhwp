@@ -36,6 +36,11 @@ pub enum LayoutKind {
     Symbol(String),
     /// 수학 기호 (Unicode)
     MathSymbol(String),
+    /// 실제 선택한 대체 글꼴과 전진폭을 함께 전달하는 표시 글리프.
+    FontGlyph {
+        text: String,
+        font_family: &'static str,
+    },
     /// 함수 이름 (로만체)
     Function(String),
     /// 분수
