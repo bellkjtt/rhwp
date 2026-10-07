@@ -1495,7 +1495,7 @@ fn tac_control_indices_for_line(
     hits
 }
 
-pub(crate) fn line_has_tac_equation_control(
+fn line_has_tac_equation_control(
     para: &Paragraph,
     comp: &ComposedParagraph,
     line_idx: usize,

@@ -6705,11 +6705,7 @@ impl LayoutEngine {
                                 | crate::renderer::composer::InlineControlType::Shape
                         )
                 });
-                // 수식도 이 줄이 소유한 인라인 개체다. 작은 저장 전진으로
-                // 유효한 줄 상자를 줄이지 않고 typeset과 같은 소유 판정을 쓴다.
-                let line_owns_equation =
-                    crate::renderer::typeset::line_has_tac_equation_control(p, composed, line_idx);
-                let flow_floor = if line_has_as_char_object || line_owns_equation {
+                let flow_floor = if line_has_as_char_object {
                     max_fs.max(line_height)
                 } else {
                     max_fs

@@ -484,8 +484,6 @@ impl TypesetEngine {
                                 .unwrap_or(false);
                             let absorbed_tail_continues_at_column_top =
                                 st.current_height < st.available_height() * 0.25;
-                            let absorbed_tail_near_column_bottom =
-                                st.current_height > st.available_height() * 0.65;
                             let absorbed_short_tac_tail = st
                                 .endnote_paragraphs
                                 .get(prev_local_idx)
@@ -510,8 +508,6 @@ impl TypesetEngine {
                                 && boundary_prev_endnote_had_vpos_rewind
                                 && continued_endnote_tail_before_new_note
                                 && (absorbed_tail_continues_at_column_top
-                                    || (st.current_column + 1 >= st.col_count
-                                        && absorbed_tail_near_column_bottom)
                                     || (absorbed_short_tac_tail
                                         && st.current_height > st.available_height() * 0.80))
                         };
