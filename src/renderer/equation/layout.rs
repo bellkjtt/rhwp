@@ -589,7 +589,9 @@ impl EqLayout {
         let n = self.layout_node(numer, fs);
         let d = self.layout_node(denom, fs);
 
-        let pad = fs * FRAC_LINE_PAD;
+        // 한컴이 새로 생성한 단순 분수는 반각 숫자와 양쪽 1/4 em을 예약한다.
+        // 세로 기준선 간격과 수평 괘선 여백을 같은 임의 비율로 묶지 않는다.
+        let pad = fs * if self.hancom_math_face { 0.25 } else { FRAC_LINE_PAD };
         let w = n.width.max(d.width) + pad * 2.0;
 
         let mut n_box = n;

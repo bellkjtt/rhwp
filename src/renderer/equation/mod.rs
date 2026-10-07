@@ -16,6 +16,7 @@ pub(crate) mod inline_box;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
 mod logical_font_frame;
+mod font_frame_metrics;
 pub mod parser;
 pub mod svg_render;
 pub mod symbols;
@@ -120,11 +121,10 @@ pub(crate) fn normalized_simple_math_metrics(
     if intrinsic.width <= 0.0 || math_layout_has_line_break(&intrinsic) {
         return None;
     }
-    let single_font_line = (intrinsic.height - fs).abs() <= f64::EPSILON * fs * 4.0;
     let single_box_line =
         simple_box_height(&intrinsic, fs).is_some() && is_simple_box_expression(&intrinsic);
     let font_frame = logical_font_frame::metrics(&intrinsic, fs);
-    if !single_font_line && !single_box_line && font_frame.is_none() {
+    if !single_box_line && font_frame.is_none() {
         return None;
     }
     let (height, baseline) = font_frame.unwrap_or((intrinsic.height, intrinsic.baseline));
