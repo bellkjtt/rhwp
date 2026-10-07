@@ -146,3 +146,26 @@ CENTER 정렬점 및 독립 저장 메트릭의 무차원 비율을 검사한다
 
 상대 표시 크기 검사는 최초 legacy 코드에서도 통과한다. 새 그림 흐름의 잘못된
 글리프 크기 사용을 검출하는 대조군이며, 최초 그림 누락 검출 검사로 주장하지 않는다.
+
+
+### 최종 lint·정책 확인
+
+helper의 `option_env!().expect()` Clippy 오류를 기존 CLI 검사와 같은 `env!()` 방식으로
+고치고, 포맷 후 파생 suite를 재준비했다. 최종 배정은 새 관계 검사가 suite 020,
+p122가 suite 016이다. 같은 filter의 최종 실행은 컴파일 17.68초, 8건 PASS, exit 0이다
+(`stage4-formal-nextest-final.log`). 생산 source 8개의 해시는 시각 검증 당시와 같다.
+이 구현·fixture·관계 회귀·대표 PNG를 커밋 `305ab694b`로 고정했다.
+
+- `cargo fmt --all -- --check`: PASS (`stage4-final-fmt-check.log`).
+- Native Clippy: PASS, 1분 44초 (`stage4-clippy-native.log`).
+- WASM lib Clippy: PASS, 1분 28초 (`stage4-clippy-wasm.log`).
+- locked workspace build: PASS, 3분 11초 (`stage4-workspace-build.log`).
+- 최종 파생 suite의 workspace/all-targets Clippy: PASS, 9.74초
+  (`stage4-final-clippy-all-targets.log`).
+- base `b3c3047db575d146dff9d39098e6de98c4630b3e` manifest 정책: PASS,
+  1488 sources / 6401 static test attrs / 48 integration targets (`stage4-manifest-check.log`).
+- 같은 base의 unit tier 정책: PASS, 4199 tests / 298 modules (`stage4-unit-tiers-check.log`).
+
+파생 harness·manifest·unit inventory·TSV·로그는 stage하지 않는다.
+이 단계는 검증된 그림 흐름만 고정하며, 90% 미만인 다른 원본의 px/hash 기대값을
+바꾸거나 전체 회귀·PR 승인 완료로 판정하지 않는다.
