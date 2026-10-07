@@ -750,6 +750,7 @@ fn test_layout_with_composed_styles() {
     let composed: Vec<_> = paragraphs.iter().map(|p| compose_paragraph(p)).collect();
 
     let styles = ResolvedStyleSet {
+        resolved_dpi: None,
         page_number_char_style_id: None,
         page_number_font_is_hft: false,
         hwp3_variant: false,
@@ -898,6 +899,7 @@ fn test_layout_multi_run_x_position() {
 
     let composed: Vec<_> = paragraphs.iter().map(|p| compose_paragraph(p)).collect();
     let styles = ResolvedStyleSet {
+        resolved_dpi: None,
         page_number_char_style_id: None,
         page_number_font_is_hft: false,
         hwp3_variant: false,
@@ -996,6 +998,7 @@ fn test_resolved_to_text_style() {
     use crate::renderer::style_resolver::ResolvedCharStyle;
 
     let styles = ResolvedStyleSet {
+        resolved_dpi: None,
         page_number_char_style_id: None,
         page_number_font_is_hft: false,
         hwp3_variant: false,
@@ -1035,6 +1038,7 @@ fn test_resolved_to_text_style_with_ratio() {
     use crate::renderer::style_resolver::ResolvedCharStyle;
 
     let styles = ResolvedStyleSet {
+        resolved_dpi: None,
         page_number_char_style_id: None,
         page_number_font_is_hft: false,
         hwp3_variant: false,
