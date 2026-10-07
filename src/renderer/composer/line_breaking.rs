@@ -2800,7 +2800,9 @@ fn inline_control_line_height_hwp(para: &Paragraph) -> Option<i32> {
     para.controls
         .iter()
         .filter_map(|ctrl| match ctrl {
-            Control::Picture(pic) if pic.common.treat_as_char => Some(pic.common.height as i32),
+            Control::Picture(pic) if pic.common.treat_as_char => {
+                Some(super::inline_picture_size_hu(pic).1)
+            }
             Control::Shape(shape) if shape.common().treat_as_char => Some(shape.flow_height_hu()),
             Control::Table(table) if table.common.treat_as_char => Some(table.common.height as i32),
             Control::Equation(eq) if eq.common.treat_as_char => {
@@ -2815,9 +2817,7 @@ fn inline_control_line_height_hwp(para: &Paragraph) -> Option<i32> {
 
 fn inline_control_size_hwp(ctrl: &Control) -> Option<(i32, i32)> {
     let (width, height) = match ctrl {
-        Control::Picture(pic) if pic.common.treat_as_char => {
-            (pic.common.width as i32, pic.common.height as i32)
-        }
+        Control::Picture(pic) if pic.common.treat_as_char => super::inline_picture_size_hu(pic),
         Control::Shape(shape) if shape.common().treat_as_char => (
             (shape.common().width as i32).max(shape.shape_attr().current_width as i32),
             shape.flow_height_hu(),

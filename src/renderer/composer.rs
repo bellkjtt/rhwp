@@ -25,6 +25,8 @@ pub(crate) use nested_table_frames::{
 };
 mod resolved_fields;
 mod stored_word_tail;
+mod inline_picture_metrics;
+pub(crate) use inline_picture_metrics::inline_picture_size_hu;
 
 /// 글자겹침(CharOverlap) 렌더링 정보
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -429,7 +431,7 @@ fn compose_paragraph_scoped(
             let pos = *tac_positions.get(i)?;
             match ctrl {
                 Control::Picture(p) if p.common.treat_as_char => {
-                    Some((pos, p.common.width as i32, i))
+                    Some((pos, inline_picture_size_hu(p).0, i))
                 }
                 Control::Shape(s) if s.common().treat_as_char => {
                     Some((pos, s.common().width as i32, i))

@@ -4815,19 +4815,15 @@ impl LayoutEngine {
                             }
                             // [#6603] 상자(잉크 + 캡션 + 위아래 여백)를 baseline 에 앉히고
                             // 잉크는 상자의 (왼쪽, 위) 여백 안쪽에 그린다.
-                            let (margin_left, _, margin_top, margin_bottom) =
+                            let (margin_left, _, margin_top, _) =
                                 tac_picture_outer_margins_px(pic, self.dpi);
-                            let box_h = tac_object_box_height_px(pic_h, &pic.caption, self.dpi)
-                                + margin_top
-                                + margin_bottom;
                             let img_y = self.inline_picture_top(
                                 para,
                                 styles,
                                 tac_offsets_px,
-                                col_area,
                                 y,
                                 baseline,
-                                box_h,
+                                pic,
                             ) + margin_top;
                             let bin_data_id = pic.image_attr.bin_data_id;
                             let image_data = find_bin_data_bytes(bdc, bin_data_id);
@@ -8993,7 +8989,7 @@ impl LayoutEngine {
                                 let (pic_w, pic_h) =
                                     self.resolve_inline_picture_size(pic, col_area);
                                 // [#6603] 잉크는 바깥 여백 상자의 (왼쪽, 위) 안쪽에 그린다.
-                                let (margin_left, _, margin_top, margin_bottom) =
+                                let (margin_left, _, margin_top, _) =
                                     tac_picture_outer_margins_px(pic, self.dpi);
                                 // LINE_SEG vpos가 TopAndBottom 흐름 위치를 이미 담고 있으면
                                 // sibling 예약 높이를 다시 더하지 않는다.
@@ -9046,18 +9042,13 @@ impl LayoutEngine {
                                 } else {
                                     // [#6575] 같은 계약의 형제 경로 — 상자 전체로 맞춘다.
                                     // [#6603] 상자에는 위아래 바깥 여백도 들어간다.
-                                    let box_h =
-                                        tac_object_box_height_px(pic_h, &pic.caption, self.dpi)
-                                            + margin_top
-                                            + margin_bottom;
                                     self.inline_picture_top(
                                         para,
                                         styles,
                                         line_tac_offsets,
-                                        col_area,
                                         y,
                                         baseline,
-                                        box_h,
+                                        pic,
                                     )
                                 };
                                 let img_y = base_img_y + sibling_reserved_px + margin_top;
@@ -10513,7 +10504,7 @@ impl LayoutEngine {
                             }
                             let (pic_w, pic_h) = self.resolve_inline_picture_size(pic, col_area);
                             // [#6603] 잉크는 바깥 여백 상자의 (왼쪽, 위) 안쪽에 그린다.
-                            let (margin_left, _, margin_top, margin_bottom) =
+                            let (margin_left, _, margin_top, _) =
                                 tac_picture_outer_margins_px(pic, self.dpi);
                             // LINE_SEG vpos가 TopAndBottom 흐름 위치를 이미 담고 있으면
                             // sibling 예약 높이를 다시 더하지 않는다.
@@ -10552,17 +10543,13 @@ impl LayoutEngine {
                             } else {
                                 // [#6575] baseline 정렬 대상은 그림이 아니라 개체 상자 전체다.
                                 // [#6603] 상자에는 위아래 바깥 여백도 들어간다.
-                                let box_h = tac_object_box_height_px(pic_h, &pic.caption, self.dpi)
-                                    + margin_top
-                                    + margin_bottom;
                                 self.inline_picture_top(
                                     para,
                                     styles,
                                     line_tac_offsets,
-                                    col_area,
                                     vars.y,
                                     vars.baseline,
-                                    box_h,
+                                    pic,
                                 )
                             };
                             let img_y = base_img_y + sibling_reserved_px + margin_top;
