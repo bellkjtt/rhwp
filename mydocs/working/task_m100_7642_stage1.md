@@ -200,3 +200,17 @@ Issue: [#7642](https://github.com/edwardkim/rhwp/issues/7642)
   독립 한컴 재생성 `rmP`/`rmP'` 폭 차이와 모두 같았다. 이는 폰트의 전진폭과
   크기별 힌팅 근거이며 절대 문서 위치·회귀 기대값이 아니다. raw hmtx 전진폭과
   source의 힌팅된 논리 전진폭은 구분하고, 저장 캐시 폭을 높이만으로 무효화하지 않는다.
+
+### source `302be66a1`의 fresh WASM 확인
+
+- 첫 실행의 Rust compile(9분 10초) 뒤 최적화가 중단됐음을 handle 부재와
+  `Terminated`로 확인했다. 같은 source에서 wrapper를 다시 실행해 Rust 캐시 재사용
+  0.22초, wasm-pack 7분 37초, wrapper exit 0으로 완료했다.
+- pkg/Studio public의 JS SHA-256은
+  `70cde06a369fa7fd4fc8bc8f3d6acaee158596ba1a116a2c72159002b0b5654e`,
+  WASM SHA-256은 `330e5a04311ff1cde61d1a949fe8a61da022eca16e387480cb2aace222e9f1a3`이며
+  각각 일치한다. immutable output의 `wasm-302be66a1`을 실제 브라우저 exporter에 전달했다.
+- 수식 96개 전체 3쪽 fresh WASM 최저는 94.00834%로 같은 source Native와 같다.
+  그 결과를 확장 문서 전체나 미세한 수식 간격의 완료 판정으로 사용하지 않는다.
+  TSV·명령·빌드 출처는 ignored `issue7642-fresh-wasm/prime-width/` 및
+  `issue7642-prime-fallback-fresh-wasm-provenance.json`이다.
