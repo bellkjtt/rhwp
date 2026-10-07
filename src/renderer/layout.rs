@@ -488,8 +488,20 @@ fn para_border_can_use_rect_stroke(
 fn square_wrap_first_narrow_line_vpos_px(
     para: &Paragraph,
     col_area: &LayoutRect,
+    styles: &ResolvedStyleSet,
     dpi: f64,
 ) -> Option<f64> {
+    // 본문 줄이 수식 프레임 갱신으로 줄어든 경우 그림도 같은 저장 줄
+    // 투영 원점을 소비한다. 원래 vpos 델타를 다시 더하면 앞줄의 낡은
+    // 높이만 그림에 남는다. 줄 소속이 바뀐 입력은 이 투영의 계약이 아니다.
+    let projected = crate::renderer::composer::stored_row_projection::project_equation_rows(
+        std::slice::from_ref(para),
+        styles,
+    );
+    let para = projected
+        .as_ref()
+        .and_then(|rows| rows.first())
+        .unwrap_or(para);
     if para.line_segs.len() < 2 {
         return None;
     }
@@ -16407,9 +16419,11 @@ impl LayoutEngine {
                                 pic.common.vert_rel_to,
                                 crate::model::shape::VertRelTo::Para
                             ) {
-                                square_wrap_first_narrow_line_vpos_px(para, col_area, self.dpi)
-                                    .map(|dy| para_base_y + dy)
-                                    .unwrap_or(para_base_y)
+                                square_wrap_first_narrow_line_vpos_px(
+                                    para, col_area, styles, self.dpi,
+                                )
+                                .map(|dy| para_base_y + dy)
+                                .unwrap_or(para_base_y)
                             } else {
                                 para_base_y
                             };
