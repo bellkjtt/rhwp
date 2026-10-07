@@ -8635,6 +8635,12 @@ impl LayoutEngine {
             } else {
                 None
             };
+            // 다음 미주 앞 간격은 빈 줄을 포함한 실제 점유 끝에서 시작한다.
+            // 콘텐츠 하단은 가시 영역 검사에 남겨 두고 흐름 줄 상자와 구별한다.
+            let prev_item_occupied_end_y = super::endnote_spacing::occupied_end(
+                prev_item_content_bottom_y,
+                hcursor.prev_item_flow_line_bottom_y,
+            );
             // [#4613 · #4599 밴드-플로우] 전방 스냅 기각 판정용 — vpos_adjust 이전의 순차 흐름 위치.
             let y_before_vpos_adjust = y_offset;
             // [#4639 · #4599 ⑧] TAC-직후 보정 스킵의 예외 — 직전 TAC host 문단이 비-TAC
@@ -9073,7 +9079,9 @@ impl LayoutEngine {
                         let prev_content_bottom_y = prev_item_content_bottom_y?;
                         let prev_has_textless_equation_tail = inline_equation_count(prev_para) > 0
                             && !para_has_visible_text(prev_para);
-                        let required_gap_y = prev_content_bottom_y + prev_endnote_title_gap_px;
+                        let required_gap_y = prev_item_occupied_end_y
+                            .unwrap_or(prev_content_bottom_y)
+                            + prev_endnote_title_gap_px;
                         (prev_has_textless_equation_tail && y_offset + 0.5 >= required_gap_y)
                             .then_some(())
                     })
@@ -9092,7 +9100,7 @@ impl LayoutEngine {
             if textless_equation_tail_gap_already_visible {
                 let min_y = super::endnote_spacing::origin_after_gap(
                     y_before_vpos,
-                    prev_item_content_bottom_y,
+                    prev_item_occupied_end_y,
                     prev_endnote_title_gap_px,
                 );
                 if y_offset < min_y {
@@ -9115,7 +9123,7 @@ impl LayoutEngine {
                 // 같은 미주 사이를 현재 커서 뒤에 다시 더하지 않는다.
                 let min_y = super::endnote_spacing::origin_after_gap(
                     y_before_vpos,
-                    prev_item_content_bottom_y,
+                    prev_item_occupied_end_y,
                     prev_endnote_title_gap_px,
                 );
                 if y_offset < min_y {

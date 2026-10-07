@@ -1207,6 +1207,10 @@ impl HeightCursor {
         let prev_content_bottom_y = y_offset - prev_line_spacing_px;
         let measured_prev_content_bottom_y =
             self.prev_item_content_bottom_y.filter(|y| y.is_finite());
+        let measured_prev_occupied_end_y = super::endnote_spacing::occupied_end(
+            measured_prev_content_bottom_y,
+            self.prev_item_flow_line_bottom_y,
+        );
         let prev_content_floor_y = measured_prev_content_bottom_y
             .map(|bottom| bottom.max(prev_content_bottom_y))
             .unwrap_or(prev_content_bottom_y);
@@ -1227,7 +1231,7 @@ impl HeightCursor {
                 // 공통 간격에 맞춘다.
                 // 렌더러가 실제 콘텐츠 하단을 제공하면 그 값을 공통 기준으로 삼고,
                 // height-only 경로처럼 값이 없으면 기존 LINE_SEG 추정값으로 폴백한다.
-                let content_bottom_y = measured_prev_content_bottom_y
+                let content_bottom_y = measured_prev_occupied_end_y
                     .map(|y| y.max(prev_content_bottom_y))
                     .unwrap_or(prev_content_bottom_y);
                 let gap_px = compact_between_notes_gap_px(
@@ -1278,7 +1282,7 @@ impl HeightCursor {
             } else {
                 super::endnote_spacing::origin_after_gap(
                     y_offset,
-                    measured_prev_content_bottom_y,
+                    measured_prev_occupied_end_y,
                     prev_line_spacing_px,
                 )
             });
@@ -2081,7 +2085,7 @@ impl HeightCursor {
             self.endnote_between_notes_hu > 0 && seg.line_spacing >= self.endnote_between_notes_hu;
         // 실제 마지막 줄 점유 뒤의 간격이 순차 흐름에 이미 예약됐으면,
         // 새 미주 저장 원점의 전방 이동으로 같은 간격을 다시 소비하지 않는다.
-        let measured_gap_already_reserved = measured_prev_content_bottom_y.is_some_and(|bottom| {
+        let measured_gap_already_reserved = measured_prev_occupied_end_y.is_some_and(|bottom| {
             super::endnote_spacing::gap_is_reserved(y_offset, bottom, prev_line_spacing_px)
         });
         let legacy_single_line_gap_keep = !compact_endnote_question_title_tail_backtrack

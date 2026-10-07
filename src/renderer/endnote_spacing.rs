@@ -1,5 +1,15 @@
 //! 실제 미주 점유 끝에서 간격을 한 번만 예약하는 공통 원점 계약.
 
+/// 보이는 내용과 실제 흐름 줄 상자가 함께 소유하는 끝점이다.
+/// 빈 줄도 줄 상자를 소비하며, 후행 간격은 두 입력에 포함하지 않는다.
+pub(crate) fn occupied_end(content_end: Option<f64>, line_box_end: Option<f64>) -> Option<f64> {
+    content_end
+        .into_iter()
+        .chain(line_box_end)
+        .filter(|end| end.is_finite())
+        .reduce(f64::max)
+}
+
 pub(crate) fn origin_after_gap(flow_origin: f64, occupied_end: Option<f64>, gap: f64) -> f64 {
     // 실제 점유 끝이 없으면 기존 흐름 기반 추정을 유지한다. 점유 결과가
     // 있으면 이미 소비한 trailing에 같은 미주 간격을 다시 더하지 않는다.
