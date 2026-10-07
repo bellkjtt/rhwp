@@ -2,7 +2,7 @@
 kind: plan
 status: active
 canonical: mydocs/working/task_m100_7642_stage2.md
-last_verified: 2026-10-07
+last_verified: 2026-10-08
 ---
 
 # 이슈 #7642 시험지 16개 전체 시각 검증·관계 회귀 보정
@@ -158,3 +158,90 @@ last_verified: 2026-10-07
   충족하지 못했으므로 새 회귀나 기존 기대값 변경을 하지 않았다.
 - 시험지 16개 전체를 이 고정 바이너리로 재실행 중이다. fresh WASM·최종 lint·관계 회귀·PR은
   아직 완료 전이다. 최초 원본·실패 TSV는 그대로 보존한다.
+
+## 수식·호스트 간격·머리말의 후속 보정
+
+- 테두리 보정은 `30fa6e963dd4218f4292367ccf5e985bd4c6618b`로 보존했다.
+  이후 코드는 이 커밋 위의 변경이며 source patch·새 파일·바이너리 SHA를
+  ignored `issue7642-header-and-consumption-provenance.json`에 고정했다.
+  최신 Native 바이너리 SHA-256은
+  `a22099c767c727659d0d3a4fb499a091848a4ece6ed2569fab8feb94c091bdba`다.
+- 원본 과학 시험지의 `rmCH_3}COOH`에서 소유하지 않은 닫는 중괄호가 뒤의 `COOH`를
+  파싱에서 누락시켰다. 그룹 소유가 없는 닫는 중괄호만 제외하고 뒤 내용을 보존한다.
+  `LEFT/RIGHT`의 표시 구분자는 보호한다. 과학 4쪽은 89.91304% → 90.42185%이며,
+  수식 96개·3쪽 대조군은 98.52323/94.00834/96.98509%로 변화가 없었다.
+- 과학 문단 117의 명시적 Center 정렬이 본문 수식 단독 줄의 일률적인 offset 0에 의해
+  무시됐다. Center의 가용 폭 정렬을 실제 수식 배치에 적용해 4쪽은 91.04705%가 됐다.
+  Distribute 경로의 기존 조건은 이번 보정에 포함하지 않았으며 eq-002 HWP 대조군은
+  92.51376%로 유지됐다. 저장 위치가 수동 지정된 합성 입력의 별도 계약은 미검증이다.
+- 같은 문단의 PartialParagraph와 비글자 표가 문단 앞뒤 간격·마지막 줄 간격을 두 번
+  소비했다. 처음 시도한 `PageItem이 존재하면 이미 소비했다`는 조건은 Square wrap의
+  흐름을 전진시키지 않는 PartialParagraph를 오판해 언어 14쪽과 국어 14/17쪽에 회귀를
+  만들었다. 이 시도와 실패 출력은 `issue7642-exam-host-spacing/`에 보존했고 조건을 제거했다.
+  실제 paragraph 배치가 소비한 앞 간격·뒤 간격·마지막 줄 간격을 각각 기록하며,
+  같은 구역·문단·단에서 표 배치가 해당 결과를 소비하도록 변경했다. 셀/머리말의 표시를
+  본문 흐름 소비로 취급하지 않는다. 두 상태를 구분한 첫 보정에서 언어 14쪽 98.58707%,
+  국어 14/17쪽 96.49499/90.61634%가 복구됐고 수학 1쪽은 84.09015%다.
+  뒤 간격과 마지막 줄 간격을 분리한 최신 결과는 전체 재실행으로 확인한다.
+- 머리말 한 문단에 표와 비글자 도형이 함께 있으면 기존 배타 분기가 도형을 누락시켰다.
+  같은 문단의 원점을 보존해 도형을 배치하고, 실제 호출 메서드를
+  `header_footer_layout.rs`로 분리했다. 혼재한 글자처럼 취급 도형은 이번 변경 대상이 아니다.
+  과학 4쪽의 `4 (화학 I)` 표시가 복구됐으며 최신 Native 전쪽은
+  93.89083/95.04297/95.23493/91.54535%다. 같은 캡처의
+  `science-header-panels/review/review_004.png`를 사용자에게 직접 표시했다.
+- 90% 이상인 입력의 기존 px 검사도 관계 검사로 바꾸라는 사용자 지시를 재확인했다.
+  최신 Native/fresh WASM 전체 페이지·확대 판독을 먼저 확인한 뒤 원본 문단·표·셀 소속으로
+  대상을 찾고 포함·정렬·앞뒤 순서·누락·중복을 검사한다. 고정 폭으로 그림을 선택하는 코드도
+  변경 대상이다. 미달 입력의 원본 검사나 기대값을 먼저 바꾸지 않는다.
+- 최신 Native 시험지 16개·134쪽과 root wrapper의 fresh WASM을 실행 중이다.
+  현재 fresh WASM·관계 검사 변경·최종 lint·전체 회귀·새 PR은 완료 전이다.
+
+## 수치 통과 뒤 직접 판독에서 찾은 그림 정렬 결함
+
+- 최신 Native 16개·134쪽 runner는 exit 0으로 종료했다. 입력별 gate는 별도이며
+  11개 문서가 전쪽 90% 이상, 5개(`exam-01/02/04/05/06`)는 미달이다.
+  세부 결과는 ignored `issue7642-exam-header-and-consumption/results.json`에 있다.
+  전체 runner의 정상 종료를 PR 승인으로 해석하지 않는다.
+- 국어 원본 전체 20쪽은 최저 90.61634%, 5쪽은 94.54030%였지만, 사용자에게 표시한
+  `kor-after-panels/review/review_005.png`에서 문단 145 셀[5]의 그림 세 장이 Print보다
+  위에 놓인 결함을 직접 확인했다. 기존 #6632의 정확한 px 검사를 새 좌표로 갱신하지 않았다.
+- 같은 내용의 HWPX 원문은 그림 문단 `paraPr 38`의 `align vertical="CENTER"`,
+  해당 저장 LineSeg의 height/textheight 5952HU와 baseline 2976HU를 선언한다.
+  문단 앞 도형 줄도 `paraPr 37`, CENTER, height 1984HU와 baseline 992HU다.
+  [한컴 HWP 5.0 사양 표 44](https://cdn.hancom.com/link/docs/한글문서파일형식_5.0_revision1.3.pdf)는
+  attr1 bits 20..21을 글꼴 기준/위/가운데/아래 정렬로 정의한다.
+- 기존 `inline_picture_top`은 모든 그림 상자에 글꼴 기준 어센트 0.85를 적용했다.
+  CENTER의 저장 기준선은 상자의 중앙이므로 그림이 상자 높이의 0.35만큼 위로 이동했다.
+  이는 단순히 문단의 다음 줄이 당겨진 #6632의 원래 원인과 구분되는 paint 정렬 결함이다.
+  resolver가 세로 정렬을 보존하고 일반 run·미배치 TAC·빈 run 세 호출 경로가 같은
+  helper에서 명시적인 정렬점을 소비하도록 보정한다. 줄 높이·저장 LineSeg를 그림 좌표에
+  맞춰 덮어쓰거나 출력 원점을 clamp하지 않는다. 새 보정의 Native/fresh WASM은 재실행한다.
+- 독립 정렬 대조군은 동일 줄의 서로 다른 높이 그림을 글꼴 기준/위/가운데/아래로 지정해
+  LineSeg 없는 HWPX를 만든 뒤 한컴 정상 저장 HWP와 그 Print를 별도로 산출한다.
+  ignored `inline-picture-valign-mcp-probe/`에 입력 생성 방식·해시·원본 BinData·job을 보존한다.
+  첫 진단의 삭제된 section 참조 오류는 원본 파일과 실패 로그로 남겼고,
+  section count와 manifest/spine 참조를 정리한 package는 Native info에서 1쪽으로 열렸다.
+  수동 진단 자체의 정상 저장본 대조 결과를 국어 원본 통과로 대신하지 않는다.
+
+## 명시적 세로 정렬 보정의 Native 재확인
+
+- 새 Native build는 exit 0, 4분 23초다. 고정 바이너리 SHA-256은
+  `23963dde075a55654e4c4d86e6a19b3984c6352d409fdc34daded9066daca115`이며
+  source는 ignored `issue7642-picture-valign-provenance.json`에 연결했다.
+- 국어 5쪽은 94.54030% → 98.49149%이며, 그림 세 장이 자신의 그림 줄과 셀 안에 놓이고
+  앞 도형 줄 뒤에 배치됨을 최신 review로 확인했다. 전쪽 20쪽 최저는 90.61634%다.
+  `kor-picture-valign-panels/review/review_005.png`를 사용자에게 직접 표시했다.
+  동일 원본의 수정 전/후 실제 렌더 트리로 실행한 줄 내부 포함 진단은 그림 세 장 모두
+  FAIL → PASS다(`kor-picture-line-relation-diagnostic.json`). 정식 Rust 검사 실행과는 구분한다.
+- 같은 세로 정렬 누락이 영어 첫쪽 그림도 위로 당겼다. 영어 전쪽 8쪽은
+  최저 81.58687% → 95.63340%이며, 1쪽은 98.05928%다. 해당 최신 review도 직접 표시했다.
+  이 보정은 파일명·폭·원점 상수 없이 원본 문단 정렬을 같은 그림 배치 helper에 전달한다.
+- 국어 #6632와 사회 #6621의 px 선택/기대값을 줄·셀 소속, 내용 순서·보존·포함·정렬,
+  원본 상자 선언과의 상대 관계로 바꿀 초안을 ignored output에 보존했다.
+  현재 생산 코드를 바꾼 최신 fresh WASM의 전쪽·확대 판독이 끝나기 전 정식 회귀에는 반영하지 않는다.
+  영어 #6630·#6569·#775의 같은 px 선택도 이제 전쪽 수치 통과 후보라 관계 검사 대상에 포함한다.
+- 첫 머리말/소비 보정의 fresh WASM과 세로 정렬 보정의 fresh WASM은 다른 package다.
+  전자는 `wasm-header-and-consumption/`이며 WASM SHA
+  `ac14400bd9a929d8ddb4f87443f554086899b5b931795a7210f0de96dcebfa0c`다.
+  후자는 세로 정렬·마지막 줄 간격 소비 보정까지 포함해 새로 빌드 중이다. 전자의 점수를
+  후자에 적용하지 않는다. 최종 package의 pkg/Studio public 동기화와 브라우저 비교를 다시 확인한다.

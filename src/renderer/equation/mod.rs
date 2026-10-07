@@ -9,6 +9,7 @@
 
 pub mod ast;
 mod box_types;
+mod brace_recovery;
 #[cfg(target_arch = "wasm32")]
 pub mod canvas_render;
 pub(crate) mod dispatch;

@@ -2,18 +2,32 @@
 
 use super::{tac_object_box_height_px, tac_picture_outer_margins_px, TAC_OBJECT_ASCENT_RATIO};
 use crate::model::{control::Control, paragraph::Paragraph};
+use crate::renderer::style_resolver::ResolvedStyleSet;
 use crate::renderer::{layout::LayoutEngine, page_layout::LayoutRect};
 
 impl LayoutEngine {
     pub(super) fn inline_picture_top(
         &self,
         para: Option<&Paragraph>,
+        styles: &ResolvedStyleSet,
         line_offsets: &[(usize, f64, usize)],
         area: &LayoutRect,
         line_y: f64,
         baseline: f64,
         box_height: f64,
     ) -> f64 {
+        // HWP 5.0 표 44의 명시적 세로 정렬을 그림 상자의 정렬점에도 적용한다.
+        // CENTER 줄의 저장 기준선은 줄 중앙인데 상자는 글꼴 어센트(0.85)로
+        // 정렬하면 높이의 0.35만큼 위로 올라간다. 원본 정렬점을 보존한다.
+        let alignment = para
+            .and_then(|p| styles.para_styles.get(p.para_shape_id as usize))
+            .map_or(0, |style| style.vertical_alignment);
+        let ascent_ratio = match alignment {
+            1 => 0.0,
+            2 => 0.5,
+            3 => 1.0,
+            _ => TAC_OBJECT_ASCENT_RATIO,
+        };
         let baseline = if baseline > 0.0 {
             baseline
         } else {
@@ -34,8 +48,8 @@ impl LayoutEngine {
                     _ => None,
                 })
                 .fold(box_height, f64::max);
-            tallest * TAC_OBJECT_ASCENT_RATIO
+            tallest * ascent_ratio
         };
-        line_y + baseline - box_height * TAC_OBJECT_ASCENT_RATIO
+        line_y + baseline - box_height * ascent_ratio
     }
 }

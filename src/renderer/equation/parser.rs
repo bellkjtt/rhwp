@@ -36,7 +36,8 @@ pub struct EqParser {
 }
 
 impl EqParser {
-    pub fn new(tokens: Vec<Token>) -> Self {
+    pub fn new(mut tokens: Vec<Token>) -> Self {
+        super::brace_recovery::retain_owned_closing_braces(&mut tokens);
         let paren_match = Self::compute_paren_match(&tokens);
         Self {
             tokens,

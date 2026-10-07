@@ -299,6 +299,8 @@ impl ResolvedCharStyle {
 pub struct ResolvedParaStyle {
     /// 정렬 방식
     pub alignment: Alignment,
+    /// 줄 안 세로 정렬 (ParaShape attr1 bits 20..21): 글꼴 기준/위/가운데/아래.
+    pub vertical_alignment: u8,
     /// 줄간격 값 (px 또는 비율)
     pub line_spacing: f64,
     /// 줄간격 종류
@@ -358,6 +360,7 @@ impl Default for ResolvedParaStyle {
     fn default() -> Self {
         Self {
             alignment: Alignment::Justify,
+            vertical_alignment: 0,
             line_spacing: 160.0, // 기본 160%
             line_spacing_type: LineSpacingType::Percent,
             margin_left: 0.0,
@@ -1435,6 +1438,7 @@ fn resolve_single_para_style(
     };
     ResolvedParaStyle {
         alignment: ps.alignment,
+        vertical_alignment: ((ps.attr1 >> 20) & 0x03) as u8,
         line_spacing,
         line_spacing_type: ps.line_spacing_type,
         margin_left: margin_px(ps.margin_left),

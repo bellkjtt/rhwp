@@ -4777,6 +4777,7 @@ impl LayoutEngine {
         line_node: &mut RenderNode,
         comp_line: &ComposedLine,
         para: Option<&Paragraph>,
+        styles: &ResolvedStyleSet,
         bin_data_content: Option<&[BinDataContent]>,
         tac_offsets_px: &[(usize, f64, usize)],
         col_area: &LayoutRect,
@@ -4821,6 +4822,7 @@ impl LayoutEngine {
                                 + margin_bottom;
                             let img_y = self.inline_picture_top(
                                 para,
+                                styles,
                                 tac_offsets_px,
                                 col_area,
                                 y,
@@ -4993,10 +4995,8 @@ impl LayoutEngine {
                 .and_then(|flow| flow.row_for_tac(k))
                 .unwrap_or(0)
         };
-        // [Task #490] 셀에 텍스트 없이 수식만 있을 때는 셀 ParaShape alignment 를
-        // 따라야 한다. 단, [Task #1245] 본문/미주 수식-only 줄은 저장된 LINE_SEG
-        // 흐름을 따라야 하며 문단 alignment 를 다시 적용하면 열 안에서 중앙으로 밀린다.
-        // [Task #489] effective_col_x 적용 (Picture+Square wrap LINE_SEG cs/sw 좁은 영역).
+        // 텍스트가 없는 수식 줄도 해당 문단의 명시적 정렬을 소비한다.
+        // 단·어울림 줄의 시작은 effective_col_x에 이미 반영됐다.
         let mut row_tac_widths = vec![0.0f64; equation_tac_extra_rows + 1];
         for (k, (pos, w, _)) in tac_offsets_px.iter().enumerate() {
             if tac_on_line(k, *pos) {
@@ -5005,23 +5005,13 @@ impl LayoutEngine {
             }
         }
         let line_tac_width: f64 = row_tac_widths.iter().sum();
-        // [#5583] 본문 흐름의 수식-only 줄도 문단 정렬을 따른다 — 단 저장 LINE_SEG 가 줄 시작
-        // 위치를 담고 있으면(그 값이 권위다) 종전대로 저장 흐름을 쓴다.
-        //
-        // 종전에는 비-셀이면 무조건 0.0 이라 가운데 정렬 문단의 수식이 단 왼쪽 끝에 붙었다
-        // (3252633 국가유산수리 감리대가 기준 2·3쪽: 저장 cs=0 sw=48188 인데 수식 x=75.6 =
-        // 본문 좌측, 가운데라면 269.6). `column_start > 0` 인 줄은 한컴이 흐름 x 를 적어 둔
-        // 경우이므로 #1256/#1308 계약대로 그 값을 존중한다.
-        let align_offset = if cell_ctx.is_some() || comp_line.column_start == 0 {
-            match alignment {
-                Alignment::Center | Alignment::Distribute => {
-                    (available_width - line_tac_width).max(0.0) / 2.0
-                }
-                Alignment::Right => (available_width - line_tac_width).max(0.0),
-                _ => 0.0,
+        let align_offset = match alignment {
+            Alignment::Center => (available_width - line_tac_width).max(0.0) / 2.0,
+            Alignment::Right => (available_width - line_tac_width).max(0.0),
+            Alignment::Distribute if cell_ctx.is_some() || comp_line.column_start == 0 => {
+                (available_width - line_tac_width).max(0.0) / 2.0
             }
-        } else {
-            0.0
+            _ => 0.0,
         };
         // Empty-run TAC-only lines still belong to the visual line flow.
         // Therefore paragraph margins and first-line/hanging indent must
@@ -5754,6 +5744,7 @@ impl LayoutEngine {
         let mut last_line_box_bottom: Option<f64> = None;
         let mut last_line_border_bottom: Option<f64> = None;
         let mut paragraph_fill_bands = Vec::new();
+        let mut last_line_consumed = false;
         let stored_tac_assignment =
             para.and_then(|p| crate::renderer::composer::composed_tac_line_assignment(p, composed));
         for line_idx in start_line..end {
@@ -6945,12 +6936,8 @@ impl LayoutEngine {
             let line_plain_text: String = comp_line.runs.iter().map(|r| r.text.as_str()).collect();
             let is_answer_sheet_number_label =
                 cell_ctx.is_some() && line_plain_text.trim() == "수험번호";
-            // [Task #1308 CI follow-up / #1256 regression]
-            // 본문/미주 흐름의 TAC 수식-only 줄은 저장된 LINE_SEG x 흐름을 따라야 한다.
-            // 빈 TextRun 이 있는 수식-only 문단은 일반 정렬 경로로 들어오므로,
-            // Distribute/Center 의 잔여 폭 중앙 오프셋을 적용하면 한컴과 달리 수식 블록이
-            // 열 안쪽으로 밀린다. 그림/표 TAC는 문단 정렬 폭을 따라야 하며, 표 셀 안 수식은
-            // 기존처럼 셀 정렬을 따른다.
+            // 본문 수식-only 분배 정렬의 기존 흐름 계약을 유지한다.
+            // 명시적인 가운데 정렬은 텍스트 유무와 관계없이 같은 점유 폭을 쓴다.
             let non_cell_tac_only_line = cell_ctx.is_none()
                 && !line_tac_offsets_for_width.is_empty()
                 && line_plain_text.trim().is_empty()
@@ -7107,8 +7094,6 @@ impl LayoutEngine {
                 Alignment::Center => {
                     let align_offset = if center_packed_cell_label_as_right {
                         (available_width - effective_text_width).max(0.0)
-                    } else if non_cell_tac_only_line {
-                        0.0
                     } else {
                         (available_width
                             - centered_measure.as_ref().map_or(
@@ -7359,6 +7344,7 @@ impl LayoutEngine {
                 &mut line_node,
                 comp_line,
                 para,
+                styles,
                 bin_data_content,
                 &line_tac_offsets,
                 col_area,
@@ -7770,6 +7756,7 @@ impl LayoutEngine {
                 }
             }
             prev_line_reserved_tac_picture_height = current_line_reserved_tac_picture_height;
+            last_line_consumed = !skip_advance_empty_line;
         }
 
         // 실제 흐름 전진에 사용한 줄 상자 결과를 지연 기준 소비자에 전달한다.
@@ -7846,6 +7833,7 @@ impl LayoutEngine {
                 .unwrap_or((hwpunit_to_px(400, self.dpi), 0.0));
             first_line_box_top = Some(y);
             last_line_box_bottom = Some(y + default_height);
+            last_line_consumed = true;
             let line_id = tree.next_id();
             let mut line_node = RenderNode::new(
                 line_id,
@@ -7940,6 +7928,19 @@ impl LayoutEngine {
             }
         }
         y = paragraph_flow_bottom;
+
+        // 셀/캡션의 줄이나 단순히 배정된 항목을 본문 문단의 소비로 승격하지 않는다.
+        // 빈 본문 줄도 유효한 점유를 가질 수 있으므로 글자 유무는 조건으로 쓰지 않는다.
+        if cell_ctx.is_none()
+            && self.is_body_flow_col_area(col_area)
+            && first_line_box_top.is_some()
+        {
+            let mut consumed = self.paragraph_spacing_consumed.borrow_mut();
+            let entry = consumed.entry((section_index, para_index)).or_default();
+            entry.0 |= start_line == 0;
+            entry.1 |= end == composed.lines.len();
+            entry.2 |= last_line_consumed && end == composed.lines.len();
+        }
 
         y
     }
@@ -9051,6 +9052,7 @@ impl LayoutEngine {
                                             + margin_bottom;
                                     self.inline_picture_top(
                                         para,
+                                        styles,
                                         line_tac_offsets,
                                         col_area,
                                         y,
@@ -10555,6 +10557,7 @@ impl LayoutEngine {
                                     + margin_bottom;
                                 self.inline_picture_top(
                                     para,
+                                    styles,
                                     line_tac_offsets,
                                     col_area,
                                     vars.y,
