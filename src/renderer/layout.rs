@@ -3686,6 +3686,7 @@ mod note_reference;
 mod paragraph_layout;
 mod picture_footnote;
 mod shape_layout;
+mod stored_shape_host;
 mod table_cell_content;
 mod table_inline_picture_origin;
 pub(crate) mod table_layout;
@@ -10414,6 +10415,20 @@ impl LayoutEngine {
             let heading_shape_keeps_page_base = saved_inline_heading_page
                 && matches!(item, PageItem::Shape { para_index, control_index: 0 }
                     if matches!(col_content.items.first(), Some(PageItem::FullParagraph { para_index: first }) if first == para_index));
+            let shape_keeps_host_line_base = match item {
+                PageItem::Shape {
+                    para_index,
+                    control_index,
+                } => stored_shape_host::preserves_line_origin(
+                    &paragraphs[*para_index],
+                    *para_index,
+                    *control_index,
+                    &col_node,
+                    item_start_y_for_band,
+                    new_y,
+                ),
+                _ => false,
+            };
             // 저장 컷이 본문을 소유하고 확정 표 원점이 그 재시작과 같으면
             // 표 뒤에도 본문 사다리의 기준을 유지한다. 후처리에서 이를 지우면
             // typeset과 다른 원점으로 뒤 문단을 다시 배치하게 된다.
@@ -10438,6 +10453,7 @@ impl LayoutEngine {
                     });
             if !heading_shape_keeps_page_base
                 && !stored_overlay_host_keeps_page_base
+                && !shape_keeps_host_line_base
                 && !resolved_stored_wrap_fragment
                 && (was_tac || (is_table_or_shape && !is_para_float_table && !is_inline_tac_object))
             {
