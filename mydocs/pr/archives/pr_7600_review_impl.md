@@ -1507,7 +1507,7 @@ Skia는 x 원점도 다른 폭 추정으로 계산했다. 실제 표시의 글�
 
 15쪽 확대 판독에서 `rm` 뒤 백틱 공백이 문자로 표시되고 그 뒤 벡터
 문자가 이탤릭으로 남는 결함을 확인했다. 원본 스크립트의
-`rm \`angle\`A _{it \`n rm} B _{it \`n rm} D _{it \`n rm}`와
+``rm `angle`A _{it `n rm} B _{it `n rm} D _{it `n rm}``와
 같은 영역의 독립 Print는 백틱을 표시하지 않고 A/B/D를 정체로, n을
 이탤릭으로 출력한다. 단일 인자 파서가 Whitespace를 Text로 소비한
 뒤 글꼴 지시를 끝내는 경로가 원인이다. 점수 통과로 면제하지 않는다.
@@ -1521,3 +1521,18 @@ Skia는 x 원점도 다른 폭 추정으로 계산했다. 실제 표시의 글�
 
 전체 Clippy에서 누락된 LayoutBox.font_size와 ResolvedStyleSet.resolved_dpi
 테스트 초기화도 보정한다. 기존 검사 조건과 기대값은 변경하지 않는다.
+
+
+하한만·상한만·복합 하한의 추가 진단 Print job은
+`d89f7b95-03b6-4b9b-8352-ee86dd683d5c`다. engine 2020,
+11.0.0.9136, PrintMethod 0으로 출력했다. 현재 Native 전체는
+83.00015%이고 라벨 폭·줄 위치와 적분 윤곽 차이가 함께 보인다.
+이를 통과 증거나 정식 회귀 fixture로 사용하지 않는다.
+
+기존 적분의 단일 S곡선에는 실제 표시의 갈고리와 획 굵기 변화가
+없었다. 설치된 사설 글꼴 윤곽을 복사하지 않고 저장소의 공개
+Latin Modern Math 1.959 integral 윤곽을 사용한다. 기존 공통 ink 영역에
+좌표 변환하며 SVG·Canvas2D·Skia·JSON/CanvasKit이 같은 명령을 소비한다.
+원본 저작권과 GUST Font License를 파일 및 THIRD_PARTY_LICENSES.md에
+보존한다. 배치 폭·첨자 원점·논리 프레임과 표시 윤곽의 계약은 구분한다.
+원본 및 진단 입력을 다시 비교해 위치와 모양을 검증한다.

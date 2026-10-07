@@ -62,8 +62,6 @@ pub(crate) const INTEGRAL_SCALE: f64 = 2.5;
 pub(crate) struct IntegralGeom {
     /// 글리프 가로 폭(상·하 갈고리 포함, trailing pad 제외)
     pub width: f64,
-    /// 줄기 stroke 두께
-    pub stroke_w: f64,
     /// path 상단(상단 갈고리 끝) y
     pub top_y: f64,
     /// path 하단(하단 갈고리 끝) y
@@ -80,7 +78,6 @@ pub(crate) fn integral_geom(fs: f64) -> IntegralGeom {
     let source_font_size = fs * 2.0;
     IntegralGeom {
         width: source_font_size * 630.0 / 1024.0,
-        stroke_w: fs * 0.06,
         top_y: baseline + fs * AXIS_HEIGHT - source_font_size * 820.0 / 1024.0,
         bottom_y: baseline + fs * AXIS_HEIGHT + source_font_size * 202.0 / 1024.0,
         top_hook_x: source_font_size * 579.0 / 1024.0,

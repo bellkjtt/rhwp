@@ -4612,11 +4612,12 @@ export class CanvasKitLayerRenderer {
     geometry: { pathData: string; strokeWidth: number },
     x: number, y: number, color: string,
   ): boolean {
-    if (!geometry.pathData || geometry.pathData.length > 512
-      || ![x, y, geometry.strokeWidth].every(Number.isFinite) || geometry.strokeWidth <= 0) return false;
+    if (!geometry.pathData || geometry.pathData.length > 4096
+      || ![x, y, geometry.strokeWidth].every(Number.isFinite) || geometry.strokeWidth < 0) return false;
     const path = this.canvasKit.Path.MakeFromSVGString(geometry.pathData);
     if (!path) return false;
-    const paint = this.makeStrokePaint(color, geometry.strokeWidth);
+    const paint = geometry.strokeWidth === 0
+      ? this.makeFillPaint(color) : this.makeStrokePaint(color, geometry.strokeWidth);
     try {
       paint.setStrokeCap(this.canvasKit.StrokeCap.Round);
       canvas.save();

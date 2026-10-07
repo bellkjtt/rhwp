@@ -2968,13 +2968,12 @@ fn write_equation_layout_box(buf: &mut String, layout: &LayoutBox) {
 }
 
 fn write_integral_geometry(buf: &mut String, fs: f64) {
-    let geom = crate::renderer::equation::layout::integral_geom(fs);
     let path = crate::renderer::equation::svg_render::integral_path_data(0.0, 0.0, fs);
     let _ = write!(
         buf,
         ",\"integralGeometry\":{{\"pathData\":{},\"strokeWidth\":{}}}",
         json_escape(&path),
-        geom.stroke_w
+        0.0
     );
 }
 

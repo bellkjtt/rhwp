@@ -1455,6 +1455,7 @@ export interface LayerEquationLayoutBox {
 
 export interface LayerIntegralGeometry {
   pathData: string;
+  /** 0은 닫힌 윤곽 채우기, 양수는 이전 stroke 경로다. */
   strokeWidth: number;
 }
 

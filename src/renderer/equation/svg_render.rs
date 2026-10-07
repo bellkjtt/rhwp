@@ -129,7 +129,7 @@ fn render_box(
             ));
         }
         LayoutKind::MathSymbol(text) => {
-            // 적분 기호(∫): 폰트 `<text>` 대신 stroke path 로 렌더 (Task #1317).
+            // 적분 기호(∫): 공통 공개 글리프 윤곽을 사용한다.
             // 폰트 미임베딩 SVG 에서 뷰어 대체 폰트의 글리프 bbox 편차로 상·하한이
             // 어긋나던 문제를, 폰트 독립·결정적 path 로 해소한다(geom SSOT).
             if super::layout::is_integral_symbol(text) {
@@ -442,32 +442,35 @@ fn render_box(
     }
 }
 
-/// 적분 기호(∫)를 stroke path 로 렌더 (Task #1317).
-///
-/// 글리프 박스 좌상단 `(x, y)` 기준으로 `integral_geom` 의 기하를 사용해 한 줄짜리
-/// S-곡선(bottom-left → top-right, 양끝 갈고리)을 그린다. 폰트에 의존하지 않으므로
-/// SVG 뷰어/환경에 무관하게 동일한 visual bbox 를 보장하며, layout 의 상·하한
-/// attach point(동일 geom)와 정합한다.
+/// 공개 표시 글꼴의 적분 윤곽을 공통 ink 영역에 배치한다.
+/// 측정에서 정한 점유와 첨자 원점을 유지하며 모든 backend에 같은 경로를 전달한다.
 pub(crate) fn integral_path_data(x: f64, y: f64, fs: f64) -> String {
-    let g = integral_geom(fs);
-    let h = g.bottom_y - g.top_y;
-    format!(
-        "M{:.2},{:.2} C{:.2},{:.2} {:.2},{:.2} {:.2},{:.2}",
-        x + g.bottom_hook_x,
-        y + g.bottom_y,
-        x + g.width * 1.02,
-        y + g.bottom_y - h * 0.30,
-        x - g.width * 0.10,
-        y + g.top_y + h * 0.30,
-        x + g.top_hook_x,
-        y + g.top_y
-    )
+    use super::integral_outline::{commands, Command};
+    use std::fmt::Write;
+    let mut path = String::new();
+    for command in commands(x, y, fs) {
+        match command {
+            Command::Move((x, y)) => {
+                let _ = write!(path, "M{x:.4},{y:.4}");
+            }
+            Command::Line((x, y)) => {
+                let _ = write!(path, "L{x:.4},{y:.4}");
+            }
+            Command::Cubic([(a, b), (c, d), (e, f)]) => {
+                let _ = write!(path, "C{a:.4},{b:.4} {c:.4},{d:.4} {e:.4},{f:.4}");
+            }
+            Command::Close => path.push('Z'),
+        }
+    }
+    path
 }
 
 fn integral_path(x: f64, y: f64, fs: f64, color: &str) -> String {
-    let g = integral_geom(fs);
-    format!("<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\"/>\n",
-        integral_path_data(x, y, fs), color, g.stroke_w)
+    format!(
+        "<path d=\"{}\" fill=\"{}\"/>\n",
+        integral_path_data(x, y, fs),
+        color
+    )
 }
 
 fn font_size_from_box(lb: &LayoutBox, base_fs: f64) -> f64 {

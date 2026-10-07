@@ -16,6 +16,7 @@ pub mod hancom_glyphs;
 mod font_frame_metrics;
 mod font_style_runs;
 pub(crate) mod inline_box;
+pub(crate) mod integral_outline;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
 mod logical_font_frame;

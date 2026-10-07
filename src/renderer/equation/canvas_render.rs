@@ -360,28 +360,20 @@ fn set_font(ctx: &CanvasRenderingContext2d, size: f64, italic: bool, bold: bool)
 
 /// 적분 기호(∫)를 stroke path 로 렌더 (Task #1317).
 ///
-/// svg_render.rs 의 `integral_path` 와 동일한 `integral_geom` 기하·곡선을 사용해
-/// SVG/Canvas 가 픽셀 단위로 정합한다. 폰트에 의존하지 않으므로 글리프 bbox 가
-/// 결정적이며 상·하한 attach point(동일 geom)와 어긋나지 않는다.
+/// SVG·Skia와 같은 공개 적분 윤곽 및 공통 ink 영역을 소비한다.
 fn draw_integral(ctx: &CanvasRenderingContext2d, x: f64, y: f64, fs: f64, color: &str) {
-    let g = integral_geom(fs);
-    let h = g.bottom_y - g.top_y;
-    let p0x = x + g.bottom_hook_x;
-    let p0y = y + g.bottom_y;
-    let p3x = x + g.top_hook_x;
-    let p3y = y + g.top_y;
-    let c1x = x + g.width * 1.02;
-    let c1y = y + g.bottom_y - h * 0.30;
-    let c2x = x - g.width * 0.10;
-    let c2y = y + g.top_y + h * 0.30;
-    ctx.set_stroke_style_str(color);
-    ctx.set_line_width(g.stroke_w);
-    ctx.set_line_cap("round");
+    use super::integral_outline::{commands, Command};
+    ctx.set_fill_style_str(color);
     ctx.begin_path();
-    ctx.move_to(p0x, p0y);
-    ctx.bezier_curve_to(c1x, c1y, c2x, c2y, p3x, p3y);
-    ctx.stroke();
-    ctx.set_line_cap("butt");
+    for command in commands(x, y, fs) {
+        match command {
+            Command::Move((x, y)) => ctx.move_to(x, y),
+            Command::Line((x, y)) => ctx.line_to(x, y),
+            Command::Cubic([(a, b), (c, d), (e, f)]) => ctx.bezier_curve_to(a, b, c, d, e, f),
+            Command::Close => ctx.close_path(),
+        }
+    }
+    ctx.fill();
 }
 
 /// 늘림 괄호 렌더링

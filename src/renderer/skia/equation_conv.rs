@@ -8,8 +8,8 @@ use super::font_lookup::{
 
 use crate::renderer::equation::ast::MatrixStyle;
 use crate::renderer::equation::layout::{
-    integral_geom, is_integral_symbol, LayoutBox, LayoutKind, AXIS_HEIGHT, BIG_OP_SCALE,
-    INTEGRAL_SCALE, SCRIPT_SCALE,
+    is_integral_symbol, LayoutBox, LayoutKind, AXIS_HEIGHT, BIG_OP_SCALE, INTEGRAL_SCALE,
+    SCRIPT_SCALE,
 };
 use crate::renderer::equation::symbols::{DecoKind, FontStyleKind};
 
@@ -872,30 +872,31 @@ fn font_size_from_box(lb: &LayoutBox, base_fs: f64) -> f64 {
 
 /// 적분 기호(∫)를 stroke path 로 렌더 (Task #1317).
 ///
-/// svg_render.rs `integral_path` / canvas_render.rs `draw_integral` 와 동일한
-/// `integral_geom` 기하·곡선을 사용해 SVG/Canvas/Skia 3경로가 정합한다. 폰트
-/// 비의존으로 글리프 bbox 가 결정적이며 상·하한 attach point 와 어긋나지 않는다.
+/// SVG·Canvas2D와 같은 공개 적분 윤곽 및 공통 ink 영역을 소비한다.
 fn draw_integral(canvas: &Canvas, x: f64, y: f64, fs: f64, color: Color) {
-    let g = integral_geom(fs);
-    let h = g.bottom_y - g.top_y;
-    let p0x = x + g.bottom_hook_x;
-    let p0y = y + g.bottom_y;
-    let p3x = x + g.top_hook_x;
-    let p3y = y + g.top_y;
-    let c1x = x + g.width * 1.02;
-    let c1y = y + g.bottom_y - h * 0.30;
-    let c2x = x - g.width * 0.10;
-    let c2y = y + g.top_y + h * 0.30;
-    let mut paint = stroke_paint(color, g.stroke_w);
-    paint.set_stroke_cap(paint::Cap::Round);
+    use crate::renderer::equation::integral_outline::{commands, Command};
     let mut path = PathBuilder::new();
-    path.move_to((p0x as f32, p0y as f32));
-    path.cubic_to(
-        (c1x as f32, c1y as f32),
-        (c2x as f32, c2y as f32),
-        (p3x as f32, p3y as f32),
-    );
-    canvas.draw_path(&path.detach(), &paint);
+    for command in commands(x, y, fs) {
+        match command {
+            Command::Move((x, y)) => {
+                path.move_to((x as f32, y as f32));
+            }
+            Command::Line((x, y)) => {
+                path.line_to((x as f32, y as f32));
+            }
+            Command::Cubic([(a, b), (c, d), (e, f)]) => {
+                path.cubic_to(
+                    (a as f32, b as f32),
+                    (c as f32, d as f32),
+                    (e as f32, f as f32),
+                );
+            }
+            Command::Close => {
+                path.close();
+            }
+        }
+    }
+    canvas.draw_path(&path.detach(), &fill_paint(color));
 }
 
 fn fill_paint(color: Color) -> Paint {
