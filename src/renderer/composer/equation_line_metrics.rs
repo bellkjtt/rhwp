@@ -10,6 +10,20 @@ pub(super) fn refresh_equation_rows(
     styles: &ResolvedStyleSet,
 ) {
     let positions = para.control_text_positions();
+    // 글자 없는 수식 줄은 컨트롤 순번이 text 길이를 넘을 수 있다.
+    // 표시 경로의 실제 줄 소속을 소비하며 text 범위로 다시 추측하지 않는다.
+    let equation_owners =
+        crate::renderer::equation_tac_flow::uses_equation_only_flow(para, composed).then(|| {
+            crate::renderer::equation_tac_flow::equation_only_tac_line_assignment(
+                para,
+                composed,
+                &composed.tac_controls,
+            )
+            .into_iter()
+            .zip(&composed.tac_controls)
+            .map(|(line, (_, _, control))| (*control, line))
+            .collect::<Vec<_>>()
+        });
     let line_count = composed.lines.len();
     let dpi = styles.resolved_dpi.unwrap_or(DEFAULT_DPI);
     for line_index in 0..composed.lines.len() {
@@ -41,11 +55,15 @@ pub(super) fn refresh_equation_rows(
         let mut changed = false;
         let mut has_equation = false;
         let mut supported = true;
-        for (control, position) in para.controls.iter().zip(&positions) {
-            if *position < line.char_start
-                || *position > end
-                || (*position == end && line_index + 1 < line_count)
-            {
+        for (control_index, (control, position)) in para.controls.iter().zip(&positions).enumerate()
+        {
+            let belongs_to_line = if let Some(owners) = &equation_owners {
+                owners.contains(&(control_index, line_index))
+            } else {
+                *position >= line.char_start
+                    && (*position < end || (*position == end && line_index + 1 == line_count))
+            };
+            if !belongs_to_line {
                 continue;
             }
             match control {

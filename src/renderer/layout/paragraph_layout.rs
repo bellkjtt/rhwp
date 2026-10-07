@@ -5025,6 +5025,12 @@ impl LayoutEngine {
         // Therefore paragraph margins and first-line/hanging indent must
         // use the same x origin as ordinary TextLine nodes.
         let row_base_x = |row: usize| -> f64 {
+            // 별도 수식 줄 나눔이 없으면 일반 글줄이 확정한 원점을 그대로 쓴다.
+            // HWP3 계보 보정은 별도 줄 나눔의 옛 2배 indent에만 적용한다.
+            // 빈 run이라는 이유로 정상 내어쓰기·저장 플래그를 다시 계산하지 않는다.
+            if equation_tac_line_flow.is_none() {
+                return effective_col_x + effective_margin_left;
+            }
             let visual_line_idx = equation_tac_line_flow
                 .as_ref()
                 .map(|flow| flow.visual_line_idx_for_row(row))

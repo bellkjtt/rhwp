@@ -249,7 +249,7 @@ pub(crate) fn paragraph_effective_margin_left_with_indent_scale(
     margin_left + paragraph_line_indent_with_scale(indent, visual_line_idx, indent_scale)
 }
 
-fn equation_only_tac_line_assignment(
+pub(crate) fn equation_only_tac_line_assignment(
     para: &Paragraph,
     composed: &ComposedParagraph,
     tac_offsets_px: &[(usize, f64, usize)],
