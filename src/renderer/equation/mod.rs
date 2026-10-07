@@ -12,11 +12,11 @@ pub mod ast;
 pub mod canvas_render;
 pub(crate) mod dispatch;
 pub mod hancom_glyphs;
+mod font_frame_metrics;
 pub(crate) mod inline_box;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
 mod logical_font_frame;
-mod font_frame_metrics;
 pub mod parser;
 pub mod svg_render;
 pub mod symbols;
@@ -132,16 +132,11 @@ pub(crate) fn normalized_simple_math_metrics(
     if equation.common.height <= height {
         return None;
     }
-    // 무효인 논리 폰트 프레임은 너비도 이전 글리프 캐시와 구분한다.
-    // 같은 표시 LayoutBox의 전진폭을 측정과 paint가 함께 소비한다.
-    // 별도의 기존 BOX 계약은 저장된 외곽 너비를 유지한다.
-    let width = if font_frame.is_some() {
-        super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32
-    } else {
-        equation.common.width
-    };
+    // 논리 높이의 무효만으로 저장 전진폭까지 무효라고 판단할 수 없다.
+    // 대체 글꼴의 자연 폭은 backend의 표시 스케일 입력이며,
+    // 원본 글줄의 점유 폭을 대신하지 않는다. 측정·배치는 같은 저장 폭을 소비한다.
     Some((
-        width,
+        equation.common.width,
         height,
         super::px_to_hwpunit(baseline, super::DEFAULT_DPI),
     ))
