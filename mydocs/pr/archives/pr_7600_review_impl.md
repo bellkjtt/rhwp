@@ -1536,3 +1536,33 @@ Latin Modern Math 1.959 integral 윤곽을 사용한다. 기존 공통 ink 영�
 원본 저작권과 GUST Font License를 파일 및 THIRD_PARTY_LICENSES.md에
 보존한다. 배치 폭·첨자 원점·논리 프레임과 표시 윤곽의 계약은 구분한다.
 원본 및 진단 입력을 다시 비교해 위치와 모양을 검증한다.
+
+
+`8edd3f8c2`의 원본 18쪽 Native dev 전체는 90% 이상이며 최저는
+6쪽 91.18877%다. 15·16쪽은 93.45365%/91.42286%, 수식 HWP/HWPX는
+92.51376%, dyad 원본/최소 입력은 95.16512%/95.89197%다. dyad 원본의
+첫 캡처는 Chrome 시작 timeout으로 실패했고 별도 새 key로 재실행했다.
+환경 실패를 시각 회귀로 분류하지 않는다.
+
+추가 진단의 한컴산뜻돋움 라벨은 내장 폭 DB에 없는 face다. 실제 SVG에서
+11 pt 라틴 문자가 모두 7.3333 px(0.5 em)의 textLength로 배치된 것을
+확인했다. 공식 글꼴 설치와 내장 메트릭 지원을 같은 상태로 보고하지 않는다.
+해당 진단은 81.73091%이며 실패 입력과 원 Print를 보존한다.
+
+수식 기하를 별도로 판독하기 위해 지원되는 함초롬돋움 라벨 대조군을
+생성했다. 변경은 Contents/header.xml의 라벨 face 이름뿐이며 수식
+스크립트·크기·문단 XML은 동일하다. HWP job
+`78556bae-3dfa-4308-be7d-2f461a1a7619`, Print job
+`973b5172-693c-4fa5-b8bf-0603ebadb439`는 engine 2020으로 실행했다.
+기준 PDF SHA-256은
+`9a03f67883dfeef93e837e644139a97dfe9c9a4eb01968f3bd371a077521119f`다.
+이 6개 적분 대조군 Native의 2px 실루엣은 100.00000%였다. review PNG에서
+적분 윤곽·상하한·복합 하한과 뒤 본문 위치를 직접 확인했다. 이는 별도
+대조군 결과이며 한컴산뜻돋움 진단이나 원본 18쪽의 통과로 바꾸어 보고하지 않는다.
+
+같은 source에서 fmt check·Native/WASM/workspace all-target Clippy,
+workspace build, base `48ff4bb93` 대비 integration manifest와 unit tier
+정책 검사가 모두 exit 0으로 끝났다. TypeScript 검사도 exit 0이다.
+최종 fresh WASM과 원본 대조군 전체 검사, Skia·Studio·회귀 검사는 남아 있다.
+MCP Print로 만든 추가 진단 PDF도 커밋에 포함하며 TSV·실행 로그·중간
+JSON·nextrun은 ignored output에만 보존한다.
