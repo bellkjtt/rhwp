@@ -166,6 +166,7 @@ impl EqNode {
                     .map(|c| c.simplify())
                     .filter(|c| !matches!(c, EqNode::Empty))
                     .collect();
+                children = super::font_style_runs::resolve(children);
                 if children.len() == 1 {
                     children.into_iter().next().unwrap()
                 } else if children.is_empty() {

@@ -493,6 +493,14 @@ impl EqParser {
             .get(cmd)
             .or_else(|| FONT_STYLES.get(cmd_lower.as_str()))
         {
+            // 한컴의 rm/it은 단일 인자가 아니라 현재 그룹 안의 글꼴 전환이다.
+            // 명시적 공백을 인자로 소비하지 않고 Row에서 다음 전환까지 적용한다.
+            if matches!(cmd_lower.as_str(), "rm" | "it") {
+                return EqNode::FontStyle {
+                    style,
+                    body: Box::new(EqNode::Empty),
+                };
+            }
             // 다음 토큰이 구조 명령어(LEFT, RIGHT 등)이면 body 없이 반환
             // rm P it LEFT(...) 에서 it이 LEFT를 body로 먹지 않도록
             let body = if self.current_type() == TokenType::Command

@@ -14,6 +14,7 @@ pub mod canvas_render;
 pub(crate) mod dispatch;
 pub mod hancom_glyphs;
 mod font_frame_metrics;
+mod font_style_runs;
 pub(crate) mod inline_box;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
