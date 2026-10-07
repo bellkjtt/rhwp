@@ -5849,11 +5849,15 @@ impl DocumentCore {
                     _ => false,
                 })
             });
-            let math_textboxes = crate::renderer::render_normalization::math_textbox::normalize(
+            let math_tables = crate::renderer::render_normalization::math_table::normalize(
                 &section.paragraphs,
                 &self.styles,
             );
-            let math_geometry_changed = math_textboxes.is_some();
+            let math_textboxes = crate::renderer::render_normalization::math_textbox::normalize(
+                math_tables.as_deref().unwrap_or(&section.paragraphs),
+                &self.styles,
+            );
+            let math_geometry_changed = math_textboxes.is_some() || math_tables.is_some();
             let unplaced_rows =
                 normalize_widthless_rows && section_has_unplaced_stored_rows(&section.paragraphs);
             let widthless: Vec<usize> = section
@@ -5892,7 +5896,7 @@ impl DocumentCore {
                 out.push(None);
                 continue;
             }
-            let mut np = math_textboxes.unwrap_or_else(|| section.paragraphs.clone());
+            let mut np = math_textboxes.or(math_tables).unwrap_or_else(|| section.paragraphs.clone());
             let mut frame_changes = Vec::new();
             if !inline_frames.is_empty() {
                 let mut frames = inline_frames.into_iter().peekable();
