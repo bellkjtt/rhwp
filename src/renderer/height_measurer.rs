@@ -2080,7 +2080,11 @@ impl HeightMeasurer {
                                     | crate::renderer::composer::InlineControlType::Shape
                             )
                     });
-                    let flow_floor = if line_has_as_char_object {
+                    let line_owns_equation =
+                        crate::renderer::typeset::line_has_tac_equation_control(
+                            para, comp, line_idx,
+                        );
+                    let flow_floor = if line_has_as_char_object || line_owns_equation {
                         max_fs.max(lh)
                     } else {
                         max_fs
