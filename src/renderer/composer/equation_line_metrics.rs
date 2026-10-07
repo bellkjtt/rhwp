@@ -10,6 +10,12 @@ pub(super) fn refresh_equation_rows(
     styles: &ResolvedStyleSet,
 ) {
     let positions = para.control_text_positions();
+    let dpi = styles.resolved_dpi.unwrap_or(DEFAULT_DPI);
+    let tac_offsets_px: Vec<_> = composed
+        .tac_controls
+        .iter()
+        .map(|(position, width, control)| (*position, hwpunit_to_px(*width, dpi), *control))
+        .collect();
     // 글자 없는 수식 줄은 컨트롤 순번이 text 길이를 넘을 수 있다.
     // 표시 경로의 실제 줄 소속을 소비하며 text 범위로 다시 추측하지 않는다.
     let equation_owners =
@@ -17,7 +23,7 @@ pub(super) fn refresh_equation_rows(
             crate::renderer::equation_tac_flow::equation_only_tac_line_assignment(
                 para,
                 composed,
-                &composed.tac_controls,
+                &tac_offsets_px,
             )
             .into_iter()
             .zip(&composed.tac_controls)
@@ -25,7 +31,6 @@ pub(super) fn refresh_equation_rows(
             .collect::<Vec<_>>()
         });
     let line_count = composed.lines.len();
-    let dpi = styles.resolved_dpi.unwrap_or(DEFAULT_DPI);
     for line_index in 0..composed.lines.len() {
         let next_box_height = composed.lines.get(line_index + 1).and_then(|next| {
             source_inline_box_height(
