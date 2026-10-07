@@ -79,12 +79,12 @@ pub(crate) fn integral_geom(fs: f64) -> IntegralGeom {
     let baseline = fs * INTEGRAL_SCALE * 0.7;
     let source_font_size = fs * 2.0;
     IntegralGeom {
-        width: fs * 0.52,
+        width: source_font_size * 630.0 / 1024.0,
         stroke_w: fs * 0.06,
         top_y: baseline + fs * AXIS_HEIGHT - source_font_size * 820.0 / 1024.0,
         bottom_y: baseline + fs * AXIS_HEIGHT + source_font_size * 202.0 / 1024.0,
-        top_hook_x: fs * 0.50,
-        bottom_hook_x: fs * 0.04,
+        top_hook_x: source_font_size * 579.0 / 1024.0,
+        bottom_hook_x: source_font_size * 50.0 / 1024.0,
     }
 }
 
@@ -409,7 +409,12 @@ impl EqLayout {
                 x: 0.0,
                 y: 0.0,
                 // Task #1233: 첨자 없는 bare 적분도 뒤 피연산자와 trailing 간격 유지.
-                width: geom.width + fs * BIG_OP_TRAIL_PAD,
+                width: geom.width
+                    + if self.hancom_math_face {
+                        0.0
+                    } else {
+                        fs * BIG_OP_TRAIL_PAD
+                    },
                 height: op_fs,
                 baseline: op_fs * 0.7, // 적분 기호 baseline: 기호 높이의 70%
                 kind: LayoutKind::MathSymbol(text.to_string()),

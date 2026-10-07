@@ -53,21 +53,39 @@ impl EqLayout {
         let mut base = self.layout_node(base, fs);
         let mut sub = sub.map(|node| self.layout_node(node, self.script_font_size(fs)));
         let mut sup = sup.map(|node| self.layout_node(node, self.script_font_size(fs)));
-        let sup_dy = sup
-            .as_ref()
-            .map_or(0.0, |value| geom.top_y - value.height * 0.30);
+        let sup_dy = sup.as_ref().map_or(0.0, |value| {
+            if self.hancom_math_face {
+                base.baseline - fs - value.baseline
+            } else {
+                geom.top_y - value.height * 0.30
+            }
+        });
         let head = (-sup_dy).max(0.0);
         base.x = 0.0;
         base.y = head;
         base.width = geom.width;
         let gap_x = fs * 0.22;
         if let Some(value) = sup.as_mut() {
-            value.x = geom.top_hook_x + gap_x;
+            value.x = if self.hancom_math_face {
+                fs * 1.3
+            } else {
+                geom.top_hook_x + gap_x
+            };
             value.y = head + sup_dy;
         }
         if let Some(value) = sub.as_mut() {
-            value.x = geom.bottom_hook_x + gap_x;
-            value.y = head + geom.bottom_y - value.height * 0.72;
+            value.x = if self.hancom_math_face {
+                fs * 0.75
+            } else {
+                geom.bottom_hook_x + gap_x
+            };
+            value.y = if self.hancom_math_face {
+                // 독립 Print의 평범한 하한 기준선은 본체보다 0.9 em 낮다.
+                // 복합 하한은 표시 글꼴 MATH SubscriptTopMax(344/1000)를 소비한다.
+                head + base.baseline + (fs * 0.9).max(value.baseline - fs * 0.344) - value.baseline
+            } else {
+                head + geom.bottom_y - value.height * 0.72
+            };
         }
         let right = [Some(&base), sub.as_ref(), sup.as_ref()]
             .into_iter()
@@ -84,7 +102,12 @@ impl EqLayout {
             base,
             sub,
             sup,
-            width: right + fs * BIG_OP_TRAIL_PAD,
+            width: right
+                + if self.hancom_math_face {
+                    0.0
+                } else {
+                    fs * BIG_OP_TRAIL_PAD
+                },
             height: bottom,
         }
     }
