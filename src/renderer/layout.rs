@@ -10424,8 +10424,15 @@ impl LayoutEngine {
                     *para_index,
                     *control_index,
                     &col_node,
-                    item_start_y_for_band,
-                    new_y,
+                    stored_shape_host::ShapeHostFlow {
+                        before: item_start_y_for_band,
+                        after: new_y,
+                        spacing_after: styles
+                            .para_styles
+                            .get(paragraphs[*para_index].para_shape_id as usize)
+                            .map_or(0.0, |style| style.spacing_after),
+                        dpi: self.dpi,
+                    },
                 ),
                 _ => false,
             };
