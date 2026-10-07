@@ -468,14 +468,6 @@ impl TypesetEngine {
                             && continued_endnote_tail_before_new_note
                             && st.current_height > st.available_height() * 0.70
                             && st.current_height < st.available_height() * 0.75;
-                        let skip_default_mid_column_between_notes_trailing = endnote_flow_profile
-                            .map(EndnoteFlowProfile::visible_nonzero_default_between_notes)
-                            .unwrap_or(false)
-                            && boundary_prev_endnote_had_vpos_rewind
-                            && continued_endnote_tail_before_new_note
-                            && st.current_column + 1 >= st.col_count
-                            && st.current_height > st.available_height() * 0.25
-                            && st.current_height < st.available_height() * 0.50;
                         let skip_absorbed_render_between_notes_trailing = {
                             let absorbed_visible_profile = endnote_flow_profile
                                 .map(|profile| {
@@ -513,7 +505,6 @@ impl TypesetEngine {
                         };
                         let skip_render_between_notes_trailing =
                             skip_default_render_between_notes_trailing
-                                || skip_default_mid_column_between_notes_trailing
                                 || skip_absorbed_render_between_notes_trailing;
                         if st
                             .endnote_paragraphs
