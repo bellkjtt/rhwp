@@ -32,17 +32,8 @@ pub(super) fn refresh_equation_rows(
         });
     let line_count = composed.lines.len();
     for line_index in 0..composed.lines.len() {
-        let next_box_height = composed.lines.get(line_index + 1).and_then(|next| {
-            source_inline_box_height(
-                para,
-                &positions,
-                next,
-                composed
-                    .lines
-                    .get(line_index + 2)
-                    .map(|line| line.char_start),
-            )
-        });
+        let following_box_height =
+            following_reserved_box_height(para, &positions, composed, line_index);
         let stored_pair = para
             .line_segs
             .get(line_index)
@@ -93,7 +84,7 @@ pub(super) fn refresh_equation_rows(
                 _ => {}
             }
         }
-        if !supported || !has_equation {
+        if !supported {
             continue;
         }
         // 실제 텍스트가 있는 줄은 텍스트의 어센트·하강부도 같은 합집합에 포함한다.
@@ -108,15 +99,17 @@ pub(super) fn refresh_equation_rows(
             .unwrap_or(0);
         let text_ascent = (f64::from(text_height) * 0.85).round() as i32;
         let text_descent = text_height - text_ascent;
+        if !has_equation && text_height == 0 {
+            continue;
+        }
         old_ascent = old_ascent.max(text_ascent);
         old_logical_height = old_logical_height.max(text_height);
         new_logical_height = new_logical_height.max(text_height);
         new_ascent = new_ascent.max(text_ascent);
         new_descent = new_descent.max(text_descent);
-        // 다음 줄의 실제 인라인 개체가 같은 큰 높이를 소유하는 경우만
-        // 그 높이를 앞줄에서 중복 예약한 것으로 판정한다. vpos의 전진이
-        // text_height와 같다는 이유만으로 유효한 line_height를 줄이지 않는다.
-        let next_inline_box_was_reserved = stored_pair.is_some_and(|(source, next)| {
+        // 같은 저장 예약 구간의 뒤 인라인 개체가 큰 높이를 실제 소유해야 한다.
+        // 일반 텍스트 줄이나 저장 컷 앞 줄도 뒤 개체의 점유를 중복하지 않는다.
+        let following_inline_box_was_reserved = stored_pair.is_some_and(|(source, next)| {
             use crate::model::paragraph::LineSeg;
             !para.stored_text_partition_is_dirty()
                 && line_count == para.line_segs.len()
@@ -124,23 +117,22 @@ pub(super) fn refresh_equation_rows(
                 && next.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
                 && source.text_height == old_logical_height
                 && source.line_height > old_logical_height
-                && next_box_height.is_some_and(|height| {
-                    height == source.line_height && height == next.text_height
-                })
+                && following_box_height == Some(source.line_height)
                 && (source.baseline_distance - old_ascent).abs() <= 1
                 && source.vertical_pos >= 0
-                && source
+                && (source
                     .vertical_pos
                     .checked_add(old_logical_height)
                     .and_then(|end| end.checked_add(source.line_spacing))
                     == Some(next.vertical_pos)
+                    || next.vertical_pos < source.vertical_pos)
         });
         // 저장 줄이 이 개체 합집합에서 나온 경우만 메트릭을 다시 발행한다.
         // 별도 줄 높이·수직 정렬 계약을 실제 상자의 대용으로 덮어쓰지 않는다.
         if (changed
             && line.line_height == old_logical_height
             && (line.baseline_distance - old_ascent).abs() <= 1)
-            || next_inline_box_was_reserved
+            || following_inline_box_was_reserved
         {
             let occupied_height = new_ascent + new_descent;
             // 저장 간격은 논리 상자 높이 뒤의 leading이다. 실제 기준선 합집합이
@@ -153,6 +145,52 @@ pub(super) fn refresh_equation_rows(
             debug_assert!(hwpunit_to_px(line.line_height, DEFAULT_DPI) > 0.0);
         }
     }
+}
+
+/// 같은 높이를 공유하는 저장 예약 구간의 끝을 실제 후속 개체의 소유로 확인한다.
+/// 중간 줄의 전진이 내용 높이로 닫히거나 저장 원점으로 돌아갈 때만 구간을 따른다.
+fn following_reserved_box_height(
+    para: &Paragraph,
+    positions: &[usize],
+    composed: &ComposedParagraph,
+    index: usize,
+) -> Option<i32> {
+    let source = para.line_segs.get(index)?;
+    if source.line_height <= source.text_height || composed.lines.len() != para.line_segs.len() {
+        return None;
+    }
+    for next_index in index + 1..para.line_segs.len() {
+        let previous = &para.line_segs[next_index - 1];
+        let next = &para.line_segs[next_index];
+        if next.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+            || next.vertical_pos < 0
+            || !(previous
+                .vertical_pos
+                .checked_add(previous.text_height)
+                .and_then(|end| end.checked_add(previous.line_spacing))
+                == Some(next.vertical_pos)
+                || next.vertical_pos < previous.vertical_pos)
+        {
+            return None;
+        }
+        if next.text_height == source.line_height {
+            let line = composed.lines.get(next_index)?;
+            return source_inline_box_height(
+                para,
+                positions,
+                line,
+                composed
+                    .lines
+                    .get(next_index + 1)
+                    .map(|line| line.char_start),
+            )
+            .filter(|height| *height == source.line_height);
+        }
+        if next.line_height != source.line_height || next.text_height != source.text_height {
+            return None;
+        }
+    }
+    None
 }
 
 /// 다음 줄의 소유 범위에서 원 저장 인라인 개체 높이를 확인한다.

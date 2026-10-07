@@ -430,10 +430,11 @@ impl HeightCursor {
         }
         // 수식 부분 재조판으로 바뀐 높이를 연속된 옛 저장 사다리가 복원하지 않게 한다.
         // 단/쪽 리셋이나 실제 저장 gap은 아래 기존 경로가 소유한다.
-        if (self.suppress_hwpx_stale_forward || self.stored_equation_reflow)
-            && !self.session_edited
-            && (self.prev_reissued_equation_rows
-                || crate::renderer::composer::uses_remeasured_equation_frame(prev_para))
+        if !self.session_edited
+            && (((self.suppress_hwpx_stale_forward || self.stored_equation_reflow)
+                && self.prev_reissued_equation_rows)
+                || (self.suppress_hwpx_stale_forward
+                    && crate::renderer::composer::uses_remeasured_equation_frame(prev_para)))
         {
             if let Some((previous, current)) = prev_para.line_segs.last().zip(
                 paragraphs
