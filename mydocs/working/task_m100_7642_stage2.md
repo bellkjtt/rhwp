@@ -245,3 +245,30 @@ last_verified: 2026-10-08
   `ac14400bd9a929d8ddb4f87443f554086899b5b931795a7210f0de96dcebfa0c`다.
   후자는 세로 정렬·마지막 줄 간격 소비 보정까지 포함해 새로 빌드 중이다. 전자의 점수를
   후자에 적용하지 않는다. 최종 package의 pkg/Studio public 동기화와 브라우저 비교를 다시 확인한다.
+
+## 전체 회귀 실행과 컴파일 누락 보정 — 2026-10-08
+
+- 새 PR 번호는 아직 없다. 전체 검증을 우선하라는 지시에 따라 아래 명령을 끝까지 실행했다.
+  `cargo nextest run --locked --cargo-profile release-test --target-dir target/pr-review --tests --test-threads 12 --no-fail-fast`.
+- 첫 실행은 기존 `equation_command_goldens::dump_layout`이 추가된 `FontGlyph`를 처리하지 못해
+  E0004, exit 101로 컴파일 실패했다. helper가 글리프의 텍스트·선택 글꼴·메트릭을 기록하도록
+  명시적인 match arm을 추가했다. golden·assertion·허용치 변경은 없다.
+- 재실행은 컴파일 통과 후 **10,524건 실행, 10,464건 통과, 60건 실패, 50건 skipped**,
+  실행 1,226.193초, exit 100으로 종료했다. 느린 검사도 종료 결과를 확인했다.
+- 실행 시작 HEAD는 `a08f27f86a582a623907be779e9d71ddc8cfc653`, 고정 base는
+  `b3c3047db575d146dff9d39098e6de98c4630b3e`다. 빌드 중 문서-only commit `3d3418221`이
+  추가됐고 재실행에는 위 helper 보정이 포함됐다. 생산 Rust와 fixture는 변경되지 않았다.
+- 실패 로그와 실제 assertion 대상·fixture 선언을 대조한 입력은 **HWP 18개·HWPX 6개**다.
+  합성 수식·정렬 검사 6건은 직접 원본 파일이 없으므로 실물 문서로 추정하지 않는다.
+  완료 로그·입력 대응 TSV·해시는 ignored
+  `output/pr-review/issue7642/full-regression-20261008/`에 보존한다.
+- 실패 입력의 최신 Native/fresh WASM 전쪽과 독립 한컴 Print를 다시 대조한다. 90% 미만은
+  출력을 먼저 개선하고, 90% 이상 및 확대 판독 후 필요한 px 검사만 관계 검사로 바꾼다.
+  본문 넘침·겹침·쪽수의 실패도 같은 원본으로 확인하며 baseline을 일괄 갱신하지 않는다.
+- self PR 절차는 `3d3418221`에서 **PR 생성 → 정확한 code head CI 성공 → PR review·오늘할일
+  문서-only trailing commit → trailing head CI 확인 → merge**로 수정했다. PR 번호 기반 기록과
+  오늘할일은 앞으로 이 CI 완료 순서를 따른다. 전체 회귀 60건 실패는 준비 완료가 아니다.
+- 최신 fresh WASM build는 exit 0, 17분 08초다. 고정 package는 ignored `wasm-a08f27f86/`,
+  WASM SHA-256 `4e86188cfd4eceede8dd4a45ba4bc70b4aced39ccbbc0733174354e9d295b429`다.
+  root pkg와 Studio public의 JS·WASM 해시가 각각 일치한다. package 생성과 브라우저 Sweep 통과를
+  구분하며, 현재 실패 입력 전쪽 Sweep은 다음 보정 단계에서 실행한다.
