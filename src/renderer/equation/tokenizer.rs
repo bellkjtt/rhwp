@@ -135,8 +135,8 @@ impl Tokenizer {
     /// [Task #576] times/sim 연산자 키워드도 변수와 인접 시 분리.
     /// HWP 수식 script 에서 "{a timesm}" → "a × m", "rm X simZ" → "X ~ Z"
     /// 의미. 광범위 sweep (158 fixture / 563 unique scripts) 결과 결함 발현
-    /// 키워드는 times/sim 만 (대소문자 4 개). alpha/sqrt 등은 항상 공백
-    /// 구분되어 prefix-split 불필요 — 그리스 문자 prefix 충돌 회귀 위험 0.
+    /// 키워드는 times/sim이었다 (대소문자 4개). 그리스 문자는 일반 식별자
+    /// 접두사로 임의 분리하지 않으며 닫는 구분자와의 명령 경계는 별도로 확인한다.
     ///
     /// [Task #1122] HWP 수식 script 에서 분모 숫자가 OVER/ATOP 에 붙는 경우
     /// (`11 over20`, `3 over5`)가 있어 over/atop 뒤가 숫자인 경우에만 분리한다.
@@ -195,6 +195,14 @@ impl Tokenizer {
             }
         }
 
+        // 곱셈 기호에 숫자가 붙어도 같은 연산자·피연산자 경계다.
+        // cdots나 cdotValue 같은 다른 명령·식별자는 숫자 조건에 해당하지 않는다.
+        if self.matches_at_ascii_ci("cdot") && self.peek(4).is_some_and(|ch| ch.is_ascii_digit()) {
+            self.pos += 4;
+            let value = self.chars[start..self.pos].iter().collect::<String>();
+            return Token::new(TokenType::Command, value, start);
+        }
+
         // [#1204-C] prime 이 글자/숫자에 붙은 경우 분리 (`primeF`→′ F).
         for kw in ["prime", "PRIME"] {
             if self.matches_at(kw) {
@@ -213,6 +221,30 @@ impl Tokenizer {
                 self.pos += 1;
             } else {
                 break;
+            }
+        }
+
+        // 알려진 그리스 기호와 RIGHT가 닫는 구분자 앞에서 붙은 경우다.
+        // sigmaRIGHT )를 문자로 그리지 않으며 일반 그리스 접두사 변수는 보존한다.
+        if let Some(prefix_len) = value
+            .len()
+            .checked_sub(5)
+            .filter(|&len| len > 0 && value[len..].eq_ignore_ascii_case("right"))
+        {
+            let next = self.chars[self.pos..]
+                .iter()
+                .copied()
+                .find(|ch| !ch.is_ascii_whitespace());
+            let greek_symbol =
+                super::symbols::lookup_symbol(&value[..prefix_len]).is_some_and(|symbol| {
+                    symbol.chars().count() == 1
+                        && symbol
+                            .chars()
+                            .all(|ch| ('\u{0370}'..='\u{03ff}').contains(&ch))
+                });
+            if matches!(next, Some(')' | ']' | '}' | '|')) && greek_symbol {
+                self.pos = start + prefix_len;
+                return Token::new(TokenType::Command, value[..prefix_len].to_string(), start);
             }
         }
 
