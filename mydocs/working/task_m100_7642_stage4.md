@@ -93,8 +93,8 @@ fresh WASM은 `209e7bd5e0fa066e6114ab6f59c48ba9279a67c06044a50634197e9d2ea10f72`
 
 | 범위 | Native 쪽수/최저값 | fresh WASM 쪽수/최저값 | 판정 |
 | --- | --- | --- | --- |
-| 저장 줄 없는 독립 Print 반례 13개 | 26쪽 / 99.99937% | 26쪽 / 99.99937% | 쪽수 일치·gate 통과 |
-| 원본 p122·상대 크기 정상 저장·영어·국어 대조군 6개 | 57쪽 / 90.61634% | 57쪽 / 90.61634% | 쪽수 일치·gate 통과 |
+| 저장 줄 없는 독립 Print 반례 13개 | 26쪽 / 99.99937% | 26쪽 / 99.99937% | 쪽수 일치·90% 수치 기준 충족 |
+| 원본 p122·상대 크기 정상 저장·영어·국어 대조군 6개 | 57쪽 / 90.61634% | 57쪽 / 90.61634% | 쪽수 일치·90% 수치 기준 충족 |
 
 전쪽 TSV·명령·기준 SHA는 `picture-logical-font-native/results.json`,
 `picture-logical-font-native-controls/results.json`, `picture-logical-font-wasm/results.json`에
@@ -169,3 +169,9 @@ p122가 suite 016이다. 같은 filter의 최종 실행은 컴파일 17.68초, 8
 파생 harness·manifest·unit inventory·TSV·로그는 stage하지 않는다.
 이 단계는 검증된 그림 흐름만 고정하며, 90% 미만인 다른 원본의 px/hash 기대값을
 바꾸거나 전체 회귀·PR 승인 완료로 판정하지 않는다.
+
+
+전쪽 `--silhouette-only` TSV 산출의 `pr_review_gate.status`는 **not_evaluated**다.
+위 표는 수치 기준 충족이며 자동 승인 gate 통과라는 뜻이 아니다. 대표 페이지의 review·
+overlay·확대 판독은 별도로 실행했다. 전체 변경 범위에 미달 원본이 남아 있으므로 이
+단계의 검사 통과나 새 관계 회귀를 PR 승인·통합 가능 판정으로 승격하지 않는다.

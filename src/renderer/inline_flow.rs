@@ -7,6 +7,8 @@ use std::ops::Range;
 
 mod picture_rows;
 pub(crate) use picture_rows::supports_picture_rows;
+mod stored_host;
+pub(crate) use stored_host::plan_stored_empty_square_host;
 
 use crate::model::{control::Control, paragraph::Paragraph, style::Alignment};
 
@@ -81,6 +83,8 @@ pub(crate) struct InlineFlowRow {
 /// 좌표와 높이는 같은 계산의 결과다. 확정 후 단 상대 좌표로 보관한다.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InlineFlowPlan {
+    /// 정상 저장 증언으로 확정한 빈 부동 개체 호스트의 실제 줄 예약.
+    pub(crate) stored_empty_host: bool,
     /// NO_LS 본문의 확정 frame 행. 원본 IR은 바꾸지 않고 fit와 paint에 함께 전달한다.
     pub(crate) text_rows: Option<Vec<crate::model::paragraph::LineSeg>>,
     /// Square table owns the object; this plan owns only its host text rows.
@@ -393,6 +397,7 @@ pub(crate) fn plan(
     let mut exclusions = preceding.to_vec();
     let horizontal = frame.container.x..frame.container.x + frame.container.width;
     let mut result = InlineFlowPlan {
+        stored_empty_host: false,
         text_rows: None,
         square_host_control: None,
         text_spacing_before: None,
@@ -736,6 +741,7 @@ pub(crate) fn plan_plain_text(
         });
     let end = text_top + hwpunit_to_px(frame.top, placement.dpi) + style.spacing_after;
     Some(InlineFlowPlan {
+        stored_empty_host: false,
         start: placement.paragraph_y,
         end,
         boxes: Vec::new(),
@@ -870,6 +876,7 @@ pub(crate) fn plan_square_table_host(
     // object remains an exclusion and fit budget; it is not a text advance.
     let end = spacing_before + hwpunit_to_px(frame.top, dpi) + style.spacing_after;
     Some(InlineFlowPlan {
+        stored_empty_host: false,
         text_rows: Some(rows),
         square_host_control: Some(control),
         text_spacing_before: Some(spacing_before),

@@ -2908,6 +2908,10 @@ impl LayoutEngine {
             let mut projected = para.clone();
             projected.line_segs = rows.clone();
             projected.hwpx_axis_shift = 0;
+            if plan.stored_empty_host {
+                // 실제 줄 예약만 그린다. 부동 그림·도형은 Shape 항목이 소유한다.
+                projected.controls.clear();
+            }
             let composed =
                 crate::renderer::composer::compose_paragraph_in_context(&projected, styles);
             self.layout_composed_paragraph_in_frame(

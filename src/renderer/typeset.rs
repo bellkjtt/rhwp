@@ -3498,12 +3498,16 @@ impl TypesetEngine {
         styles: &ResolvedStyleSet,
         column_width_px: Option<f64>,
         endnote: bool,
+        stored_host_plan: Option<&crate::renderer::inline_flow::InlineFlowPlan>,
     ) -> DumpFormattedParagraphHeight {
-        let fmt = if endnote {
+        let mut fmt = if endnote {
             self.format_endnote_paragraph(para, composed, styles, column_width_px)
         } else {
             self.format_paragraph(para, composed, styles, column_width_px)
         };
+        if let Some(plan) = stored_host_plan.filter(|plan| plan.stored_empty_host) {
+            fmt.use_square_host_plan(plan.clone(), self.dpi);
+        }
         DumpFormattedParagraphHeight {
             total: fmt.total_height,
             spacing_before: fmt.spacing_before,

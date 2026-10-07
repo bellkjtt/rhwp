@@ -10707,6 +10707,10 @@ impl LayoutEngine {
                         measured_tables,
                         plan,
                     );
+                    if plan.stored_empty_host {
+                        self.stored_textless_host_end
+                            .set(Some((*para_index, col_area.y + plan.end)));
+                    }
                     return (col_area.y + plan.end, false);
                 }
                 let deferred_empty_float_text_anchor_y =

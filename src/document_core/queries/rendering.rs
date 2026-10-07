@@ -6507,6 +6507,12 @@ impl DocumentCore {
             &self.styles,
             column_width_px,
             para_index >= body_len,
+            self.pagination.get(sec_idx).and_then(|pr| {
+                pr.pages
+                    .iter()
+                    .flat_map(|page| &page.column_contents)
+                    .find_map(|column| column.inline_flow_plans.get(&para_index))
+            }),
         ))
     }
 
