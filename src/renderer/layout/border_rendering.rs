@@ -3,6 +3,7 @@
 use super::super::render_tree::*;
 use super::super::style_resolver::{ResolvedBorderStyle, ResolvedStyleSet};
 use super::super::{LineStyle, StrokeDash};
+use super::border_geometry::double_line_parts;
 use crate::model::style::{BorderLine, BorderLineType, CenterLine};
 use crate::model::table::{Cell, Table, TableZone, MAX_TABLE_GRID_CELLS};
 
@@ -982,10 +983,7 @@ pub(crate) fn create_border_line_nodes(
 
         // 이중선 (동일 굵기)
         BorderLineType::Double => {
-            let total = base_width.max(3.0);
-            let sub_w = (total * 0.3).max(0.4);
-            let gap = (total * 0.4).max(1.0);
-            let offset = (gap + sub_w) / 2.0;
+            let lines = double_line_parts(base_width);
             create_parallel_lines(
                 tree,
                 border.color,
@@ -993,7 +991,7 @@ pub(crate) fn create_border_line_nodes(
                 y1,
                 x2,
                 y2,
-                &[(-offset, sub_w), (offset, sub_w)],
+                &lines,
                 StrokeDash::Solid,
             )
         }
@@ -1247,10 +1245,7 @@ fn create_diagonal_line_nodes(
     match line_type {
         BorderLineType::None => vec![],
         BorderLineType::Double => {
-            let total = base_width.max(3.0);
-            let sub_w = (total * 0.3).max(0.4);
-            let gap = (total * 0.4).max(1.0);
-            let offset = (gap + sub_w) / 2.0;
+            let lines = double_line_parts(base_width);
             create_parallel_lines_perpendicular(
                 tree,
                 color,
@@ -1258,7 +1253,7 @@ fn create_diagonal_line_nodes(
                 y1,
                 x2,
                 y2,
-                &[(-offset, sub_w), (offset, sub_w)],
+                &lines,
                 StrokeDash::Solid,
             )
         }
@@ -1352,44 +1347,6 @@ fn create_crooked_diagonal_line_nodes(
         ));
     }
     nodes
-}
-
-/// BorderLine이 시각적으로 차지하는 전체 폭(px).
-///
-/// `create_border_line_nodes`의 이중선/삼중선 분해 규칙과 같은 값을 써서,
-/// 쪽 기준 테두리 박스를 바깥쪽으로 확장할 때 렌더된 선 묶음이 본문 쪽으로
-/// 파고들지 않게 한다.
-pub(crate) fn border_line_visual_span(border: &BorderLine) -> f64 {
-    if border.line_type == BorderLineType::None {
-        return 0.0;
-    }
-
-    let base_width = border_width_to_px(border.width);
-    match border.line_type {
-        BorderLineType::Double
-        | BorderLineType::ThinThickDouble
-        | BorderLineType::ThickThinDouble => base_width.max(3.0),
-        BorderLineType::ThinThickThinTriple => base_width.max(4.0),
-        _ => base_width,
-    }
-}
-
-/// 쪽 기준 페이지 테두리를 본문 영역 바깥쪽에 배치할 때 쓰는 보정 폭(px).
-///
-/// 한컴오피스는 `쪽 기준` 이중선 페이지 테두리에서 저장된 간격값에 선 묶음의
-/// 시각 폭을 한 번 더 반영해, 테두리가 본문/객체 쪽으로 파고들지 않게 그린다.
-/// 표/문단 테두리의 선 자체 분해 규칙은 그대로 두고, 페이지 테두리 위치 계산에만
-/// 이 값을 사용한다.
-pub(crate) fn body_page_border_outset(border: &BorderLine) -> f64 {
-    const BODY_PAGE_DOUBLE_LINE_OUTSET_FACTOR: f64 = 2.5;
-    let span = border_line_visual_span(border);
-    match border.line_type {
-        BorderLineType::Double
-        | BorderLineType::ThinThickDouble
-        | BorderLineType::ThickThinDouble
-        | BorderLineType::ThinThickThinTriple => span * BODY_PAGE_DOUBLE_LINE_OUTSET_FACTOR,
-        _ => span,
-    }
 }
 
 /// HWP 테두리 굵기 인덱스 → 픽셀 변환 (96dpi 고정)

@@ -3694,6 +3694,7 @@ pub struct LayoutEngine {
 }
 
 mod anchor_box_flow;
+mod border_geometry;
 mod border_rendering;
 mod column_separators;
 mod fill_background;
@@ -3736,9 +3737,8 @@ pub use text_measurement::forces_halfwidth_punct_paint;
 pub use text_measurement::{EmbeddedTextMeasurer, TextMeasurer};
 // [Task #826] map_pua_bullet_char 는 통합 테스트 (tests/issue_826.rs) 에서 직접 검증
 // (PUA substitution 매핑 정합) — pub 노출.
-pub(crate) use border_rendering::{
-    body_page_border_outset, border_line_visual_span, border_width_to_px, create_border_line_nodes,
-};
+pub(crate) use border_geometry::page_border_rect;
+pub(crate) use border_rendering::{border_width_to_px, create_border_line_nodes};
 pub use paragraph_layout::map_pua_bullet_char;
 // para_relative_float_table_lead 는 통합 테스트(tests/issue_6697_square_float_lead.rs)
 // 에서 어울림 wrap 리드 계약을 직접 검증한다.
@@ -5555,50 +5555,8 @@ impl LayoutEngine {
                     );
                 }
                 let borders = &bs.borders;
-                let (base_x, base_y, base_w, base_h) = if paper_based {
-                    (0.0, 0.0, layout.page_width, layout.page_height)
-                } else {
-                    (
-                        layout.body_area.x,
-                        layout.body_area.y,
-                        layout.body_area.width,
-                        layout.body_area.height,
-                    )
-                };
-
-                let sp_l = hwpunit_to_px(pbf.spacing_left as i32, self.dpi);
-                let sp_r = hwpunit_to_px(pbf.spacing_right as i32, self.dpi);
-                let sp_t = hwpunit_to_px(pbf.spacing_top as i32, self.dpi);
-                let sp_b = hwpunit_to_px(pbf.spacing_bottom as i32, self.dpi);
-                let (out_l, out_r, out_t, out_b) = if paper_based {
-                    (0.0, 0.0, 0.0, 0.0)
-                } else {
-                    (
-                        body_page_border_outset(&borders[0]),
-                        body_page_border_outset(&borders[1]),
-                        body_page_border_outset(&borders[2]),
-                        0.0,
-                    )
-                };
-                // 종이 기준: 종이 가장자리에서 안쪽(+)으로 spacing
-                // 쪽 기준: 본문 영역에서 바깥쪽(-)으로 spacing + 선 묶음 폭만큼 확장
-                // 단 하단은 footer/쪽번호 영역과 맞닿으므로 한컴처럼 spacing까지만
-                // 반영한다. 상단/좌우 outset은 Stage 29 로고 정합을 유지한다.
-                let (bx, by, bw, bh) = if paper_based {
-                    (
-                        base_x + sp_l,
-                        base_y + sp_t,
-                        base_w - sp_l - sp_r,
-                        base_h - sp_t - sp_b,
-                    )
-                } else {
-                    (
-                        base_x - sp_l - out_l,
-                        base_y - sp_t - out_t,
-                        base_w + sp_l + sp_r + out_l + out_r,
-                        base_h + sp_t + sp_b + out_t + out_b,
-                    )
-                };
+                let rect = page_border_rect(pbf, layout, self.dpi);
+                let (bx, by, bw, bh) = (rect.x, rect.y, rect.width, rect.height);
 
                 let top_nodes =
                     create_border_line_nodes(tree.frame_mut(), &borders[2], bx, by, bx + bw, by);

@@ -2915,9 +2915,8 @@ impl DocumentCore {
 
     /// 페이지 정보 (네이티브 에러 타입)
     pub fn get_page_info_native(&self, page_num: u32) -> Result<String, HwpError> {
-        use crate::model::page::PageBorderBasis;
         use crate::renderer::hwpunit_to_px;
-        use crate::renderer::layout::body_page_border_outset;
+        use crate::renderer::layout::page_border_rect;
         let (page_content, _, _) = self.find_page(page_num)?;
         let sec_idx = page_content.section_index;
         let section_def = &self.document.sections[sec_idx].section_def;
@@ -2950,42 +2949,13 @@ impl DocumentCore {
         let binding_mirrored = page_def.binding == crate::model::page::BindingMethod::DuplexSided
             && page_content.page_number != 0
             && page_content.page_number.is_multiple_of(2);
-        let pbf_left = hwpunit_to_px(page_border_fill.spacing_left as i32, self.dpi);
-        let pbf_right = hwpunit_to_px(page_border_fill.spacing_right as i32, self.dpi);
-        let pbf_top = hwpunit_to_px(page_border_fill.spacing_top as i32, self.dpi);
-        let pbf_bottom = hwpunit_to_px(page_border_fill.spacing_bottom as i32, self.dpi);
-        let body_top = mt + mh;
-        let body_bottom_margin = mb + mf;
-        let visual_outsets = if matches!(page_border_fill.basis, PageBorderBasis::BodyBased)
-            && page_border_fill.border_fill_id > 0
-        {
-            self.document
-                .doc_info
-                .border_fills
-                .get((page_border_fill.border_fill_id - 1) as usize)
-                .map(|bf| {
-                    (
-                        body_page_border_outset(&bf.borders[0]),
-                        body_page_border_outset(&bf.borders[1]),
-                        body_page_border_outset(&bf.borders[2]),
-                        body_page_border_outset(&bf.borders[3]),
-                    )
-                })
-                .unwrap_or((0.0, 0.0, 0.0, 0.0))
-        } else {
-            (0.0, 0.0, 0.0, 0.0)
-        };
-        let (out_l, out_r, out_t, _out_b) = visual_outsets;
-        let (page_border_left, page_border_right, page_border_top, page_border_bottom) =
-            match page_border_fill.basis {
-                PageBorderBasis::PaperBased => (pbf_left, pbf_right, pbf_top, pbf_bottom),
-                PageBorderBasis::BodyBased => (
-                    (ml - pbf_left - out_l).max(0.0),
-                    (mr - pbf_right - out_r).max(0.0),
-                    (body_top - pbf_top - out_t).max(0.0),
-                    (body_bottom_margin - pbf_bottom).max(0.0),
-                ),
-            };
+        let border_rect = page_border_rect(page_border_fill, &page_content.layout, self.dpi);
+        let (page_border_left, page_border_right, page_border_top, page_border_bottom) = (
+            border_rect.x,
+            page_content.layout.page_width - border_rect.x - border_rect.width,
+            border_rect.y,
+            page_content.layout.page_height - border_rect.y - border_rect.height,
+        );
         // 단별 영역 정보
         let cols_json: String = page_content
             .layout
