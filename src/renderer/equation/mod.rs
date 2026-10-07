@@ -8,6 +8,7 @@
 //! `mydocs/manual/equation_module.md`.
 
 pub mod ast;
+mod box_types;
 #[cfg(target_arch = "wasm32")]
 pub mod canvas_render;
 pub(crate) mod dispatch;
