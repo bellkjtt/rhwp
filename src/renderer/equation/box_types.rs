@@ -72,6 +72,11 @@ pub enum LayoutKind {
     /// 큰 연산자
     BigOp {
         symbol: String,
+        op_font_size: f64,
+        op_width: f64,
+        op_x: f64,
+        op_y: f64,
+        op_baseline: f64,
         sub: Option<Box<LayoutBox>>,
         sup: Option<Box<LayoutBox>>,
     },

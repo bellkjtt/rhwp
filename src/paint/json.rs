@@ -2963,11 +2963,22 @@ fn write_equation_layout_box(buf: &mut String, layout: &LayoutBox) {
         "{{\"x\":{:.6},\"y\":{:.6},\"width\":{:.6},\"height\":{:.6},\"baseline\":{:.6},\"fontSize\":{:.6},\"kind\":",
         layout.x, layout.y, layout.width, layout.height, layout.baseline, layout.font_size,
     );
-    write_equation_layout_kind(buf, &layout.kind);
+    write_equation_layout_kind(buf, &layout.kind, layout.font_size);
     buf.push('}');
 }
 
-fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind) {
+fn write_integral_geometry(buf: &mut String, fs: f64) {
+    let geom = crate::renderer::equation::layout::integral_geom(fs);
+    let path = crate::renderer::equation::svg_render::integral_path_data(0.0, 0.0, fs);
+    let _ = write!(
+        buf,
+        ",\"integralGeometry\":{{\"pathData\":{},\"strokeWidth\":{}}}",
+        json_escape(&path),
+        geom.stroke_w
+    );
+}
+
+fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f64) {
     match kind {
         LayoutKind::HancomGlyphs(run) => {
             let _ = write!(
@@ -3003,7 +3014,19 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind) {
         LayoutKind::Text(text) => write_equation_text_kind(buf, "text", text),
         LayoutKind::Number(text) => write_equation_text_kind(buf, "number", text),
         LayoutKind::Symbol(text) => write_equation_text_kind(buf, "symbol", text),
-        LayoutKind::MathSymbol(text) => write_equation_text_kind(buf, "mathSymbol", text),
+        LayoutKind::MathSymbol(text) => {
+            if crate::renderer::equation::layout::is_integral_symbol(text) {
+                let _ = write!(
+                    buf,
+                    "{{\"type\":\"mathSymbol\",\"text\":{}",
+                    json_escape(text)
+                );
+                write_integral_geometry(buf, font_size);
+                buf.push('}');
+            } else {
+                write_equation_text_kind(buf, "mathSymbol", text);
+            }
+        }
         LayoutKind::Function(name) => {
             let _ = write!(
                 buf,
@@ -3050,12 +3073,24 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind) {
             write_equation_layout_box(buf, sup);
             buf.push('}');
         }
-        LayoutKind::BigOp { symbol, sub, sup } => {
+        LayoutKind::BigOp {
+            symbol,
+            sub,
+            sup,
+            op_font_size,
+            op_width,
+            op_x,
+            op_y,
+            op_baseline,
+        } => {
             let _ = write!(
                 buf,
-                "{{\"type\":\"bigOp\",\"symbol\":{}",
-                json_escape(symbol)
+                "{{\"type\":\"bigOp\",\"symbol\":{},\"opFontSize\":{},\"opWidth\":{},\"opX\":{},\"opY\":{},\"opBaseline\":{}",
+                json_escape(symbol), op_font_size, op_width, op_x, op_y, op_baseline
             );
+            if crate::renderer::equation::layout::is_integral_symbol(symbol) {
+                write_integral_geometry(buf, font_size);
+            }
             write_optional_equation_box(buf, "sub", sub.as_deref());
             write_optional_equation_box(buf, "sup", sup.as_deref());
             buf.push('}');

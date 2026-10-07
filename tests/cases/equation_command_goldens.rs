@@ -227,7 +227,9 @@ fn dump_layout(out: &mut String, lb: &LayoutBox, indent: usize) {
             let _ = writeln!(out, "{pad}  sup:");
             dump_layout(out, sup, indent + 2);
         }
-        LayoutKind::BigOp { symbol, sub, sup } => {
+        LayoutKind::BigOp {
+            symbol, sub, sup, ..
+        } => {
             let _ = writeln!(out, "{pad}BigOp({symbol:?}) {metrics}");
             if let Some(sub) = sub {
                 let _ = writeln!(out, "{pad}  sub:");

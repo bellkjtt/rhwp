@@ -263,33 +263,29 @@ fn render_box(
                 bold,
             );
         }
-        LayoutKind::BigOp { symbol, sub, sup } => {
+        LayoutKind::BigOp {
+            symbol,
+            sub,
+            sup,
+            op_font_size,
+            op_x,
+            op_y,
+            op_baseline,
+            ..
+        } => {
             let is_integral = super::layout::is_integral_symbol(symbol);
-            // Task #1313: 적분은 전용 스케일(INTEGRAL_SCALE), ∑/∏ 등은 BIG_OP_SCALE.
-            let op_fs = fs
-                * if is_integral {
-                    super::layout::INTEGRAL_SCALE
-                } else {
-                    super::layout::BIG_OP_SCALE
-                };
+            // 생산 단계에서 확정한 표시 글자 크기와 원점을 소비한다.
+            let op_fs = *op_font_size;
             let esc = escape_xml(symbol);
 
             if is_integral {
                 // 적분: 기호는 왼쪽, 첨자는 오른쪽 위/아래 (nolimits).
                 // Task #1317: 폰트 `<text>` 대신 stroke path 로 렌더(geom SSOT).
-                svg.push_str(&integral_path(x, y, fs, color));
+                svg.push_str(&integral_path(x + op_x, y + op_y, fs, color));
             } else {
                 // ∑, ∏ 등: 기호는 중앙, 첨자는 위/아래 (limits)
-                let sup_h = sup.as_ref().map(|b| b.height + fs * 0.05).unwrap_or(0.0);
-                // Task #1233: 연산자는 max_w(= lb.width - trailing pad)에 중앙정렬 →
-                // pad 전체가 순수 trailing 간격이 되고 첨자(max_w 중앙정렬)와 정렬된다.
-                // #1304: 연산자 폭은 layout 의 estimate_text_width 와 동일 기준을 써야
-                // 첨자(레이아웃이 estimate_text_width 로 max_w 중앙정렬)와 가로 중심이 맞는다.
-                // (기존 estimate_op_width 의 0.6 과소추정 → ∑가 우측으로, 첨자가 좌측으로 보임)
-                let center_w = lb.width - fs * super::layout::BIG_OP_TRAIL_PAD;
-                let op_x =
-                    x + (center_w - super::layout::estimate_text_width(symbol, op_fs, false)) / 2.0;
-                let op_y = y + sup_h + op_fs * 0.8;
+                let op_x = x + op_x;
+                let op_y = y + op_baseline;
                 svg.push_str(&format!(
                     "<text x=\"{:.2}\" y=\"{:.2}\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>\n",
                     op_x, op_y, op_fs, color, EQ_FONT_FAMILY, esc,
@@ -452,23 +448,26 @@ fn render_box(
 /// S-곡선(bottom-left → top-right, 양끝 갈고리)을 그린다. 폰트에 의존하지 않으므로
 /// SVG 뷰어/환경에 무관하게 동일한 visual bbox 를 보장하며, layout 의 상·하한
 /// attach point(동일 geom)와 정합한다.
-fn integral_path(x: f64, y: f64, fs: f64, color: &str) -> String {
+pub(crate) fn integral_path_data(x: f64, y: f64, fs: f64) -> String {
     let g = integral_geom(fs);
     let h = g.bottom_y - g.top_y;
-    // 하단 갈고리 끝(좌하) → 상단 갈고리 끝(우상). 하부는 우측, 상부는 좌측으로
-    // 휘어 적분기호 특유의 기운 S 형태를 만든다(round cap 으로 갈고리 표현).
-    let p0x = x + g.bottom_hook_x;
-    let p0y = y + g.bottom_y;
-    let p3x = x + g.top_hook_x;
-    let p3y = y + g.top_y;
-    let c1x = x + g.width * 1.02;
-    let c1y = y + g.bottom_y - h * 0.30;
-    let c2x = x - g.width * 0.10;
-    let c2y = y + g.top_y + h * 0.30;
     format!(
-        "<path d=\"M{:.2},{:.2} C{:.2},{:.2} {:.2},{:.2} {:.2},{:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\"/>\n",
-        p0x, p0y, c1x, c1y, c2x, c2y, p3x, p3y, color, g.stroke_w,
+        "M{:.2},{:.2} C{:.2},{:.2} {:.2},{:.2} {:.2},{:.2}",
+        x + g.bottom_hook_x,
+        y + g.bottom_y,
+        x + g.width * 1.02,
+        y + g.bottom_y - h * 0.30,
+        x - g.width * 0.10,
+        y + g.top_y + h * 0.30,
+        x + g.top_hook_x,
+        y + g.top_y
     )
+}
+
+fn integral_path(x: f64, y: f64, fs: f64, color: &str) -> String {
+    let g = integral_geom(fs);
+    format!("<path d=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\" stroke-linecap=\"round\"/>\n",
+        integral_path_data(x, y, fs), color, g.stroke_w)
 }
 
 fn font_size_from_box(lb: &LayoutBox, base_fs: f64) -> f64 {

@@ -316,22 +316,25 @@ fn render_box(
                 bold,
             );
         }
-        LayoutKind::BigOp { symbol, sub, sup } => {
+        LayoutKind::BigOp {
+            symbol,
+            sub,
+            sup,
+            op_font_size,
+            op_x,
+            op_y,
+            op_baseline,
+            ..
+        } => {
             let is_integral = is_integral_symbol(symbol);
-            // Task #1313: 적분은 전용 스케일(INTEGRAL_SCALE), ∑/∏ 등은 BIG_OP_SCALE.
-            let op_fs = fs
-                * if is_integral {
-                    INTEGRAL_SCALE
-                } else {
-                    BIG_OP_SCALE
-                };
+            // 생산 단계에서 확정한 표시 글자 크기와 원점을 소비한다.
+            let op_fs = *op_font_size;
             if is_integral {
                 // Task #1317: 적분 기호는 stroke path 로 렌더(geom SSOT).
-                draw_integral(canvas, x, y, fs, color);
+                draw_integral(canvas, x + op_x, y + op_y, fs, color);
             } else {
-                let sup_h = sup.as_ref().map(|b| b.height + fs * 0.05).unwrap_or(0.0);
-                let op_x = x + (lb.width - estimate_op_width(symbol, op_fs)) / 2.0;
-                let op_y = y + sup_h + op_fs * 0.8;
+                let op_x = x + op_x;
+                let op_y = y + op_baseline;
                 draw_text(
                     canvas, fonts, symbol, op_x, op_y, op_fs, false, false, color, false,
                 );
@@ -865,10 +868,6 @@ fn font_size_from_box(lb: &LayoutBox, base_fs: f64) -> f64 {
     } else {
         base_fs
     }
-}
-
-fn estimate_op_width(text: &str, fs: f64) -> f64 {
-    text.chars().count() as f64 * fs * 0.6
 }
 
 /// 적분 기호(∫)를 stroke path 로 렌더 (Task #1317).

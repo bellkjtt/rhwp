@@ -202,33 +202,30 @@ fn render_box(
             render_box(ctx, sub, x, y, color, fs * SCRIPT_SCALE, italic, bold);
             render_box(ctx, sup, x, y, color, fs * SCRIPT_SCALE, italic, bold);
         }
-        LayoutKind::BigOp { symbol, sub, sup } => {
+        LayoutKind::BigOp {
+            symbol,
+            sub,
+            sup,
+            op_font_size,
+            op_x,
+            op_y,
+            op_baseline,
+            ..
+        } => {
             // [Issue #900] svg_render.rs BigOp arm 과 동기화 (commit 292dbbef).
             // 적분 (∫, ∮ 등): 기호 좌측, 첨자 우상단/우하단 (nolimits)
             // 그 외 (∑, ∏ 등): 기호 중앙, 첨자 위/아래 (limits)
             let is_integral = super::layout::is_integral_symbol(symbol);
-            // Task #1313: 적분은 전용 스케일(INTEGRAL_SCALE), ∑/∏ 등은 BIG_OP_SCALE.
-            let op_fs = fs
-                * if is_integral {
-                    INTEGRAL_SCALE
-                } else {
-                    BIG_OP_SCALE
-                };
+            // 생산 단계에서 확정한 표시 글자 크기와 원점을 소비한다.
+            let op_fs = *op_font_size;
             set_font(ctx, op_fs, false, false);
             ctx.set_fill_style_str(color);
             if is_integral {
                 // Task #1317: 적분 기호는 stroke path 로 렌더(geom SSOT).
-                draw_integral(ctx, x, y, fs, color);
+                draw_integral(ctx, x + op_x, y + op_y, fs, color);
             } else {
-                let sup_h = sup.as_ref().map(|b| b.height + fs * 0.05).unwrap_or(0.0);
-                // Task #1233: 연산자는 max_w(= lb.width - trailing pad)에 중앙정렬 →
-                // pad 전체가 순수 trailing 간격이 되고 첨자(max_w 중앙정렬)와 정렬된다.
-                // #1304: 연산자 폭은 layout 의 estimate_text_width 와 동일 기준을 써야 첨자와
-                // 가로 중심이 맞는다 (기존 estimate_op_width 의 0.6 과소추정 → ∑ 우측 치우침).
-                let center_w = lb.width - fs * super::layout::BIG_OP_TRAIL_PAD;
-                let op_x =
-                    x + (center_w - super::layout::estimate_text_width(symbol, op_fs, false)) / 2.0;
-                let op_y = y + sup_h + op_fs * 0.8;
+                let op_x = x + op_x;
+                let op_y = y + op_baseline;
                 let _ = ctx.fill_text(symbol, op_x, op_y);
             }
             // 위/아래 첨자 — LayoutBox 자식 좌표 사용 (적분/일반 공통)

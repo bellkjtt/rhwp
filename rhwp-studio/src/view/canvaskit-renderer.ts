@@ -4302,6 +4302,9 @@ export class CanvasKitLayerRenderer {
       case 'number':
       case 'symbol':
       case 'mathSymbol': {
+        if (layout.kind.type === 'mathSymbol' && layout.kind.integralGeometry) {
+          return this.drawEquationIntegral(canvas, layout.kind.integralGeometry, x, y, color);
+        }
         // 수학 알파벳에는 글리프 자체의 기울임·굵기를 그대로 사용한다.
         const styled = layout.kind.type === 'text' && /^[\u{1D400}-\u{1D7FF}\u{210E}]+$/u.test(layout.kind.text);
         return this.drawEquationText(
@@ -4374,20 +4377,16 @@ export class CanvasKitLayerRenderer {
           && child(layout.kind.sub, fontSize * 0.7)
           && child(layout.kind.sup, fontSize * 0.7);
       case 'bigOp': {
-        const opSize = fontSize * 1.5;
+        const opSize = layout.kind.opFontSize ?? fontSize * 1.5;
         const supHeight = layout.kind.sup ? layout.kind.sup.height + fontSize * 0.05 : 0;
-        const symbolDrawn = this.drawEquationText(
-          canvas,
-          layout.kind.symbol,
-          x,
-          y + supHeight + opSize * 0.8,
-          opSize,
-          color,
-          false,
-          false,
-          layout.width,
-          true,
-        );
+        const symbolDrawn = layout.kind.integralGeometry
+          ? this.drawEquationIntegral(canvas, layout.kind.integralGeometry, x + (layout.kind.opX ?? 0), y + (layout.kind.opY ?? 0), color)
+          : this.drawEquationText(
+            canvas, layout.kind.symbol, x + (layout.kind.opX ?? 0),
+            y + (layout.kind.opBaseline ?? (supHeight + opSize * 0.8)),
+            opSize, color, false, false,
+            layout.kind.opWidth ?? layout.width, false,
+          );
         const supDrawn = layout.kind.sup
           ? child(layout.kind.sup, fontSize * 0.7, false, false)
           : true;
@@ -4606,6 +4605,24 @@ export class CanvasKitLayerRenderer {
       } finally { paragraph?.delete(); builder?.delete(); paint?.delete(); font.delete(); }
     }
     return false;
+  }
+
+  private drawEquationIntegral(
+    canvas: SkCanvas,
+    geometry: { pathData: string; strokeWidth: number },
+    x: number, y: number, color: string,
+  ): boolean {
+    if (!geometry.pathData || geometry.pathData.length > 512
+      || ![x, y, geometry.strokeWidth].every(Number.isFinite) || geometry.strokeWidth <= 0) return false;
+    const path = this.canvasKit.Path.MakeFromSVGString(geometry.pathData);
+    if (!path) return false;
+    const paint = this.makeStrokePaint(color, geometry.strokeWidth);
+    try {
+      paint.setStrokeCap(this.canvasKit.StrokeCap.Round);
+      canvas.save();
+      try { canvas.translate(x, y); canvas.drawPath(path, paint); } finally { canvas.restore(); }
+      return true;
+    } finally { path.delete(); paint.delete(); }
   }
 
   private drawEquationLine(

@@ -2019,7 +2019,9 @@ fn canvaskit_equation_layout_is_supported(layout: &LayoutBox) -> bool {
                     && child(sub, remaining_nodes)
                     && child(sup, remaining_nodes)
             }
-            LayoutKind::BigOp { symbol, sub, sup } => {
+            LayoutKind::BigOp {
+                symbol, sub, sup, ..
+            } => {
                 text_supported(symbol)
                     && sub
                         .as_deref()

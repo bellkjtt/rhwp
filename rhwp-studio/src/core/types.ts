@@ -1453,13 +1453,18 @@ export interface LayerEquationLayoutBox {
   kind: LayerEquationLayoutKind;
 }
 
+export interface LayerIntegralGeometry {
+  pathData: string;
+  strokeWidth: number;
+}
+
 export type LayerEquationLayoutKind =
   | { type: 'hancomGlyphs'; glyphs: string; positions: number[]; shears?: number[]; baselineShift: number }
   | { type: 'row'; children: LayerEquationLayoutBox[] }
   | { type: 'text'; text: string }
   | { type: 'number'; text: string }
   | { type: 'symbol'; text: string }
-  | { type: 'mathSymbol'; text: string }
+  | { type: 'mathSymbol'; text: string; integralGeometry?: LayerIntegralGeometry }
   | { type: 'function'; name: string }
   | { type: 'fraction'; numer: LayerEquationLayoutBox; denom: LayerEquationLayoutBox }
   | { type: 'atop'; top: LayerEquationLayoutBox; bottom: LayerEquationLayoutBox }
@@ -1467,7 +1472,7 @@ export type LayerEquationLayoutKind =
   | { type: 'superscript'; base: LayerEquationLayoutBox; sup: LayerEquationLayoutBox }
   | { type: 'subscript'; base: LayerEquationLayoutBox; sub: LayerEquationLayoutBox }
   | { type: 'subSup'; base: LayerEquationLayoutBox; sub: LayerEquationLayoutBox; sup: LayerEquationLayoutBox }
-  | { type: 'bigOp'; symbol: string; sub?: LayerEquationLayoutBox; sup?: LayerEquationLayoutBox }
+  | { type: 'bigOp'; symbol: string; opFontSize?: number; opWidth?: number; opX?: number; opY?: number; opBaseline?: number; integralGeometry?: LayerIntegralGeometry; sub?: LayerEquationLayoutBox; sup?: LayerEquationLayoutBox }
   | { type: 'limit'; isUpper: boolean; name?: LayerEquationLayoutBox; nameFontSize?: number; subFontSize?: number; sub?: LayerEquationLayoutBox }
   | { type: 'matrix'; style: LayerEquationMatrixStyle; cells: LayerEquationLayoutBox[][] }
   | { type: 'rel'; arrow: LayerEquationLayoutBox; over: LayerEquationLayoutBox; under?: LayerEquationLayoutBox }

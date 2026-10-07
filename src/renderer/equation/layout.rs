@@ -5,9 +5,11 @@
 
 use super::ast::*;
 
+mod big_op_geometry;
 mod decoration_geometry;
 mod fraction_geometry;
 mod glyph_advances;
+mod integral_placement;
 mod limit_geometry;
 mod matrix_geometry;
 mod script_geometry;
@@ -74,12 +76,13 @@ pub(crate) struct IntegralGeom {
 
 /// 글꼴 크기 `fs` 에 대한 적분 글리프 기하를 산출한다(SSOT).
 pub(crate) fn integral_geom(fs: f64) -> IntegralGeom {
-    let h = fs * INTEGRAL_SCALE;
+    let baseline = fs * INTEGRAL_SCALE * 0.7;
+    let source_font_size = fs * 2.0;
     IntegralGeom {
         width: fs * 0.52,
         stroke_w: fs * 0.06,
-        top_y: h * 0.04,
-        bottom_y: h * 0.96,
+        top_y: baseline + fs * AXIS_HEIGHT - source_font_size * 820.0 / 1024.0,
+        bottom_y: baseline + fs * AXIS_HEIGHT + source_font_size * 202.0 / 1024.0,
         top_hook_x: fs * 0.50,
         bottom_hook_x: fs * 0.04,
     }
@@ -462,141 +465,6 @@ impl EqLayout {
             height: fs,
             baseline: fs * 0.8,
             kind: LayoutKind::Function(name.to_string()),
-        }
-    }
-
-    fn layout_big_op(
-        &self,
-        symbol: &str,
-        sub: &Option<Box<EqNode>>,
-        sup: &Option<Box<EqNode>>,
-        fs: f64,
-    ) -> LayoutBox {
-        // 적분 기호: nolimits 스타일 (큰 기호 + 오른쪽 위/아래 첨자)
-        if is_integral_symbol(symbol) {
-            return self.layout_integral(symbol, sub, sup, fs);
-        }
-        // ∑, ∏ 등: limits 스타일 (위/아래 중앙)
-        let op_fs = fs * BIG_OP_SCALE;
-        let op_w = estimate_text_width(symbol, op_fs, false);
-        let op_h = op_fs;
-
-        let sub_box = sub
-            .as_ref()
-            .map(|s| self.layout_node(s, self.script_font_size(fs)));
-        let sup_box = sup
-            .as_ref()
-            .map(|s| self.layout_node(s, self.script_font_size(fs)));
-
-        let sup_h = sup_box
-            .as_ref()
-            .map(|b| b.height + fs * 0.05)
-            .unwrap_or(0.0);
-        let sub_h = sub_box
-            .as_ref()
-            .map(|b| b.height + fs * 0.05)
-            .unwrap_or(0.0);
-
-        let total_h = sup_h + op_h + sub_h;
-        let max_w = [
-            op_w,
-            sub_box.as_ref().map(|b| b.width).unwrap_or(0.0),
-            sup_box.as_ref().map(|b| b.width).unwrap_or(0.0),
-        ]
-        .iter()
-        .copied()
-        .fold(0.0f64, f64::max);
-
-        let baseline = sup_h + op_h * 0.6;
-
-        let sup_laid = sup_box.map(|mut b| {
-            b.x = (max_w - b.width) / 2.0;
-            b.y = 0.0;
-            b
-        });
-        let sub_laid = sub_box.map(|mut b| {
-            b.x = (max_w - b.width) / 2.0;
-            b.y = sup_h + op_h;
-            b
-        });
-
-        LayoutBox {
-            font_size: fs,
-            x: 0.0,
-            y: 0.0,
-            // Task #1233: 피연산자가 연산자에 붙지 않도록 trailing 간격 추가.
-            // sup/sub 중앙정렬은 max_w 기준 유지 → 연산자는 좌측, 우측에 순수 공백.
-            width: max_w + fs * BIG_OP_TRAIL_PAD,
-            height: total_h,
-            baseline,
-            kind: LayoutKind::BigOp {
-                symbol: symbol.to_string(),
-                sub: sub_laid.map(Box::new),
-                sup: sup_laid.map(Box::new),
-            },
-        }
-    }
-
-    /// 적분 기호 레이아웃: 큰 기호 + 오른쪽 위/아래 첨자 (nolimits 스타일)
-    fn layout_integral(
-        &self,
-        symbol: &str,
-        sub: &Option<Box<EqNode>>,
-        sup: &Option<Box<EqNode>>,
-        fs: f64,
-    ) -> LayoutBox {
-        let op_fs = fs * BIG_OP_SCALE;
-        let op_w = estimate_text_width(symbol, op_fs, false);
-        let op_h = op_fs;
-
-        let sub_box = sub
-            .as_ref()
-            .map(|s| self.layout_node(s, self.script_font_size(fs)));
-        let sup_box = sup
-            .as_ref()
-            .map(|s| self.layout_node(s, self.script_font_size(fs)));
-
-        // 기호 기준선: 기호 높이의 60% (중앙보다 약간 위)
-        let op_baseline = op_h * 0.6;
-
-        // 위첨자: 기호 오른쪽 위
-        let sup_shift = op_h * 0.1; // 기호 상단에서 약간 아래
-                                    // 아래첨자: 기호 오른쪽 아래
-        let sub_shift = op_h * 0.55; // 기호 중앙 아래
-
-        let script_x = op_w; // 첨자는 기호 오른쪽에 배치
-
-        let mut total_w = op_w;
-        let mut total_h = op_h;
-
-        let sup_laid = sup_box.map(|mut b| {
-            b.x = script_x;
-            b.y = sup_shift;
-            total_w = total_w.max(script_x + b.width);
-            b
-        });
-
-        let sub_laid = sub_box.map(|mut b| {
-            b.x = script_x;
-            b.y = sub_shift;
-            total_w = total_w.max(script_x + b.width);
-            total_h = total_h.max(sub_shift + b.height);
-            b
-        });
-
-        LayoutBox {
-            font_size: fs,
-            x: 0.0,
-            y: 0.0,
-            // Task #1233: 적분 뒤 피연산자(예: f(x)dx)가 첨자에 붙지 않도록 trailing 간격.
-            width: total_w + fs * BIG_OP_TRAIL_PAD,
-            height: total_h,
-            baseline: op_baseline,
-            kind: LayoutKind::BigOp {
-                symbol: symbol.to_string(),
-                sub: sub_laid.map(Box::new),
-                sup: sup_laid.map(Box::new),
-            },
         }
     }
 
