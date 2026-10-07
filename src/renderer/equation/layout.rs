@@ -10,6 +10,7 @@ mod glyph_advances;
 mod limit_geometry;
 mod script_geometry;
 mod symbol_advances;
+mod symbol_spacing;
 mod variable_style;
 pub(crate) use variable_style::is_styled_variable;
 
@@ -325,45 +326,9 @@ impl EqLayout {
             };
         }
 
-        let mut boxes: Vec<LayoutBox> = children
-            .iter()
-            .enumerate()
-            .map(|(index, c)| {
-                let mut layout = self.layout_node(c, fs);
-                let operator = match c {
-                    EqNode::Symbol(text) | EqNode::MathSymbol(text) => {
-                        super::hancom_glyphs::is_operator(text)
-                    }
-                    _ => false,
-                };
-                if operator {
-                    if let LayoutKind::HancomGlyphs(run) = &mut layout.kind {
-                        let operand = |node: &EqNode| match node {
-                            EqNode::Empty | EqNode::Space(_) => false,
-                            EqNode::Symbol(text) | EqNode::MathSymbol(text) => {
-                                !super::hancom_glyphs::is_operator(text)
-                            }
-                            _ => true,
-                        };
-                        let left = if index > 0 && operand(&children[index - 1]) {
-                            fs * 0.15
-                        } else {
-                            0.0
-                        };
-                        let right = if children.get(index + 1).is_some_and(operand) {
-                            fs * 0.15
-                        } else {
-                            0.0
-                        };
-                        for position in &mut run.positions {
-                            *position += left;
-                        }
-                        run.width += left + right;
-                        layout.width = run.width;
-                    }
-                }
-                layout
-            })
+        let mut boxes: Vec<LayoutBox> = self
+            .row_children(children, fs)
+            .into_iter()
             .filter(|b| b.width > 0.0 || matches!(b.kind, LayoutKind::Newline))
             .collect();
 
