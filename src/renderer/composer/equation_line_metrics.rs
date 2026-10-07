@@ -1,6 +1,6 @@
 //! 실제 수식 상자로 바뀐 줄의 점유 메트릭을 공통 구성 결과에 반영한다.
 
-use super::{ComposedParagraph, ResolvedStyleSet};
+use super::{ComposedLine, ComposedParagraph, ResolvedStyleSet};
 use crate::model::{control::Control, paragraph::Paragraph};
 use crate::renderer::{hwpunit_to_px, px_to_hwpunit, DEFAULT_DPI};
 
@@ -13,6 +13,17 @@ pub(super) fn refresh_equation_rows(
     let line_count = composed.lines.len();
     let dpi = styles.resolved_dpi.unwrap_or(DEFAULT_DPI);
     for line_index in 0..composed.lines.len() {
+        let next_box_height = composed.lines.get(line_index + 1).and_then(|next| {
+            source_inline_box_height(
+                para,
+                &positions,
+                next,
+                composed
+                    .lines
+                    .get(line_index + 2)
+                    .map(|line| line.char_start),
+            )
+        });
         let stored_pair = para
             .line_segs
             .get(line_index)
@@ -79,10 +90,10 @@ pub(super) fn refresh_equation_rows(
         new_logical_height = new_logical_height.max(text_height);
         new_ascent = new_ascent.max(text_ascent);
         new_descent = new_descent.max(text_descent);
-        // 원본 저장 줄의 글자 높이와 다음 원점이 현재 줄 개체의 논리 높이를
-        // 함께 증언하면, 다음 줄의 큰 상자를 앞줄에서도 예약하지 않는다.
-        // 개체 소유가 바뀐 합성·편집 줄이나 저장 간격이 끊긴 경우는 제외한다.
-        let stored_content_cadence = stored_pair.is_some_and(|(source, next)| {
+        // 다음 줄의 실제 인라인 개체가 같은 큰 높이를 소유하는 경우만
+        // 그 높이를 앞줄에서 중복 예약한 것으로 판정한다. vpos의 전진이
+        // text_height와 같다는 이유만으로 유효한 line_height를 줄이지 않는다.
+        let next_inline_box_was_reserved = stored_pair.is_some_and(|(source, next)| {
             use crate::model::paragraph::LineSeg;
             !para.stored_text_partition_is_dirty()
                 && line_count == para.line_segs.len()
@@ -90,6 +101,9 @@ pub(super) fn refresh_equation_rows(
                 && next.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
                 && source.text_height == old_logical_height
                 && source.line_height > old_logical_height
+                && next_box_height.is_some_and(|height| {
+                    height == source.line_height && height == next.text_height
+                })
                 && (source.baseline_distance - old_ascent).abs() <= 1
                 && source.vertical_pos >= 0
                 && source
@@ -103,7 +117,7 @@ pub(super) fn refresh_equation_rows(
         if (changed
             && line.line_height == old_logical_height
             && (line.baseline_distance - old_ascent).abs() <= 1)
-            || stored_content_cadence
+            || next_inline_box_was_reserved
         {
             let occupied_height = new_ascent + new_descent;
             // 저장 간격은 논리 상자 높이 뒤의 leading이다. 실제 기준선 합집합이
@@ -116,4 +130,33 @@ pub(super) fn refresh_equation_rows(
             debug_assert!(hwpunit_to_px(line.line_height, DEFAULT_DPI) > 0.0);
         }
     }
+}
+
+/// 다음 줄의 소유 범위에서 원 저장 인라인 개체 높이를 확인한다.
+/// 현재 줄의 캐시 높이를 다음 줄의 실제 개체로 재인용하지 않는다.
+fn source_inline_box_height(
+    para: &Paragraph,
+    positions: &[usize],
+    line: &ComposedLine,
+    next_start: Option<usize>,
+) -> Option<i32> {
+    let end = next_start.unwrap_or_else(|| para.text.chars().count());
+    para.controls
+        .iter()
+        .zip(positions)
+        .filter(|(_, position)| {
+            **position >= line.char_start
+                && (**position < end || (next_start.is_none() && **position == end))
+        })
+        .filter_map(|(control, _)| match control {
+            Control::Equation(value) if value.common.treat_as_char => {
+                Some(value.common.height as i32)
+            }
+            Control::Picture(value) if value.common.treat_as_char => {
+                Some(value.common.height as i32)
+            }
+            _ => None,
+        })
+        .max()
+        .filter(|height| *height > 0)
 }

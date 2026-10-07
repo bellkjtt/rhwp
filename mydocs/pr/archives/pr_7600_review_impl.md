@@ -1566,3 +1566,33 @@ workspace build, base `48ff4bb93` 대비 integration manifest와 unit tier
 최종 fresh WASM과 원본 대조군 전체 검사, Skia·Studio·회귀 검사는 남아 있다.
 MCP Print로 만든 추가 진단 PDF도 커밋에 포함하며 TSV·실행 로그·중간
 JSON·nextrun은 ignored output에만 보존한다.
+
+
+### 저장 줄 높이와 다음 줄의 실제 개체 소유 대조
+
+원본 18쪽은 source `1be719b47`의 fresh WASM에서도 최저 91.18877%로
+Native와 같은 값이었다. 패키지/public JS와 WASM의 바이트 일치도 확인했다.
+98개 역할의 함초롬돋움 라벨 대조군 Native 3쪽은
+99.78707%/98.77101%/96.48090%다. 기존 진단과 원본을 구분해 보존한다.
+
+#1139의 추가 원본은 아직 미달이다. 9월 2022 HWP 23쪽 중
+12·13·14·19·21·22쪽이 90% 미만이고 최저는 13쪽 54.69165%다.
+보정 전 `8c6ccc086`의 같은 Print 대조 12·13쪽은
+85.39554%/74.35107%였으며 현재는 83.93119%/54.69165%다.
+새 보정에서 증가한 차이도 회귀 후보로 보존하고 조사한다.
+
+실제 원본의 note owner 122, 내부 문단 18의 분수 줄 4·5는
+line_height 2298, text_height 2070이며 다음 줄 text_height도 2070이다.
+기존 stored_content_cadence는 다음 vpos가 text_height+line_spacing이라는
+이유로 이 line_height까지 줄였다. 이것만으로 다음 큰 개체의 중복
+예약이라고 판단하는 가정은 부족하다. 반면 원본 10월 owner 70의
+조건 문단에는 다음 줄이 실제로 소유한 더 큰 수식 상자가 있다.
+
+다음 줄의 소유 범위와 실제 원 저장 인라인 Equation/Picture 높이를
+대조해, 그 개체가 현재의 큰 line_height와 다음 text_height를 실제로
+소유하는 경우만 중복 예약 후보로 삼는다. 작은 분수 줄의 유효한
+line_height는 유지한다. 문서 ID·고정 px·우연한 특정 수치를 조건으로
+사용하지 않는다. 이 판단은 같은 ComposedLine 결과를 갱신해 측정과
+최종 문단 배치에 전달한다. 다음 단계는 9월의 실패 경계와 원본 10월
+18쪽을 다시 출력해 이 가정과 반례를 실제 Print에 대조하는 것이다.
+회귀 검사·기대값은 아직 바꾸지 않는다.
