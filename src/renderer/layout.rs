@@ -3544,6 +3544,8 @@ pub struct LayoutEngine {
     /// 같은 문단의 문단 기준 자리차지 표는 host 글과 겹칠 수 없을 뿐, 그 줄의 **줄간격**
     /// 띠에는 놓일 수 있다 — push-down 바닥을 흐름 y 가 아니라 이 값으로 잡는다.
     host_text_content_bottom: std::cell::Cell<Option<(usize, f64, f64)>>,
+    /// 저장 사다리에서 실제 예약한 비가시 float 호스트의 줄 끝(문단 번호, y).
+    stored_textless_host_end: std::cell::Cell<Option<(usize, f64)>>,
     /// [#7418] 지금 배치하는 표의 push-down 바닥(`host_text_content_bottom` 에서 온 값).
     pub(crate) table_push_floor: std::cell::Cell<Option<f64>>,
     /// 빈 줄 감추기로 높이 0 처리된 문단 인덱스 집합
@@ -3766,6 +3768,7 @@ impl LayoutEngine {
             last_item_flow_line_bottom: std::cell::Cell::new(f64::NAN),
             last_item_endnote_equation_tail_line_box: std::cell::Cell::new(false),
             host_text_content_bottom: std::cell::Cell::new(None),
+            stored_textless_host_end: std::cell::Cell::new(None),
             table_push_floor: std::cell::Cell::new(None),
             hidden_empty_paras: std::cell::RefCell::new(std::collections::HashSet::new()),
             pre_emitted_host_paras: std::cell::RefCell::new(std::collections::HashSet::new()),
@@ -8315,6 +8318,7 @@ impl LayoutEngine {
         let mut last_endnote_para_top: Option<(usize, f64)> = None;
         // [#6574] 직전 항목이 그린 글줄(글줄 안 수식 포함) 범위 하단.
         let mut prev_item_ink_bottom_y: Option<f64> = None;
+        self.stored_textless_host_end.set(None);
         for (item_ordinal, item) in col_content.items.iter().enumerate() {
             self.page_top_float_caption_spacing_para.set(
                 (item_ordinal == 0)
@@ -10432,6 +10436,11 @@ impl LayoutEngine {
                             .get(paragraphs[*para_index].para_shape_id as usize)
                             .map_or(0.0, |style| style.spacing_after),
                         dpi: self.dpi,
+                        textless_host_end: self
+                            .stored_textless_host_end
+                            .get()
+                            .filter(|(owner, _)| owner == para_index)
+                            .map(|(_, end)| end),
                     },
                 ),
                 _ => false,
@@ -10980,6 +10989,12 @@ impl LayoutEngine {
         >,
         float_pushed_line_spacings: &std::collections::HashMap<usize, f64>,
     ) -> (f64, bool) {
+        if matches!(
+            item,
+            PageItem::FullParagraph { .. } | PageItem::PartialParagraph { .. }
+        ) {
+            self.stored_textless_host_end.set(None);
+        }
         let ctx = ColumnItemCtx {
             page_content,
             paragraphs,
@@ -11234,7 +11249,13 @@ impl LayoutEngine {
                                     lines
                                 }
                             });
-                            return (y_offset + advance, false);
+                            let end = y_offset + advance;
+                            if ladder_delta_px.is_some() {
+                                // 빈 글자 줄도 독립된 저장 예약을 갖는다. 그림 출력 뒤
+                                // 줄 존재를 재추정하지 않도록 실제 수용 끝을 전달한다.
+                                self.stored_textless_host_end.set(Some((*para_index, end)));
+                            }
+                            return (end, false);
                         }
                         // NO_LS 문서의 Square 등 흐름
                         // 상호작용 앵커 빈 문단은 한글이 완전한 em 줄박스를 예약한다

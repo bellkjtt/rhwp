@@ -8,6 +8,7 @@ pub(super) struct ShapeHostFlow {
     pub after: f64,
     pub spacing_after: f64,
     pub dpi: f64,
+    pub textless_host_end: Option<f64>,
 }
 
 /// 호스트 줄의 전진이 끝난 뒤 그림만 출력한 항목은 저장 사다리의 원점을 바꾸지 않는다.
@@ -24,6 +25,7 @@ pub(super) fn preserves_line_origin(
         after: flow_after,
         spacing_after,
         dpi,
+        textless_host_end,
     } = flow;
     let common = match paragraph.controls.get(control_index) {
         Some(Control::Picture(picture)) => &picture.common,
@@ -50,6 +52,11 @@ pub(super) fn preserves_line_origin(
     let roundoff = (flow_before.abs() + flow_after.abs()) * f64::EPSILON;
     if (flow_after - flow_before).abs() > roundoff {
         return false;
+    }
+    // 글자가 없는 호스트는 TextLine을 그리지 않아도 줄 공간을 예약한다.
+    // 그 분기에서 저장 사다리로 실제 수용한 끝을 재사용하며 예약량을 재추정하지 않는다.
+    if let Some(end) = textless_host_end {
+        return same_coordinate(flow_before, end);
     }
     let Some(first) = paragraph.line_segs.first() else {
         return false;
