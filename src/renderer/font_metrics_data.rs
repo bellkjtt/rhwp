@@ -8,6 +8,9 @@ use std::sync::OnceLock;
 
 use crate::renderer::font_rule_layout_metric_projection::find_font_rule_layout_metric;
 
+#[path = "font_metric_han_santteut.rs"]
+mod han_santteut;
+
 #[derive(Debug)]
 pub struct HangulMetric {
     pub cho_groups: u8,
@@ -312,6 +315,7 @@ impl FontMetrics {
         GENERATED_FONT_METRICS
             .iter()
             .chain(MEASURED_FONT_METRIC_OVERLAYS.iter())
+            .chain(han_santteut::METRICS.iter())
     }
 }
 

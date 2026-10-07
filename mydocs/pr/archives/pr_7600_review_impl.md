@@ -1,11 +1,18 @@
 ---
 kind: plan
-status: active
+status: historical
 canonical: mydocs/manual/pr_review_workflow.md
 last_verified: 2026-10-07
 ---
 
 # PR #7600 메인터너 보정 실행 기록
+
+> 이 문서는 원 PR 검토 중의 로컬 보정 이력이다. 원 PR #7600은 2026-10-07에
+> `22ddc2ab81c405b0c3e9b1f25a397a87de109948`으로 병합됐다. 이하의 미완료·보류 표현은
+> 당시 code head에 대한 기록이며 현재 원 PR의 상태를 뜻하지 않는다.
+> 새 원인의 수식 비율·페이지 배치 보정은 [#7642 1단계](../../working/task_m100_7642_stage1.md),
+> 별도 재저장본 문제는 [#7640](https://github.com/edwardkim/rhwp/issues/7640)에서 진행한다.
+
 
 ## 범위와 독립 근거
 
