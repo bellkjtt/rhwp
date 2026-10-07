@@ -16,6 +16,8 @@ pub(crate) use variable_style::is_styled_variable;
 /// 수식 레이아웃 박스
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct LayoutBox {
+    /// 측정에 사용한 글자 크기. 각 backend가 첨자 비율을 다시 추정하지 않는다.
+    pub font_size: f64,
     /// X 위치 (부모 기준 상대 좌표)
     pub x: f64,
     /// Y 위치 (부모 기준 상대 좌표)
@@ -247,6 +249,16 @@ impl EqLayout {
         }
     }
 
+    /// 독립 한컴 Print의 HYhwpEQ 첨자는 명목 글자 크기의 0.68배다.
+    /// 다른 face는 기존 계약을 사용하고 결과 글자 크기를 자식 상자에 보존한다.
+    fn script_font_size(&self, fs: f64) -> f64 {
+        fs * if self.hancom_math_face {
+            0.68
+        } else {
+            SCRIPT_SCALE
+        }
+    }
+
     /// AST를 레이아웃 박스로 변환
     pub fn layout(&self, node: &EqNode) -> LayoutBox {
         self.layout_node(node, self.font_size)
@@ -280,6 +292,7 @@ impl EqLayout {
             EqNode::Color { body, .. } => self.layout_node(body, fs),
             EqNode::Space(kind) => self.layout_space(*kind, fs),
             EqNode::Newline => LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: 0.0,
@@ -288,6 +301,7 @@ impl EqLayout {
                 kind: LayoutKind::Newline,
             },
             EqNode::Empty => LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: 0.0,
@@ -301,6 +315,7 @@ impl EqLayout {
     fn layout_row(&self, children: &[EqNode], fs: f64) -> LayoutBox {
         if children.is_empty() {
             return LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: 0.0,
@@ -354,6 +369,7 @@ impl EqLayout {
 
         if boxes.is_empty() {
             return LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: 0.0,
@@ -379,6 +395,7 @@ impl EqLayout {
         }
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: x,
@@ -446,6 +463,7 @@ impl EqLayout {
             estimate_text_width(text, fs, false)
         };
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w,
@@ -473,6 +491,7 @@ impl EqLayout {
             })
             .sum();
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w,
@@ -506,6 +525,7 @@ impl EqLayout {
             fs * 0.05
         };
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w + pad * 2.0,
@@ -527,6 +547,7 @@ impl EqLayout {
             let op_fs = fs * INTEGRAL_SCALE;
             let geom = integral_geom(fs);
             return LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 // Task #1233: 첨자 없는 bare 적분도 뒤 피연산자와 trailing 간격 유지.
@@ -539,6 +560,7 @@ impl EqLayout {
         let w = glyph_advances::text_width(text, fs)
             .unwrap_or_else(|| estimate_text_width(text, fs, false));
         let symbol = LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w,
@@ -550,6 +572,7 @@ impl EqLayout {
             // 관계 기호의 glyph와 양쪽 여백을 공통 배치 결과로 보존한다.
             let padding = fs * 0.15;
             let space = |x| LayoutBox {
+                font_size: fs,
                 x,
                 y: 0.0,
                 width: padding,
@@ -560,6 +583,7 @@ impl EqLayout {
             let mut glyph = symbol;
             glyph.x = padding;
             LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: w + padding * 2.0,
@@ -576,6 +600,7 @@ impl EqLayout {
         let w = glyph_advances::text_width(name, fs)
             .unwrap_or_else(|| estimate_text_width(name, fs, false));
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w + fs * 0.02,
@@ -591,7 +616,12 @@ impl EqLayout {
 
         // 한컴이 새로 생성한 단순 분수는 반각 숫자와 양쪽 1/4 em을 예약한다.
         // 세로 기준선 간격과 수평 괘선 여백을 같은 임의 비율로 묶지 않는다.
-        let pad = fs * if self.hancom_math_face { 0.25 } else { FRAC_LINE_PAD };
+        let pad = fs
+            * if self.hancom_math_face {
+                0.25
+            } else {
+                FRAC_LINE_PAD
+            };
         let w = n.width.max(d.width) + pad * 2.0;
 
         let mut n_box = n;
@@ -601,6 +631,7 @@ impl EqLayout {
         let (total_h, baseline) = fraction_geometry::position(&mut n_box, &mut d_box, fs);
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w,
@@ -635,6 +666,7 @@ impl EqLayout {
         bottom_box.y = top_h;
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w,
@@ -678,6 +710,7 @@ impl EqLayout {
         body_box.y = pad;
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: total_w,
@@ -692,7 +725,7 @@ impl EqLayout {
 
     fn layout_subscript(&self, base: &EqNode, sub: &EqNode, fs: f64) -> LayoutBox {
         let b = self.layout_node(base, fs);
-        let s = self.layout_node(sub, fs * SCRIPT_SCALE);
+        let s = self.layout_node(sub, self.script_font_size(fs));
 
         let sub_shift = b.baseline * 0.4;
         let total_h = (b.height).max(sub_shift + s.height);
@@ -708,6 +741,7 @@ impl EqLayout {
         let total_w = base_box.width + sub_box.width;
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: total_w,
@@ -725,8 +759,8 @@ impl EqLayout {
         let is_integral = matches!(base, EqNode::MathSymbol(s) if is_integral_symbol(s));
 
         let b = self.layout_node(base, fs);
-        let sb = self.layout_node(sub, fs * SCRIPT_SCALE);
-        let sp = self.layout_node(sup, fs * SCRIPT_SCALE);
+        let sb = self.layout_node(sub, self.script_font_size(fs));
+        let sp = self.layout_node(sup, self.script_font_size(fs));
 
         if is_integral {
             // 적분 전용 배치 (Task #1317): 글리프를 stroke path 로 그리므로 상·하한 attach
@@ -769,6 +803,7 @@ impl EqLayout {
                 .max(sup_box.y + sup_box.height);
 
             return LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: total_w,
@@ -820,6 +855,7 @@ impl EqLayout {
         let total_w = base_box.width + script_w;
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: total_w,
@@ -851,8 +887,12 @@ impl EqLayout {
         let op_w = estimate_text_width(symbol, op_fs, false);
         let op_h = op_fs;
 
-        let sub_box = sub.as_ref().map(|s| self.layout_node(s, fs * SCRIPT_SCALE));
-        let sup_box = sup.as_ref().map(|s| self.layout_node(s, fs * SCRIPT_SCALE));
+        let sub_box = sub
+            .as_ref()
+            .map(|s| self.layout_node(s, self.script_font_size(fs)));
+        let sup_box = sup
+            .as_ref()
+            .map(|s| self.layout_node(s, self.script_font_size(fs)));
 
         let sup_h = sup_box
             .as_ref()
@@ -887,6 +927,7 @@ impl EqLayout {
         });
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             // Task #1233: 피연산자가 연산자에 붙지 않도록 trailing 간격 추가.
@@ -914,8 +955,12 @@ impl EqLayout {
         let op_w = estimate_text_width(symbol, op_fs, false);
         let op_h = op_fs;
 
-        let sub_box = sub.as_ref().map(|s| self.layout_node(s, fs * SCRIPT_SCALE));
-        let sup_box = sup.as_ref().map(|s| self.layout_node(s, fs * SCRIPT_SCALE));
+        let sub_box = sub
+            .as_ref()
+            .map(|s| self.layout_node(s, self.script_font_size(fs)));
+        let sup_box = sup
+            .as_ref()
+            .map(|s| self.layout_node(s, self.script_font_size(fs)));
 
         // 기호 기준선: 기호 높이의 60% (중앙보다 약간 위)
         let op_baseline = op_h * 0.6;
@@ -946,6 +991,7 @@ impl EqLayout {
         });
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             // Task #1233: 적분 뒤 피연산자(예: f(x)dx)가 첨자에 붙지 않도록 trailing 간격.
@@ -963,6 +1009,7 @@ impl EqLayout {
     fn layout_matrix(&self, rows: &[Vec<EqNode>], style: MatrixStyle, fs: f64) -> LayoutBox {
         if rows.is_empty() {
             return LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: 0.0,
@@ -1038,6 +1085,7 @@ impl EqLayout {
         }
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: full_w,
@@ -1082,6 +1130,7 @@ impl EqLayout {
 
         // 중괄호 포함 레이아웃 → Paren으로 래핑
         let inner = LayoutBox {
+            font_size: fs,
             // 외곽 폭에 예약한 왼쪽 중괄호 폭을 실제 자식 원점에서도 소비한다.
             x: fs * 0.3,
             y: 0.0,
@@ -1092,6 +1141,7 @@ impl EqLayout {
         };
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: full_w + fs * 0.3,
@@ -1151,6 +1201,7 @@ impl EqLayout {
         }
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: max_w,
@@ -1200,6 +1251,7 @@ impl EqLayout {
         let total_h = (y - row_gap).max(0.0);
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: total_w,
@@ -1227,6 +1279,7 @@ impl EqLayout {
         let total_h = y - row_gap;
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: max_w,
@@ -1262,6 +1315,7 @@ impl EqLayout {
         let total_w = left_w + pad + body_box.width + pad + right_w;
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: total_w,
@@ -1290,6 +1344,7 @@ impl EqLayout {
             body_box.x = padding;
             body_box.y = padding;
             return LayoutBox {
+                font_size: fs,
                 x: 0.0,
                 y: 0.0,
                 width: body_box.width + 2.0 * padding,
@@ -1307,6 +1362,7 @@ impl EqLayout {
         body_box.y = deco_h;
 
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: body_box.width,
@@ -1347,6 +1403,7 @@ impl EqLayout {
         }
         let b = styled.layout_node(body, fs);
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: b.width,
@@ -1366,6 +1423,7 @@ impl EqLayout {
             SpaceKind::Tab => fs * 1.0,
         };
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width: w,

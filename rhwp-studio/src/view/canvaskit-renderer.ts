@@ -4261,6 +4261,7 @@ export class CanvasKitLayerRenderer {
       return false;
     }
     budget.remainingNodes -= 1;
+    fontSize = layout.fontSize ?? fontSize;
     const x = parentX + layout.x;
     const y = parentY + layout.y;
     const child = (box: LayerEquationLayoutBox, size = fontSize, childItalic = italic, childBold = bold) => (
@@ -4489,7 +4490,8 @@ export class CanvasKitLayerRenderer {
   }
 
   private equationBoxIsFinite(layout: LayerEquationLayoutBox): boolean {
-    return Number.isFinite(layout.x)
+    return (layout.fontSize === undefined || (Number.isFinite(layout.fontSize) && layout.fontSize > 0))
+      && Number.isFinite(layout.x)
       && Number.isFinite(layout.y)
       && Number.isFinite(layout.width)
       && Number.isFinite(layout.height)
@@ -4499,7 +4501,7 @@ export class CanvasKitLayerRenderer {
   }
 
   private equationFontSizeFromBox(layout: LayerEquationLayoutBox, baseFontSize: number): number {
-    return Math.max(1, layout.height > 0 ? layout.height : baseFontSize);
+    return Math.max(1, layout.fontSize ?? baseFontSize);
   }
 
   private drawEquationText(

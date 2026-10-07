@@ -57,6 +57,7 @@ fn render_box(
     italic: bool,
     bold: bool,
 ) {
+    let fs = if lb.font_size > 0.0 { lb.font_size } else { fs };
     let x = parent_x + lb.x;
     let y = parent_y + lb.y;
 
@@ -859,8 +860,8 @@ fn draw_decoration(
 }
 
 fn font_size_from_box(lb: &LayoutBox, base_fs: f64) -> f64 {
-    if lb.height > 0.0 {
-        lb.height
+    if lb.font_size > 0.0 {
+        lb.font_size
     } else {
         base_fs
     }

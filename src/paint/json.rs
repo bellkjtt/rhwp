@@ -2960,8 +2960,8 @@ fn write_path_commands(buf: &mut String, commands: &[PathCommand]) {
 fn write_equation_layout_box(buf: &mut String, layout: &LayoutBox) {
     let _ = write!(
         buf,
-        "{{\"x\":{:.6},\"y\":{:.6},\"width\":{:.6},\"height\":{:.6},\"baseline\":{:.6},\"kind\":",
-        layout.x, layout.y, layout.width, layout.height, layout.baseline,
+        "{{\"x\":{:.6},\"y\":{:.6},\"width\":{:.6},\"height\":{:.6},\"baseline\":{:.6},\"fontSize\":{:.6},\"kind\":",
+        layout.x, layout.y, layout.width, layout.height, layout.baseline, layout.font_size,
     );
     write_equation_layout_kind(buf, &layout.kind);
     buf.push('}');
@@ -4746,6 +4746,7 @@ mod tests {
                         EquationNode {
                             svg_content: "<text>x</text>".to_string(),
                             layout_box: LayoutBox {
+                                font_size: 12.0,
                                 x: 0.0,
                                 y: 0.0,
                                 width: 8.0,

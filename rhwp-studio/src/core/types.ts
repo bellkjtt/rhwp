@@ -1444,6 +1444,7 @@ export type LayerEquationFontStyle =
   | 'monospace';
 
 export interface LayerEquationLayoutBox {
+  fontSize?: number;
   x: number;
   y: number;
   width: number;

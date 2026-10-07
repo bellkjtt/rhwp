@@ -53,7 +53,7 @@ fn frame(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
             metrics.bar
         }),
         LayoutKind::Superscript { base, sup }
-            if font_line(base, fs) && font_line(sup, fs * super::layout::SCRIPT_SCALE) =>
+            if font_line(base, fs) && font_line(sup, sup.font_size) =>
         {
             Some(metrics.sup)
         }

@@ -1,6 +1,6 @@
 //! 극한 이름과 하한의 글자 크기·기준선을 측정과 모든 paint에 함께 전달한다.
 
-use super::{estimate_text_width, EqLayout, EqNode, LayoutBox, LayoutKind, SCRIPT_SCALE};
+use super::{estimate_text_width, EqLayout, EqNode, LayoutBox, LayoutKind};
 
 impl EqLayout {
     pub(super) fn layout_limit(
@@ -12,12 +12,7 @@ impl EqLayout {
         // HYhwpEQ의 독립 Print에서 이름은 BaseUnit의 1.2배, 하한은 0.68배다.
         // 다른 수식 face의 기존 크기 계약은 유지한다.
         let name_font_size = if self.hancom_math_face { fs * 1.2 } else { fs };
-        let sub_font_size = fs
-            * if self.hancom_math_face {
-                0.68
-            } else {
-                SCRIPT_SCALE
-            };
+        let sub_font_size = self.script_font_size(fs);
         let name = if is_upper { "Lim" } else { "lim" };
         let baseline = name_font_size * 0.8;
         // upstream의 실제 한컴 이름 글리프도 같은 크기와 기준선을 소비한다.
@@ -48,6 +43,7 @@ impl EqLayout {
             name_font_size
         };
         LayoutBox {
+            font_size: fs,
             x: 0.0,
             y: 0.0,
             width,

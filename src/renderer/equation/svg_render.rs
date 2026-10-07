@@ -43,6 +43,7 @@ fn render_box(
     italic: bool,
     bold: bool,
 ) {
+    let fs = if lb.font_size > 0.0 { lb.font_size } else { fs };
     let x = parent_x + lb.x;
     let y = parent_y + lb.y;
 
