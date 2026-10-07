@@ -118,3 +118,16 @@ Issue: [#7642](https://github.com/edwardkim/rhwp/issues/7642)
   기존 74.88730% 결과를 수정 후 결과로 사용하지 않으며, 새 회귀 기대값도 추가하지 않습니다.
   원본 PDF의 미분 기호는 `HYhwpEQ`에 없는 `′`를 `Haansoft Batang`으로 출력하므로,
   본문 폭 연결 이후 수식 자체의 glyph·간격과 해당 대체 글꼴도 계속 대조합니다.
+
+## 새 브랜치 이관 완료
+
+- 작업 브랜치: `fix/equation-font-metrics-pagination-20261007`.
+- 새 base: `b34fa18d74391a583efe8f5b4db8e84d36e130dd` (`upstream/devel`).
+- 이관 전 보존: `backup/equation-followup-before-upstream-20261007` 및 기존
+  `review/phantomn-pr7600-20261006`, 마지막 보존 commit `c5d1416fc`.
+- 이미 통합된 원 기여 `fe30ba9b7`을 제외하고 미통합 보정 115개 commit을 새 base 위로
+  rebase했다. 새 수식 메트릭·HWP·PDF 보존 commit은 `4fa6dc9f9`다.
+- 문서 add/add 충돌은 과거 로컬 검토 이력을 순차 재적용한 뒤 원 PR review를 upstream의
+  실제 병합 판정으로 복원했다. 원 PR의 완료 판정과 새 작업의 미완료 상태를 분리한다.
+- 최신 base의 #7608 및 해당 table command·회귀 변경을 포함한 ancestry를 확인했다.
+  새 font metric과 새 base의 Native 재출력은 아직 수행하지 않았다.

@@ -1,247 +1,130 @@
----
-kind: review
-status: active
-canonical: mydocs/manual/pr_review_workflow.md
-last_verified: 2026-10-07
----
-
 # PR #7600 리뷰 — dyad 붙여쓰기와 양쪽 화살표
 
 ## 최종 판정
 
-**머지 보류 — 메인터너 보정의 최종 검증 진행 중.** 현재 추가 보정 head는
-`a3fd2cdda`이며 런타임 source `3020c479878aaed0d05c8d200f36f2b4b2587807`의
-Native 전체 원본·정상 대조군 검증을 마쳤지만 시각 미달이 남습니다.
-최신 `upstream/devel`의 `fe9ffd27e91d8d260fbccde5ff68aa08aadf94ca` 위로
-106개 커밋을 보존해 rebase했고, 문단 간 저장 경계의 부분 점유도 보정했습니다.
-rebase 전 `8c252adfb51718d35801ced127de4295a99cbb23`의 Native 대조에서
-9월 23쪽은 최저 90.78108%, 10월 18쪽은 최저 91.24244%를 유지했습니다.
-사용자가 지적한 11쪽 하단 두 줄의 소속을 복구했고 94.70319% → 96.33025%입니다.
-독립 Print와 같이 해당 두 줄은 11쪽, 마지막 `존재하지 않는다.`는 12쪽에 있습니다.
-12쪽은 `3e37b93ea`에서 92.16245%가 됐지만, 직접 판독에서 그래프가
-쪽 하단 밖으로 내려와 문20과 겹쳤고 13쪽도 34.49027%로 회귀했습니다.
-이 수치 통과를 승인으로 사용하지 않았습니다. `e34cfd0ad`에서 명시 크기의
-TAC 그림 점유를 실제 단 문맥과 표 측정으로 확인해 그래프와 문20을 Print와 같은
-13쪽에 배치했습니다. Native 11·12·13쪽은 96.33025%/96.04768%/97.61688%이며
-새 review/compare를 직접 판독했습니다. `29e79e1bc`에서는 빈 줄의 실제 줄 상자 끝을
-다음 미주 간격에 반영해 14쪽을 71.34044% → 95.98702%로 보정하고
-새 review를 직접 확인했습니다. 해당 source의 정상 대조군 8개도 90% 이상입니다.
-`3020c4798`에서 그림 뒤 풀이 전체를 그림과 묶던 가정을 제거해
-그래프를 Print와 같은 18쪽으로 복구했습니다. 하지만 18~21쪽은 각각
-82.58639%/41.16275%/65.80087%/85.89813%로 미달이며, 원본 18쪽의
-수식 줄 나눔과 뒤 배치 차이를 계속 보정합니다. 정상 대조군 8개는
-모두 이전 최저값을 유지했습니다. 새 source의 fresh WASM과 최종 전체 게이트는 남습니다.
-overlay의 색상은
-사용자 지적에 따라 RHWP만 파랑, PDF만 빨강으로 수정하고 PNG에 범례를 표시합니다.
-사용자 표 캡처의 원본 `fragment_ghost_vrules.hwp`도 대응 Print의 10쪽과
-직접 비교했습니다. immutable `c4574b920` Native는 보조 점수 95.36398%지만
-마지막 가스용품 행이 다음 쪽으로 넘어가며 전체 32쪽 대 31쪽입니다.
-행 소속·쪽수 차이는 미해결이고 기존 검사 변경으로 숨기지 않습니다.
-표의 새 한컴 2020 MCP Print(1-up, PrintMethod 0)는 31쪽이고
-기존 기준의 10쪽과 픽셀까지 같아 기준 출력 변경 문제가 아님을 확인했습니다.
-Visual Sweep은 선택 쪽의 점수가 통과해도 전체 쪽수가 다르면
-`re_review_required`로 판정하도록 보완했습니다. 도구 97개 검사와
-후속 focused 14개, 실제 표의 일반/TSV 모드 실행을 확인했습니다.
-전체 11월 21쪽은 최저 41.16275%로 아직 미달입니다. 이전 결과를 새 base/head의
-통과로 보고하지 않습니다. 아래 완결된 Native/fresh WASM 시각 검증은
-`18cae770d960ffff8da59a70c1d4dbe4f5076a17`의 결과입니다. Native 원본 9월 23쪽의 최저 일치율은
-90.78108%이며, 7쪽 그림 원점 보정으로 해당 쪽은 93.07072% → 95.28674%입니다.
-11월 1쪽은 83.45544% → 93.79509%, 17쪽은 72.08955% → 95.07303%로
-개선됐습니다. 17쪽의 줄 겹침과 마지막 적분 누락을 실제 저장 전진 기준의 투영으로
-보정했습니다. 전체 11월 문서는 아직 미달 쪽이 남아 있으므로 통과로 보고하지 않습니다.
+**승인.** `dbb87b98047ffb73ff038374a59501495a47bdf2`의 dyad 붙여쓰기 분리와 양쪽 화살표 수정을 검증한 최소 재현 범위에서 수용한다. Native/fresh WASM의 전체 1쪽 실루엣 일치율 최저값은 각각 **96.62219%**, gate는 `passed`다. 최신 head CI 성공과 current-base 충돌 없음도 재확인했다. 작업지시자가 GitHub 승인·병합·후속 처리를 승인하여 병합을 완료했다. 아래 CanvasKit 진단 한계와 남은 글꼴·화살촉 차이를 포함한 판정이며, 원본 전체 문항 개선을 주장하지 않는다.
 
-이전 후보의 줄 공간 고정은 10월 대조군에 회귀를 만들었고, 실제 저장 전진으로
-보정하면서 그 가정과 추가 메트릭 출처 분기를 정리했습니다. 별도 되감김 fit 후보도
-11월의 해당 단일 줄에 적용되지 않았고 9월 대조군을 훼손해 제거했습니다. 후보별
-실패와 보정 경로는 개별 실행 기록에 보존합니다. 기대값 변경으로 회귀를 숨기지 않습니다.
+## 접수와 라우팅
 
-`18cae770d`의 fresh WASM 12건은 각각 Native와 같은 최저값으로 통과했습니다.
-9월·10월은 전체 페이지이며 11월은 영향 1·17쪽만 93.79509%/95.07303%입니다.
-WASM SHA-256 `0bba788b6bdffdb2b1bc1441baede0ffef2857a241dfeb821eaf0f73d3e39676`은
-pkg/public 및 Studio 실제 응답 바이트와 같습니다. Canvas2D·CanvasKit 4건에서
-수식 표시와 실행 오류 없음도 확인했습니다. CanvasKit의 한컴 글꼴 대체가
-남아 있으므로 해당 실행을 글꼴 동일성이나 화면 픽셀 충실도 증거로 보고하지 않습니다.
-추가 그림·저장 원점 보정의 새 head에서는 Native/fresh WASM을 다시 실행합니다.
+- base route: maintainer 일반 (`maintainer_general.md`).
+- modifiers: 접수·리뷰, 로컬 검증, 시각·fixture 증적, 첫 기여자, 오래된 base 확인.
+- loaded documents: `pr_review_workflow.md`, `pr_review/README.md`, `maintainer_general.md`, `intake_and_review.md`, `local_validation.md`, `visual_fixture_evidence.md`, `first_time_contributor.md`, `rework_and_exceptions.md`, `review_template.md`. 빌드·시각 작업은 `dev_environment_guide.md`, `visual_verification_governance.md`, `visual_sweep_guide.md`도 적용했다.
+- PR: [#7600](https://github.com/edwardkim/rhwp/pull/7600), 작성자 `Phantomn`, FIRST_TIME_CONTRIBUTOR. 기존 merged PR 검색 결과 0건.
+- reviewer는 이미 `jangster77`이 지정되어 있어 중복 assign하지 않았다.
+- 관련 이슈: [#7593](https://github.com/edwardkim/rhwp/issues/7593), `closes #7593`. U+2AFD 누락 #7594는 범위 밖.
+- code head: `dbb87b98047ffb73ff038374a59501495a47bdf2`, commit 1개, 18 files / +121 −6.
+- 기준 devel: `fe9ffd27e91d8d260fbccde5ff68aa08aadf94ca`. `git merge-tree --write-tree upstream/devel upstream/pr7600-head` exit 0, tree `c9bbd6ec57e96c1b1b70d8d4859c3aac0c2b58e2`.
+- 원 head 그대로 `/tmp/rhwp-pr7600-review-20261007`, branch `review/pr7600-20261007`에서 검토했다. 원 fork를 재작성하거나 최신 devel을 source에 merge하지 않았다.
+- 2026-10-07 최종 조회에서 PR은 open / non-draft / mergeable / clean, code head는 동일하다. PR API의 base SHA는 `c167dc6abbebf69546575e2d16d06223791bab82`였으나 base ref는 devel이고, branch API와 fetch 결과의 현재 devel은 위 `fe9ffd27…`다. 충돌 simulation은 현재 devel로 수행했다. 상태값은 merge 직전에 다시 확인한다.
 
-10월 원본 9건과 #1308의 8건은 `65e96c9a687b33a4a22d57313f8d971dbb05bdb0`에서
-정식 관계 회귀를 통과했습니다. 이후 런타임이 바뀌었으므로 최신 head에서 다시 실행합니다.
-#1139 파일 전체의 나머지 px 검사는 원 입력의 관련 모든 페이지가 Native/fresh WASM
-90% 이상이 된 뒤 독립 기대값으로 변경합니다. 미달 입력의 검사를 먼저 바꾸거나
-기존 검사를 자동 삭제하지 않습니다.
+## 변경 범위와 호출 경로
 
-초기 전체 nextest의 10,517건 중 10,514 PASS / 3 FAIL / 50 SKIP과 이후 #1139
-77건의 54 PASS / 23 FAIL은 이전 source의 결과입니다. 현재 head의 전체 회귀
-결과가 아닙니다. 최종 lint·nextest·Skia 검증, 오늘할일을 포함한 최종 review 묶음,
-PR 생성·CI 모니터링·merge·후속 처리가 남아 있습니다.
+1. `tokenizer.rs:522`의 `GLUE_SAFE`에 `dyad`를 추가했다. `read_command → longest_keyword_prefix → is_glue_safe`의 기존 붙여쓰기 규칙에 참여하며 문서 ID나 임의 수치 조건이 없다.
+2. `parser.rs`의 기존 decoration AST와 `layout.rs:1180`의 `layout_decoration` 결과를 유지한다. width는 body.width, 높이·기준선은 기존 장식 메트릭이다.
+3. SVG `svg_render.rs:404`, Canvas2D `canvas_render.rs:286`, Skia `equation_conv.rs:663`은 같은 layout의 body 원점·폭으로 장식을 배치한다. `Vec | Dyad`는 기존 Vec의 가로선·오른쪽 화살촉을 사용하고 Dyad에만 대칭인 왼쪽 화살촉을 추가했다. 변경 뒤 원점을 clamp하거나 덮어쓰는 분기는 없다.
+4. `src/paint/json.rs:3057`은 기존 Dyad를 `dyad`로 직렬화하고 `canvaskit_policy.rs:1912`는 기존부터 이를 허용했다. Studio `canvaskit-renderer.ts:3605`도 기존 centerX·width·fontSize로 같은 장식을 그린다. 최신 devel의 같은 파일 변경은 뒤의 `renderFormObject`이며 장식 분기와 독립적이다.
+5. pagination·rowspan·빈 문단·저장 LineSeg 유효성·baseline·golden 허용치는 바꾸지 않았다.
 
-원격 통합 PR을 아직 push/생성하지 않았으며 원 PR의 녹색 CI를 새 후보의 CI로
-대신하지 않습니다. #7594의 별도 기호 모양/의미 문제와 macOS/Windows 시스템 글꼴
-실행은 검증 범위 밖입니다.
+## 독립 근거와 검증 입력
 
-## 접수와 검토 head
+한컴 한글 2022 `12.0.0.535`에서 저장한 공개 최소 재현 HWPX와 같은 입력의 한컴 PDF를 사용했다. `pdfinfo`의 Creator는 `Hwp 2022 12.0.0.535`, Producer는 `Hancom PDF 1.3.0.545`, 1쪽이다. PDF 글꼴은 HanSantteutDotumRegular와 HyhwpEQ다. 본문의 한컴 화살표를 직접 열어 규칙을 확인했으며 버전 연도 때문에 기준 PDF를 재생성하지 않았다.
 
-| 항목 | 값 |
+| 역할 | 저장소 경로 (`mydocs/pr/assets/issue_7593_dyad_arrow/` 아래) | SHA-256 |
+| --- | --- | --- |
+| 입력 | `repro-dyad-min.hwpx` | `c8605b6d47949a402de1955df3dd00a3dc2ae56dbab822d12b512fc108d4198d` |
+| 독립 PDF | `repro-dyad-min.hancom.pdf` | `103c6ffb34e64bad8992ce6b6284faa7d00a9d82095757ff0ad335ca4ccbe838` |
+
+두 파일은 원 code head에 포함된다. 입력의 저장 메타데이터와 네 script(`rm dyadAB`, `rm dyad AB`, `dyad{rm AB}`, `dyad{{rm AC} it } BOT dyad{{rm BD} it }`)를 직접 확인했다. 입력·PDF 및 작성자 Native/fresh WASM review·overlay 4장의 실행 파일 바이트가 각각 code head의 commit blob과 동일함을 확인했다. SHA는 ignored `build-receipt.json`과 원 PR asset에 연결한다.
+
+## 실행한 검증
+
+| 검증 | 결과·근거 |
 | --- | --- |
-| 원 PR·작성자 | [#7600](https://github.com/edwardkim/rhwp/pull/7600) / Phantomn / 첫 기여자 |
-| 관련 이슈 | [#7593](https://github.com/edwardkim/rhwp/issues/7593) 해결 범위; [#7594](https://github.com/edwardkim/rhwp/issues/7594) 별도 문제 유지 |
-| 원 head·fork | `dbb87b98047ffb73ff038374a59501495a47bdf2` / Phantomn/rhwp / fix/issue-7593 |
-| 검토 base | `fe9ffd27e91d8d260fbccde5ff68aa08aadf94ca` / upstream/devel; 최초 base는 `48ff4bb93` |
-| 검토 branch·체리픽 | `review/phantomn-pr7600-20261006` / `fe30ba9b7` (최초 `5d7a2ad98`, rebase 후에도 원 저자 보존, 충돌 없음) |
-| 메인터너 런타임 source | `3020c4798` Native 9건 완료: 11~14쪽 회복, 정상 대조군 8개 무감소; 11월 18~21쪽 미달. 이후 `a3fd2cdda`는 시각 gate 안내 보완이며 런타임 변경 없음. Native/fresh WASM 12건은 rebase 전 `18cae770d`이며 새 head로 재실행 필요 |
-| 초기 배포·회귀 단계 | `84fda69394ca359cc121705da270636dc2d67670`, `31c1d4ecd6cfd0fce50658fccce158cf876b8077`; 최종 source의 검증을 대신하지 않음 |
-| reviewer·라우팅 | jangster77 / collaborator_external_pr + first_time_contributor + intake_and_review + local_validation + visual_fixture_evidence |
-| 원 PR 상태 재확인 | 2026-10-07 OPEN, non-draft, mergeable MERGEABLE, 원 head 동일; 원 CI는 후보 검증을 대신하지 않음 |
+| head Full CI | [37317981931](https://github.com/edwardkim/rhwp/actions/runs/37317981931), Build & Test / Archive A–D / Lint / Native Skia / Frontend package success |
+| 별도 검사 | CodeQL Actions, Render Diff, Adapter inter-diff, Proptest success. CI Impact Policy success; CodeQL aggregate neutral는 선택한 언어 외 두 configuration 부재 경고 |
+| focused Rust | `node scripts/run-rust-test.mjs issue_7593_eq_dyad_glue_and_arrow -- --cargo-profile release-test --target-dir target/pr-review`: 3 PASS, 해당 suite의 다른 215개는 필터로 제외 |
+| manifest | `--prepare` 뒤 `--check --base-ref fe9ffd27e91d8d260fbccde5ff68aa08aadf94ca` PASS. 파생 파일을 PR에 stage하지 않음 |
+| diff | `git diff --check upstream/devel...HEAD` PASS, current-base merge 충돌 없음 |
+| Studio | `npm --prefix rhwp-studio test`: 1815 PASS / 0 FAIL / 2 skip |
+| Native build | `cargo build --locked --profile release-test --target-dir target/pr-review --bin rhwp` PASS |
+| Native 시각 | 원 head에서 새 export·Chrome raster·직접 PNG 판독. 현재 canonical Sweep의 `--silhouette-only --png-pair`로 새 PNG를 측정: p1 **96.62219%**, 미달 0, 누락 0 |
+| Docker fresh WASM | `docker compose -p rhwp --env-file .env.docker run --rm wasm` PASS. 기존 named volume 재사용, 루트 pkg와 Studio public JS/WASM SHA-256 동일 |
+| fresh WASM 시각 | 동일 code head의 새 pkg로 1쪽 전체 재출력·직접 PNG 판독. p1 **96.62219%**, gate `passed`, 90% 미달·누락 0, 문서/기준 PDF/출력 모두 1쪽 |
+| TypeScript | fresh pkg 반영 뒤 `npx --prefix rhwp-studio tsc --noEmit -p rhwp-studio/tsconfig.json` PASS. 최초 pkg 미준비로 인한 TS2307과 구분 |
+| Canvas 2D 실제 출력 | fresh WASM `HwpDocument.renderPageToCanvas(0, canvas, 1)`을 Chrome 152에서 실행. 네 수식·다섯 양방향 장식·1쪽 표시 직접 확인 |
 
-원 기능·메인터너 보정은 별도 일반 commit으로 누적했다. contributor history를 rewrite하지 않았다.
-원시 TSV 3개는 `08abab871`에서 Git 제외하고 ignored output에 보존했다. 단일 원 PR의 검토/보정
-문서와 오늘할일을 같은 통합 후보에 유지하며 통합 PR 번호를 예측한 별도 문서는 만들지 않는다.
+같은 code head의 성공한 CI와 clean current-base merge, 제품 보정 없음 조건에 따라 전체 nextest·Native Skia 광범위 회귀·lint를 중복 실행하지 않았다(`pr_review_workflow.md` 3.2.2). focused·fresh WASM·직접 시각 검증은 별도로 완료했다. source-side cfg(test) 변경은 없어 unit-tier 추가 검사는 비해당이다. 로컬 nextest는 0.9.137이며 권고 0.9.140 관련 경고가 있었으나 실제 선택된 세 검사는 정상 실행됐다.
 
-## 초기 보류 사유와 실제 보정
+수정 전 3 FAIL은 PR 본문의 작성자 실행 기록을 참고했다. reviewer가 수정 전 코드를 재빌드한 결과로 표현하지 않는다. 검사 자체를 읽고 토큰 분리·동일 의미의 붙여/띄어 출력·Vec과의 폭/오른쪽 화살촉 불변 및 Dyad 두 화살촉의 검사 의미를 확인했다.
 
-| 초기 사유 | 독립 실행·조치 | 현재 상태 |
-| --- | --- | --- |
-| 과거79.8%/64.3% 실패 입력 미제공 | 사용자 확인: 다른 문서는 없음. 공개 이슈 입력을 원 바이트로 확보하고 실제 Print에서79.58463%/바탕쪽 선 누락 재현 | 공개 원본은 보정·재검증 완료; 미제공 과거 파일과 같은 입력이라고 추정하지 않음 |
-| 기존 PDF의 Print 출처 미확인 | Creator만으로 출력 방법을 판단하지 않음. 스크립트 없는 사본을 MCP Print로 출력하고 기존 PDF와 전쪽 raster 동일성 확인 | 새 PDF의 실행 Print 계약과 원문 대응으로 해소; 기존 출력 메뉴는 별도 미확인 |
-| 바탕쪽 선·보기 기준선·선택지 위치 | 저장 master frame을 paint하고 flow를 밀지 않음; 저장 수식 flow baseline을 실제 배치도 소비; 저장 줄이 없으면 TabDef에서 재조판 | 원본 전체1쪽 판독·관계 회귀로 확인 |
-| 실제 SVG의 잘못된 font fallback | fc-match만으로 공급을 확인했다는 초기 기록 정정. SVG 내장 name table의 실제 face 검증 후 시스템 family/weight 조회 보정 | Han Santteut Dotum Regular/Bold·HCR Batang 공급 확인; 별도 RHWP_FONT_PATH 미사용 |
-| 실제 CanvasKit의①/② 내용 누락 | 없는 U+2AFD 때문에 전체 수식 paint가 실패. 같은 codepoint의 정식 Noto Sans Math glyph fallback 공급 | 새 WASM/실제 Canvas2D·CanvasKit4경로 표시 통과; hidden overlay 없음 |
-| 발문 AB의 약2배 장평·관계 기호 간격 | 흐름 예약 bbox와 BaseUnit의 실제 paint 폭 분리; rm 정체 상태 보존; 관계 glyph/양쪽 공간을 공통 Row 결과로 소비 | 최신 전쪽·확대 판독 완료; 추가 회귀 RED3FAIL/선행 GREEN6PASS |
 
-구현 근거·반례·전후 실행은 [보정 기록](pr_7600_review_impl.md)에 연결했다.
-기존 golden/baseline 허용치·90% 기준을 완화하지 않았고 글꼴 예외를 사용하지 않았다.
+### 재실행 명령과 증적
 
-## 구현 주장과 조판 원칙
-
-| 주장 | 생산 → 소비 경로와 실제 검사 | 판정 |
-| --- | --- | --- |
-| dyad 붙여쓰기와 양쪽 화살표 | read_command/longest_keyword_prefix → EqLayout Decoration → SVG/Canvas2D/Skia/CanvasKit; 원 기여3검사·벡터 대조·표시 E2E | 충족(검증한 Native/WASM/브라우저 범위) |
-| 측정/배치 기준선 공유 | flow_metrics_hwp → composer 줄 측정 → inline_baseline_px → paragraph_layout의 두 EquationNode 원점 → painter; 같은 저장 기준선 비율·TextRun CellContext 소유와 최종 순서 검사 | 충족(본문/셀 원본 및 최소 입력) |
-| 저장 줄 없는 탭 재조판 | 기존 para_has_no_stored_line_segs → ComposedParagraph.tab_extended → TabDef 기반 커서; 원 metadata 보존, 저장 줄 경로의 advance 유지 | 원본 관계 검사 충족; 정상 대조군은 전체 회귀 결과로 확인 |
-| 바탕쪽 선의 소유/비흐름 | master ColumnDef 저장 frame → 공통 separator → 실제 MasterPageLine; 저장 frame 비율·ColumnDef 소유·다음 본문 보존 검사 | 충족(원본/최소 대조) |
-| 동일 BaseUnit의 자연 paint 폭 | EqLayout intrinsic → 네 painter, bbox 예약은 흐름에만 소비; 실제 Print SVG의 조상 transform 포함 장식 폭 비교 | 충족(동일 AB 세 문맥); 일반성은 전체 회귀 결과로 확인 |
-| 관계 기호 양쪽 간격 | tokenizer/parser 공통 분류 → MathSymbol의 glyph/Space Row → 모든 painter; BOT/직접Unicode의 내용·순서·점유 영역 비겹침 | 충족(실제 원본 두 관계 입력); Greek 합성은 진단만 수행 |
-| 저장 정보의 독립성 | 실제 한컴 저장 입력·MCP Print를 기준으로 검증; 문서 ID/우연한 속성/좌표 clamp를 추가하지 않음 | 충족 |
-| 분할/이어받기·rowspan/clipping | 이번 변경은 분할 컷·소유 유닛·예약 높이·종료 조건을 바꾸지 않음 | 해당 구현 원칙 비해당; 전체 회귀 무회귀는 별도 게이트 |
-| 시스템 글꼴 모듈 | Native fontdb의 공통 시스템 family/weight 조회; Linux 실제 실행. WASM cfg 제외, TTC index0 이외 기존 제한 유지 | Linux 충족; macOS/Windows 실행 미검증 |
-
-## 입력·독립 Print PDF의 보존
-
-| 파일 | SHA-256 | 출처·역할 |
-| --- | --- | --- |
-| `samples/issue7593/repro-equation-issue7593.hwpx` | `88a3683c34e92f8887e54b9b379f8c399a8ec844e46e127793c6486cba8d31ec` | 공개 이슈 원본, Phantomn/rhwp의 issue-assets8e49f1b8e 원 바이트 |
-| `samples/issue7593/repro-dyad-min-no-script.hwpx` | `7f12969bce23d268cd2cc1d1ebd20f64582755373afd91035e2278ecf0aa7e69` | 원 PR 최소 입력의 기본 빈 Scripts만 제거; 모든11개 조판/content entry byte 동일 |
-| `pdf/issue7593/repro-equation-issue7593-hwpx-2020.pdf` | `206b9fc127a8f40e63fc49ba86ebd455f7d4e651e1f32dbf68d3915052d9f8db` | 공개 원본의 MCP2020 Print, job c0af74c9-1bcf-454d-b177-08ab91b24e59 |
-| `pdf/issue7593/repro-dyad-min-no-script-hwpx-2020.pdf` | `ba0df59511f46087b7b08bd93fa02e2fe216207a355ebc1fefe8f5413bf3b7cb` | 사본의 MCP2020 Print, job261546f2-3bbd-4f1a-b550-6d42e5945d5b |
-
-네 파일은1a7ad89e4에 포함했고 실행 바이트와 commit 일치를 확인했다. 원 최소 입력
-`mydocs/pr/assets/issue_7593_dyad_arrow/repro-dyad-min.hwpx` (SHAc8605b6d…) 및 기존 PDF도 보존했다.
-원본의 macro는 실행하지 않았다. 원본 MCP 거부 `HANCOM_MACRO_MANUAL_PROCESSING_REQUIRED`와
-스크립트 사본의 변경 entry/동일 출력 증거는 output에 보존했다.
-
-두 새 기준은 Hancom11.0.0.9136 / pdf_print_method0 / hancom2020_pdf_driver_one_up의
-실제 성공·다운로드를 확인했다. PDF1.4 / Creator Hwp2020 0.0.0.0 / Producer HancomPDF1.3.0.550,
-각 전체1쪽이다. 문서 저장 제품과 canonical selector로 engine2020 짝을 확인했다.
-2024MCP usage의 Print 계약/bridge를 따랐으며 금지된 직접 변환 스크립트나 LibreOffice는 쓰지 않았다.
-기준 연도/Creator 문자열만으로 PDF를 거부하지 않았다.
-
-## 전체 페이지 시각 결과와 명령
-
-검증 source9ee2878be, 실행 head84fda6939. Native와 새 최적화 WASM의 실제 출력으로
-두 문서 모두 **전체1쪽**을 비교했다. 평균으로 미달 쪽을 감추지 않았다.
-
-| 입력·쪽 범위 | Native 최저 | fresh WASM 최저 | 90% 미만 / 누락 / 측정 불가 | gate |
-| --- | --- | --- | --- | --- |
-| 공개 원본 p1 / 전체1쪽 |92.98588%|92.98588%|0 / 0 / 0|passed|
-| 최소 입력 p1 / 전체1쪽 |99.43478%|99.43478%|0 / 0 / 0|passed|
-| 원 최소 입력 ↔ Scripts 제거 사본 |100%/픽셀 동일|별도 비교 미실행|0 / 0 / 0 (Native)|최신 Native pair 직접 확인|
-| 원 최소 입력 ↔ 기존 기여자 PDF |99.43478%|99.43478% (같은 최신 WASM raster 직접 TSV 비교)|0 / 0 / 0|Native 정식 gate passed; WASM TSV-only는 not_evaluated|
-| 기존 PDF2022 ↔ 새 Print PDF2020 |100%/픽셀 동일|출력 backend 비해당|0 / 0 / 0|고정 PDF 두 파일의 전쪽 raster 직접 확인|
-
-최적화 build: 저장소 루트에서
-`CARGO_TARGET_DIR=target/pr-review scripts/wasm-pack-locked.sh --target web --out-dir pkg` exit0.
-pkg/public/실제 Studio download WASM SHA-256은
-`cf850c529720d37cef7953f6ef03d857662110d408e55a2decb9bd5029a43c18`;
-JS는 `70cde06a369fa7fd4fc8bc8f3d6acaee158596ba1a116a2c72159002b0b5654e`다.
-추적된 public/rhwp.js는 새 build 뒤 byte 동일하므로 추가 diff가 없다.
+Native export는 PR head의 `scripts/visual_sweep.py`, fresh WASM export 및 점수·gate는 현재 devel의 canonical script를 사용했다. 실행 도구와 출력 생성 코드를 구분해 `build-receipt.json`에 SHA를 남겼다. 두 경로의 출력 생성 코드는 모두 위 code head다. 글꼴 디렉터리 `/mnt/c/Windows/Fonts`의 실제 HanSantteutDotum/HYHWPEQ 공급을 확인했다.
 
 ```bash
-python3 scripts/visual_sweep.py \
-  --hwp samples/issue7593/repro-equation-issue7593.hwpx \
-  --pdf pdf/issue7593/repro-equation-issue7593-hwpx-2020.pdf \
-  --key issue-original --rhwp-bin target/pr-review/release-test/rhwp \
-  --pages 1 --dpi 96 --embed-fonts=full \
-  --out output/pr-review/pr7600/spaced-native-issue
-# fresh WASM은 --wasm-pkg pkg 및 --out .../spaced-wasm-issue 추가/변경.
-# 최소 입력은 위 표의 사본/대응 PDF, --key min-print, .../spaced-*-min 사용.
-python3 scripts/visual_sweep.py --silhouette-only \
-  --png-pair output/pr-review/pr7600/spaced-native-issue/issue-original/rhwp_png \
-  output/pr-review/pr7600/spaced-native-issue/issue-original/pdf_png \
-  --out output/pr-review/pr7600/spaced-native-issue-scores
+# review worktree에서 Native export
+VISUAL_SWEEP_CHROME=/home/edward/.cache/puppeteer/chrome/linux-152.0.7977.54/chrome-linux64/chrome-wrapper RHWP_FONT_PATH=/mnt/c/Windows/Fonts \
+  /home/edward/mygithub/rhwp/venv/bin/python scripts/visual_sweep.py \
+  --hwp mydocs/pr/assets/issue_7593_dyad_arrow/repro-dyad-min.hwpx \
+  --pdf mydocs/pr/assets/issue_7593_dyad_arrow/repro-dyad-min.hancom.pdf \
+  --key dyad --pages 1 --rhwp-bin target/pr-review/release-test/rhwp \
+  --dpi 96 --embed-fonts=full --font-path /mnt/c/Windows/Fonts \
+  --out output/pr-review/pr7600-20261007/native-review
+# 현재 devel의 canonical script에 review worktree의 절대 입력/출력 경로를 전달
+# fresh WASM은 위 옵션에 --wasm-pkg /tmp/rhwp-pr7600-review-20261007/pkg를 추가
+# 현재 devel 루트에서 Native 전체 TSV; WASM은 native를 wasm으로 바꿔 실행
+venv/bin/python scripts/visual_sweep.py --silhouette-only \
+  --png-pair /tmp/rhwp-pr7600-review-20261007/output/pr-review/pr7600-20261007/native-review/dyad/rhwp_png /tmp/rhwp-pr7600-review-20261007/output/pr-review/pr7600-20261007/native-review/dyad/pdf_png \
+  --out /tmp/rhwp-pr7600-review-20261007/output/pr-review/pr7600-20261007/native-scores
 ```
 
-4개 정식 Sweep run_manifest의 gate와 전쪽 TSV/직접 판독을 함께 확인했다.
-TSV-only의 not_evaluated 자체는 승인 판정으로 쓰지 않았다. 별도 font-path/예외는 없다.
-`output/pr-review/pr7600/spaced-{native,wasm}-{issue,min}-scores/silhouette.tsv`가 원시 결과다.
-**Native TSV 원본3개 ZIP** `output/pr-review/pr7600/pr7600-native-all-pages-tsv.zip`을 준비했다.
-로그·원시 TSV·JSON·ZIP·nextrun은 output에 보존하며 Git에 커밋하지 않는다.
+실행 경로·Chrome wrapper 등 세부 정보는 `native-sweep.log`, `wasm-review/dyad/run_manifest.json`과 `canvas2d-probe.mjs`에 보존했다. 결과는 `native-scores/silhouette.tsv`, `wasm-scores/silhouette.tsv`, 두 `dyad/review/review_001.png`와 `dyad/overlay/overlay_001.png`, `canvas2d-page1.png`/`canvas2d-inspect.png`다. Native/fresh WASM의 `pixel_match`는 99.83678%, `visual_accuracy_proxy_percent`는 8.9658%, 2px 이웃 내용 실루엣은 96.62219%다. 배경 비중과 글꼴 위치에 민감한 보조값을 수용 판정으로 대체하지 않고 직접 판독했다. flagged 후보 0쪽, 누락 0쪽이다.
 
-### 공개 원본 — p1 전체 페이지
+fresh JS SHA-256 `70cde06a369fa7fd4fc8bc8f3d6acaee158596ba1a116a2c72159002b0b5654e`, WASM `9ae3ba8013684fdd4a1200566d35f80f91eb01546b6603442425913336612c0c`. 빌드 wrapper의 tracked public JS 동기화는 로컬 검증 후 원 head로 복원하며 제품 변경으로 commit하지 않는다.
 
-![공개 원본 p1 Native 전체 페이지 비교](../assets/pr_7600_review_20261006/native-issue-compare.png)
+## 시각 판독과 한계
 
-![공개 원본 p1 fresh WASM 전체 페이지 비교](../assets/pr_7600_review_20261006/wasm-issue-compare.png)
+- 작성자 제공 Native·Skia·CanvasKit 전후 비교와 Native review를 직접 열었다. 새 Native와 fresh WASM 출력도 한컴 PDF와 같은 영역에서 직접 읽었다. 글자 `dyadAB` 노출이 사라지고 AB/AC/BD 위에 폭 전체 양쪽 화살표가 보였다.
+- 한컴보다 작은 화살촉, 수식 글리프 모양·세로 위치, BOT 주변 좁은 간격은 남는다. 한컴의 화살촉 픽셀 크기와 완전히 같아졌다는 판정은 하지 않는다.
+- Canvas 2D는 실제 bundled Latin Modern Math와 입력 본문 글꼴을 등록한 fresh WASM 브라우저 진단으로 네 행을 직접 확인했다. 진단 페이지의 local-only 글꼴 참조 오류는 실제 공급 파일로 교체해 해소했고 최종 실행에서 font load 오류를 무시하지 않았다. Canvas 2D의 PDF 일치율을 별도로 측정하지 않았으며, SVG의 96.62219%를 이 경로 수치로 쓰지 않는다. 전체 Studio UI E2E는 이번에 수행하지 않았다.
+- 작성자의 CanvasKit 직접 호출 비교는 ① 행이 before/after 모두 누락되어 있다. 이는 이번 PR에서 검출된 새 회귀와 구분한다. reviewer는 그 비교만으로 마지막 행의 Studio 표시를 통과로 보고하지 않는다.
+- 원 PR의 축소 전 입력 79.8% / 첫 축소 64.3%는 작성자 과거 기록이다. 현재 수용 근거는 commit된 4가지 dyad 사례의 1쪽 최소 재현과 독립 PDF다. 원본 전체 문항이나 마스터쪽 구분선 개선을 주장하지 않는다.
+- 로그·새 TSV·PNG는 `output/pr-review/pr7600-20261007/`에 보존했다. 기존 PR 본문에는 원 head SHA로 고정한 Native/fresh WASM review·overlay 4장이 실제 Markdown image로 포함되어 있다.
 
-| 경로 | review | standalone overlay |
+## 조판 원칙과 주장 대조
+
+| 검토 항목 | 근거 | 판정 |
 | --- | --- | --- |
-| Native | ![공개 원본 p1 Native review](../assets/pr_7600_review_20261006/native-issue-review.png) | ![공개 원본 p1 Native overlay](../assets/pr_7600_review_20261006/native-issue-overlay.png) |
-| fresh WASM | ![공개 원본 p1 fresh WASM review](../assets/pr_7600_review_20261006/wasm-issue-review.png) | ![공개 원본 p1 fresh WASM overlay](../assets/pr_7600_review_20261006/wasm-issue-overlay.png) |
+| 근거·일반성 | 독립 한컴 PDF의 직선 양쪽 화살표, 기존 glued keyword 규칙 재사용, 샘플별 예외 없음 | 충족 |
+| 측정·배치·backend 일관성 | 기존 공통 LayoutBox의 body 폭·원점; 4 출력 분기에서 Dyad만 왼쪽 화살촉 추가 | 충족 |
+| 분할·이어받기 | 컷·페이지 예산·continuation 변경 없음 | 비해당 |
+| 줄 소속·저장 LineSeg | 수식 토큰화는 변하지만 저장 줄 수용·문단 줄 나눔·측정 알고리즘 변경 없음 | 비해당 |
+| 독립 증거·반례 | 붙여/띄어/단독·중괄호·복합식, Vec 불변 대조, 작성자 red 기록과 reviewer green 분리 | 충족 |
+| 기준값 변경 | baseline·golden·허용치 수정 없음 | 비해당 |
+| 검증 범위의 시각 조건 | 공개 최소 재현의 1쪽 전체, Native/fresh WASM 각각 96.62219%, 새 PNG 직접 판독·누락 없음 | 충족 |
+| Studio CanvasKit 전체 사례 실제 실행 | 코드 분기 및 작성자 전후 이미지 확인; 마지막 행 누락은 before/after 공통. reviewer의 전체 Studio UI E2E 미실행 | 미검증 |
+| 입력 commit | 입력·독립 PDF·기존 대표 이미지 4장 모두 code head blob과 바이트 동일 | 충족 |
 
-바탕쪽 구분선·그림·보기 외곽, 보기 ㄴ의 수식 높이/소유, AB의 자연 장평, 관계 기호 양쪽 간격,
-다섯 선택지와 뒤 정답의 위치·순서·누락을 직접 확인했다.
+## 처리 계획
 
-### 최소 입력 — p1 전체 페이지
+1. fresh WASM·TS·실제 Canvas 2D와 최종 PNG 판독을 완료하여 승인 판정을 기록했다.
+2. review 문서를 local commit으로 보존한 뒤 작업지시자 승인에 따라 최신 head/CI/base를 재확인하여 승인·merge를 수행했다. archive와 오늘할일은 maintainer 직접 반영으로 보존한다.
+3. post_merge 절차에 따라 아래 승인된 계획의 감사·첫 기여 환영 댓글을 운영 기록 반영 뒤 게시하고 이번 검토 작업공간만 정리한다. contributor fork는 보존한다.
 
-![최소 입력 p1 Native 전체 페이지 비교](../assets/pr_7600_review_20261006/native-min-compare.png)
+## Merge 후 contributor PR comment 계획
 
-![최소 입력 p1 fresh WASM 전체 페이지 비교](../assets/pr_7600_review_20261006/wasm-min-compare.png)
+작업지시자가 승인한 후속 게시 계획이다. 실제 merge SHA 확정 뒤 `--body-file`로 한국어 존댓말 문안을 게시하고 API로 한글과 실제 LF, asset URL을 재확인한다. [Visual Sweep 정본](https://github.com/edwardkim/rhwp/blob/devel/mydocs/manual/verification/visual_sweep_guide.md#github-merge-comment)을 연결하고 `mydocs/pr/assets/issue_7593_dyad_arrow/{native-review,native-overlay,wasm-review,wasm-overlay}.png`를 merge SHA 고정 raw URL의 Markdown 이미지로 표시한다. 검토자가 새로 측정한 범위와 작성자 첨부 이미지의 기존 측정값을 구분한다. 첫 기여 감사, 붙여쓰기/양쪽 화살표 수용, 남은 글꼴·BOT 간격과 직접 CanvasKit 진단 한계를 함께 명시한다.
 
-| 경로 | review | standalone overlay |
-| --- | --- | --- |
-| Native | ![최소 입력 p1 Native review](../assets/pr_7600_review_20261006/native-min-review.png) | ![최소 입력 p1 Native overlay](../assets/pr_7600_review_20261006/native-min-overlay.png) |
-| fresh WASM | ![최소 입력 p1 fresh WASM review](../assets/pr_7600_review_20261006/wasm-min-review.png) | ![최소 입력 p1 fresh WASM overlay](../assets/pr_7600_review_20261006/wasm-min-overlay.png) |
+게시할 asset URL 형식은 `https://raw.githubusercontent.com/edwardkim/rhwp/<merge-commit-sha>/mydocs/pr/assets/issue_7593_dyad_arrow/native-review.png`이며 overlay 및 WASM도 같은 형식이다. 대상 1쪽, flagged 0, 위 보조값과 실루엣 96.62219% 및 직접 판독의 남은 차이를 함께 게시한다. 작성자 이미지의 기존 96.21277%와 reviewer의 새 측정값은 구분한다.
 
-4행·4수식·5개의 양쪽 화살표, 관계 기호 앞뒤 내용/간격 보존을 확인했다.
-사용자가 지정한 원 PDF도 원 최소 HWPX/최신 Native로 직접 재비교해99.43478%/gate passed를
-확인했다. fresh WASM raster를 이 PDF의 같은 PNG와 직접 비교한 TSV도99.43478%다.
-두 독립 기준 PDF 사이100%와 RHWP 대 PDF99.43478%를 구분한다.
+## 병합과 후속 처리
 
-![원 최소 입력 p1 Native와 기존 기여자 PDF 전체 페이지 비교](../assets/pr_7600_review_20261006/native-min-original-pdf-compare.png)
-
-[발문 수식 전후/Print 확대](../assets/pr_7600_review_20261006/equation-first-line-before-after-print.png),
-[선택지 간격 전후/Print 확대](../assets/pr_7600_review_20261006/choices-before-after-print.png)도 보존했다.
-글꼴별 획·작은 원점 차이는 남는다. 자동 보조값을 완전 glyph 일치나 #7594 해결로 확대하지 않는다.
-
-## 로컬 검증과 실제 표시
-
-- 관계 기반 기존3검사: 수정 전a0db9c052의3FAIL → 보정 후3PASS. 선0개/기준선 순서/탭 격자 비율로 검출했다.
-- 신규 paint/관계3검사:7a61272f1의3FAIL(기존3PASS), 보정 후 재실행6PASS(exit0). 장식 폭39.99996 대20.02, BOT 간격, 직접Unicode의 MathSymbol0개로 검출했다. 최종 전체 결과는 진행 중이다.
-- 원 기여 glued dyad/화살표 focused3PASS. 정식 suite를 prepare한 뒤 실제 test count로 확인했고 빌드 오류·0tests를 red/pass로 세지 않았다.
-- Studio TypeScript PASS, npm1,815PASS/0FAIL/2SKIP, 실제 CanvasKit font coverage PASS, E2E MANIFEST150파일/150행 PASS.
-- 최신 브라우저 E2E는 Canvas2D/CanvasKit × 두 문서4PASS. 실제 수식 내용, backend, fresh WASM download 해시 및 CanvasKit hidden overlay 없음/지원 오류0을 확인했다. `logs/browser-final.log` 및 browser-final/results.json.
-- [실제 Studio 공개 원본](../assets/pr_7600_review_20261006/studio-canvaskit-issue.png), [실제 Studio 최소 입력](../assets/pr_7600_review_20261006/studio-canvaskit-min.png)의 CanvasKit 화면을 직접 확인했다. render tree의 Equation 개수만으로 표시를 판정하지 않는다.
-- Studio/Chrome/Firefox/VS Code 최종 배포 build 및 font/extension 계약9PASS. dist WASM은 새cf850c52와 동일하다.
-- Noto Sans Math2.001 전체 TTF→WOFF2(226,456bytes), 동일2,655glyph/2,472codepoint이며 subset/문자 치환 없음. 원 font의 Copyright2018 Google LLC 및 SIL OFL1.1을 `NotoSansMath-OFL.txt`, `FONTS.md`, `THIRD_PARTY_LICENSES.md`에 보존했다. 모든 배포본에서 라이선스 전문 byte 일치를 확인했다.
-- oracle 쪽수 원장에 독립 Print로 확인한 두1/1행만 등록했다. 다른 golden/baseline/래칫 허용치는 변경하지 않았다.
-- 필수 fmt·세 Clippy·workspace build·base 정책 PASS. 첫 전체 nextest는10,514PASS/3FAIL/50SKIP. #1139/#1308 보정 후 전체 재검증과 Native Skia3종은 남아 있다.
-- 원 head의 [Full CI](https://github.com/edwardkim/rhwp/actions/runs/37317981931), [Render Diff](https://github.com/edwardkim/rhwp/actions/runs/37317981119)는 원 head의 증거다. 새 integration 후보의 원격 CI는 아직 없다.
-
-## 통합 및 merge 후속 처리 계획
-
-로컬 준비가 완료되면 한국어 PR 본문 초안·실제 head SHA 고정 raw Markdown 이미지·Native TSV ZIP을
-준비한다. 사용자 remote push/PR 생성 승인 후 upstream의 임시 head에서 devel 대상 통합 PR을
-등록한다. 최신 code candidate CI가 녹색인 뒤 남은 review·오늘할일을 같은 PR의 trailing 기록으로
-확정하고 최종 head CI/mergeability를 다시 확인한다. 원 contributor branch에는 직접 push하지 않는다.
-
-통합 후 정확한 merge SHA·검증 CI URL·같은 asset의 merge SHA raw URL·남은 차이와 첫 기여 안내를
-한국어 존댓말 contributor comment로 게시하고 API 재조회한다. 원 PR은 통합 PR을 연결해 대체 close하고
-#7594는 열어 둔다. upstream/devel 포함·동기화·소유한 임시 branch만 정리하며 shared target/다른 작업은 보존한다.
+- 사용자 승인 뒤 exact head `dbb87b98047ffb73ff038374a59501495a47bdf2`에 [GitHub APPROVED review](https://github.com/edwardkim/rhwp/pull/7600#pullrequestreview-5441419157)를 게시하고 본문의 한국어·LF를 API 재조회로 확인했다.
+- 2026-10-07 20:11 KST에 [merge commit `22ddc2ab81c405b0c3e9b1f25a397a87de109948`](https://github.com/edwardkim/rhwp/commit/22ddc2ab81c405b0c3e9b1f25a397a87de109948)로 devel에 병합했다. `--match-head-commit`으로 검증 head를 고정했다.
+- 후속 문서 경로: maintainer 직접 반영. 이 archive review와 `mydocs/orders/20261007.md`만 운영 기록 commit으로 반영한다. 원 fork의 제품 코드·테스트·baseline을 보정하지 않았다.
+- 관련 [#7593](https://github.com/edwardkim/rhwp/issues/7593)은 [Close Issues on devel Push](https://github.com/edwardkim/rhwp/actions/runs/37612400718) success에 따라 20:11:35 KST에 CLOSED가 됐다. 수동 close는 불필요하다.
+- [Refresh nextest target duration data](https://github.com/edwardkim/rhwp/actions/runs/37612400702): success. `ready=true`, `successful-pr-worker-measurements`, source run `37317981931` attempt 2의 B/C/D 실측으로 46 target을 갱신하고 metrics branch의 `f423af8e` commit push까지 확인했다. 병합 뒤 CI·CodeQL·Adapter·Proptest·Oracle 재실행은 시작하지 않았다.
+- 기준 작업공간의 devel을 upstream/devel로 fast-forward했고 merge commit 포함을 확인했다. 영구 입력/PDF 및 대표 이미지 4장도 이 merge SHA에 포함된다.
+- issue와 PR에는 같은 증적의 maintainer comment가 아직 없어 후속 댓글을 게시한다. 게시 후 API로 한글·LF·merge SHA 고정 이미지 URL을 재확인한다.
+- 이번 작업에서 만든 clean review worktree/branch와 임시 PR fetch ref는 후속 게이트 확인 뒤 정리한다. contributor `Phantomn/rhwp:fix/issue-7593`과 다른 작업공간·공유 target/pr-review·Docker cache는 보존한다. review-only local commit `014d4ef61`의 검토 내용은 이 archive로 이전했다.
