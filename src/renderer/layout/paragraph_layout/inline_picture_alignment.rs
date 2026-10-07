@@ -1,6 +1,6 @@
 //! 한 줄 소유 그림의 각 상자를 공통 글줄 기준선에 맞춘다.
 
-use super::{tac_object_box_height_px, tac_picture_outer_margins_px, TAC_OBJECT_ASCENT_RATIO};
+use super::{tac_object_box_height_px, tac_picture_outer_margins_px};
 use crate::model::{control::Control, image::Picture, paragraph::Paragraph};
 use crate::renderer::style_resolver::ResolvedStyleSet;
 use crate::renderer::{hwpunit_to_px, layout::LayoutEngine};
@@ -24,12 +24,7 @@ impl LayoutEngine {
         let alignment = para
             .and_then(|p| styles.para_styles.get(p.para_shape_id as usize))
             .map_or(0, |style| style.vertical_alignment);
-        let ascent_ratio = match alignment {
-            1 => 0.0,
-            2 => 0.5,
-            3 => 1.0,
-            _ => TAC_OBJECT_ASCENT_RATIO,
-        };
+        let ascent_ratio = crate::renderer::composer::inline_picture_ascent_ratio(alignment);
         let baseline = if baseline > 0.0 {
             baseline
         } else {

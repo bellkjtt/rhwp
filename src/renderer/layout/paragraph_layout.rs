@@ -2966,7 +2966,42 @@ impl LayoutEngine {
                 ),
             );
             for item in &plan.boxes[row.boxes.clone()] {
-                let InlineFlowContent::Text { range, style, lang } = &item.content else {
+                if let InlineFlowContent::Picture {
+                    control,
+                    margin_left,
+                    margin_top,
+                    ..
+                } = &item.content
+                {
+                    let Control::Picture(picture) = &para.controls[*control] else {
+                        continue;
+                    };
+                    let (width, height) = self.resolve_inline_picture_size(picture, col_area);
+                    let data_id = picture.image_attr.bin_data_id;
+                    line.children.push(make_picture_image_node(
+                        tree,
+                        picture,
+                        section_index,
+                        para_index,
+                        *control,
+                        None,
+                        picture.render_crop_rect(),
+                        picture.crop_reference_size(),
+                        data_id,
+                        find_bin_data_bytes(bin_data_content, data_id),
+                        BoundingBox::new(
+                            col_area.x + item.x + margin_left,
+                            col_area.y + item.y + margin_top,
+                            width,
+                            height,
+                        ),
+                    ));
+                    continue;
+                }
+                let InlineFlowContent::Text {
+                    range, style, lang, ..
+                } = &item.content
+                else {
                     continue;
                 };
                 let text: String = chars[range.clone()].iter().collect();
@@ -3058,6 +3093,7 @@ impl LayoutEngine {
             let y = col_area.y + item.y;
             match &item.content {
                 InlineFlowContent::Text { .. } => {}
+                InlineFlowContent::Picture { .. } => {}
                 InlineFlowContent::FloatingTable { control } => {
                     let Control::Table(table) = &para.controls[*control] else {
                         continue;

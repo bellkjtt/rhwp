@@ -5,6 +5,9 @@
 
 use std::ops::Range;
 
+mod picture_rows;
+pub(crate) use picture_rows::supports_picture_rows;
+
 use crate::model::{control::Control, paragraph::Paragraph, style::Alignment};
 
 use super::{
@@ -24,6 +27,8 @@ pub enum InlineFlowContent {
         range: Range<usize>,
         style: u32,
         lang: usize,
+        /// 줄 안 정렬점과 실제 글꼴 기준선을 구분한다.
+        alignment_baseline: Option<f64>,
     },
     Table {
         control: usize,
@@ -32,6 +37,13 @@ pub enum InlineFlowContent {
     },
     /// Width-neutral object anchored to the physical text row.
     FloatingTable { control: usize },
+    /// 글자처럼 그림의 줄 상자와 실제 잉크 사이 바깥 여백.
+    Picture {
+        control: usize,
+        margin_left: f64,
+        margin_top: f64,
+        affect_line_spacing: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -42,6 +54,18 @@ pub struct InlineFlowBox {
     pub width: f64,
     pub height: f64,
     pub baseline: f64,
+}
+
+impl InlineFlowBox {
+    fn alignment_baseline(&self) -> f64 {
+        match self.content {
+            InlineFlowContent::Text {
+                alignment_baseline: Some(value),
+                ..
+            } => value,
+            _ => self.baseline,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -120,10 +144,11 @@ impl RowMetrics {
     }
 
     fn with(self, item: &InlineFlowBox) -> Self {
+        let baseline = item.alignment_baseline();
         Self {
             width: self.width + item.width,
-            baseline: self.baseline.max(item.baseline),
-            descent: self.descent.max(item.height - item.baseline),
+            baseline: self.baseline.max(baseline),
+            descent: self.descent.max(item.height - baseline),
         }
     }
 }
@@ -131,6 +156,9 @@ impl RowMetrics {
 /// 현재 연결된 계약은 본문의 텍스트 / TAC 표 / 그림 / 구조 marker다.
 /// 다른 소유자의 수식·각주·필드를 누락시키지 않고 연결 전까지 기존 경로로 반환한다.
 pub(crate) fn supports(para: &Paragraph, width_hu: i32) -> bool {
+    if supports_picture_rows(para) {
+        return true;
+    }
     para.controls.iter().any(|c| {
         matches!(c, Control::Table(t)
         if super::height_measurer::is_tac_table_inline_in_para(t, width_hu, para))
@@ -155,11 +183,10 @@ pub(crate) fn plan(
     preceding: &[FrameExclusion],
 ) -> Option<InlineFlowPlan> {
     let style = styles.para_styles.get(para.para_shape_id as usize)?;
+    let picture_rows = supports_picture_rows(para);
     let top = frame.paragraph_y + style.spacing_before;
-    // A control-only carrier has no glyph offsets. Its logical object cursor
-    // still advances (0, 1, ...), but those slots are not positions in `text`.
-    // Keep control order in the atom stream; the shared row composer decides
-    // whether their boxes fit together or advance to the next physical row.
+    // 가시 글자가 없는 문단의 개체 순번은 문자 위치가 아니다. 각 개체의
+    // 순서를 유지해 토큰으로 넣고, 공통 줄 구성 결과가 같은 줄 수용 여부와 줄 소유를 결정한다.
     let positions = if para.text.is_empty() {
         vec![0; para.controls.len()]
     } else {
@@ -214,7 +241,11 @@ pub(crate) fn plan(
                     }));
                 }
                 Control::Picture(picture) => {
-                    if let Some(exclusion) = frame.picture_exclusion(picture) {
+                    if picture.common.treat_as_char {
+                        atoms.push(Atom::Box(picture_rows::picture_box(
+                            picture, ci, style, frame.dpi,
+                        )));
+                    } else if let Some(exclusion) = frame.picture_exclusion(picture) {
                         atoms.push(Atom::Float(exclusion));
                     }
                 }
@@ -234,24 +265,38 @@ pub(crate) fn plan(
         let cs = super::composer::find_active_char_shape(&para.char_shapes, stream_position);
         let lang = detect_lang_category(ch);
         let text_style = resolved_to_text_style(styles, cs, lang);
-        let width = if ch == ' ' {
-            estimate_text_width_unrounded(" ", &text_style)
+        let width = if ch == ' ' || picture_rows {
+            estimate_text_width_unrounded(&ch.to_string(), &text_style)
         } else {
             estimate_text_width(&ch.to_string(), &text_style)
         };
+        // 표시 relSz는 글리프 크기다. 새 그림 글줄도 일반 문단과 같이
+        // 선언 글자 크기를 줄 상자·간격에 사용하고 표시 크기는 style에 보존한다.
+        let line_font_size = if picture_rows {
+            styles
+                .char_styles
+                .get(cs as usize)
+                .map_or(text_style.font_size, |s| s.font_size)
+        } else {
+            text_style.font_size
+        };
         let metrics = super::composer::frame_metrics_for_line(
-            text_style.font_size,
+            line_font_size,
             12.0,
             style.line_spacing_type,
             style.line_spacing,
             frame.dpi,
         );
         let height = hwpunit_to_px(metrics.line_height, frame.dpi);
+        let alignment_baseline = (picture_rows && style.vertical_alignment != 0).then(|| {
+            height * super::composer::inline_picture_ascent_ratio(style.vertical_alignment)
+        });
         let mut item = InlineFlowBox {
             content: InlineFlowContent::Text {
                 range: position..position + 1,
                 style: cs,
                 lang,
+                alignment_baseline,
             },
             x: 0.0,
             y: 0.0,
@@ -264,6 +309,7 @@ pub(crate) fn plan(
                 range: position..position,
                 style: cs,
                 lang,
+                alignment_baseline,
             };
             item.width = 0.0;
             atoms.push(Atom::Break(item));
@@ -293,7 +339,10 @@ pub(crate) fn plan(
                 }
             }
             Atom::Box(InlineFlowBox {
-                content: InlineFlowContent::Text { .. } | InlineFlowContent::Table { .. },
+                content:
+                    InlineFlowContent::Text { .. }
+                    | InlineFlowContent::Table { .. }
+                    | InlineFlowContent::Picture { .. },
                 ..
             }) => followed_by_flow = true,
             // A floating anchor owns its authored physical row. Spaces before
@@ -419,7 +468,7 @@ pub(crate) fn plan(
                         InlineFlowContent::Text { range, .. } => {
                             chars[range.clone()].iter().any(|ch| !ch.is_whitespace())
                         }
-                        InlineFlowContent::Table { .. } => true,
+                        InlineFlowContent::Table { .. } | InlineFlowContent::Picture { .. } => true,
                         InlineFlowContent::FloatingTable { .. } => false,
                     })
                 {
@@ -544,7 +593,16 @@ fn finish_row(
         .any(|b| matches!(b.content, InlineFlowContent::Table { .. }));
     let row_font_size = row
         .iter()
-        .filter(|item| matches!(item.content, InlineFlowContent::Text { .. }))
+        .filter(|item| {
+            matches!(
+                item.content,
+                InlineFlowContent::Text { .. }
+                    | InlineFlowContent::Picture {
+                        affect_line_spacing: true,
+                        ..
+                    }
+            )
+        })
         .map(|item| item.height)
         .reduce(f64::max)
         .unwrap_or(plan.fallback_font_size);
@@ -555,7 +613,7 @@ fn finish_row(
         item.y = if matches!(item.content, InlineFlowContent::FloatingTable { .. }) {
             y
         } else {
-            y + baseline - item.baseline
+            y + baseline - item.alignment_baseline()
         };
         x += item.width;
         plan.boxes.push(item);

@@ -26,7 +26,7 @@ pub(crate) use nested_table_frames::{
 mod resolved_fields;
 mod stored_word_tail;
 mod inline_picture_metrics;
-pub(crate) use inline_picture_metrics::inline_picture_size_hu;
+pub(crate) use inline_picture_metrics::{inline_picture_ascent_ratio, inline_picture_size_hu};
 
 /// 글자겹침(CharOverlap) 렌더링 정보
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]

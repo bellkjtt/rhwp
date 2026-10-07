@@ -1754,7 +1754,9 @@ pub(crate) fn tac_object_flow_height_px(
 pub(crate) fn tac_object_flow_height_hu(ctrl: &crate::model::control::Control) -> Option<i32> {
     use crate::model::control::Control;
     match ctrl {
-        Control::Picture(pic) if pic.common.treat_as_char => Some(pic.common.height as i32),
+        Control::Picture(pic) if pic.common.treat_as_char => {
+            Some(composer::inline_picture_size_hu(pic).1)
+        }
         Control::Shape(shape) if shape.common().treat_as_char => Some(shape.flow_height_hu()),
         _ => None,
     }
