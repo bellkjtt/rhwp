@@ -1,7 +1,7 @@
 //! 구역 vpos 책임. 기존 조건과 호출 순서를 보존한다.
 use crate::renderer::typeset::{
-    stored_ladder_encodes_spacing_before, HeightCursor, Paragraph, ResolvedStyleSet, TypesetEngine,
-    TypesetState,
+    stored_ladder_encodes_spacing_before, ComposedParagraph, HeightCursor, Paragraph,
+    ResolvedStyleSet, TypesetEngine, TypesetState,
 };
 impl TypesetEngine {
     /// 렌더러 `build_single_column` 의 inter-item VPOS_CORR(Stage C `HeightCursor::vpos_adjust`)
@@ -15,6 +15,7 @@ impl TypesetEngine {
         st: &mut TypesetState,
         para_idx: usize,
         paragraphs: &[Paragraph],
+        composed: &[ComposedParagraph],
         styles: &ResolvedStyleSet,
         spacing_before_px: f64,
     ) {
@@ -96,6 +97,15 @@ impl TypesetEngine {
             allow_start_height_backtrack: false,
             suppress_large_forward_jump: false,
             suppress_hwpx_stale_forward: st.profile.hwpx_stored_layout(),
+            stored_equation_reflow: st.profile.hwp5_container(),
+            prev_reissued_equation_rows: st
+                .vpos_prev_layout_para
+                .and_then(|index| paragraphs.get(index).zip(composed.get(index)))
+                .is_some_and(|(source, actual)| {
+                    crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                        source, actual,
+                    )
+                }),
             uniform_filler_ladder: self.uniform_filler_ladder.get(),
             endnote_between_notes_hu: 0,
             prev_item_content_bottom_y: None,

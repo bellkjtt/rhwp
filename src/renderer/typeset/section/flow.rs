@@ -186,6 +186,7 @@ impl TypesetEngine {
                 st,
                 para_idx,
                 paragraphs,
+                composed,
                 styles,
                 formatted.spacing_before,
             );
