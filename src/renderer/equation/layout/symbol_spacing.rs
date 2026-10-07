@@ -15,24 +15,24 @@ impl EqLayout {
             .filter(|(_, node)| !matches!(node, EqNode::Space(_) | EqNode::Empty))
             .map(|(index, _)| index)
             .collect();
+        let mut next_position = 0;
         nodes
             .iter()
-            .enumerate()
-            .map(|(index, node)| {
+            .map(|node| {
                 let mut result = self.layout_node(node, fs);
+                if matches!(node, EqNode::Space(_) | EqNode::Empty) {
+                    return result;
+                }
+                let position = next_position;
+                next_position += 1;
                 if !self.hancom_math_face || !operator(node) {
                     return result;
                 }
-                let position = significant
-                    .iter()
-                    .position(|value| *value == index)
-                    .expect("연산자는 유효한 글줄 요소다");
-                let left =
-                    if position == 0 || operator(nodes.get(significant[position - 1]).unwrap()) {
-                        0.0
-                    } else {
-                        fs * 0.15
-                    };
+                let left = if position == 0 || operator(&nodes[significant[position - 1]]) {
+                    0.0
+                } else {
+                    fs * 0.15
+                };
                 let right = if position + 1 == significant.len()
                     || operator(&nodes[significant[position + 1]])
                 {
