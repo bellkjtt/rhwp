@@ -58,6 +58,7 @@ impl TypesetEngine {
         vars: EndnoteEmitVars,
         flow: EndnoteFlowState,
     ) -> EndnoteFlowState {
+        let original_endnote = en_ctrl;
         let projected_endnote = super::row_projection::project_equation_rows(en_ctrl, styles);
         let en_ctrl = projected_endnote.as_ref();
         let EndnoteEmitVars {
@@ -1929,6 +1930,31 @@ impl TypesetEngine {
             } else {
                 render_fit_split.or(split_candidate)
             };
+            // 실제 수식 줄 메트릭을 갱신하면 저장 컷 앞에 들어가는 줄도 달라진다.
+            // 이전 컷을 고정하지 않고 방출할 부분 문단의 실제 점유를 대조한다.
+            let split_candidate = split_candidate.map(|split| {
+                if internal_vpos_rewind
+                    && !st.profile.session_edited()
+                    && crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                        &original_endnote.paragraphs[ep_idx],
+                        &composed,
+                    )
+                {
+                    self.reflowed_endnote_prefix_split(
+                        st,
+                        paragraphs,
+                        styles,
+                        en_para,
+                        en_para_idx,
+                        split,
+                        available,
+                        en_col_w,
+                    )
+                    .unwrap_or(split)
+                } else {
+                    split
+                }
+            });
             // 저장 되감김을 같은 단에 수용한 뒤에도 후속 줄의 실제 점유를
             // 확인한다. 작아진 saved-delta 누계로 쪽 아래 넘침을 허용하지 않는다.
             if ep_idx > 0

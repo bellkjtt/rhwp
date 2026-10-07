@@ -501,6 +501,32 @@ impl TypesetEngine {
         sequential_compact_rewind: bool,
         future: Option<(&[Paragraph], i32, bool)>,
     ) -> Option<f64> {
+        self.simulate_endnote_column_with_item(
+            st,
+            paragraphs,
+            styles,
+            available,
+            en_col_w,
+            extra_para_full.map(|para_index| PageItem::FullParagraph { para_index }),
+            sequential_compact_rewind,
+            future,
+        )
+    }
+
+    /// 분할 후보도 실제 방출할 PartialParagraph로 측정한다.
+    /// 이미 배치한 그림 프레임은 현재 단의 paint 문맥 그대로 소비한다.
+    #[allow(clippy::too_many_arguments)]
+    pub(in crate::renderer::typeset) fn simulate_endnote_column_with_item(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        available: f64,
+        en_col_w: f64,
+        extra_item: Option<PageItem>,
+        sequential_compact_rewind: bool,
+        future: Option<(&[Paragraph], i32, bool)>,
+    ) -> Option<f64> {
         if st.current_items.is_empty() {
             return None;
         }
@@ -512,7 +538,7 @@ impl TypesetEngine {
             .current_items
             .iter()
             .filter_map(page_item_para_index)
-            .chain(extra_para_full)
+            .chain(extra_item.as_ref().and_then(page_item_para_index))
         {
             if local_indices.iter().any(|(global, _)| *global == pi) {
                 continue;
@@ -536,7 +562,6 @@ impl TypesetEngine {
         // 저장 span/75% 되감김으로 순차 렌더(+69.7px)를 과소 계상해 알짜 풀이가
         // 용지 밖에 남았다. acc·A2 스냅은 그대로 휴리스틱.
         if ssot_level >= EnSsotLevel::A3 || sequential_compact_rewind {
-            let extra_item = extra_para_full.map(|pi| PageItem::FullParagraph { para_index: pi });
             return self
                 .simulate_endnote_column_extent(
                     st,
@@ -546,7 +571,13 @@ impl TypesetEngine {
                     en_col_w,
                     extra_item.as_ref(),
                 )
-                .map(|(bottom, _)| bottom);
+                .and_then(|(bottom, occupied)| {
+                    if future.is_some() || matches!(extra_item, Some(PageItem::PartialParagraph { .. })) {
+                        occupied
+                    } else {
+                        Some(bottom)
+                    }
+                });
         }
         let page_base = st
             .current_items
@@ -574,7 +605,6 @@ impl TypesetEngine {
         hc.stored_equation_reflow = !st.profile.session_edited()
             && (st.profile.hwp5_container() || st.profile.hwpx_stored_layout());
         let mut y = st.current_start_height;
-        let extra_item = extra_para_full.map(|pi| PageItem::FullParagraph { para_index: pi });
         // [#5886] 한 번 compact 되감김이 나오면 렌더처럼 나머지도 순차 적층한다.
         let mut stack_sequential = false;
         for item in st.current_items.iter().chain(extra_item.as_ref()) {

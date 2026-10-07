@@ -1,10 +1,51 @@
 //! 수용한 저장 되감김 뒤의 단일 줄은 같은 실제 점유 결과로 fit한다.
 
 use crate::renderer::typeset::{
-    ColumnBreakType, FormattedParagraph, Paragraph, ResolvedStyleSet, TypesetEngine, TypesetState,
+    ColumnBreakType, FormattedParagraph, PageItem, Paragraph, ResolvedStyleSet, TypesetEngine,
+    TypesetState,
 };
 
 impl TypesetEngine {
+    /// 메트릭이 바뀐 저장 줄의 분할은 실제 앞부분의 점유로 확인한다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn reflowed_endnote_prefix_split(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        para_index: usize,
+        saved_split: usize,
+        available: f64,
+        column_width: f64,
+    ) -> Option<usize> {
+        if paragraph.column_type != ColumnBreakType::None
+            || paragraph.controls.iter().any(|control| {
+                matches!(
+                    control,
+                    crate::model::control::Control::Table(_)
+                        | crate::model::control::Control::Picture(_)
+                        | crate::model::control::Control::Shape(_)
+                )
+            })
+        {
+            return None;
+        }
+        (saved_split + 1..paragraph.line_segs.len())
+            .rev()
+            .find(|&end_line| {
+                let occupied = self.simulate_endnote_column_with_item(
+                    st, paragraphs, styles, available, column_width,
+                    Some(PageItem::PartialParagraph { para_index, start_line: 0, end_line }),
+                    true, None,
+                );
+                if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
+                    eprintln!("EN_PREFIX_OCCUPIED pi={para_index} end={end_line} bottom={occupied:?} available={available:.3}");
+                }
+                occupied.is_some_and(|bottom| bottom <= available)
+            })
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(super) fn reflowed_endnote_whole_paragraph_fits(
         &self,
