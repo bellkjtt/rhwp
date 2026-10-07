@@ -762,29 +762,6 @@ impl TypesetEngine {
                 })
                 .chain(tac_picture_only_height)
                 .reduce(f64::max);
-            let tac_picture_tail_group_height =
-                if let (Some(first), Some(pic_h)) = (this_first_offset, tac_picture_tail_height) {
-                    let tail_bottom = en_ctrl
-                        .paragraphs
-                        .iter()
-                        .skip(ep_idx + 1)
-                        .flat_map(|p| p.line_segs.iter())
-                        .map(|s| {
-                            s.vertical_pos
-                                .saturating_add(s.line_height)
-                                .saturating_add(s.line_spacing)
-                                + endnote_start
-                        })
-                        .max();
-                    Some(
-                        tail_bottom
-                            .map(|bottom| hwpunit_to_px((bottom - first).max(0), dpi))
-                            .unwrap_or(0.0)
-                            .max(pic_h),
-                    )
-                } else {
-                    None
-                };
             let cap_large_separator_stale_forward_vpos = large_separator_block
                 && compact_between_notes_gap
                 && st.current_height < available * 0.70;
@@ -1666,11 +1643,17 @@ impl TypesetEngine {
                 && local_vpos_rewind
                 && para_is_treat_as_char_picture_only(en_para)
                 && st.current_column + 1 >= st.col_count
-                && st.current_height
-                    + tac_picture_tail_group_height
-                        .or(tac_picture_only_height)
-                        .unwrap_or(en_fit)
-                    > available - ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX
+                && self.reflowed_endnote_single_line_overflows(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                )
                 && st
                     .current_items
                     .iter()
@@ -1685,8 +1668,8 @@ impl TypesetEngine {
                     })
                     .unwrap_or(false);
             if tac_picture_rewinds_before_column_base {
-                // 저장 vpos가 현재 단 시작보다 앞선 TAC 그림은 한컴에서
-                // 하단 겹침으로 남기지 않고 다음 단/쪽에서 자체 높이를 소비한다.
+                // 저장 원점이 앞서도 실제 그림 점유가 들어가면 현재 단에 둔다.
+                // 뒤 풀이 전체를 그림과 묶어 공간을 예약하지 않는다.
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
                 prev_en_content_bottom_vpos = None;
