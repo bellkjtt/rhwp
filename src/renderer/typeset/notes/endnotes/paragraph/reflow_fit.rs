@@ -1,8 +1,8 @@
 //! 수용한 저장 되감김 뒤의 단일 줄은 같은 실제 점유 결과로 fit한다.
 
 use crate::renderer::typeset::{
-    ColumnBreakType, FormattedParagraph, MeasuredTable, PageItem, Paragraph, ResolvedStyleSet,
-    TypesetEngine, TypesetState,
+    para_is_treat_as_char_picture_only, ColumnBreakType, FormattedParagraph, MeasuredTable,
+    PageItem, Paragraph, ResolvedStyleSet, TypesetEngine, TypesetState,
 };
 
 impl TypesetEngine {
@@ -46,7 +46,7 @@ impl TypesetEngine {
                 let occupied = self.simulate_endnote_column_with_item(
                     st, paragraphs, styles, available, column_width,
                     Some(PageItem::PartialParagraph { para_index, start_line: 0, end_line }),
-                    true, None, measured_tables,
+                    true, None, measured_tables, true,
                 );
                 if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
                     eprintln!("EN_PREFIX_OCCUPIED pi={para_index} end={end_line} bottom={occupied:?} available={available:.3}");
@@ -137,6 +137,7 @@ impl TypesetEngine {
         para_index: usize,
         available: f64,
         column_width: f64,
+        measured_tables: &[MeasuredTable],
     ) -> bool {
         // 다줄의 분할 컷은 이 단일 줄 계약으로 바꾸지 않는다.
         if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
@@ -152,16 +153,33 @@ impl TypesetEngine {
         {
             return false;
         }
-        let occupied = self.simulate_endnote_column_with_tail(
-            st,
-            paragraphs,
-            styles,
-            available,
-            column_width,
-            Some(para_index),
-            true,
-            Some((&[], 0, false)),
-        );
+        let occupied = if para_is_treat_as_char_picture_only(paragraph) {
+            // 이미 배치된 표 때문에 미래 문단의 지원 여부 검사에서 빠지지 않는다.
+            // 명시 크기의 TAC 그림은 실제 단 문맥과 표 측정으로 점유를 확인한다.
+            self.simulate_endnote_column_with_item(
+                st,
+                paragraphs,
+                styles,
+                available,
+                column_width,
+                Some(PageItem::FullParagraph { para_index }),
+                true,
+                None,
+                measured_tables,
+                true,
+            )
+        } else {
+            self.simulate_endnote_column_with_tail(
+                st,
+                paragraphs,
+                styles,
+                available,
+                column_width,
+                Some(para_index),
+                true,
+                Some((&[], 0, false)),
+            )
+        };
         if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
             eprintln!(
                 "EN_SINGLE_OCCUPIED pi={para_index} bottom={occupied:?} available={available:.3}"

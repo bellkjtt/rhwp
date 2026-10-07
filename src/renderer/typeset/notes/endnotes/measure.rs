@@ -512,6 +512,7 @@ impl TypesetEngine {
             sequential_compact_rewind,
             future,
             &[],
+            false,
         )
     }
 
@@ -529,6 +530,7 @@ impl TypesetEngine {
         sequential_compact_rewind: bool,
         future: Option<(&[Paragraph], i32, bool)>,
         measured_tables: &[MeasuredTable],
+        occupied_only: bool,
     ) -> Option<f64> {
         if st.current_items.is_empty() {
             return None;
@@ -575,7 +577,7 @@ impl TypesetEngine {
                     extra_item.as_ref(),
                 )
                 .and_then(|(bottom, occupied)| {
-                    if future.is_some() || matches!(extra_item, Some(PageItem::PartialParagraph { .. })) {
+                    if occupied_only || future.is_some() || matches!(extra_item, Some(PageItem::PartialParagraph { .. })) {
                         occupied
                     } else {
                         Some(bottom)

@@ -1997,6 +1997,7 @@ impl TypesetEngine {
                     en_para_idx,
                     available,
                     en_col_w,
+                    measured_tables,
                 )
             {
                 st.advance_column_or_new_page();
