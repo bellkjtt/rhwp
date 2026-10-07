@@ -2,26 +2,81 @@
 kind: review
 status: active
 canonical: mydocs/manual/pr_review_workflow.md
-last_verified: 2026-10-06
+last_verified: 2026-10-07
 ---
 
 # PR #7600 리뷰 — dyad 붙여쓰기와 양쪽 화살표
 
 ## 최종 판정
 
-**머지 보류 — 전체 회귀의 px 고정 검사와 시각 대조군 보정 진행 중.** #7593 공개 원본의
-최신 Native/fresh WASM 전체1쪽은92.98588%, 최소 입력은99.43478%다. 필수 fmt·세 Clippy·workspace
-build·base 정책과 원 기여3검사는 통과했다. 첫 전체 nextest는10,517 실행 중10,514PASS/3FAIL/50SKIP
-(exit100,730.063초)로 종료했다. 문28의 고정 영역 검사는 `(ii)` 자체의 인라인 수식을 앞 수식으로
-잘못 선택했고, #1308의 두 SVG 검사는 강제 줄바꿈 수식을 고정 y 범위로 찾지 못했다.
+**머지 보류 — 메인터너 보정의 최종 검증 진행 중.** 현재 추가 보정 head는
+`a3fd2cdda`이며 런타임 source `3020c479878aaed0d05c8d200f36f2b4b2587807`의
+Native 전체 원본·정상 대조군 검증을 마쳤지만 시각 미달이 남습니다.
+최신 `upstream/devel`의 `fe9ffd27e91d8d260fbccde5ff68aa08aadf94ca` 위로
+106개 커밋을 보존해 rebase했고, 문단 간 저장 경계의 부분 점유도 보정했습니다.
+rebase 전 `8c252adfb51718d35801ced127de4295a99cbb23`의 Native 대조에서
+9월 23쪽은 최저 90.78108%, 10월 18쪽은 최저 91.24244%를 유지했습니다.
+사용자가 지적한 11쪽 하단 두 줄의 소속을 복구했고 94.70319% → 96.33025%입니다.
+독립 Print와 같이 해당 두 줄은 11쪽, 마지막 `존재하지 않는다.`는 12쪽에 있습니다.
+12쪽은 `3e37b93ea`에서 92.16245%가 됐지만, 직접 판독에서 그래프가
+쪽 하단 밖으로 내려와 문20과 겹쳤고 13쪽도 34.49027%로 회귀했습니다.
+이 수치 통과를 승인으로 사용하지 않았습니다. `e34cfd0ad`에서 명시 크기의
+TAC 그림 점유를 실제 단 문맥과 표 측정으로 확인해 그래프와 문20을 Print와 같은
+13쪽에 배치했습니다. Native 11·12·13쪽은 96.33025%/96.04768%/97.61688%이며
+새 review/compare를 직접 판독했습니다. `29e79e1bc`에서는 빈 줄의 실제 줄 상자 끝을
+다음 미주 간격에 반영해 14쪽을 71.34044% → 95.98702%로 보정하고
+새 review를 직접 확인했습니다. 해당 source의 정상 대조군 8개도 90% 이상입니다.
+`3020c4798`에서 그림 뒤 풀이 전체를 그림과 묶던 가정을 제거해
+그래프를 Print와 같은 18쪽으로 복구했습니다. 하지만 18~21쪽은 각각
+82.58639%/41.16275%/65.80087%/85.89813%로 미달이며, 원본 18쪽의
+수식 줄 나눔과 뒤 배치 차이를 계속 보정합니다. 정상 대조군 8개는
+모두 이전 최저값을 유지했습니다. 새 source의 fresh WASM과 최종 전체 게이트는 남습니다.
+overlay의 색상은
+사용자 지적에 따라 RHWP만 파랑, PDF만 빨강으로 수정하고 PNG에 범례를 표시합니다.
+사용자 표 캡처의 원본 `fragment_ghost_vrules.hwp`도 대응 Print의 10쪽과
+직접 비교했습니다. immutable `c4574b920` Native는 보조 점수 95.36398%지만
+마지막 가스용품 행이 다음 쪽으로 넘어가며 전체 32쪽 대 31쪽입니다.
+행 소속·쪽수 차이는 미해결이고 기존 검사 변경으로 숨기지 않습니다.
+표의 새 한컴 2020 MCP Print(1-up, PrintMethod 0)는 31쪽이고
+기존 기준의 10쪽과 픽셀까지 같아 기준 출력 변경 문제가 아님을 확인했습니다.
+Visual Sweep은 선택 쪽의 점수가 통과해도 전체 쪽수가 다르면
+`re_review_required`로 판정하도록 보완했습니다. 도구 97개 검사와
+후속 focused 14개, 실제 표의 일반/TSV 모드 실행을 확인했습니다.
+전체 11월 21쪽은 최저 41.16275%로 아직 미달입니다. 이전 결과를 새 base/head의
+통과로 보고하지 않습니다. 아래 완결된 Native/fresh WASM 시각 검증은
+`18cae770d960ffff8da59a70c1d4dbe4f5076a17`의 결과입니다. Native 원본 9월 23쪽의 최저 일치율은
+90.78108%이며, 7쪽 그림 원점 보정으로 해당 쪽은 93.07072% → 95.28674%입니다.
+11월 1쪽은 83.45544% → 93.79509%, 17쪽은 72.08955% → 95.07303%로
+개선됐습니다. 17쪽의 줄 겹침과 마지막 적분 누락을 실제 저장 전진 기준의 투영으로
+보정했습니다. 전체 11월 문서는 아직 미달 쪽이 남아 있으므로 통과로 보고하지 않습니다.
 
-사용자가 #1139 파일 전체의 px 고정 검사를 문단 소유·위치 순서 관계로 바꾸도록 범위를 확장했다.
-해당 입력의 Native/fresh WASM90% 선행 조건과 독립 Print 출력부터 확인하며 기존 검사는
-자동 삭제하거나 임계값을 완화하지 않는다. 최종 Skia/전체 재검증·PR 생성은 아직 수행 전이다.
+이전 후보의 줄 공간 고정은 10월 대조군에 회귀를 만들었고, 실제 저장 전진으로
+보정하면서 그 가정과 추가 메트릭 출처 분기를 정리했습니다. 별도 되감김 fit 후보도
+11월의 해당 단일 줄에 적용되지 않았고 9월 대조군을 훼손해 제거했습니다. 후보별
+실패와 보정 경로는 개별 실행 기록에 보존합니다. 기대값 변경으로 회귀를 숨기지 않습니다.
 
-원격 통합 PR의 push/생성·최신 head CI·merge 및 원 PR 후속 처리는 수행하지 않았다.
-원 head의 녹색 CI를 새 메인터너 후보의 CI로 대신하지 않는다. #7594의 별도 기호 모양/의미
-문제, macOS/Windows 시스템 글꼴 실행은 검증 범위 밖이다.
+`18cae770d`의 fresh WASM 12건은 각각 Native와 같은 최저값으로 통과했습니다.
+9월·10월은 전체 페이지이며 11월은 영향 1·17쪽만 93.79509%/95.07303%입니다.
+WASM SHA-256 `0bba788b6bdffdb2b1bc1441baede0ffef2857a241dfeb821eaf0f73d3e39676`은
+pkg/public 및 Studio 실제 응답 바이트와 같습니다. Canvas2D·CanvasKit 4건에서
+수식 표시와 실행 오류 없음도 확인했습니다. CanvasKit의 한컴 글꼴 대체가
+남아 있으므로 해당 실행을 글꼴 동일성이나 화면 픽셀 충실도 증거로 보고하지 않습니다.
+추가 그림·저장 원점 보정의 새 head에서는 Native/fresh WASM을 다시 실행합니다.
+
+10월 원본 9건과 #1308의 8건은 `65e96c9a687b33a4a22d57313f8d971dbb05bdb0`에서
+정식 관계 회귀를 통과했습니다. 이후 런타임이 바뀌었으므로 최신 head에서 다시 실행합니다.
+#1139 파일 전체의 나머지 px 검사는 원 입력의 관련 모든 페이지가 Native/fresh WASM
+90% 이상이 된 뒤 독립 기대값으로 변경합니다. 미달 입력의 검사를 먼저 바꾸거나
+기존 검사를 자동 삭제하지 않습니다.
+
+초기 전체 nextest의 10,517건 중 10,514 PASS / 3 FAIL / 50 SKIP과 이후 #1139
+77건의 54 PASS / 23 FAIL은 이전 source의 결과입니다. 현재 head의 전체 회귀
+결과가 아닙니다. 최종 lint·nextest·Skia 검증, 오늘할일을 포함한 최종 review 묶음,
+PR 생성·CI 모니터링·merge·후속 처리가 남아 있습니다.
+
+원격 통합 PR을 아직 push/생성하지 않았으며 원 PR의 녹색 CI를 새 후보의 CI로
+대신하지 않습니다. #7594의 별도 기호 모양/의미 문제와 macOS/Windows 시스템 글꼴
+실행은 검증 범위 밖입니다.
 
 ## 접수와 검토 head
 
@@ -30,15 +85,15 @@ build·base 정책과 원 기여3검사는 통과했다. 첫 전체 nextest는10
 | 원 PR·작성자 | [#7600](https://github.com/edwardkim/rhwp/pull/7600) / Phantomn / 첫 기여자 |
 | 관련 이슈 | [#7593](https://github.com/edwardkim/rhwp/issues/7593) 해결 범위; [#7594](https://github.com/edwardkim/rhwp/issues/7594) 별도 문제 유지 |
 | 원 head·fork | `dbb87b98047ffb73ff038374a59501495a47bdf2` / Phantomn/rhwp / fix/issue-7593 |
-| 검토 base | `a048da32d2b76867283aa6dbdf2578816a0e6238` / upstream/devel |
-| 검토 branch·체리픽 | `review/phantomn-pr7600-20261006` / `5d7a2ad98` (원 저자 보존, 충돌 없음) |
-| 메인터너 런타임 source | `1a7ad89e4` → `557a1c91c` → `9ee2878be489e5dc4a6efc4c751a65465e32c571` |
-| 배포·회귀 후보 | `84fda69394ca359cc121705da270636dc2d67670` (배포 계약), `31c1d4ecd6cfd0fce50658fccce158cf876b8077` (추가 회귀); Rust 런타임은9ee2878be와 동일 |
+| 검토 base | `fe9ffd27e91d8d260fbccde5ff68aa08aadf94ca` / upstream/devel; 최초 base는 `48ff4bb93` |
+| 검토 branch·체리픽 | `review/phantomn-pr7600-20261006` / `fe30ba9b7` (최초 `5d7a2ad98`, rebase 후에도 원 저자 보존, 충돌 없음) |
+| 메인터너 런타임 source | `3020c4798` Native 9건 완료: 11~14쪽 회복, 정상 대조군 8개 무감소; 11월 18~21쪽 미달. 이후 `a3fd2cdda`는 시각 gate 안내 보완이며 런타임 변경 없음. Native/fresh WASM 12건은 rebase 전 `18cae770d`이며 새 head로 재실행 필요 |
+| 초기 배포·회귀 단계 | `84fda69394ca359cc121705da270636dc2d67670`, `31c1d4ecd6cfd0fce50658fccce158cf876b8077`; 최종 source의 검증을 대신하지 않음 |
 | reviewer·라우팅 | jangster77 / collaborator_external_pr + first_time_contributor + intake_and_review + local_validation + visual_fixture_evidence |
-| 원 PR 상태 재확인 | 2026-10-06 Open, non-draft, MERGEABLE/CLEAN, head unchanged, maintainer_can_modify true |
+| 원 PR 상태 재확인 | 2026-10-07 OPEN, non-draft, mergeable MERGEABLE, 원 head 동일; 원 CI는 후보 검증을 대신하지 않음 |
 
 원 기능·메인터너 보정은 별도 일반 commit으로 누적했다. contributor history를 rewrite하지 않았다.
-원시 TSV3개는 `08abab871`에서 Git 제외하고 ignored output에 보존했다. 단일 원 PR의 검토/보정
+원시 TSV 3개는 `08abab871`에서 Git 제외하고 ignored output에 보존했다. 단일 원 PR의 검토/보정
 문서와 오늘할일을 같은 통합 후보에 유지하며 통합 PR 번호를 예측한 별도 문서는 만들지 않는다.
 
 ## 초기 보류 사유와 실제 보정
