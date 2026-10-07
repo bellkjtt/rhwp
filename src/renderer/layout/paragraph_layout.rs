@@ -6392,17 +6392,24 @@ impl LayoutEngine {
             let line_visual_bottom = text_y + line_height;
             let is_body_flow_col_area = self.is_body_flow_col_area(col_area);
             let is_endnote_virtual_para = self.is_endnote_paragraph(para_index);
+            // 마지막 run 끝에 실제 방출되는 TAC도 이 줄의 점유다. 정렬 폭과
+            // 같은 방출 집합을 사용해야 탭 뒤 문단 끝 수식을 빈 줄로 오인해
+            // 콘텐츠 하단과 다음 미주 앞 간격에서 누락하지 않는다.
             let blank_spacer_line = is_blank_spacer_line(
                 para,
                 is_endnote_virtual_para,
                 runs_all_whitespace,
-                &line_tac_offsets,
+                &line_tac_offsets_for_width,
             );
             let equation_only_endnote_tail_line = is_body_flow_col_area
                 && cell_ctx.is_none()
                 && is_endnote_virtual_para
                 && line_idx + 1 >= end
-                && is_equation_only_tac_line(para, runs_all_whitespace, &line_tac_offsets);
+                && is_equation_only_tac_line(
+                    para,
+                    runs_all_whitespace,
+                    &line_tac_offsets_for_width,
+                );
             let tolerated_endnote_bottom_bleed = self.is_tolerated_current_endnote_bottom_bleed(
                 is_body_flow_col_area && cell_ctx.is_none() && is_endnote_virtual_para,
                 line_visual_bottom,
