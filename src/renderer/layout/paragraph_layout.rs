@@ -5315,12 +5315,8 @@ impl LayoutEngine {
         let box_margin_right = para_style.map(|s| s.margin_right).unwrap_or(0.0);
         let indent = para_style.map(|s| s.indent).unwrap_or(0.0);
 
-        // [Task #547] paragraph margin_left/right 는 텍스트 좌/우 inset 으로 한 번만
-        // 적용. Task #544 후 box outline = col_area (margin 미적용) 이므로 박스 안
-        // 좌측 여백 = box_margin_left (PDF 한컴 2010 정합).
-        // 이전 코드는 paragraph border + border_spacing=0 인 경우 inner_pad_left =
-        // box_margin_left 로 한 번 더 더해 이중 inset 부작용 발생 (Task #544 전 박스도
-        // margin 적용했을 때만 의미가 있던 분기).
+        // 문단 여백은 글줄 시작에 한 번 적용한다. 테두리의 여백 포함 여부는
+        // 별도의 border_ignore_margin 속성과 실제 문단/줄 점유 결과로 결정한다.
         let margin_left = box_margin_left;
         let margin_right = box_margin_right;
         let alignment = para_style
@@ -5581,16 +5577,6 @@ impl LayoutEngine {
                 .flatten()
         });
 
-        // 배경/테두리 렌더링을 위한 시작 위치 기록
-        // 문단 경계 = 이전 문단 끝 = y_start (spacing_before 적용 전).
-        // `border_ignore_margin`(attr1 bit 29) 문단은 줄 상자만 덮으므로 앞 간격 뒤에서
-        // 시작한다 (한/글 2020: 앞 간격 1000HU 문단의 배경이 첫 줄 위에서 시작).
-        let border_ignore_margin = para_style.is_some_and(|s| s.border_ignore_margin);
-        let bg_y_start = if para_border_fill_id > 0 && !border_ignore_margin {
-            y_start
-        } else {
-            y
-        };
         let bg_insert_idx = col_node.children.len();
 
         // start_line까지의 누적 문자 오프셋 계산 (편집용 문서 좌표)
@@ -5764,6 +5750,7 @@ impl LayoutEngine {
         // 따라야 한다 — 줄간격이 음수인 문단에서는 전진값 `y` 가 줄 상자 아래보다 위로
         // 올라가, 테두리가 글자를 가로지른다(3143955 제목: 줄 상자 아래 171.6px, 전진 y
         // 162.0px, 실제로 그려진 선 159.7/163.7).
+        let mut first_line_box_top: Option<f64> = None;
         let mut last_line_box_bottom: Option<f64> = None;
         let mut last_line_border_bottom: Option<f64> = None;
         let mut paragraph_fill_bands = Vec::new();
@@ -6577,6 +6564,7 @@ impl LayoutEngine {
                 (0.0, None)
             };
 
+            first_line_box_top.get_or_insert(y);
             let line_id = tree.next_id();
             let mut line_node = RenderNode::new(
                 line_id,
@@ -7792,100 +7780,6 @@ impl LayoutEngine {
             }
         }
 
-        // 문단 테두리/배경 범위 수집 (build_single_column에서 연속 그룹으로 병합 렌더링)
-        // margin_left/margin_right를 반영하여 박스 위치·폭 조정.
-        // Task #463: 셀 안 단락은 본문 큐에 leakage 하지 않도록 cell_ctx 게이팅.
-        // 셀 외곽선은 별도 경로(table_layout/border_rendering)에서 처리되므로
-        // 본문 단락의 연속 외곽선 merge 가 셀 단락 좌표/시그니처에 의해 깨지지 않게 한다.
-        if para_border_fill_id > 0 && (cell_ctx.is_none() || self.collect_cell_para_borders.get()) {
-            // [#5711] 줄간격이 음수인 문단은 전진값 `y` 가 마지막 줄 상자 아래보다 위에
-            // 있다. 그 값을 테두리 아래 변으로 쓰면 테두리가 글자를 가로지른다. 다음 문단
-            // 시작 y 는 종전대로 두어 문단 간 간격 계약은 바꾸지 않는다.
-            //
-            // 본문 문단의 아래 변은 `border_ignore_margin`(attr1 bit 29)이 정한다. 채움
-            // 유무와 무관하다(한/글 2020 합성 대조: 채움·테두리·채움+테두리 모두 같은 규칙).
-            // - 꺼짐: 문단 흐름 전체 — 마지막 줄의 줄간격과 문단 뒤 간격까지 덮는다.
-            //   이어진 같은 배경 문단은 틈 없이 한 띠가 된다(hwp3-sample4 코드 블록).
-            // - 켜짐: 마지막 줄 상자 아래까지만 덮는다(#1835 제목 배경).
-            // 셀 문단은 기존 점유 계약을 유지하고, 음수 간격도 줄 상자를 감싼다.
-            // 뒤 간격은 아래 흐름 전진과 같은 값을 쓴다.
-            let trailing_after = if let Some(spacing) = &vertical_spacing {
-                spacing.after
-            } else if end == composed.lines.len() {
-                spacing_after
-            } else {
-                0.0
-            };
-            let flow_bottom = if cell_ctx.is_none() {
-                y + trailing_after.max(0.0)
-            } else {
-                y
-            };
-            let border_bottom =
-                last_line_border_bottom
-                    .or(last_line_box_bottom)
-                    .map_or(y, |bottom| {
-                        if cell_ctx.is_none() && border_ignore_margin {
-                            bottom
-                        } else {
-                            flow_bottom.max(bottom)
-                        }
-                    });
-            let bg_height = border_bottom - bg_y_start;
-            if bg_height > 0.0 {
-                // margin_left/margin_right는 이미 px 단위 (style_resolver에서 변환됨)
-                // border_spacing[2]/[3] (top/bottom) 을 inset 으로 전달 — 병합 그룹의 첫/마지막 range 에서만 적용됨.
-                let top_inset = para_style.map(|s| s.border_spacing[2]).unwrap_or(0.0);
-                let bottom_inset = para_style.map(|s| s.border_spacing[3]).unwrap_or(0.0);
-                let left_inset = para_style.map(|s| s.border_spacing[0]).unwrap_or(0.0);
-                let right_inset = para_style.map(|s| s.border_spacing[1]).unwrap_or(0.0);
-                // 컬럼/페이지 wrap 시 inner edge 미렌더링용 partial 플래그
-                let is_partial_start = start_line > 0;
-                let is_partial_end = end < composed.lines.len();
-                // Task #463: wrap=Square 호스트 문단의 텍스트는 좁은 wrap_area 에서
-                // 렌더링되지만 외곽선은 원래 col_area 너비로 그려야 floating 표를
-                // 박스가 둘러쌈. layout_wrap_around_paras 가 override 를 설정.
-                // override 가 활성된 경우(wrap host), 박스 우측은 floating 표의 끝
-                // 까지 확장된 width 그대로 사용 — margin_right 차감하지 않는다
-                // (그렇지 않으면 표가 박스 밖으로 다시 튀어나옴).
-                // [Task #544] paragraph margin_left/right 는 텍스트 inset 으로만 사용,
-                // 박스 outline 좌표는 col_area 전체 (PDF 정합). wrap=Square 호스트
-                // (border_box_override) 케이스는 layout_wrap_around_paras 가 설정한
-                // override 좌표 그대로 사용 (margin 미적용).
-                // `border_ignore_margin` 문단은 문단 왼쪽·오른쪽 여백 안쪽을 기준으로, 테두리
-                // 왼쪽·오른쪽 간격만큼 바깥으로 넓힌 범위를 덮는다. 한/글 2020 실측:
-                // - 여백 2000HU·간격 0 문단의 배경이 단 양끝에서 26.7px 안쪽이다.
-                // - exam_math 8쪽(여백 2270/1130HU·간격 1133HU) 상자는 단 왼쪽에서
-                //   1137HU, 오른쪽에서 0 이다.
-                let (box_x, box_w) = if let Some((ox, ow)) = self.border_box_override.get() {
-                    (ox, ow)
-                } else if border_ignore_margin && cell_ctx.is_none() {
-                    let style = para_style;
-                    let left =
-                        style.map_or(0.0, |s| (s.margin_left - s.border_spacing[0]).max(0.0));
-                    let right =
-                        style.map_or(0.0, |s| (s.margin_right - s.border_spacing[1]).max(0.0));
-                    let width = (col_area.width - left - right).max(0.0);
-                    (col_area.x + left, width)
-                } else {
-                    (col_area.x, col_area.width)
-                };
-                self.para_border_ranges.borrow_mut().push((
-                    para_border_fill_id,
-                    box_x - left_inset,
-                    bg_y_start,
-                    box_w + left_inset + right_inset,
-                    border_bottom,
-                    top_inset,
-                    bottom_inset,
-                    is_partial_start,
-                    is_partial_end,
-                    para_index,
-                    paragraph_fill_bands,
-                ));
-            }
-        }
-
         // ComposedLine이 없으면 빈 TextRun 생성 (편집용). `compose_paragraph()`는
         // 빈 문단에 줄을 만들지 않을 수 있는데, 종전 400HU 고정 advance는
         // pagination의 NO_LS 빈 문단 메트릭과 달라 다음 표/문단을 위로 끌어올렸다.
@@ -7950,6 +7844,8 @@ impl LayoutEngine {
                     })
                 })
                 .unwrap_or((hwpunit_to_px(400, self.dpi), 0.0));
+            first_line_box_top = Some(y);
+            last_line_box_bottom = Some(y + default_height);
             let line_id = tree.next_id();
             let mut line_node = RenderNode::new(
                 line_id,
@@ -7999,13 +7895,51 @@ impl LayoutEngine {
             y += default_height + default_spacing;
         }
 
-        // 문단 뒤 간격 (spacing_after). 빈 composed 문단도 실제 한 줄 advance 뒤에
-        // 적용해야 일반 composed 문단과 동일한 순서를 따른다.
-        if let Some(spacing) = vertical_spacing {
-            y += spacing.after;
-        } else if spacing_after > 0.0 && end == composed.lines.len() {
-            y += spacing_after;
+        // 문단 흐름과 테두리가 동일한 뒤 간격을 소비한다. 이어지는 조각에는
+        // 문단의 마지막 간격을 붙이지 않는다.
+        let applied_spacing_after = if let Some(spacing) = vertical_spacing {
+            spacing.after
+        } else if end == composed.lines.len() {
+            spacing_after.max(0.0)
+        } else {
+            0.0
+        };
+        let paragraph_flow_bottom = y + applied_spacing_after;
+        if para_border_fill_id > 0 && (cell_ctx.is_none() || self.collect_cell_para_borders.get()) {
+            let border_box = super::paragraph_border::paragraph_border_box(
+                para_style,
+                col_area,
+                y_start,
+                first_line_box_top.unwrap_or(y_start),
+                last_line_box_bottom.unwrap_or(y),
+                if cell_ctx.is_none()
+                    && !crate::renderer::paragraph_outline_reserves_line_spacing(
+                        para_border_fill_id, styles,
+                    ) {
+                    last_line_border_bottom.or(last_line_box_bottom).unwrap_or(y)
+                } else {
+                    last_line_border_bottom.unwrap_or(y).max(paragraph_flow_bottom)
+                },
+                self.border_box_override.get(),
+            );
+            if border_box.height > 0.0 && border_box.width > 0.0 {
+                // 위아래 간격은 연결 그룹의 첫/마지막 조각에서만 확장한다.
+                self.para_border_ranges.borrow_mut().push((
+                    para_border_fill_id,
+                    border_box.x,
+                    border_box.y,
+                    border_box.width,
+                    border_box.y + border_box.height,
+                    para_style.map_or(0.0, |s| s.border_spacing[2]),
+                    para_style.map_or(0.0, |s| s.border_spacing[3]),
+                    start_line > 0,
+                    end < composed.lines.len(),
+                    para_index,
+                    paragraph_fill_bands,
+                ));
+            }
         }
+        y = paragraph_flow_bottom;
 
         y
     }
