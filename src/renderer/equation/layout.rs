@@ -498,14 +498,7 @@ impl EqLayout {
         let w = estimate_text_width(display, fs, false);
         // 연산자 좌우 여백
         let pad = if matches!(text, "+" | "-" | "=" | "<" | ">" | "×" | "÷") {
-            // HYhwpEQ의 기본 연산자 전진폭에는 자체 괘선·bearing이 포함된다.
-            // 실제 hmtx를 소비하면서 일반 수학 스타일의 여백을 다시 더하지 않는다.
-            // 스크립트에 명시된 공백은 별도의 Space 노드가 그대로 소비한다.
-            if self.hancom_math_face {
-                0.0
-            } else {
-                fs * 0.15
-            }
+            fs * 0.15
         } else if matches!(text, "(" | ")" | "[" | "]" | "'" | "′" | "″" | "‴") {
             // 보통 크기의 구분자는 관계·이항 연산자 여백을 갖지 않는다.
             0.0
