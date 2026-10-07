@@ -2031,6 +2031,18 @@ impl HeightCursor {
                 .unwrap_or(false)
             || compact_no_separator_large_title_tail_gap;
         if std::env::var("RHWP_VPOS_DEBUG").is_ok() {
+            if current_is_endnote_title {
+                eprintln!(
+                    "VPOS_NOTE_GAP pi={} gap_hu={} prev_content={:?} prev_flow={:?} gap_cap={:?} tall={} carries_gap={} title_regular={} title_upper={} page_mid={} page_default={}",
+                    item_para, self.endnote_between_notes_hu, measured_prev_content_bottom_y,
+                    self.prev_item_flow_line_bottom_y, bottom_new_note_gap_cap,
+                    follows_tall_inline_item, prev_line_carries_note_gap,
+                    compact_endnote_question_title_after_tall_regular_gap,
+                    compact_endnote_question_title_after_tall_upper_flow,
+                    compact_endnote_page_title_mid_stale_gap,
+                    compact_endnote_page_title_default_mid_gap,
+                );
+            }
             let path = if is_page_path { "page" } else { "lazy" };
             eprintln!(
                 "VPOS_CORR: path={} pi={} prev_pi={} prev_vpos={} prev_lh={} prev_ls={} vpos_end={} base={} col_y={:.2} y_in={:.2} end_y={:.2} result={:.2} stale_forward={} large_gap_body_stale={} current_title={} title_bottom={} page_tail={} equation_tail={} single_tail={} zero_gap_title={} compact_new_note={} compact_stale_note_gap={} compact_tac_pic_gap={} compact_bottom_rewind={} compact_deep_backtrack={} compact_safe_backtrack={} applied={}",
