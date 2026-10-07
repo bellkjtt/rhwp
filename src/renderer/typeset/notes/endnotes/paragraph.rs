@@ -30,6 +30,7 @@ use crate::renderer::typeset::{
 mod fit_split;
 mod initial_fit;
 mod new_note_fit;
+mod picture_frame;
 mod reflow_fit;
 mod rewind_tail;
 mod tail_fit;
@@ -776,7 +777,17 @@ impl TypesetEngine {
             let ssot_level = en_ssot_level();
             let ssot_debug = en_ssot_debug();
 
-            let non_tac_object_height = if endnote_has_text_or_equation {
+            // 앞/현재/뒤 저장 줄이 그림 띠를 정확히 닫는 경우만 호스트 한 줄을
+            // 별도 예약하지 않는다. 상대 프레임의 끝을 fit과 실제 누적에 공유한다.
+            let stored_picture_frame = (!self.profile.get().session_edited()
+                && (self.profile.get().hwp5_stored_pagination_layout()
+                    || self.profile.get().hwpx_stored_layout())
+                && !compact_no_separator_spacing)
+                .then(|| picture_frame::relative_frame(&en_ctrl.paragraphs, ep_idx, styles, dpi))
+                .flatten();
+            let non_tac_object_height = if let Some(frame) = stored_picture_frame {
+                Some(fmt.spacing_before + frame.paragraph_end(0.0, 0.0))
+            } else if endnote_has_text_or_equation {
                 None
             } else {
                 non_tac_picture_or_shape_block_height_px(en_para, dpi)
@@ -833,10 +844,18 @@ impl TypesetEngine {
                     trailing_ls_px,
                 },
             );
-            let en_fit = non_tac_object_height
-                .map(|height| raw_en_fit.max(height))
-                .unwrap_or(raw_en_fit);
-            let total_advance_fit = line_advances_sum.max(non_tac_object_height.unwrap_or(0.0));
+            let en_fit = if stored_picture_frame.is_some() {
+                non_tac_object_height.unwrap_or(raw_en_fit)
+            } else {
+                non_tac_object_height
+                    .map(|height| raw_en_fit.max(height))
+                    .unwrap_or(raw_en_fit)
+            };
+            let total_advance_fit = if stored_picture_frame.is_some() {
+                en_fit
+            } else {
+                line_advances_sum.max(non_tac_object_height.unwrap_or(0.0))
+            };
             let fit_split_column = (st.pages.len(), st.current_column);
             let initial_fit::InitialFitResult {
                 remaining_height,
@@ -1927,6 +1946,15 @@ impl TypesetEngine {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
                 prev_en_content_bottom_vpos = None;
+            }
+            if split_candidate.is_none() && !pre_emit_tail_before_non_tac_object_advance {
+                if let Some(frame) = stored_picture_frame {
+                    let placement =
+                        picture_frame::at_origin(frame, st.current_height + fmt.spacing_before);
+                    en_advance =
+                        placement.paragraph_end(st.current_height, 0.0) - st.current_height;
+                    st.record_paragraph_float_placement((en_para_idx, 0), placement);
+                }
             }
             if self.emit_endnote_split(
                 st,
