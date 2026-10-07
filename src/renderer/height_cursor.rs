@@ -170,6 +170,11 @@ pub(crate) struct HeightCursor {
     /// HWPX 원본의 일부 LINE_SEG vpos 는 이전 쪽/단 조판 좌표가 남아 페이지 상단 본문을
     /// 과도하게 아래로 밀 수 있다. 원본 IR은 보존하고 조판 커서에서만 제한적으로 접는다.
     pub suppress_hwpx_stale_forward: bool,
+    /// HWP5 컨테이너의 변환 계보도 유효 저장 줄을 가질 수 있다. 재측정된
+    /// 수식 줄의 실제 전진은 다음 저장 원점에서 낡은 높이로 되돌리지 않는다.
+    pub stored_equation_reflow: bool,
+    /// 실제 구성 결과가 직전 문단의 저장 수식 줄 전진을 갱신했다는 소비 기록.
+    pub prev_reissued_equation_rows: bool,
     /// [#5854] 저장 LINE_SEG 사다리가 통짜 합성값인 문서 — `vertical_pos` 가 실측
     /// 조판 좌표가 아니므로 앵커 스냅 자체를 끈다. 켜 두면 글꼴로 다시 뽑은 줄
     /// 진행을 매 항목마다 그 상수 사다리로 되돌려 놓는다.
@@ -258,6 +263,8 @@ impl HeightCursor {
             allow_start_height_backtrack,
             suppress_large_forward_jump,
             suppress_hwpx_stale_forward: false,
+            stored_equation_reflow: false,
+            prev_reissued_equation_rows: false,
             uniform_filler_ladder: false,
             endnote_between_notes_hu: 0,
             prev_item_content_bottom_y: None,
@@ -423,9 +430,10 @@ impl HeightCursor {
         }
         // 수식 부분 재조판으로 바뀐 높이를 연속된 옛 저장 사다리가 복원하지 않게 한다.
         // 단/쪽 리셋이나 실제 저장 gap은 아래 기존 경로가 소유한다.
-        if self.suppress_hwpx_stale_forward
+        if (self.suppress_hwpx_stale_forward || self.stored_equation_reflow)
             && !self.session_edited
-            && crate::renderer::composer::uses_remeasured_equation_frame(prev_para)
+            && (self.prev_reissued_equation_rows
+                || crate::renderer::composer::uses_remeasured_equation_frame(prev_para))
         {
             if let Some((previous, current)) = prev_para.line_segs.last().zip(
                 paragraphs

@@ -8213,6 +8213,7 @@ impl LayoutEngine {
             col_content.endnote_flow,
         );
         hcursor.suppress_hwpx_stale_forward = self.profile.get().hwpx_stored_layout();
+        hcursor.stored_equation_reflow = self.profile.get().hwp5_container();
         // [#5854] 통짜 합성 LINE_SEG 사다리 판정 — 본문 단에서만 갱신한다. 미주 단은
         // `paragraphs` 가 미주 전용 재색인 배열이라 구역 판정의 근거가 아니므로 본문에서
         // 정해진 값을 그대로 이어 쓴다 (조판 경로 `TypesetEngine` 과 같은 구역 단위 값).
@@ -9241,6 +9242,13 @@ impl LayoutEngine {
                 }
             } else {
                 hcursor.prev_layout_para = Some(item_para);
+                hcursor.prev_reissued_equation_rows =
+                    composed.get(item_para).is_some_and(|actual| {
+                        crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                            &paragraphs[item_para],
+                            actual,
+                        )
+                    });
             }
 
             // Percent 전환: 표 하단과 비교 (Task #9)

@@ -780,7 +780,7 @@ impl TypesetEngine {
             // 앞/현재/뒤 저장 줄이 그림 띠를 정확히 닫는 경우만 호스트 한 줄을
             // 별도 예약하지 않는다. 상대 프레임의 끝을 fit과 실제 누적에 공유한다.
             let stored_picture_frame = (!self.profile.get().session_edited()
-                && (self.profile.get().hwp5_stored_pagination_layout()
+                && (self.profile.get().hwp5_container()
                     || self.profile.get().hwpx_stored_layout())
                 && !compact_no_separator_spacing)
                 .then(|| picture_frame::relative_frame(&en_ctrl.paragraphs, ep_idx, styles, dpi))

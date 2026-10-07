@@ -571,6 +571,8 @@ impl TypesetEngine {
         hc.endnote_between_notes_hu = st.endnote_between_notes_hu;
         hc.endnote_note_first_paras =
             endnote_first_local_paras(paragraphs.len(), &st.endnote_para_sources, &local_indices);
+        hc.stored_equation_reflow = !st.profile.session_edited()
+            && (st.profile.hwp5_container() || st.profile.hwpx_stored_layout());
         let mut y = st.current_start_height;
         let extra_item = extra_para_full.map(|pi| PageItem::FullParagraph { para_index: pi });
         // [#5886] 한 번 compact 되감김이 나오면 렌더처럼 나머지도 순차 적층한다.
@@ -731,6 +733,11 @@ impl TypesetEngine {
                 hc.vpos_lazy_base = None;
             } else {
                 hc.prev_layout_para = Some(local);
+                hc.prev_reissued_equation_rows =
+                    crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                        item_para,
+                        &item_composed,
+                    );
             }
             hc.prev_item_was_partial_table = matches!(item, PageItem::PartialTable { .. });
         }
@@ -798,6 +805,8 @@ impl TypesetEngine {
                 &st.endnote_para_sources,
                 &local_indices,
             );
+            hc.stored_equation_reflow = !st.profile.session_edited()
+                && (st.profile.hwp5_container() || st.profile.hwpx_stored_layout());
             let mut y = st.current_start_height;
             for item in &st.current_items {
                 let Some(pi) = page_item_para_index(item) else {
@@ -850,6 +859,11 @@ impl TypesetEngine {
                     hc.vpos_lazy_base = None;
                 } else {
                     hc.prev_layout_para = Some(local);
+                    hc.prev_reissued_equation_rows =
+                        crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+                            item_para,
+                            &item_composed,
+                        );
                 }
                 hc.prev_item_was_partial_table = matches!(item, PageItem::PartialTable { .. });
             }

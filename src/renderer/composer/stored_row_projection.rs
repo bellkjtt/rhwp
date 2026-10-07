@@ -3,6 +3,32 @@
 use crate::model::paragraph::Paragraph;
 use crate::renderer::style_resolver::ResolvedStyleSet;
 
+/// 이미 구성한 실제 줄 결과가 저장 수식 줄의 전진을 바꿨는지 확인한다.
+/// 중첩 미주 소유나 폭 재조판의 수용 조건으로 세로 메트릭 갱신을 추측하지 않는다.
+pub(crate) fn reissued_equation_rows(
+    original: &Paragraph,
+    composed: &super::ComposedParagraph,
+) -> bool {
+    !original.stored_text_partition_is_dirty()
+        && original.controls.iter().any(|control| {
+            matches!(control, crate::model::control::Control::Equation(equation)
+                if equation.common.treat_as_char)
+        })
+        && composed.lines.len() == original.line_segs.len()
+        && original.line_segs.iter().all(|line| {
+            line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+                && line.line_height > 0
+        })
+        && original
+            .line_segs
+            .iter()
+            .zip(&composed.lines)
+            .any(|(source, actual)| {
+                source.line_height != actual.line_height
+                    || source.line_spacing != actual.line_spacing
+            })
+}
+
 pub(crate) fn project_equation_rows(
     original: &[Paragraph],
     styles: &ResolvedStyleSet,
