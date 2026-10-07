@@ -60,7 +60,6 @@ pub(super) fn refresh_equation_rows(
         let mut changed = false;
         let mut has_equation = false;
         let mut supported = true;
-        let mut retains_source_strut = true;
         for (control_index, (control, position)) in para.controls.iter().zip(&positions).enumerate()
         {
             let belongs_to_line = if let Some(owners) = &equation_owners {
@@ -78,10 +77,8 @@ pub(super) fn refresh_equation_rows(
                     let old_height = equation.common.height as i32;
                     let old_baseline =
                         old_height.saturating_mul(i32::from(equation.baseline)) / 100;
-                    let ((_, height, baseline), frame) =
-                        crate::renderer::equation::flow_metrics_with_source_hwp(equation);
-                    retains_source_strut &=
-                        frame != crate::renderer::equation::EquationFlowFrame::ReplacementText;
+                    let (_, height, baseline) =
+                        crate::renderer::equation::flow_metrics_hwp(equation);
                     let height = height as i32;
                     old_ascent = old_ascent.max(old_baseline);
                     old_logical_height = old_logical_height.max(old_height);
@@ -146,20 +143,11 @@ pub(super) fn refresh_equation_rows(
             || next_inline_box_was_reserved
         {
             let occupied_height = new_ascent + new_descent;
-            // 뒤 개체 높이가 앞줄 선언 높이에 중복 들어간 저장본은 다음
-            // vpos가 실제 앞줄 점유(text_height)와 간격을 이미 증언한다.
-            // 논리 상자를 줄일 때 이 유효한 전진까지 선언 높이 차이만큼
-            // 당기지 않는다. 표시와 투영은 같은 줄 간격 결과를 소비한다.
-            let logical_advance_height = if next_inline_box_was_reserved && retains_source_strut {
-                stored_pair.expect("유효한 저장 줄 쌍").0.text_height
-            } else {
-                new_logical_height
-            };
             // 저장 간격은 논리 상자 높이 뒤의 leading이다. 실제 기준선 합집합이
             // 더 크면 그 차이는 leading에서 소비해 상자/간격을 이중 예약하지 않는다.
             line.line_spacing = line
                 .line_spacing
-                .saturating_add(logical_advance_height.saturating_sub(occupied_height));
+                .saturating_add(new_logical_height.saturating_sub(occupied_height));
             line.line_height = occupied_height;
             line.baseline_distance = new_ascent;
             debug_assert!(hwpunit_to_px(line.line_height, DEFAULT_DPI) > 0.0);

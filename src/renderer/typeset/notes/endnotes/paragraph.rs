@@ -559,23 +559,8 @@ impl TypesetEngine {
                 && internal_vpos_rewind
                 && internal_rewind_split.is_none()
                 && st.col_count > 1
-                && endnote_has_visible_payload
-                // 저장 원점의 되감김만으로 실제로 들어가는 수식을 넘기지
-                // 않는다. 실제 paint 경로로 마지막 줄·개체까지 재생한다.
-                // 측정 불가는 기존 이월을 유지하며 fit 허용치는 바꾸지 않는다.
-                && self
-                    .simulate_endnote_column_bottom_y(
-                        st,
-                        paragraphs,
-                        styles,
-                        available,
-                        en_col_w,
-                        Some(en_para_idx),
-                        true,
-                    )
-                    .is_none_or(|bottom| {
-                        bottom > available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX
-                    });
+                && st.current_height > available * 0.75
+                && endnote_has_visible_payload;
 
             let col_count = st.col_count;
             let dpi = self.dpi;

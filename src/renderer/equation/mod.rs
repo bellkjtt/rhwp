@@ -71,22 +71,7 @@ pub fn intrinsic_size_hwp(script: &str, font_size: u32) -> (u32, u32) {
 /// 수학 글꼴 HYhwpEQ에는 한글 cmap이 없으므로 한글은 본문 대체 글꼴로 그린다.
 /// 일반 수식의 저장 프레임과 보호된 크기는 유지한다. 독립 한컴 출력에서
 /// 확인한 글자 줄·윗줄·단일 위첨자·BOX의 낡은 캐시만 논리 상자로 재발행한다.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) enum EquationFlowFrame {
-    Stored,
-    LogicalFont,
-    ReplacementText,
-}
-
 pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u32, u32, i32) {
-    flow_metrics_with_source_hwp(equation).0
-}
-
-/// 줄 공간의 유효성도 실제 메트릭을 생성한 경로에서 함께 전달한다.
-/// 대체 본문 글꼴로 재조판한 수식에 이전 수학 글꼴의 줄 공간을 재사용하지 않는다.
-pub(crate) fn flow_metrics_with_source_hwp(
-    equation: &crate::model::control::Equation,
-) -> ((u32, u32, i32), EquationFlowFrame) {
     if !equation.common.size_protect
         && equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
         && equation
@@ -106,23 +91,17 @@ pub(crate) fn flow_metrics_with_source_hwp(
             .flatten();
         let (height, baseline) = font_frame.unwrap_or((intrinsic.height, intrinsic.baseline));
         (
-            (
-                super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32,
-                super::px_to_hwpunit(height, super::DEFAULT_DPI).max(1) as u32,
-                super::px_to_hwpunit(baseline, super::DEFAULT_DPI),
-            ),
-            EquationFlowFrame::ReplacementText,
+            super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32,
+            super::px_to_hwpunit(height, super::DEFAULT_DPI).max(1) as u32,
+            super::px_to_hwpunit(baseline, super::DEFAULT_DPI),
         )
     } else if let Some(metrics) = normalized_simple_math_metrics(equation) {
-        (metrics, EquationFlowFrame::LogicalFont)
+        metrics
     } else {
         (
-            (
-                equation.common.width,
-                equation.common.height,
-                (equation.common.height as i32).saturating_mul(i32::from(equation.baseline)) / 100,
-            ),
-            EquationFlowFrame::Stored,
+            equation.common.width,
+            equation.common.height,
+            (equation.common.height as i32).saturating_mul(i32::from(equation.baseline)) / 100,
         )
     }
 }

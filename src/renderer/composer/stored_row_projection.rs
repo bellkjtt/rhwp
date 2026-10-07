@@ -43,7 +43,22 @@ pub(crate) fn project_equation_rows(
                 || actual.baseline_distance != source.baseline_distance
                 || actual.line_spacing != source.line_spacing
             {
-                let height_delta = actual.line_height.saturating_sub(source.line_height);
+                // 저장 선언 높이에 뒤 줄 개체가 포함됐어도 앞줄의 전진은
+                // 저장 사다리가 가리킨다. 원래 내용 높이+간격으로 이미 전진한
+                // 줄은 그 높이를 기준으로 재조판 차이를 구한다. 선언 높이의
+                // 차이를 빼면 중복 예약분까지 다시 당겨 다음 줄이 겹친다.
+                let source_advance_height = if source.line_height > source.text_height
+                    && source_positions.get(index + 1).is_some_and(|next| {
+                        source_vpos
+                            .checked_add(source.text_height)
+                            .and_then(|end| end.checked_add(source.line_spacing))
+                            == Some(*next)
+                    }) {
+                    source.text_height
+                } else {
+                    source.line_height
+                };
+                let height_delta = actual.line_height.saturating_sub(source_advance_height);
                 let spacing_delta = actual.line_spacing.saturating_sub(source.line_spacing);
                 // 저장 사다리가 이미 실제 줄의 전진값이면 뒤 원점을 다시 당기지
                 // 않는다. 낡은 상자의 전진을 저장한 경우만 재조판량을 투영한다.
