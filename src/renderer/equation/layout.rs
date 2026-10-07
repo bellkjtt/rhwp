@@ -1068,14 +1068,24 @@ impl EqLayout {
         }
         let total_h = y - row_gap;
         let full_w = max_w + fs * 0.6;
+        // cases의 왼쪽 식은 가운데 행의 글자 기준선에 맞춘다.
+        // 물리 상자의 중간을 기준선으로 쓰면 모든 행이 글자 하강부만큼 내려간다.
+        let baseline = if self.hancom_math_face && !row_boxes.is_empty() {
+            let upper = &row_boxes[(row_boxes.len() - 1) / 2];
+            let lower = &row_boxes[row_boxes.len() / 2];
+            (upper.y + upper.baseline + lower.y + lower.baseline) * 0.5
+        } else {
+            total_h / 2.0
+        };
 
         // 중괄호 포함 레이아웃 → Paren으로 래핑
         let inner = LayoutBox {
-            x: 0.0,
+            // 외곽 폭에 예약한 왼쪽 중괄호 폭을 실제 자식 원점에서도 소비한다.
+            x: fs * 0.3,
             y: 0.0,
             width: full_w,
             height: total_h,
-            baseline: total_h / 2.0,
+            baseline,
             kind: LayoutKind::Row(row_boxes),
         };
 
@@ -1084,7 +1094,7 @@ impl EqLayout {
             y: 0.0,
             width: full_w + fs * 0.3,
             height: total_h,
-            baseline: total_h / 2.0,
+            baseline,
             kind: LayoutKind::Paren {
                 left: "{".to_string(),
                 right: String::new(),
@@ -1371,6 +1381,14 @@ pub(crate) fn is_integral_symbol(symbol: &str) -> bool {
 
 /// 텍스트 폭 추정
 pub(crate) fn estimate_text_width(text: &str, font_size: f64, italic: bool) -> f64 {
+    // 일반 기호·함수·극한·큰 연산자도 paint와 같은 표시 글리프의 전진폭을 쓴다.
+    // font_line에서만 실제 메트릭을 쓰고 여기서 다시 문자 종류별 비율로
+    // 추정하면 등호 같은 기호가 자기 상자를 넘어 뒤 내용과 겹친다.
+    if !italic {
+        if let Some(width) = glyph_advances::text_width(text, font_size) {
+            return width;
+        }
+    }
     let mut w = 0.0;
     for ch in text.chars() {
         let ratio = if matches!(ch, '(' | ')') {
