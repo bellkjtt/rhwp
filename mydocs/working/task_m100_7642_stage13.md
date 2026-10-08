@@ -29,5 +29,13 @@ Native/fresh WASM 점수와 같은 배율 확대 판독을 별도로 확인한�
 row는 윤곽 glyph에도 원본 전진폭과 연산자 여백을 별도로 적용한다.
 
 Native Clippy는 exit 0, 1분 55초이며 Studio `tsc --noEmit`도 exit 0이다.
-Native 진단 빌드는 진행 중으로 수정 후 시각 판정과 fresh WASM은 아직 미검증이다.
+Native 진단 빌드는 exit 0, 6분 1초이며 code head는 `960fe1fbf`다.
+바이너리 SHA-256은 `8bb9528d319b5a295d56631506dcffad1606bb3a7d05f24ff105650683c5ac54`이고
+파일별 소스 해시는 ignored `equation-multiplication-outline-native-provenance.json`에 있다.
+원본 17쪽은 **96.95492%**, 독립 연산자 대조군은 **91.34684%**다.
+같은 배율의 확대 비교와 fresh WASM의 최종 판정은 계속 진행한다.
 Golden dumper는 추가 필드를 수용하는 패턴만 바꿨고 회귀 기대값은 갱신하지 않았다.
+
+과거 비교에서 완료된 SVG 162개, 8.93GiB를 해시·경로 원장에 고정한 뒤 정리했다.
+입력·Print PDF·PNG·TSV·JSON·로그·고정 바이너리·실행 중 산출물과 최저 쪽은 보존했다.
+원장은 ignored `completed-svg-cleanup-stage13-20261008.json`이다.
