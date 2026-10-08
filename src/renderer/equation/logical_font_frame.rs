@@ -27,11 +27,11 @@ const BAR_SUP_FRAMES: [[u32; 5]; 14] = [
     [2400, 3297, 90, 3657, 91],
 ];
 
-fn bar_sup_metrics(fs: f64, radical: bool) -> Option<(f64, f64)> {
-    let hu = crate::renderer::px_to_hwpunit(fs, crate::renderer::DEFAULT_DPI) as u32;
+fn bar_sup_metrics(fs: f64, radical: bool, dpi: f64) -> Option<(f64, f64)> {
+    let hu = crate::renderer::px_to_hwpunit(fs, dpi) as u32;
     let row = BAR_SUP_FRAMES.iter().find(|row| row[0] == hu)?;
     let index = if radical { 3 } else { 1 };
-    let height = crate::renderer::hwpunit_to_px(row[index] as i32, crate::renderer::DEFAULT_DPI);
+    let height = crate::renderer::hwpunit_to_px(row[index] as i32, dpi);
     Some((height, height * f64::from(row[index + 1]) / 100.0))
 }
 
@@ -85,6 +85,25 @@ fn font_line(value: &LayoutBox, fs: f64) -> bool {
     }
 }
 
+/// 단일 글자 줄 위첨자의 기준선 거리를 독립 한컴 논리 프레임에서 해소한다.
+/// 공개 표시 글꼴의 MATH shift를 원본 face의 프레임과 혼용하지 않는다.
+pub(super) fn superscript_shift(
+    base: &LayoutBox,
+    sup: &LayoutBox,
+    fs: f64,
+    dpi: f64,
+) -> Option<f64> {
+    if !font_line(base, fs)
+        || !font_line(sup, sup.font_size)
+        || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
+    {
+        return None;
+    }
+    let metrics = super::font_frame_metrics::for_size_at_dpi(fs, dpi)?;
+    let shift = metrics.sup.0 - metrics.line.0 + metrics.line.1 * (1.0 - sup.font_size / fs);
+    Some(shift)
+}
+
 fn contains_prime(value: &LayoutBox) -> bool {
     match &value.kind {
         LayoutKind::Symbol(s)
@@ -98,8 +117,8 @@ fn contains_prime(value: &LayoutBox) -> bool {
     }
 }
 
-fn frame(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
-    let metrics = super::font_frame_metrics::for_size(fs)?;
+fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    let metrics = super::font_frame_metrics::for_size_at_dpi(fs, dpi)?;
     if font_line(value, fs) {
         return Some(if contains_prime(value) {
             metrics.prime_line
@@ -119,10 +138,10 @@ fn frame(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
         LayoutKind::Superscript { base, sup }
             if bar_font_line(base, fs) && font_line(sup, sup.font_size) =>
         {
-            bar_sup_metrics(fs, false)
+            bar_sup_metrics(fs, false, dpi)
         }
         LayoutKind::Sqrt { index: None, body } if bar_sup_radical_body(body, fs) == Some(true) => {
-            bar_sup_metrics(fs, true)
+            bar_sup_metrics(fs, true, dpi)
         }
         LayoutKind::Superscript { base, sup }
             if font_line(base, fs) && font_line(sup, sup.font_size) =>
@@ -147,12 +166,12 @@ fn frame(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
             let percent = ((metrics.fraction.1 + extra_numer) / height * 100.0).round();
             Some((height, height * percent / 100.0))
         }
-        LayoutKind::FontStyle { body, .. } => frame(body, fs),
+        LayoutKind::FontStyle { body, .. } => frame(body, fs, dpi),
         LayoutKind::Row(items) => {
             let mut ascent = 0.0_f64;
             let mut descent = 0.0_f64;
             for item in items {
-                let (height, baseline) = frame(item, fs)?;
+                let (height, baseline) = frame(item, fs, dpi)?;
                 ascent = ascent.max(baseline);
                 descent = descent.max(height - baseline);
             }
@@ -164,5 +183,9 @@ fn frame(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
 
 /// 중첩 분수·배열·아래첨자·복합 첨자·일반 근호·다줄·다중 장식은 이 계약이 아니다.
 pub(super) fn metrics(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
-    frame(value, fs)
+    frame(value, fs, crate::renderer::DEFAULT_DPI)
+}
+
+pub(super) fn metrics_at_dpi(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    frame(value, fs, dpi)
 }

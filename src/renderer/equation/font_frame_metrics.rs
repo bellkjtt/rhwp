@@ -74,3 +74,19 @@ pub(super) fn for_size(fs: f64) -> Option<FontFrameMetrics> {
         fraction: convert(11),
     })
 }
+
+pub(super) fn for_size_at_dpi(fs: f64, dpi: f64) -> Option<FontFrameMetrics> {
+    let reference_dpi = crate::renderer::DEFAULT_DPI;
+    let metrics = for_size(fs * reference_dpi / dpi)?;
+    let convert = |(height, baseline): (f64, f64)| {
+        (height * dpi / reference_dpi, baseline * dpi / reference_dpi)
+    };
+    Some(FontFrameMetrics {
+        line: convert(metrics.line),
+        prime_line: convert(metrics.prime_line),
+        bar: convert(metrics.bar),
+        prime_bar: convert(metrics.prime_bar),
+        sup: convert(metrics.sup),
+        fraction: convert(metrics.fraction),
+    })
+}

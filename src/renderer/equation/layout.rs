@@ -556,7 +556,14 @@ impl EqLayout {
 
     fn layout_paren(&self, left: &str, right: &str, body: &EqNode, fs: f64) -> LayoutBox {
         let b = self.layout_node(body, fs);
-        let use_stretch_round = b.height > fs * 1.2 && matches!((left, right), ("(", ")"));
+        let delimiter_height = if self.hancom_math_face {
+            super::logical_font_frame::metrics_at_dpi(&b, fs, self.dpi)
+                .map_or(b.height, |(height, _)| height)
+        } else {
+            b.height
+        };
+        let glyph_delimiters = delimiter_height <= fs * 1.2;
+        let use_stretch_round = !glyph_delimiters && matches!((left, right), ("(", ")"));
         let source_round = self.hancom_math_face
             && !use_stretch_round
             && matches!(left, "" | "(" | ")")
@@ -599,6 +606,8 @@ impl EqLayout {
                 right: right.to_string(),
                 left_width: left_w,
                 right_width: right_w,
+                delimiter_height,
+                glyph_delimiters,
                 body: Box::new(body_box),
             },
         }

@@ -38,7 +38,17 @@ impl EqLayout {
         // 위첨자의 깊이를 포함해 본체 기준선 위에 하단 여유를 확보한다.
         // 키 큰 본체는 원래 기준선을 유지하므로 위첨자를 맞추려고 본체를 올리지 않는다.
         let sup_depth = sup_box.height - sup_box.baseline;
-        let shift = (fs * SUPERSCRIPT_SHIFT_UP).max(sup_depth + fs * SUPERSCRIPT_BOTTOM_MIN);
+        let shift = self
+            .hancom_math_face
+            .then(|| {
+                super::super::logical_font_frame::superscript_shift(
+                    &base_box, &sup_box, fs, self.dpi,
+                )
+            })
+            .flatten()
+            .unwrap_or_else(|| {
+                (fs * SUPERSCRIPT_SHIFT_UP).max(sup_depth + fs * SUPERSCRIPT_BOTTOM_MIN)
+            });
         let baseline = base_box.baseline.max(sup_box.baseline + shift);
         base_box.x = 0.0;
         base_box.y = baseline - base_box.baseline;

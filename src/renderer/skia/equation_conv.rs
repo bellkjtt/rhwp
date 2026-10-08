@@ -477,9 +477,11 @@ fn render_box(
             right,
             left_width,
             right_width,
+            delimiter_height,
+            glyph_delimiters,
             body,
         } => {
-            let use_glyph = lb.height <= fs * 1.2;
+            let use_glyph = *glyph_delimiters;
             if !left.is_empty() {
                 if use_glyph && (left == "(" || left == ")") {
                     draw_text(
@@ -502,7 +504,7 @@ fn render_box(
                         x,
                         y,
                         *left_width,
-                        lb.height,
+                        *delimiter_height,
                         color,
                         fs,
                     );
@@ -532,7 +534,7 @@ fn render_box(
                         right_x,
                         y,
                         *right_width,
-                        lb.height,
+                        *delimiter_height,
                         color,
                         fs,
                     );

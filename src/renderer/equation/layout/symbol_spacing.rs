@@ -18,6 +18,15 @@ fn reserves_operator_gap(node: &EqNode) -> bool {
     }
 }
 
+fn ends_with_script(node: &EqNode) -> bool {
+    match node {
+        EqNode::Superscript { .. } | EqNode::Subscript { .. } => true,
+        EqNode::FontStyle { body, .. } => ends_with_script(body),
+        EqNode::Row(items) => items.last().is_some_and(ends_with_script),
+        _ => false,
+    }
+}
+
 impl EqLayout {
     pub(super) fn row_children(&self, nodes: &[EqNode], fs: f64) -> Vec<LayoutBox> {
         let significant: Vec<usize> = nodes
@@ -60,7 +69,13 @@ impl EqLayout {
                 {
                     0.0
                 } else {
-                    padding
+                    if source_metrics.is_some()
+                        && ends_with_script(&nodes[significant[position - 1]])
+                    {
+                        padding.max(fs * 0.20)
+                    } else {
+                        padding
+                    }
                 };
                 let right = if position + 1 == significant.len()
                     || operator(&nodes[significant[position + 1]])

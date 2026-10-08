@@ -3162,15 +3162,19 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
             right,
             left_width,
             right_width,
+            delimiter_height,
+            glyph_delimiters,
             body,
         } => {
             let _ = write!(
                 buf,
-                "{{\"type\":\"paren\",\"left\":{},\"right\":{},\"leftWidth\":{:.3},\"rightWidth\":{:.3},\"body\":",
+                "{{\"type\":\"paren\",\"left\":{},\"right\":{},\"leftWidth\":{:.3},\"rightWidth\":{:.3},\"delimiterHeight\":{:.3},\"glyphDelimiters\":{},\"body\":",
                 json_escape(left),
                 json_escape(right),
                 left_width,
                 right_width,
+                delimiter_height,
+                glyph_delimiters,
             );
             write_equation_layout_box(buf, body);
             buf.push('}');

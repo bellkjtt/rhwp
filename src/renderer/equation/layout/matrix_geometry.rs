@@ -156,6 +156,8 @@ impl EqLayout {
                 right: String::new(),
                 left_width: fs * 0.3,
                 right_width: 0.0,
+                delimiter_height: total_h,
+                glyph_delimiters: false,
                 body: Box::new(inner),
             },
         }

@@ -115,6 +115,8 @@ pub enum LayoutKind {
         right: String,
         left_width: f64,
         right_width: f64,
+        delimiter_height: f64,
+        glyph_delimiters: bool,
         body: Box<LayoutBox>,
     },
     /// 장식

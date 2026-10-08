@@ -306,17 +306,28 @@ fn render_box(
             right,
             left_width,
             right_width,
+            delimiter_height,
+            glyph_delimiters,
             body,
         } => {
             // 텍스트 높이 파렌(`(`, `)`)은 폰트 글리프로 렌더, 그 외는 path. (Task #283)
-            let use_glyph = lb.height <= fs * 1.2;
+            let use_glyph = *glyph_delimiters;
             if !left.is_empty() {
                 if use_glyph && (left == "(" || left == ")") {
                     set_font(ctx, fs, false, false);
                     ctx.set_fill_style_str(color);
                     let _ = ctx.fill_text(left, x, y + lb.baseline);
                 } else {
-                    draw_stretch_bracket(ctx, left, x, y, *left_width, lb.height, color, fs);
+                    draw_stretch_bracket(
+                        ctx,
+                        left,
+                        x,
+                        y,
+                        *left_width,
+                        *delimiter_height,
+                        color,
+                        fs,
+                    );
                 }
             }
             render_box(ctx, body, x, y, color, fs, italic, bold);
@@ -333,7 +344,7 @@ fn render_box(
                         right_x,
                         y,
                         *right_width,
-                        lb.height,
+                        *delimiter_height,
                         color,
                         fs,
                     );

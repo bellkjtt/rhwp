@@ -4443,16 +4443,18 @@ export class CanvasKitLayerRenderer {
       case 'eqAlign':
         return layout.kind.rows.every((row) => child(row.left) && child(row.right));
       case 'paren': {
-        const { leftWidth, rightWidth } = layout.kind;
+        const { leftWidth, rightWidth, delimiterHeight, glyphDelimiters } = layout.kind;
         // 이전 paint JSON에는 측정 폭이 없다. SVG 대체 경로를 사용한다.
         if (typeof leftWidth !== 'number' || typeof rightWidth !== 'number'
-          || !Number.isFinite(leftWidth) || !Number.isFinite(rightWidth)) return false;
+          || !Number.isFinite(leftWidth) || !Number.isFinite(rightWidth)
+          || typeof delimiterHeight !== 'number' || !Number.isFinite(delimiterHeight)
+          || typeof glyphDelimiters !== 'boolean') return false;
         return (layout.kind.left
-          ? this.drawEquationBracket(canvas, layout.kind.left, x, y, layout.height, color, fontSize, leftWidth, layout.baseline)
+          ? this.drawEquationBracket(canvas, layout.kind.left, x, y, delimiterHeight, color, fontSize, leftWidth, layout.baseline, glyphDelimiters)
           : true)
           && child(layout.kind.body)
           && (layout.kind.right
-            ? this.drawEquationBracket(canvas, layout.kind.right, x + layout.width - rightWidth, y, layout.height, color, fontSize, rightWidth, layout.baseline)
+            ? this.drawEquationBracket(canvas, layout.kind.right, x + layout.width - rightWidth, y, delimiterHeight, color, fontSize, rightWidth, layout.baseline, glyphDelimiters)
             : true);
       }
       case 'decoration':
@@ -4663,6 +4665,7 @@ export class CanvasKitLayerRenderer {
     fontSize: number,
     measuredWidth?: number,
     baseline?: number,
+    glyphDelimiters?: boolean,
   ): boolean {
     const width = measuredWidth ?? Math.max(fontSize * 0.3, 1);
     if (bracket === '|') {
@@ -4673,7 +4676,7 @@ export class CanvasKitLayerRenderer {
       bracket,
       measuredWidth === undefined ? x - width / 2 : x,
       y + (baseline ?? height * 0.7),
-      measuredWidth !== undefined && height <= fontSize * 1.2 ? fontSize : Math.max(height, fontSize),
+      glyphDelimiters === true ? fontSize : Math.max(height, fontSize),
       color,
       false,
       false,
