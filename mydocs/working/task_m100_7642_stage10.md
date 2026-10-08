@@ -46,3 +46,25 @@ HWP3 계보 보상 ×0.5가 이 중복을 가리기도 했으나 유효 스타�
 현재 변경은 code 4개 파일의 15줄 추가 / 79줄 삭제이며 회귀 기대값은 수정하지 않았다.
 Native 재빌드는 `stage10-equation-indent-native-build.log`로 실행 중이고 아직 수정 후
 시각 통과나 전체 회귀 완료를 기록하지 않는다.
+
+
+## 첫 Native 재검증 결과
+
+`c886b29db6a2b766b078dff17535dab9df58b7d6`의 Native 빌드는 exit 0, 14분 56초다.
+고정 바이너리 `output/pr-review/issue7642/failed-inputs-20261008/rhwp-equation-indent-once`의
+SHA-256은 `cd4d63f94c5c9ab8dc215f033338baee1789df138a4c6084ab3cb9c86fc9eed9`다.
+`equation-indent-once-native-provenance.json`에 코드 파일별 해시와 명령을 보존했다.
+
+같은 원본·한컴 Print의 17쪽 2px 실루엣은 94.55551% → **95.33926%**다.
+Native와 PDF의 전체 쪽수는 각각 23쪽이며 이 실행은 17쪽만 직접 비교했다.
+둘째·셋째 수식의 x 원점은 첫 줄 RHS와 같아져 원본 내어쓰기 정렬을 회복했다.
+576dpi의 같은 물리 영역 대조에서도 확인했다. 해당 영역의 닫는 괄호/등호와 수식 내부
+간격 차이는 남아 있으므로 확대 판독은 **미충족**이며 시각 개선 완료나 회귀 변경으로
+승격하지 않는다. 전체 23쪽 TSV는 별도 실행 중이고 fresh WASM은 아직 미검증이다.
+
+증적은 ignored `output/pr-review/issue7642/equation-regression-scope-20261008/` 아래의
+`indent-once-monthly-page17/`, `sep2022-indent-once-equation-zoom/`에 있다.
+같은 head의 `cargo clippy --locked --target-dir target/pr-review -- -D warnings`는
+exit 0, 1분 32초다. 나머지 필수 lint/전체 nextest는 최종 보정 뒤 다시 확인한다.
+정상 대조군 `eq-002.hwp`/`eq-002.hwpx`는 첫 Chrome navigation timeout을 로그에 보존하고
+180초 raster timeout으로 별도 경로에서 재검증 중이다. 환경 실패를 출력 결함으로 세지 않는다.
