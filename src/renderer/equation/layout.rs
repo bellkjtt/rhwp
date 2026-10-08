@@ -416,6 +416,11 @@ impl EqLayout {
             return layout;
         }
         if self.hancom_math_face {
+            // 명령으로 입력한 연산자도 직접 기호와 같은 논리 전진·표시 상자를 소비한다.
+            // 독립 메트릭이 없는 다른 수학 명령은 기존 경로를 유지한다.
+            if source_font_symbol::operator_metrics(text, fs, self.dpi).is_some() {
+                return self.layout_symbol(text, fs);
+            }
             if let Some(result) = source_font_symbol::layout(text, fs) {
                 return result;
             }

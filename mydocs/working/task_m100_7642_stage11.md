@@ -113,3 +113,25 @@ Print method 0 / one-up 실행 증거와 글리프 원점은 ignored `operator-*
 일반 괄호가 큰 path로 바뀌지 않도록 구분자 높이와 표시 방식을 공통 Paren 결과에 보존해
 SVG/Canvas/Skia/Studio가 소비한다. 최신 Studio tsc는 exit 0이고 Native lint 확인 중이다.
 단순 전체 점수와 최종 확대 판독의 통과 여부는 새 빌드 재출력 뒤 별도로 기록한다.
+
+## 최신 Native 결과와 확대 판독
+
+공통 프레임 보정 코드 head는 `a5c3751b9`다. Native `release-test` 진단 빌드는
+exit 0, 5분 55초이며 바이너리 `rhwp-equation-source-frame`의 SHA-256은
+`5e20b70be1643542179797a0cda8f46ef4df12e921f21301b4366ed87d2c2b5c`다.
+Native Clippy는 exit 0, Studio tsc도 exit 0이다. 시작 head와 소스 파일별 해시,
+실행 로그는 `output/pr-review/issue7642/failed-inputs-20261008/`에 보존한다.
+
+2022년 9월 원본 17쪽은 **95.25802%**다. 그러나 같은 576dpi 영역의 직접 비교에서
+둘째 줄 `times100`, `times10`의 간격과 분수 숫자 모양 차이가 남아 확대 판독은
+**미충족**이다. 수치 통과를 완료로 기록하지 않는다. 명령 연산자가 공통 여백 계산에서
+빠진 원인은 [다음 단계](task_m100_7642_stage12.md)에 이어 기록한다.
+
+36개 활성 원본의 Native 전수 TSV 산출은 진행 중이다. 먼저 끝난 eq-002 HWP/HWPX는
+각각 92.51275%, `samples/exam_math_8.hwp`는 **83.49525%**로 확인했다.
+math8의 대표 review PNG는 `equation-regression-scope-20261008/source-frame-math8-review/`에
+보존했고 90% 미만으로 재검토가 필요하다. 전체 검증 통과를 뜻하지 않는다.
+
+fresh WASM은 턴 중단으로 종료된 프로세스가 없음을 확인한 뒤 공용 절대 target
+`/home/tsjang/rhwp/target/pr-review`에서 다시 빌드 중이다. Native 전수 비교는 고정 바이너리를
+사용하며 Cargo를 병렬 실행하지 않는다. 최종 exit와 최신 WASM 시각 결과는 아직 미검증이다.
