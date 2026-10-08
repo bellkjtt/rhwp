@@ -105,5 +105,13 @@ PARAMARGIN·수식 SHAPEOBJECT를 생략한다. 한컴 저장본은 장평·상�
 
 HWP/HWPX 저장 제품은 제공 파일명이나 요청 제품으로 추정하지 않고 실제 metadata를
 기록했다. 이 두 저장본의 정식 Visual Sweep에는 각 저장본을 engine 2020으로 다시
-Print한 PDF를 사용한다. 원본 HML의 2024 PDF와 저장본의 2020 Print는 각각 구분하며,
+Print한 다음 PDF를 사용한다. 두 출력 모두 Hancom 11.0.0.9136,
+`pdf_print_method=0`, `pdf_output_mode=hancom2020_pdf_driver_one_up`을 확인했다.
+
+| 저장본 | MCP Print PDF | SHA-256 |
+| --- | --- | --- |
+| HWP | [2020 Print PDF](../../pdf/issue7642-equation-print/hml-saved-hwp-exambank_math_equations_min-2020.pdf) | `45dff67c088f95e95cfed72f7a1f84e75132c77d891f8eabac65618325b94f55` |
+| HWPX | [2020 Print PDF](../../pdf/issue7642-equation-print/hml-saved-hwpx-exambank_math_equations_min-2020.pdf) | `e76083fe1f2c708fb361c0fb7f5e13d9d7090b7bf24e3664f388339f09f460c3` |
+
+원본 HML의 2024 PDF와 저장본의 2020 Print는 각각 구분하며,
 현재 차이가 해결되었다거나 전체 HML 호환성을 입증했다는 뜻으로 사용하지 않는다.
