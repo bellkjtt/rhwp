@@ -48,7 +48,12 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<Layo
             (false, true) => (&ROMAN_UPPER, b'A'),
             (false, false) => (&ROMAN_LOWER, b'a'),
         };
-        let width = logical_advance(advances[usize::from(ch - first)], fs, dpi);
+        let width = if italic && ch == b'f' {
+            super::source_font_advance::measured(fs, dpi, 3)
+        } else {
+            None
+        }
+        .unwrap_or_else(|| logical_advance(advances[usize::from(ch - first)], fs, dpi));
         children.push(LayoutBox {
             font_size: fs,
             x,

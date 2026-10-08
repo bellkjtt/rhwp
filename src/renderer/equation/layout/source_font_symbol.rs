@@ -45,7 +45,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
         font_size: fs,
         x: 0.0,
         y: 0.0,
-        width: fs * 276.0 / 1024.0,
+        width: super::source_font_advance::measured(fs, dpi, 2).unwrap_or(fs * 276.0 / 1024.0),
         height: fs,
         baseline: fs * 0.8,
         kind: LayoutKind::FontGlyph {

@@ -57,8 +57,14 @@ const METRICS: [[u32; 13]; 14] = [
     ],
 ];
 
+/// 글자 크기 메트릭의 키는 원래 정수 BaseUnit을 복원한다.
+/// 좌표 변환의 절삭을 사용하면 13pt가 부동소수점 오차로 1299HU가 된다.
+pub(super) fn base_unit_at_dpi(fs: f64, dpi: f64) -> u32 {
+    (fs * crate::renderer::HWPUNIT_PER_INCH / dpi).round() as u32
+}
+
 pub(super) fn for_size(fs: f64) -> Option<FontFrameMetrics> {
-    let hu = crate::renderer::px_to_hwpunit(fs, crate::renderer::DEFAULT_DPI) as u32;
+    let hu = base_unit_at_dpi(fs, crate::renderer::DEFAULT_DPI);
     let row = METRICS.iter().find(|row| row[0] == hu)?;
     let convert = |index: usize| {
         let height =
@@ -98,7 +104,7 @@ pub(super) fn line_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     }
     // 기존 구조별 표에 없는 22pt의 일반 글줄만 독립 정상화로 확인했다.
     // job ee04e67a-b8cb-4297-9f26-716027f9eb7e, a/n/x/m 모두 동일하다.
-    let hu = crate::renderer::px_to_hwpunit(fs, dpi) as u32;
+    let hu = base_unit_at_dpi(fs, dpi);
     if hu != 2200 {
         return None;
     }
@@ -127,7 +133,7 @@ pub(super) fn subscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
         [2200, 2626, 71],
         [2400, 2899, 71],
     ];
-    let hu = crate::renderer::px_to_hwpunit(fs, dpi) as u32;
+    let hu = base_unit_at_dpi(fs, dpi);
     let row = FRAMES.iter().find(|row| row[0] == hu)?;
     let height = crate::renderer::hwpunit_to_px(row[1] as i32, dpi);
     Some((height, height * f64::from(row[2]) / 100.0))

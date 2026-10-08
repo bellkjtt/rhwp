@@ -7,6 +7,7 @@
 //! 소비한다. 동작은 바꾸지 않는다. 모듈 지도는 `README.md`, 매뉴얼은
 //! `mydocs/manual/equation_module.md`.
 
+mod advance_contract;
 pub mod ast;
 mod box_types;
 mod brace_recovery;
@@ -138,11 +139,15 @@ pub(crate) fn normalized_simple_math_metrics(
     if equation.common.height <= height {
         return None;
     }
-    // 논리 높이의 무효만으로 저장 전진폭까지 무효라고 판단할 수 없다.
-    // 대체 글꼴의 자연 폭은 backend의 표시 스케일 입력이며,
-    // 원본 글줄의 점유 폭을 대신하지 않는다. 측정·배치는 같은 저장 폭을 소비한다.
+    // 높이가 무효여도 미지원 구조의 폭까지 무효라고 추정하지 않는다.
+    // 독립 한컴 전진폭을 확인한 일반 글자 줄만 paint와 같은 논리 폭으로 재발행한다.
+    let width = if advance_contract::has_source_advances(&ast) {
+        super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32
+    } else {
+        equation.common.width
+    };
     Some((
-        equation.common.width,
+        width,
         height,
         super::px_to_hwpunit(baseline, super::DEFAULT_DPI),
     ))

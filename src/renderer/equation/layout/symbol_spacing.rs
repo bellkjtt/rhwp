@@ -27,6 +27,20 @@ fn ends_with_script(node: &EqNode) -> bool {
     }
 }
 
+/// 인접한 닫는 괄호는 하나의 구분자 묶음이다. operand 끝만 자동 간격을 만든다.
+fn operand_end(node: &EqNode) -> bool {
+    match node {
+        EqNode::Text(_) | EqNode::Number(_) => true,
+        EqNode::Symbol(text) | EqNode::MathSymbol(text) => matches!(text.as_str(), "'" | "′"),
+        EqNode::Row(items) => items
+            .iter()
+            .rfind(|item| !matches!(item, EqNode::Space(_) | EqNode::Empty))
+            .is_some_and(operand_end),
+        EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => operand_end(body),
+        _ => false,
+    }
+}
+
 impl EqLayout {
     pub(super) fn row_children(&self, nodes: &[EqNode], fs: f64) -> Vec<LayoutBox> {
         let significant: Vec<usize> = nodes
@@ -45,6 +59,24 @@ impl EqLayout {
                 }
                 let position = next_position;
                 next_position += 1;
+                if self.hancom_math_face
+                    && position > 0
+                    && matches!(node, EqNode::Symbol(text) if matches!(text.as_str(), "(" | ")"))
+                    && operand_end(&nodes[significant[position - 1]])
+                {
+                    let left = fs * 0.07;
+                    let width = result.width + left;
+                    result.x = left;
+                    return LayoutBox {
+                        font_size: fs,
+                        x: 0.0,
+                        y: 0.0,
+                        width,
+                        height: result.height,
+                        baseline: result.baseline,
+                        kind: LayoutKind::Row(vec![result]),
+                    };
+                }
                 if !self.hancom_math_face || !operator(node) {
                     return result;
                 }

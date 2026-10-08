@@ -14,6 +14,7 @@ mod integral_placement;
 mod limit_geometry;
 mod matrix_geometry;
 mod script_geometry;
+mod source_font_advance;
 mod source_font_symbol;
 mod source_font_text;
 mod symbol_advances;
@@ -385,9 +386,13 @@ impl EqLayout {
             .hancom_math_face
             .then(|| source_font_symbol::operator_metrics(display, fs, self.dpi))
             .flatten();
-        let w = source_operator
-            .map(|(width, _)| width)
-            .unwrap_or_else(|| estimate_text_width(display, fs, false));
+        let w = if self.hancom_math_face && matches!(text, "(" | ")") {
+            source_font_advance::paren(fs, self.dpi)
+        } else {
+            source_operator
+                .map(|(width, _)| width)
+                .unwrap_or_else(|| estimate_text_width(display, fs, false))
+        };
         // 연산자 좌우 여백
         let pad = if source_operator.is_some() {
             0.0
@@ -584,7 +589,7 @@ impl EqLayout {
         // Times New Roman '(' advance (em 기준) = 0.333. 텍스트 높이 glyph는 이 폭을 유지하고,
         // 큰 둥근 괄호 path는 한컴 HyhwpEQ 출력에 가깝게 더 좁게 잡는다. (Task #283, #1139)
         let paren_w = if source_round {
-            source_font_text::logical_advance(398, fs, self.dpi)
+            source_font_advance::paren(fs, self.dpi)
         } else if use_stretch_round {
             fs * 0.27
         } else {
@@ -622,7 +627,12 @@ impl EqLayout {
     fn layout_space(&self, kind: SpaceKind, fs: f64) -> LayoutBox {
         let w = match kind {
             SpaceKind::Normal => fs * 0.33,
-            SpaceKind::Thin => fs * if self.hancom_math_face { 0.125 } else { 0.17 },
+            SpaceKind::Thin if self.hancom_math_face => {
+                // 한컴의 명시적 Thin은 BaseUnit/8을 정수 HWPUNIT로 게시한다.
+                let size = super::font_frame_metrics::base_unit_at_dpi(fs, self.dpi);
+                super::super::hwpunit_to_px((size / 8) as i32, self.dpi)
+            }
+            SpaceKind::Thin => fs * 0.17,
             SpaceKind::Tab => fs * 1.0,
         };
         LayoutBox {

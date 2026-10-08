@@ -28,7 +28,7 @@ const BAR_SUP_FRAMES: [[u32; 5]; 14] = [
 ];
 
 fn bar_sup_metrics(fs: f64, radical: bool, dpi: f64) -> Option<(f64, f64)> {
-    let hu = crate::renderer::px_to_hwpunit(fs, dpi) as u32;
+    let hu = super::font_frame_metrics::base_unit_at_dpi(fs, dpi);
     let row = BAR_SUP_FRAMES.iter().find(|row| row[0] == hu)?;
     let index = if radical { 3 } else { 1 };
     let height = crate::renderer::hwpunit_to_px(row[index] as i32, dpi);
