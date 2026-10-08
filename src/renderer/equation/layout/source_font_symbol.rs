@@ -18,7 +18,26 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
     ))
 }
 
-pub(super) fn layout(text: &str, fs: f64) -> Option<LayoutBox> {
+pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
+    if text == "×" {
+        let (width, _) = operator_metrics(text, fs, dpi)?;
+        let baseline = fs * 0.8;
+        return Some(LayoutBox {
+            font_size: fs,
+            x: 0.0,
+            y: 0.0,
+            width,
+            height: fs,
+            baseline,
+            kind: LayoutKind::FontGlyph {
+                text: text.to_string(),
+                font_family: "Latin Modern Math, STIX Two Math, serif",
+                outline: Some(super::super::multiplication_outline::commands(
+                    fs, width, baseline,
+                )),
+            },
+        });
+    }
     if !matches!(text, "'" | "′") {
         return None;
     }
@@ -32,6 +51,7 @@ pub(super) fn layout(text: &str, fs: f64) -> Option<LayoutBox> {
         kind: LayoutKind::FontGlyph {
             text: "′".to_string(),
             font_family: "Haansoft Batang, 한컴바탕, Batang, 바탕, serif",
+            outline: None,
         },
     })
 }

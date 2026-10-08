@@ -183,7 +183,37 @@ fn render_box(
                 true,
             );
         }
-        LayoutKind::FontGlyph { text, font_family } => {
+        LayoutKind::FontGlyph {
+            text,
+            font_family,
+            outline,
+        } => {
+            if let Some(commands) = outline {
+                let mut path = PathBuilder::new();
+                for command in commands {
+                    use crate::renderer::equation::GlyphOutlineCommand as Command;
+                    match *command {
+                        Command::Move((a, b)) => {
+                            path.move_to(((x + a) as f32, (y + b) as f32));
+                        }
+                        Command::Line((a, b)) => {
+                            path.line_to(((x + a) as f32, (y + b) as f32));
+                        }
+                        Command::Cubic([(a, b), (c, d), (e, f)]) => {
+                            path.cubic_to(
+                                ((x + a) as f32, (y + b) as f32),
+                                ((x + c) as f32, (y + d) as f32),
+                                ((x + e) as f32, (y + f) as f32),
+                            );
+                        }
+                        Command::Close => {
+                            path.close();
+                        }
+                    }
+                }
+                canvas.draw_path(&path.detach(), &fill_paint(color));
+                return;
+            }
             draw_text_with_family(
                 canvas,
                 fonts,

@@ -1465,7 +1465,7 @@ export type LayerEquationLayoutKind =
   | { type: 'text'; text: string }
   | { type: 'number'; text: string }
   | { type: 'symbol'; text: string }
-  | { type: 'fontGlyph'; text: string; fontFamily: string }
+  | { type: 'fontGlyph'; text: string; fontFamily: string; outlineGeometry?: LayerIntegralGeometry }
   | { type: 'mathSymbol'; text: string; integralGeometry?: LayerIntegralGeometry }
   | { type: 'function'; name: string }
   | { type: 'fraction'; numer: LayerEquationLayoutBox; denom: LayerEquationLayoutBox }

@@ -1998,7 +1998,7 @@ fn canvaskit_equation_layout_is_supported(layout: &LayoutBox) -> bool {
             | LayoutKind::Function(text) => text_supported(text),
             // CanvasKit은 해당 시스템 face의 SFNT 조달을 아직 입증하지 않았다.
             // 다른 수학 글꼴로 조용히 대체하지 않고 기존 SVG fallback을 사용한다.
-            LayoutKind::FontGlyph { .. } => false,
+            LayoutKind::FontGlyph { outline, .. } => outline.is_some(),
             LayoutKind::Fraction { numer, denom } => {
                 child(numer, remaining_nodes) && child(denom, remaining_nodes)
             }

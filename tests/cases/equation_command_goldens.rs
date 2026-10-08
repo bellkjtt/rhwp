@@ -178,7 +178,9 @@ fn dump_layout(out: &mut String, lb: &LayoutBox, indent: usize) {
         LayoutKind::MathSymbol(text) => {
             let _ = writeln!(out, "{pad}MathSymbol({text:?}) {metrics}");
         }
-        LayoutKind::FontGlyph { text, font_family } => {
+        LayoutKind::FontGlyph {
+            text, font_family, ..
+        } => {
             let _ = writeln!(out, "{pad}FontGlyph({text:?}, {font_family:?}) {metrics}");
         }
         LayoutKind::Function(text) => {

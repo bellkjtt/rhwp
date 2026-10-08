@@ -40,6 +40,8 @@ pub enum LayoutKind {
     FontGlyph {
         text: String,
         font_family: &'static str,
+        /// 표시 글꼴의 차이를 배치 단계에서 해소한 공통 공개 윤곽.
+        outline: Option<Vec<super::GlyphOutlineCommand>>,
     },
     /// 함수 이름 (로만체)
     Function(String),

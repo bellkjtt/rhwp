@@ -369,7 +369,7 @@ impl EqLayout {
             return layout;
         }
         if self.hancom_math_face {
-            if let Some(result) = source_font_symbol::layout(text, fs) {
+            if let Some(result) = source_font_symbol::layout(text, fs, self.dpi) {
                 return result;
             }
         }
@@ -421,7 +421,7 @@ impl EqLayout {
             if source_font_symbol::operator_metrics(text, fs, self.dpi).is_some() {
                 return self.layout_symbol(text, fs);
             }
-            if let Some(result) = source_font_symbol::layout(text, fs) {
+            if let Some(result) = source_font_symbol::layout(text, fs, self.dpi) {
                 return result;
             }
         }

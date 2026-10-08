@@ -4323,7 +4323,9 @@ export class CanvasKitLayerRenderer {
       }
       // 명시 face의 SFNT 조달 전에는 SVG fallback에서 같은 글꼴로 표시한다.
       case 'fontGlyph':
-        return false;
+        return layout.kind.outlineGeometry
+          ? this.drawEquationIntegral(canvas, layout.kind.outlineGeometry, x, y, color)
+          : false;
       case 'function':
         return this.drawEquationText(
           canvas,

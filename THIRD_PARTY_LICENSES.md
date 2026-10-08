@@ -344,7 +344,7 @@ USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
 | D2 Coding (2종) | SIL Open Font License 1.1 | NAVER | Monospace fallback |
 | Spoqa Han Sans | SIL Open Font License 1.1 | github.com/spoqa/spoqa-han-sans | Sans-serif fallback |
 | RHWP Old Hangul subset | SIL Open Font License 1.1 | Adobe / Google | 옛한글 PUA fallback, `SourceHanSerifK-OFL.txt` 동봉 |
-| Latin Modern Math 1.959 | GUST Font License | B. Jackowski, P. Strzelczyk, P. Pianowski / TeX 사용자 그룹 | 수식 fallback 및 적분 윤곽; [라이선스 전문](assets/fonts/LatinModernMath-GUST-FONT-LICENSE.txt) 동봉 |
+| Latin Modern Math 1.959 | GUST Font License | B. Jackowski, P. Strzelczyk, P. Pianowski / TeX 사용자 그룹 | 수식 fallback 및 적분·곱셈 윤곽; [라이선스 전문](assets/fonts/LatinModernMath-GUST-FONT-LICENSE.txt) 동봉 |
 | Cafe24 써라운드 | 카페24 무료 배포 | fonts.cafe24.com | 장식체 |
 | Cafe24 슈퍼매직 | 카페24 무료 배포 | fonts.cafe24.com | 장식체 |
 | 해피니스 산스 (Happiness Sans, 4종) | SIL Open Font License 1.1 | [현대백화점](https://thehyundaifont.com/) | 공식 배포 WOFF2 원본. [동봉 라이선스 PDF](ttfs/redistributable/happiness-sans/HapinessSans_License.pdf)에 저작권·Reserved Font Name·OFL 전문 수록 |
@@ -365,8 +365,9 @@ USE THE FONT SOFTWARE OR FROM OTHER DEALINGS IN THE FONT SOFTWARE.
 정보를 폰트 내부 및 동봉 라이선스에 보존한다. 소프트웨어와 함께 재배포하며 폰트 자체는
 SIL OFL 1.1을 유지한다. 원본 경로·SHA-256·변환 방법은 [폰트 목록](assets/fonts/FONTS.md)에 기록한다.
 
-`src/renderer/equation/integral_outline.rs`의 `OUTLINE`은 동봉된 Latin Modern Math
-1.959의 `integral` glyph에서 추출한 공개 윤곽이다. 원본 Copyright 2012--2014
+`src/renderer/equation/integral_outline.rs`와
+`src/renderer/equation/multiplication_outline.rs`의 `OUTLINE`은 동봉된 Latin Modern Math
+1.959의 `integral`·`multiply` glyph에서 추출한 공개 윤곽이다. 원본 Copyright 2012--2014
 B. Jackowski, P. Strzelczyk, P. Pianowski를 보존하고, 해당 윤곽 데이터는
 GUST Font License를 유지한다. rhwp는 글꼴 파일을 개명·수정하는 대신 이 윤곽의
 좌표를 공통 수식 ink 영역으로 변환한다. 한컴 사설 글꼴의 윤곽은 포함하지 않는다.

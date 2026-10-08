@@ -3009,13 +3009,26 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
         LayoutKind::Text(text) => write_equation_text_kind(buf, "text", text),
         LayoutKind::Number(text) => write_equation_text_kind(buf, "number", text),
         LayoutKind::Symbol(text) => write_equation_text_kind(buf, "symbol", text),
-        LayoutKind::FontGlyph { text, font_family } => {
+        LayoutKind::FontGlyph {
+            text,
+            font_family,
+            outline,
+        } => {
             let _ = write!(
                 buf,
-                "{{\"type\":\"fontGlyph\",\"text\":{},\"fontFamily\":{}}}",
+                "{{\"type\":\"fontGlyph\",\"text\":{},\"fontFamily\":{}",
                 json_escape(text),
                 json_escape(font_family),
             );
+            if let Some(commands) = outline {
+                let path = crate::renderer::equation::multiplication_outline::path_data(commands);
+                let _ = write!(
+                    buf,
+                    ",\"outlineGeometry\":{{\"pathData\":{},\"strokeWidth\":0}}",
+                    json_escape(&path)
+                );
+            }
+            buf.push('}');
         }
         LayoutKind::MathSymbol(text) => {
             if crate::renderer::equation::layout::is_integral_symbol(text) {

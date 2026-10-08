@@ -128,7 +128,18 @@ fn render_box(
                 text_x, text_y, fi, color, EQ_FONT_FAMILY, esc,
             ));
         }
-        LayoutKind::FontGlyph { text, font_family } => {
+        LayoutKind::FontGlyph {
+            text,
+            font_family,
+            outline,
+        } => {
+            if let Some(commands) = outline {
+                svg.push_str(&format!(
+                    "<path d=\"{}\" transform=\"translate({x:.4},{y:.4})\" fill=\"{color}\"/>\n",
+                    super::multiplication_outline::path_data(commands),
+                ));
+                return;
+            }
             svg.push_str(&format!(
                 "<text x=\"{:.2}\" y=\"{:.2}\" font-size=\"{:.2}\" fill=\"{}\" font-family=\"{}\">{}</text>\n",
                 x, y + lb.baseline, fs, color, escape_xml(font_family), escape_xml(text),

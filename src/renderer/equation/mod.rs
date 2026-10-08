@@ -18,6 +18,8 @@ mod font_frame_metrics;
 mod font_style_runs;
 pub(crate) mod inline_box;
 pub(crate) mod integral_outline;
+pub(crate) mod multiplication_outline;
+pub use integral_outline::Command as GlyphOutlineCommand;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
 mod logical_font_frame;

@@ -50,6 +50,7 @@ impl EqLayout {
                 }
                 let text = match &result.kind {
                     LayoutKind::Symbol(text) => text.as_str(),
+                    LayoutKind::FontGlyph { text, outline: Some(_), .. } => text.as_str(),
                     LayoutKind::HancomGlyphs(_) => match node {
                         EqNode::Symbol(text) | EqNode::MathSymbol(text) => text.as_str(),
                         _ => return result,

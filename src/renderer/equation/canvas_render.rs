@@ -117,7 +117,28 @@ fn render_box(
             let _ = ctx.fill_text(text, x + lb.width / 2.0, y + lb.baseline);
             ctx.set_text_align("start");
         }
-        LayoutKind::FontGlyph { text, font_family } => {
+        LayoutKind::FontGlyph {
+            text,
+            font_family,
+            outline,
+        } => {
+            if let Some(commands) = outline {
+                ctx.set_fill_style_str(color);
+                ctx.begin_path();
+                for command in commands {
+                    use super::GlyphOutlineCommand as Command;
+                    match *command {
+                        Command::Move((a, b)) => ctx.move_to(x + a, y + b),
+                        Command::Line((a, b)) => ctx.line_to(x + a, y + b),
+                        Command::Cubic([(a, b), (c, d), (e, f)]) => {
+                            ctx.bezier_curve_to(x + a, y + b, x + c, y + d, x + e, y + f)
+                        }
+                        Command::Close => ctx.close_path(),
+                    }
+                }
+                ctx.fill();
+                return;
+            }
             ctx.set_font(&format!("{fs:.1}px {font_family}"));
             ctx.set_fill_style_str(color);
             ctx.set_text_align("start");

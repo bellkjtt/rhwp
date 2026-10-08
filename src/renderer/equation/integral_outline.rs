@@ -6,8 +6,8 @@
 
 use super::layout::integral_geom;
 
-#[derive(Clone, Copy)]
-pub(crate) enum Command {
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub enum Command {
     Move((f64, f64)),
     Line((f64, f64)),
     Cubic([(f64, f64); 3]),
