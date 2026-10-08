@@ -1,3 +1,4 @@
+
 fn missing_lineseg_legacy_bullet_requires_regenerated_space_metric(
     para: &Paragraph,
     composed: &ComposedParagraph,
@@ -359,4 +360,3 @@ fn split_composed_line_by_width(
     }
     result
 }
-

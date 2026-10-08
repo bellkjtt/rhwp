@@ -326,7 +326,7 @@ impl TypesetState {
             alignment: style.map_or(crate::model::style::Alignment::Left, |s| s.alignment),
             dpi: self.data.layout.dpi,
         };
-        if let Some(exclusion) = frame.picture_exclusion(picture) {
+        if let Some(exclusion) = frame.picture_exclusion(picture, para, control_index, styles) {
             self.data
                 .side_wrap_exclusions
                 .insert((para_index, control_index), exclusion);

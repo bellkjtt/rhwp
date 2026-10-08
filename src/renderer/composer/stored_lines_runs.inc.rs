@@ -1,3 +1,4 @@
+
 /// 문단의 텍스트를 줄별로 분할하고, 각 줄 내에서 CharShapeRef 경계에 따라 분할한다.
 fn compose_lines(para: &Paragraph) -> Vec<ComposedLine> {
     if para.line_segs.is_empty() {
@@ -696,3 +697,61 @@ pub(crate) fn is_lang_neutral(ch: char) -> bool {
     )
 }
 
+/// 문단 내 인라인 컨트롤(표/도형)의 위치를 식별한다.
+/// [#6706] 줄 끝 개체와 다음 줄 첫 글자는 같은 가시 위치로 투영될 수 있다.
+/// 조합 결과가 현재 문단의 줄 경계·메트릭을 그대로 소비하고 충돌이 존재할 때
+/// UTF-16 제어 슬롯으로 개체 소유 줄을 복원한다. 저장 줄과 편집 재조판 줄은
+/// 각각의 출처 안에서만 적용하며 둘을 섞은 사다리는 수용하지 않는다.
+/// 이 조회는 저장 캐시의 수용 조건을 변경하거나 옛 줄을 재조판에 적용하지 않는다.
+pub(crate) fn composed_tac_line_assignment(
+    para: &Paragraph,
+    comp: &ComposedParagraph,
+) -> Option<Vec<(usize, usize)>> {
+    let computed_rows = para.line_segs.first()?.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0;
+    if super::equation_tac_flow::uses_equation_only_flow(para, comp)
+        || para.char_offsets.is_empty()
+        || comp.lines.len() != para.line_segs.len()
+        || comp.lines.len() < 2
+        || comp
+            .lines
+            .iter()
+            .zip(&para.line_segs)
+            .enumerate()
+            .any(|(i, (line, seg))| {
+                (seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0) != computed_rows
+                    || line.line_height != stored_line_box_height(seg)
+                    || line.segment_width != seg.segment_width
+                    || line.char_start
+                        != para
+                            .char_offsets
+                            .partition_point(|&offset| offset < para.line_seg_text_start(i))
+            })
+    {
+        return None;
+    }
+    let assignments: Vec<(usize, usize)> = comp
+        .tac_controls
+        .iter()
+        .map(|(_, _, ci)| {
+            let owner = control_slot_line_index(para, *ci)?;
+            Some((*ci, owner))
+        })
+        .collect::<Option<_>>()?;
+    let collapsed_boundary =
+        comp.tac_controls
+            .iter()
+            .zip(&assignments)
+            .any(|((pos, _, _), (_, owner))| {
+                comp.lines
+                    .get(owner + 1)
+                    .is_some_and(|next| *pos >= next.char_start)
+            });
+    collapsed_boundary.then_some(assignments)
+}
+
+/// 보이는 다음 글자와 확장 제어 슬롯이 같은 논리 위치여도 원시 줄 소속은 다를 수 있다.
+/// 저장/현재 재조판 사다리의 UTF-16 경계로 조회하며 높이의 우연한 일치는 사용하지 않는다.
+pub(crate) fn control_slot_line_index(para: &Paragraph, control_index: usize) -> Option<usize> {
+    let start = *para.control_utf16_positions().get(control_index)?;
+    (0..para.line_segs.len()).rfind(|&line| para.line_seg_text_start(line) <= start)
+}

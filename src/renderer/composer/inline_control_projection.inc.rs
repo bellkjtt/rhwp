@@ -1,54 +1,3 @@
-/// 문단 내 인라인 컨트롤(표/도형)의 위치를 식별한다.
-/// [#6706] 줄 끝 개체와 다음 줄 첫 글자는 같은 가시 위치로 투영될 수 있다.
-/// 원본 줄 구성이 유지되고 그 충돌이 실제 존재할 때 원 기록으로 개체 소유 줄을 복원한다.
-/// 재조판된 줄이나 경계 충돌이 없는 인라인 개체들은 기존 문자 범위 배정을 그대로 쓴다.
-pub(crate) fn stored_tac_line_assignment(
-    para: &Paragraph,
-    comp: &ComposedParagraph,
-) -> Option<Vec<(usize, usize)>> {
-    if super::equation_tac_flow::uses_equation_only_flow(para, comp)
-        || para.char_offsets.is_empty()
-        || comp.lines.len() != para.line_segs.len()
-        || comp.lines.len() < 2
-        || comp
-            .lines
-            .iter()
-            .zip(&para.line_segs)
-            .enumerate()
-            .any(|(i, (line, seg))| {
-                seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
-                    || line.line_height != stored_line_box_height(seg)
-                    || line.segment_width != seg.segment_width
-                    || line.char_start
-                        != para
-                            .char_offsets
-                            .partition_point(|&offset| offset < para.line_seg_text_start(i))
-            })
-    {
-        return None;
-    }
-    let raw = para.control_utf16_positions();
-    let assignments: Vec<(usize, usize)> = comp
-        .tac_controls
-        .iter()
-        .map(|(_, _, ci)| {
-            let start = *raw.get(*ci)?;
-            let owner =
-                (0..para.line_segs.len()).rfind(|&i| para.line_seg_text_start(i) <= start)?;
-            Some((*ci, owner))
-        })
-        .collect::<Option<_>>()?;
-    let collapsed_boundary =
-        comp.tac_controls
-            .iter()
-            .zip(&assignments)
-            .any(|((pos, _, _), (_, owner))| {
-                comp.lines
-                    .get(owner + 1)
-                    .is_some_and(|next| *pos >= next.char_start)
-            });
-    collapsed_boundary.then_some(assignments)
-}
 
 fn identify_inline_controls(para: &Paragraph) -> Vec<InlineControl> {
     let mut result = Vec::new();
@@ -311,4 +260,3 @@ pub fn estimate_composed_line_width(line: &ComposedLine, styles: &ResolvedStyleS
         })
         .sum()
 }
-

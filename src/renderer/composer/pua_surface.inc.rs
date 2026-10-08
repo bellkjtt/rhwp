@@ -1,3 +1,4 @@
+
 /// [Task #555] 폰트 매트릭스 (글자폭/줄간격) 계산용 effective text 반환.
 ///
 /// PUA 옛한글 변환 (Task #528) 후 `run.display_text` 가 자모 시퀀스를 보유하면

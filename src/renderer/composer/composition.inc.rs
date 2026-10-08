@@ -228,7 +228,11 @@ fn compose_paragraph_scoped(
                 }
                 Control::Equation(eq) if eq.common.treat_as_char => {
                     // HWP 저장값을 사용 — 한컴 편집기가 실제 폰트로 계산한 정확한 너비
-                    Some((pos, crate::renderer::equation::flow_width_hwp(eq) as i32, i))
+                    Some((
+                        pos,
+                        crate::renderer::equation::inline_advance_width_hwp(eq),
+                        i,
+                    ))
                 }
                 Control::Form(f) if f.common.treat_as_char => Some((pos, f.width as i32, i)),
                 Control::Table(t)
@@ -376,6 +380,8 @@ fn compose_paragraph_scoped(
         supplemental_clusters::preserve_boundaries(&mut composed, &para.text, metric_styles);
     }
 
+    resolved_fields::apply(para, &mut composed);
+
     composed
 }
 
@@ -451,7 +457,24 @@ pub(crate) fn tac_host_trailing_spacing(
         && para.line_segs.len() == 1
         && seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
         && owned_rowbreak_tac_height(para, control_index).is_some();
-    if current_owned_row
+    // 같은 문단의 뒤 글줄이 표 줄의 전체 간격 끝에서 시작하면 그 간격을
+    // 줄 흐름과 표 배치에 모두 보존한다. 문단 경계의 별도 계약은 유지한다.
+    let stored_successor_owns_full_gap = native_stored_layout
+        && !para.stored_text_partition_is_dirty()
+        && seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+        && para.line_segs.windows(2).any(|pair| {
+            std::ptr::eq(&pair[0], seg)
+                && pair[1].tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+                && pair[1].text_start > seg.text_start
+                && seg
+                    .vertical_pos
+                    .checked_add(seg.line_height)
+                    .and_then(|end| end.checked_add(seg.line_spacing))
+                    == Some(pair[1].vertical_pos)
+        });
+    if stored_successor_owns_full_gap {
+        spacing
+    } else if current_owned_row
         || (native_stored_layout
             && seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
             && !para.stored_text_partition_is_dirty())
@@ -459,6 +482,40 @@ pub(crate) fn tac_host_trailing_spacing(
         spacing / 2.0
     } else {
         spacing
+    }
+}
+
+/// 다음 문단을 현재 프레임에서 재조판하면 저장 vpos가 간격의 나머지를
+/// 복원하지 않는다. 마지막 저장 TAC 줄은 후행 간격 전량을 흐름에 남긴다.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn tac_host_trailing_spacing_at_boundary(
+    para: &Paragraph,
+    next_para: Option<&Paragraph>,
+    control_index: usize,
+    seg: &LineSeg,
+    hwpx_stored_layout: bool,
+    native_stored_layout: bool,
+    dpi: f64,
+) -> f64 {
+    if native_stored_layout
+        && !para.stored_text_partition_is_dirty()
+        && seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+        && para
+            .line_segs
+            .last()
+            .is_some_and(|last| std::ptr::eq(last, seg))
+        && next_para.is_some_and(crate::renderer::para_has_no_stored_line_segs)
+    {
+        crate::renderer::hwpunit_to_px(seg.line_spacing.max(0), dpi)
+    } else {
+        tac_host_trailing_spacing(
+            para,
+            control_index,
+            seg,
+            hwpx_stored_layout,
+            native_stored_layout,
+            dpi,
+        )
     }
 }
 
@@ -501,14 +558,60 @@ pub(crate) fn tac_next_line_full_spacing(
                 && (next.line_segs.is_empty()
                     || next.line_segs.first().is_some_and(|first| {
                         (current_owned_row || first.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0)
-                            && seg
-                                .vertical_pos
-                                .saturating_add(seg.line_height)
-                                .saturating_add(seg.line_spacing)
-                                .saturating_add(current_spacing_after_hu)
-                                .saturating_add(next_spacing_before_hu)
-                                == first.vertical_pos
+                            && stored_tac_successor_delta_hu(
+                                para,
+                                seg,
+                                first,
+                                current_spacing_after_hu.saturating_add(next_spacing_before_hu),
+                            )
+                            .is_some_and(|delta| {
+                                seg.line_height
+                                    .checked_add(seg.line_spacing)
+                                    .and_then(|advance| {
+                                        advance.checked_add(current_spacing_after_hu)
+                                    })
+                                    .and_then(|advance| advance.checked_add(next_spacing_before_hu))
+                                    == Some(delta)
+                            })
                     }))
         })
 }
 
+/// 다음 저장 원점과 표 소유 줄의 거리. 쪽으로 통째 이월된 단일 TAC 줄은
+/// 호스트에 이전 쪽 vpos가 남아도 후속 문단이 새 쪽의 0 원점에서 상자를 닫는다.
+/// 줄 높이가 바깥여백 포함 개체 상자와 같고 후속 원점이 정확히 닫힐 때만 그
+/// 좌표계 전환을 사용한다. 측정과 실제 배치가 같은 거리 계약을 소비한다.
+pub(crate) fn stored_tac_successor_delta_hu(
+    para: &Paragraph,
+    seg: &LineSeg,
+    successor: &LineSeg,
+    paragraph_spacing_hu: i32,
+) -> Option<i32> {
+    let closing_advance = seg
+        .line_height
+        .checked_add(seg.line_spacing)?
+        .checked_add(paragraph_spacing_hu)?;
+    let reset_closes_owned_line = successor.vertical_pos < seg.vertical_pos
+        && successor.vertical_pos == closing_advance
+        && para.line_segs.len() == 1
+        && !para.cell_format_vpos_dirty
+        && successor.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+        && stored_first_tac_line(para).is_some_and(|first| std::ptr::eq(first, seg))
+        && para
+            .controls
+            .iter()
+            .filter(|control| matches!(control, Control::Table(_)))
+            .count()
+            == 1
+        && !para.controls.iter().any(|control| {
+            matches!(
+                control,
+                Control::Picture(_) | Control::Shape(_) | Control::Equation(_)
+            )
+        });
+    if reset_closes_owned_line {
+        Some(successor.vertical_pos)
+    } else {
+        successor.vertical_pos.checked_sub(seg.vertical_pos)
+    }
+}

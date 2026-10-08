@@ -251,7 +251,9 @@ pub(crate) fn plan(
                         atoms.push(Atom::Box(picture_rows::picture_box(
                             picture, ci, style, frame.dpi,
                         )));
-                    } else if let Some(exclusion) = frame.picture_exclusion(picture) {
+                    } else if let Some(exclusion) =
+                        frame.picture_exclusion(picture, para, ci, styles)
+                    {
                         atoms.push(Atom::Float(exclusion));
                     }
                 }

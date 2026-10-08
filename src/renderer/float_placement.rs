@@ -30,7 +30,9 @@ mod stored_span_opening;
 pub(crate) use stored_span_opening::{stored_span_opening_frame, StoredSpanOpeningFrame};
 mod stored_span_content_frame;
 pub(crate) use stored_span_content_frame::stored_continuous_span_prefixes_hu;
+mod picture_anchor;
 mod square_lane;
+pub(crate) use picture_anchor::stored_picture_anchor_delta;
 pub(crate) use square_lane::{
     square_successor_starts_beside_table, stored_line_lane_probe, StoredLineLaneProbe,
 };
@@ -4447,7 +4449,13 @@ impl ObjectPlacementFrame<'_> {
 
     /// 실제 출력과 같은 여백·캡션 포함 상자. 흐름에 영향을 주는 Square 그림만 등록한다.
     /// `allow_overlap`은 floating 개체 간 허용이며 TAC 줄의 어울림을 취소하지 않는다.
-    pub(crate) fn picture_exclusion(&self, picture: &Picture) -> Option<FrameExclusion> {
+    pub(crate) fn picture_exclusion(
+        &self,
+        picture: &Picture,
+        paragraph: &Paragraph,
+        control_index: usize,
+        styles: &super::style_resolver::ResolvedStyleSet,
+    ) -> Option<FrameExclusion> {
         let common = &picture.common;
         if common.treat_as_char || common.text_wrap != TextWrap::Square {
             return None;
@@ -4480,6 +4488,15 @@ impl ObjectPlacementFrame<'_> {
             self.dpi,
         );
         let (x, mut y) = self.position(common, width, height);
+        // paint와 같은 control 소유 줄을 문단 상대 앵커로 소비한다.
+        y += stored_picture_anchor_delta(
+            paragraph,
+            control_index,
+            self.column.width,
+            styles,
+            self.dpi,
+        )
+        .unwrap_or(0.0);
         if common.flow_with_text && common.vert_rel_to == VertRelTo::Para {
             y = y.min((self.column.y + self.column.height - height).max(self.column.y));
         }

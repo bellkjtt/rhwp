@@ -1,3 +1,4 @@
+
 /// Resolve stored rows when the caller has already proven that the paragraph
 /// belongs to a non-TAC Square Picture/Shape wrap band.
 ///
@@ -116,7 +117,11 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
             line_breaking::layout_paragraph_in_frame(&input, &mut probe, styles, dpi)
                 .is_some_and(|rows| rows.len() < para.line_segs.len())
         };
-    let stale = rejoinable_word_tail
+    // 합성·편집 줄은 현재 필드 토큰으로 다시 채우고 저장 줄은 기존 계약을 따른다.
+    let stale = (!para.layout_field_values.is_empty()
+        && (para.stored_text_partition_dirty
+            || crate::renderer::para_has_no_stored_line_segs(para)))
+        || rejoinable_word_tail
         || stored_rows_are_stale(composed, para, inner_width_px, styles)
         || line_breaking::remeasured_equation_start_row(para).is_some();
     match line_breaking::resolve_stored_line_segs_in_frame(
@@ -269,36 +274,6 @@ fn preserve_context_resolved_runs(source: &ComposedParagraph, reflowed: &mut Com
         run: &'a ComposedTextRun,
     }
 
-    fn projected_display(
-        run: &ComposedTextRun,
-        take_start: usize,
-        take_end: usize,
-    ) -> Option<String> {
-        let display = run.display_text.as_ref()?;
-        let model_len = run.text.chars().count();
-        if take_start == 0 && take_end == model_len {
-            return Some(display.clone());
-        }
-        if display.chars().count() == model_len {
-            return Some(
-                display
-                    .chars()
-                    .skip(take_start)
-                    .take(take_end - take_start)
-                    .collect(),
-            );
-        }
-
-        let text: String = run
-            .text
-            .chars()
-            .skip(take_start)
-            .take(take_end - take_start)
-            .collect();
-        let expanded = expand_pua_display_text(&text);
-        (expanded != text).then_some(expanded)
-    }
-
     // Only these payloads are owned by the already context-resolved source.
     // Style and language partitions remain the Frame composition's property.
     let mut context_spans = Vec::new();
@@ -359,7 +334,7 @@ fn preserve_context_resolved_runs(source: &ComposedParagraph, reflowed: &mut Com
                     .skip(take_start)
                     .take(take_end - take_start)
                     .collect();
-                piece.display_text = projected_display(&run, take_start, take_end);
+                piece.display_text = run.display_for_model_range(take_start, take_end);
                 if take_start != 0 || take_end != run_len {
                     piece.footnote_marker = None;
                     piece.char_overlap = None;
@@ -371,7 +346,7 @@ fn preserve_context_resolved_runs(source: &ComposedParagraph, reflowed: &mut Com
                 {
                     let source_start = piece_start - span.start;
                     let source_end = piece_end - span.start;
-                    piece.display_text = projected_display(span.run, source_start, source_end);
+                    piece.display_text = span.run.display_for_model_range(source_start, source_end);
                     let owns_whole_payload = piece_start == span.start && piece_end == span.end;
                     piece.footnote_marker = owns_whole_payload
                         .then_some(span.run.footnote_marker)
@@ -818,4 +793,3 @@ pub(crate) fn shrunk_cell_horizontal_padding(
     let new_right = new_total - new_left;
     (new_left, new_right)
 }
-

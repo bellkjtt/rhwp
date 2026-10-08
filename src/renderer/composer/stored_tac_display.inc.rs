@@ -1,3 +1,4 @@
+
 /// 저장된 서로 다른 물리 줄을 소유한 빈/공백 캐리어 TAC 표의 흐름.
 /// top/end는 첫 저장 줄 원점 기준 HU이며, 테두리가 아닌 바깥여백 포함 pen이다.
 #[derive(Debug, Clone, Copy)]
@@ -451,4 +452,3 @@ fn inject_footnote_markers(lines: &mut [ComposedLine], positions: &[(usize, u16)
 fn stored_line_box_height(seg: &LineSeg) -> i32 {
     seg.line_height.max(seg.text_height)
 }
-
