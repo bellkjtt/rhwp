@@ -77,6 +77,10 @@ pub(in crate::renderer::typeset) fn endnote_column_starts_at_stored_break(
         }
         _ => true,
     }
+/// 같은 단 배치에서 생산한 흐름 예약 끝과 실제 줄·내용의 점유 끝이다.
+pub(super) struct EndnoteColumnGeometry {
+    pub(super) flow_bottom: f64,
+    pub(super) occupied_bottom: Option<f64>,
 }
 
 impl TypesetEngine {
@@ -532,6 +536,41 @@ impl TypesetEngine {
         measured_tables: &[MeasuredTable],
         occupied_only: bool,
     ) -> Option<f64> {
+        let use_occupied = occupied_only
+            || future.is_some()
+            || matches!(extra_item, Some(PageItem::PartialParagraph { .. }));
+        let geometry = self.measure_endnote_column_with_item(
+            st,
+            paragraphs,
+            styles,
+            available,
+            en_col_w,
+            extra_item,
+            sequential_compact_rewind,
+            future,
+            measured_tables,
+        )?;
+        if use_occupied {
+            geometry.occupied_bottom
+        } else {
+            Some(geometry.flow_bottom)
+        }
+    }
+
+    /// fit 후보가 줄 뒤 물리 간격도 예약해야 할 때 같은 생산 결과를 소비한다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn measure_endnote_column_with_item(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        available: f64,
+        en_col_w: f64,
+        extra_item: Option<PageItem>,
+        sequential_compact_rewind: bool,
+        future: Option<(&[Paragraph], i32, bool)>,
+        measured_tables: &[MeasuredTable],
+    ) -> Option<EndnoteColumnGeometry> {
         if st.current_items.is_empty() {
             return None;
         }
@@ -576,13 +615,7 @@ impl TypesetEngine {
                     en_col_w,
                     extra_item.as_ref(),
                 )
-                .and_then(|(bottom, occupied)| {
-                    if occupied_only || future.is_some() || matches!(extra_item, Some(PageItem::PartialParagraph { .. })) {
-                        occupied
-                    } else {
-                        Some(bottom)
-                    }
-                });
+                .map(|(flow_bottom, occupied_bottom)| EndnoteColumnGeometry { flow_bottom, occupied_bottom });
         }
         let page_base = st
             .current_items
@@ -776,7 +809,10 @@ impl TypesetEngine {
             }
             hc.prev_item_was_partial_table = matches!(item, PageItem::PartialTable { .. });
         }
-        Some(y)
+        Some(EndnoteColumnGeometry {
+            flow_bottom: y,
+            occupied_bottom: Some(y),
+        })
     }
 
     /// [Task #2079] 미주 fit 판정용 렌더-시뮬 예측 — 현재 단 items 를 저장 vpos 로

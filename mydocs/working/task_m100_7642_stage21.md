@@ -67,3 +67,15 @@ focused Rust 검사와 변경 전 코드의 직접 실행은 아직 미완료다
 변경 전 `1017fefff`의 직접 Rust 음성 대조를 위한 독립 worktree를 준비 중이다. 같은 공용
 `target/pr-review`에서 Cargo를 순차 실행하고, 현재 작업 트리의 source를 되돌리지 않는다.
 그 결과와 최종 전체 lint·회귀는 아직 미완료다. 현재의 원격 PR·CI·merge는 없다.
+
+## 변경 전 코드의 직접 실패 확인
+
+별도 worktree의 source `1017fefffec8272346ad6aa0986ad05e1349c194`에 동일한 교정 검사만
+복사하고 같은 공용 target에서 위 집중 명령을 순차 실행했다. 제품 source는 변경하지 않았다.
+컴파일 8분 42초 뒤 exit 100으로 끝났으며, 실제 보기 ㄴ 기준선 관계에서 **1개 FAIL / 정상
+대조 5개 PASS**였다. 빌드·환경 실패가 아니다. `stage21-before-provenance.json`과 로그는
+source·검사 해시·명령·실패 지점을 고정한다. 보정 source에서는 같은 검사 6개가 모두 통과한다.
+
+실행 종료 뒤 임시 worktree에 다른 변경이 없는지 확인하고 이번 검사 복사만 복원했다.
+clean 상태를 확인해 작업 전용 worktree를 제거했으며 공유 target은 보존했다.
+전체 회귀와 최종 head의 lint·전수 시각 검증은 여전히 진행 중이다.

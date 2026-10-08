@@ -1,4 +1,4 @@
-//! 수용한 저장 되감김 뒤의 단일 줄은 같은 실제 점유 결과로 fit한다.
+//! 저장 줄의 실제 흐름 예약과 점유 결과로 미주의 fit을 확인한다.
 
 use crate::renderer::typeset::{
     para_is_treat_as_char_picture_only, ColumnBreakType, FormattedParagraph, MeasuredTable,
@@ -173,6 +173,45 @@ impl TypesetEngine {
         column_width: f64,
         measured_tables: &[MeasuredTable],
     ) -> bool {
+        if formatted.line_heights.len() > 1
+            && paragraph.line_segs.len() == formatted.line_heights.len()
+            && paragraph.column_type == ColumnBreakType::None
+            && !paragraph
+                .line_segs
+                .windows(2)
+                .any(|pair| pair[1].vertical_pos < pair[0].vertical_pos)
+        {
+            // 유효한 저장 내부 컷은 별도 경로에서 소비한다. 연속 다줄 문단의
+            // 첫 물리 줄조차 들어가지 않으면 뒤 줄이나 bleed 예외로 fit하지 않는다.
+            let geometry = self.measure_endnote_column_with_item(
+                st,
+                paragraphs,
+                styles,
+                available,
+                column_width,
+                Some(PageItem::PartialParagraph {
+                    para_index,
+                    start_line: 0,
+                    end_line: 1,
+                }),
+                true,
+                None,
+                measured_tables,
+            );
+            if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
+                eprintln!(
+                    "EN_FIRST_LINE_FIT pi={para_index} flow={:?} occupied={:?} available={available:.3}",
+                    geometry.as_ref().map(|result| result.flow_bottom),
+                    geometry.as_ref().and_then(|result| result.occupied_bottom),
+                );
+            }
+            return geometry.is_some_and(|result| {
+                result.flow_bottom > available
+                    || result
+                        .occupied_bottom
+                        .is_some_and(|bottom| bottom > available)
+            });
+        }
         // 다줄의 분할 컷은 이 단일 줄 계약으로 바꾸지 않는다.
         if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
             eprintln!(
