@@ -58,3 +58,13 @@ layout_shape`의 실제 소비를 추적한다. 현재 `layout_shape`의 Equatio
 명시적인 물리 탭 정지점은 유지한다. 현재 전체 source의 Native Clippy와 WASM
 Clippy는 각각 exit 0(1분 15초 / 1분 1초)이며 최종 Native 재출력과 fresh WASM은
 추가 실행해야 한다. 첫 출력의 source SHA와 이 추가 수정의 source를 구분한다.
+
+## 생산 보정 커밋과 최종 Native 재출력
+
+보정과 분석 기록은 `4ea557a1d0b4aeab51f8e125390f2a60f4b89aed`로 커밋했다.
+그 head의 Native 재빌드는 exit 0(4분 15초)이며 frozen binary SHA는
+`ac18fd011ae24aa28b13918d70307da72e60a3e6f0a6c2ae76087d62e7bb595a`이다.
+`hml-explicit-zero-final-native-review`의 두 원본 재출력은 HWP 30.36053%,
+HWPX 100%로 첫 측정과 동일하다. HWP 미달과 HWPX 확대 판독 미충족은 유지한다.
+fresh WASM wrapper는 `stage8-explicit-zero-size-wasm-build.log`로 실행 중이며
+아직 통과로 기록하지 않는다. 최종 결과 전에는 Rust source를 수정하지 않는다.
