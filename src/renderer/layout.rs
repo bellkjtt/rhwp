@@ -11174,10 +11174,10 @@ impl LayoutEngine {
                                     // 꼬리 ls를 복원한다. HWPX OLE 차트의 캡션 다음
                                     // 본문도 이 경로를 사용한다. 바닥값 판정에는 ls를
                                     // 넣지 않아 순수 개체 줄의 기존 소유권은 유지한다.
-                                    // lh == 도형 프레임 높이인 순수 개체 줄(#1116)은
-                                    // paragraph_layout의 높이 접힘과 짝을 이뤄 ls 없는
-                                    // 바닥값이 전진량을 소유한다. 프레임보다 큰 저장
-                                    // 줄 상자를 복원할 때만 별도의 꼬리 ls를 더한다.
+                                    // 프레임 높이와 줄 높이의 대소 관계는 꼬리 간격의
+                                    // 유효성을 결정하지 않는다. 순수 개체 줄도 다음
+                                    // 저장 문단 시작이 lh + ls를 입증하면 그 간격을
+                                    // 보존한다. 입증하지 않는 줄은 기존 높이만 복원한다.
                                     let profile = self.profile.get();
                                     let stored_shape_line = (profile.hwpx_stored_layout()
                                         || ((profile.hwp5_stored_pagination_layout()
@@ -11191,8 +11191,6 @@ impl LayoutEngine {
                                             if stored_shape_line
                                                 && seg.line_height > 0
                                                 && seg.line_spacing > 0
-                                                && shape_max_h
-                                                    < hwpunit_to_px(seg.line_height, self.dpi)
                                                 && paragraphs
                                                     .get(*para_index + 1)
                                                     .and_then(|next| next.line_segs.first())
