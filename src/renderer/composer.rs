@@ -27,6 +27,7 @@ mod resolved_fields;
 mod stored_word_tail;
 mod inline_picture_metrics;
 pub(crate) use inline_picture_metrics::{inline_picture_ascent_ratio, inline_picture_size_hu};
+mod punctuation_slots;
 
 /// 글자겹침(CharOverlap) 렌더링 정보
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -215,6 +216,7 @@ impl SingleLineOverflowCache {
     }
 }
 
+<<<<<<< HEAD
 /// 구역의 문단 목록을 구성한다.
 pub fn compose_section(section: &Section) -> Vec<ComposedParagraph> {
     section
@@ -4680,6 +4682,17 @@ fn convert_pua_enclosed_numbers(composed: &mut ComposedParagraph) {
         }
     }
 }
+=======
+// 같은 composer 모듈 범위의 source를 책임 경계별로 보존한다.
+include!("composer/composition.inc.rs");
+include!("composer/stored_tac_display.inc.rs");
+include!("composer/stored_lines_runs.inc.rs");
+include!("composer/inline_control_projection.inc.rs");
+include!("composer/reflow_helpers.inc.rs");
+include!("composer/stored_cell_reflow.inc.rs");
+include!("composer/cell_line_breaking.inc.rs");
+include!("composer/pua_surface.inc.rs");
+>>>>>>> d989a3298 (fix: 저장 줄의 구두점 측정과 표시 언어 슬롯 공유)
 
 mod line_breaking;
 pub(crate) use line_breaking::{
