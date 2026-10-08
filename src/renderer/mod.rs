@@ -561,7 +561,7 @@ impl TextStyle {
     /// 압축한다. TrueType 출력에서 확인한 √r 세로 압축을 HFT 대체 face에도
     /// 적용하면 같은 선언 크기의 글자가 작아진다. SVG·Canvas·Skia·glyph
     /// lowering이 동일한 출처 판정을 소비한다.
-    pub(crate) fn ratio_draw_params(&self, font_size: f64) -> (f64, f64) {
+    pub fn ratio_draw_params(&self, font_size: f64) -> (f64, f64) {
         if self.hft_font_face {
             (font_size, if self.ratio > 0.0 { self.ratio } else { 1.0 })
         } else {
