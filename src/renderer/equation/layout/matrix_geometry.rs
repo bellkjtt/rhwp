@@ -111,7 +111,7 @@ impl EqLayout {
             } else {
                 MATRIX_ROW_GAP
             };
-        let mut row_boxes: Vec<LayoutBox> = rows.iter().map(|r| self.layout_node(r, fs)).collect();
+        let mut row_boxes = self.layout_cases_rows(rows, fs);
 
         let max_w = row_boxes.iter().map(|b| b.width).fold(0.0f64, f64::max);
         let mut y = 0.0;

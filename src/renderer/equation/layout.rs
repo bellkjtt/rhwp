@@ -6,6 +6,7 @@
 use super::ast::*;
 
 mod big_op_geometry;
+mod cases_columns;
 mod decoration_geometry;
 mod fraction_geometry;
 mod glyph_advances;
