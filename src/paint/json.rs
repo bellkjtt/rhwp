@@ -3157,12 +3157,20 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
             }
             buf.push_str("]}");
         }
-        LayoutKind::Paren { left, right, body } => {
+        LayoutKind::Paren {
+            left,
+            right,
+            left_width,
+            right_width,
+            body,
+        } => {
             let _ = write!(
                 buf,
-                "{{\"type\":\"paren\",\"left\":{},\"right\":{},\"body\":",
+                "{{\"type\":\"paren\",\"left\":{},\"right\":{},\"leftWidth\":{:.3},\"rightWidth\":{:.3},\"body\":",
                 json_escape(left),
                 json_escape(right),
+                left_width,
+                right_width,
             );
             write_equation_layout_box(buf, body);
             buf.push('}');

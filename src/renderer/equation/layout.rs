@@ -288,8 +288,9 @@ impl EqLayout {
         ) {
             return layout;
         }
-        if self.hancom_math_face && self.variable_italic && !self.variable_bold {
-            if let Some(result) = source_font_text::layout(text, fs) {
+        if self.hancom_math_face && !self.variable_bold {
+            if let Some(result) = source_font_text::layout(text, fs, self.dpi, self.variable_italic)
+            {
                 return result;
             }
         }
@@ -544,14 +545,22 @@ impl EqLayout {
     fn layout_paren(&self, left: &str, right: &str, body: &EqNode, fs: f64) -> LayoutBox {
         let b = self.layout_node(body, fs);
         let use_stretch_round = b.height > fs * 1.2 && matches!((left, right), ("(", ")"));
-        let pad = if use_stretch_round {
+        let source_round = self.hancom_math_face
+            && !use_stretch_round
+            && matches!(left, "" | "(" | ")")
+            && matches!(right, "" | "(" | ")");
+        let pad = if source_round {
+            0.0
+        } else if use_stretch_round {
             fs * 0.03
         } else {
             fs * PAREN_PAD
         };
         // Times New Roman '(' advance (em 기준) = 0.333. 텍스트 높이 glyph는 이 폭을 유지하고,
         // 큰 둥근 괄호 path는 한컴 HyhwpEQ 출력에 가깝게 더 좁게 잡는다. (Task #283, #1139)
-        let paren_w = if use_stretch_round {
+        let paren_w = if source_round {
+            source_font_text::logical_advance(398, fs, self.dpi)
+        } else if use_stretch_round {
             fs * 0.27
         } else {
             fs * 0.333
@@ -576,6 +585,8 @@ impl EqLayout {
             kind: LayoutKind::Paren {
                 left: left.to_string(),
                 right: right.to_string(),
+                left_width: left_w,
+                right_width: right_w,
                 body: Box::new(body_box),
             },
         }
@@ -584,7 +595,7 @@ impl EqLayout {
     fn layout_space(&self, kind: SpaceKind, fs: f64) -> LayoutBox {
         let w = match kind {
             SpaceKind::Normal => fs * 0.33,
-            SpaceKind::Thin => fs * 0.17,
+            SpaceKind::Thin => fs * if self.hancom_math_face { 0.125 } else { 0.17 },
             SpaceKind::Tab => fs * 1.0,
         };
         LayoutBox {

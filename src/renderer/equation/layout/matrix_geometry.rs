@@ -154,6 +154,8 @@ impl EqLayout {
             kind: LayoutKind::Paren {
                 left: "{".to_string(),
                 right: String::new(),
+                left_width: fs * 0.3,
+                right_width: 0.0,
                 body: Box::new(inner),
             },
         }

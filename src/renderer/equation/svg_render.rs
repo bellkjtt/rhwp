@@ -389,10 +389,15 @@ fn render_box(
                 render_box(svg, right, x, y, color, fs, italic, bold);
             }
         }
-        LayoutKind::Paren { left, right, body } => {
+        LayoutKind::Paren {
+            left,
+            right,
+            left_width,
+            right_width,
+            body,
+        } => {
             // 텍스트 높이 파렌(`(`, `)`)은 폰트 글리프로 렌더, 그 외는 path. (Task #283)
             let use_glyph = lb.height <= fs * 1.2;
-            let paren_w = if use_glyph { fs * 0.333 } else { fs * 0.27 };
             // 왼쪽 괄호
             if !left.is_empty() {
                 if use_glyph && (left == "(" || left == ")") {
@@ -401,21 +406,30 @@ fn render_box(
                         x, y + lb.baseline, fs, color, EQ_FONT_FAMILY, escape_xml(left),
                     ));
                 } else {
-                    draw_stretch_bracket(svg, left, x, y, paren_w, lb.height, color, fs);
+                    draw_stretch_bracket(svg, left, x, y, *left_width, lb.height, color, fs);
                 }
             }
             // 본체
             render_box(svg, body, x, y, color, fs, italic, bold);
             // 오른쪽 괄호
             if !right.is_empty() {
-                let right_x = x + lb.width - paren_w;
+                let right_x = x + lb.width - right_width;
                 if use_glyph && (right == "(" || right == ")") {
                     svg.push_str(&format!(
                         "<text x=\"{:.2}\" y=\"{:.2}\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>\n",
                         right_x, y + lb.baseline, fs, color, EQ_FONT_FAMILY, escape_xml(right),
                     ));
                 } else {
-                    draw_stretch_bracket(svg, right, right_x, y, paren_w, lb.height, color, fs);
+                    draw_stretch_bracket(
+                        svg,
+                        right,
+                        right_x,
+                        y,
+                        *right_width,
+                        lb.height,
+                        color,
+                        fs,
+                    );
                 }
             }
         }

@@ -285,7 +285,9 @@ fn dump_layout(out: &mut String, lb: &LayoutBox, indent: usize) {
                 dump_layout(out, right, indent + 2);
             }
         }
-        LayoutKind::Paren { left, right, body } => {
+        LayoutKind::Paren {
+            left, right, body, ..
+        } => {
             let _ = writeln!(out, "{pad}Paren({left:?},{right:?}) {metrics}");
             dump_layout(out, body, indent + 1);
         }

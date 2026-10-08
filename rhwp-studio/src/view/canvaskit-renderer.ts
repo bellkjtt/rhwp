@@ -4442,14 +4442,19 @@ export class CanvasKitLayerRenderer {
           && (layout.kind.under ? child(layout.kind.under) : true);
       case 'eqAlign':
         return layout.kind.rows.every((row) => child(row.left) && child(row.right));
-      case 'paren':
+      case 'paren': {
+        const { leftWidth, rightWidth } = layout.kind;
+        // 이전 paint JSON에는 측정 폭이 없다. SVG 대체 경로를 사용한다.
+        if (typeof leftWidth !== 'number' || typeof rightWidth !== 'number'
+          || !Number.isFinite(leftWidth) || !Number.isFinite(rightWidth)) return false;
         return (layout.kind.left
-          ? this.drawEquationBracket(canvas, layout.kind.left, x, y, layout.height, color, fontSize)
+          ? this.drawEquationBracket(canvas, layout.kind.left, x, y, layout.height, color, fontSize, leftWidth, layout.baseline)
           : true)
           && child(layout.kind.body)
           && (layout.kind.right
-            ? this.drawEquationBracket(canvas, layout.kind.right, x + layout.width, y, layout.height, color, fontSize)
+            ? this.drawEquationBracket(canvas, layout.kind.right, x + layout.width - rightWidth, y, layout.height, color, fontSize, rightWidth, layout.baseline)
             : true);
+      }
       case 'decoration':
         if (layout.kind.decoration === 'box') {
           const strokeWidth = fontSize * 0.03;
@@ -4656,17 +4661,19 @@ export class CanvasKitLayerRenderer {
     height: number,
     color: string,
     fontSize: number,
+    measuredWidth?: number,
+    baseline?: number,
   ): boolean {
-    const width = Math.max(fontSize * 0.3, 1);
+    const width = measuredWidth ?? Math.max(fontSize * 0.3, 1);
     if (bracket === '|') {
       return this.drawEquationLine(canvas, x, y, x, y + height, color, fontSize * 0.04);
     }
     return this.drawEquationText(
       canvas,
       bracket,
-      x - width / 2,
-      y + height * 0.7,
-      Math.max(height, fontSize),
+      measuredWidth === undefined ? x - width / 2 : x,
+      y + (baseline ?? height * 0.7),
+      measuredWidth !== undefined && height <= fontSize * 1.2 ? fontSize : Math.max(height, fontSize),
       color,
       false,
       false,

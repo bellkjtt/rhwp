@@ -113,6 +113,8 @@ pub enum LayoutKind {
     Paren {
         left: String,
         right: String,
+        left_width: f64,
+        right_width: f64,
         body: Box<LayoutBox>,
     },
     /// 장식

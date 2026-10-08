@@ -68,3 +68,14 @@ Native와 PDF의 전체 쪽수는 각각 23쪽이며 이 실행은 17쪽만 직�
 exit 0, 1분 32초다. 나머지 필수 lint/전체 nextest는 최종 보정 뒤 다시 확인한다.
 정상 대조군 `eq-002.hwp`/`eq-002.hwpx`는 첫 Chrome navigation timeout을 로그에 보존하고
 180초 raster timeout으로 별도 경로에서 재검증 중이다. 환경 실패를 출력 결함으로 세지 않는다.
+
+
+## 전체 페이지 Native 보조값
+
+동일 고정 Native의 전체 23쪽 TSV 산출은 exit 0이다. 누락 쪽은 없고 최저는
+20쪽 **90.44588%**이며 모든 쪽이 90% 이상이다. TSV는
+`indent-once-monthly-all/sep2022-indent-once-all/silhouette.tsv`에 보존한다.
+이는 stage10 바이너리의 결과이며 이후 글자 전진폭/괄호 보정의 결과가 아니다.
+실루엣 전용 gate는 `not_evaluated`다. 확대 판독과 fresh WASM이 남아 있으므로
+최종 통과·PR 준비 완료로 기록하지 않는다. `eq-002.hwp`와 `eq-002.hwpx`의
+Native 대표 PNG는 각각 92.77108%이며 `indent-once-equation-controls-retry/`에 있다.
