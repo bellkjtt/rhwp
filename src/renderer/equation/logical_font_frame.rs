@@ -85,6 +85,43 @@ fn font_line(value: &LayoutBox, fs: f64) -> bool {
     }
 }
 
+/// 같은 글자 크기의 DYAD 행은 예약 프레임 안의 자연 표시 원점을 유지한다.
+/// 분수·첨자·크기 변경·다줄의 장식 본체는 이 글자 줄 계약으로 접지 않는다.
+pub(super) fn dyad_font_line(value: &LayoutBox, fs: f64) -> bool {
+    fn contains_cjk(value: &LayoutBox) -> bool {
+        match &value.kind {
+            LayoutKind::Text(text)
+            | LayoutKind::Number(text)
+            | LayoutKind::Symbol(text)
+            | LayoutKind::MathSymbol(text)
+            | LayoutKind::Function(text)
+            | LayoutKind::FontGlyph { text, .. } => super::text_has_cjk(text),
+            LayoutKind::FontStyle { body, .. }
+            | LayoutKind::Decoration { body, .. }
+            | LayoutKind::Paren { body, .. } => contains_cjk(body),
+            LayoutKind::Row(items) => items.iter().any(contains_cjk),
+            _ => false,
+        }
+    }
+    fn contains_dyad(value: &LayoutBox, fs: f64) -> Option<bool> {
+        match &value.kind {
+            LayoutKind::Decoration {
+                kind: DecoKind::Dyad,
+                body,
+            } if font_line(body, fs) => Some(true),
+            LayoutKind::FontStyle { body, .. } => contains_dyad(body, fs),
+            LayoutKind::Row(items) => items
+                .iter()
+                .try_fold(false, |found, item| Some(found | contains_dyad(item, fs)?)),
+            _ if font_line(value, fs) => Some(false),
+            _ => None,
+        }
+    }
+    // HYhwpEQ의 cmap에 없는 한글은 다른 본문 프로그램으로 표시된다.
+    // 그 경로를 수학 글꼴의 글자 줄과 같은 원점 계약으로 판단하지 않는다.
+    !contains_cjk(value) && contains_dyad(value, fs) == Some(true)
+}
+
 /// 단일 글자 줄 위첨자의 기준선 거리를 독립 한컴 논리 프레임에서 해소한다.
 /// 공개 표시 글꼴의 MATH shift를 원본 face의 프레임과 혼용하지 않는다.
 pub(super) fn superscript_shift(

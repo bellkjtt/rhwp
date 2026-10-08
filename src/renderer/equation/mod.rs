@@ -282,19 +282,28 @@ pub(crate) fn inline_baseline_px(
     }
 }
 
-/// 줄이 소비한 수식 기준선을 공통 paint 루트 원점에 연결한다.
-/// 저장 프레임의 압축을 적용해도 최종 표시 기준선은 같은 위치에 남는다.
+/// 줄이 소비한 수식 프레임에 공통 paint 원점을 연결한다.
+/// DYAD 글자 줄은 이미 배치한 예약 프레임 안의 자연 glyph 원점을 유지한다.
 pub(crate) fn layout_for_paint(
     equation: &crate::model::control::Equation,
     ast: &ast::EqNode,
     dpi: f64,
 ) -> layout::LayoutBox {
     let mut result = layout::EqLayout::for_equation(equation, dpi).layout(ast);
+    let fs = super::hwpunit_to_px(equation.font_size as i32, dpi);
     let scale = stored_vertical_scale(
         super::hwpunit_to_px(flow_height_hwp(equation) as i32, dpi),
         result.height,
-        super::hwpunit_to_px(equation.font_size as i32, dpi),
+        fs,
     );
+    if scale == 1.0
+        && equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
+        && logical_font_frame::dyad_font_line(&result, fs)
+    {
+        // bbox는 이미 저장 예약 프레임의 기준선으로 배치됐다. 자연 glyph를
+        // 본문 기준선에 다시 맞추면 큰 예약 프레임 안의 위쪽 배치가 사라진다.
+        return result;
+    }
     result.y = inline_baseline_px(equation, &result, dpi) / scale - result.baseline;
     result
 }
