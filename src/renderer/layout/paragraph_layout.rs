@@ -1269,8 +1269,6 @@ struct EquationTacLineVars {
     is_last_line_of_para: bool,
     defer_empty_line_control_marker: bool,
     equation_tac_extra_rows: usize,
-    /// [Task #1472] hwp3 변환본 indent scale 배율 — 소스분기는 caller 유지.
-    hwp3_indent_scale: f64,
     section_index: usize,
     para_index: usize,
 }
@@ -4943,7 +4941,6 @@ impl LayoutEngine {
             is_last_line_of_para,
             defer_empty_line_control_marker,
             equation_tac_extra_rows,
-            hwp3_indent_scale,
             section_index,
             para_index,
         } = v;
@@ -4999,17 +4996,11 @@ impl LayoutEngine {
                 .map(|flow| flow.visual_line_idx_for_row(row))
                 .unwrap_or(line_idx + row);
             let row_effective_margin_left =
-                    crate::renderer::equation_tac_flow::paragraph_effective_margin_left_with_indent_scale(
-                        margin_left,
-                        indent,
-                        visual_line_idx,
-                        // [Task #1472] 변환본은 effective indent 불변 위해 scale 절반.
-                        (if equation_tac_line_flow.is_some() && cell_ctx.is_none() {
-                            2.0
-                        } else {
-                            1.0
-                        }) * hwp3_indent_scale,
-                    );
+                crate::renderer::equation_tac_flow::paragraph_effective_margin_left(
+                    margin_left,
+                    indent,
+                    visual_line_idx,
+                );
             effective_col_x + row_effective_margin_left
         };
         let mut row_inline_x: Vec<f64> = (0..=equation_tac_extra_rows)
@@ -6577,28 +6568,18 @@ impl LayoutEngine {
                         - inline_offset
                         - num_offset,
                 );
-            // [Task #1472] IR indent 를 full 로 되돌리면서(parser/mod.rs) 미주 TAC 수식
-            // available_width 의 effective indent 를 불변 유지: 변환본은 scale 을 절반으로.
-            // (종전: IR(half)×2.0=full → 현재: IR(full)×1.0=full)
-            let equation_indent_scale = (if cell_ctx.is_some() { 1.0 } else { 2.0 })
-                * if self.profile.get().hwp3_layout() {
-                    0.5
-                } else {
-                    1.0
-                };
+            // 측정·가용폭·실제 원점은 이미 해소한 같은 들여쓰기를 한 번 소비한다.
             let equation_first_effective_margin_left =
-                crate::renderer::equation_tac_flow::paragraph_effective_margin_left_with_indent_scale(
+                crate::renderer::equation_tac_flow::paragraph_effective_margin_left(
                     margin_left,
                     indent,
                     0,
-                    equation_indent_scale,
                 );
             let equation_continuation_effective_margin_left =
-                crate::renderer::equation_tac_flow::paragraph_effective_margin_left_with_indent_scale(
+                crate::renderer::equation_tac_flow::paragraph_effective_margin_left(
                     margin_left,
                     indent,
                     1,
-                    equation_indent_scale,
                 );
             let equation_first_available_width = line_avail_w_override
                 .map(|w| w - inline_offset - num_offset)
@@ -7416,11 +7397,6 @@ impl LayoutEngine {
                     is_last_line_of_para,
                     defer_empty_line_control_marker,
                     equation_tac_extra_rows,
-                    hwp3_indent_scale: if self.profile.get().hwp3_layout() {
-                        0.5
-                    } else {
-                        1.0
-                    },
                     section_index,
                     para_index,
                 },

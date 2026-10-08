@@ -326,28 +326,9 @@ fn resolve_line_metrics(
                 (cw - effective_margin_l - margin_r).max(0.0)
             })
         };
-        // [Task #1472] 변환본은 미주 수식 effective indent 불변 위해 scale 절반(2.0→1.0).
-        let eq_indent_scale = 2.0
-            * if ctx.profile().hwp3_layout() {
-                0.5
-            } else {
-                1.0
-            };
-        let equation_line_available_width_px = |visual_line_idx: usize| {
-            column_width_px.map(|cw| {
-                let margin_l = para_style.map(|s| s.margin_left).unwrap_or(0.0);
-                let margin_r = para_style.map(|s| s.margin_right).unwrap_or(0.0);
-                let indent = para_style.map(|s| s.indent).unwrap_or(0.0);
-                let effective_margin_l = crate::renderer::equation_tac_flow::
-                    paragraph_effective_margin_left_with_indent_scale(
-                        margin_l,
-                        indent,
-                        visual_line_idx,
-                        eq_indent_scale,
-                    );
-                (cw - effective_margin_l - margin_r).max(0.0)
-            })
-        };
+        // 해소한 들여쓰기 단위는 본문과 수식 줄이 그대로 공유한다.
+        // 수식 전용이라는 이유로 저장 단위를 다시 곱하지 않는다.
+        let equation_line_available_width_px = line_available_width_px;
         // [#2004] 동일 char_start 에 tac(글자처럼) 그림이 다수 앵커되어 각자 한 줄씩
         // 차지하는 "이미지 스택" 문단: tac_control_indices_for_line 의 char-range 매핑이
         // [start, next_start)=[0,0) 로 비어 중간 줄이 empty_tac_guide_line(0 높이)로 붕괴한다
