@@ -1827,11 +1827,7 @@ fn write_clamped_tab_leaders(buf: &mut String, run: &TextRunNode) -> bool {
 fn write_text_control_marks(buf: &mut String, bbox: BoundingBox, run: &TextRunNode) -> bool {
     let (bounded_text, mut complete) = bounded_text_prefix(&run.text);
     let positions = run.replay_positions_prefix_for(&run.text, &bounded_text);
-    let font_size = if run.style.font_size > 0.0 {
-        run.style.font_size
-    } else {
-        12.0
-    };
+    let font_size = run.style.effective_font_size();
     let mark_font_size = (font_size * 0.5).max(1.0);
     let has_end_mark = run.is_para_end || run.is_line_break_end;
     let inline_limit =

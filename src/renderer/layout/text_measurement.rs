@@ -114,11 +114,7 @@ fn hancom_device_advance_px(
 
 /// 스타일에서 공통 파라미터 추출 (font_size, ratio, tab_w)
 fn style_params(style: &TextStyle) -> (f64, f64, f64) {
-    let base_font_size = if style.font_size > 0.0 {
-        style.font_size
-    } else {
-        12.0
-    };
+    let base_font_size = style.effective_font_size();
     // [#5756] 위/아래첨자 run 의 **전진폭**은 그리는 크기(0.7배)를 따른다.
     // 한글 저장 lineseg 실측(156732409 3쪽): 위첨자 전진을 본문 크기로 재면
     // 칸 안쪽 폭 327.95px 에 담긴 40글자가 382.9px 로 늘어 칸 오른쪽 괘선 밖
@@ -481,8 +477,10 @@ fn compute_char_positions_walk(
             } else {
                 // 기본 등간격 탭: 라인 절대 위치(line_x_offset + x) 기준으로 계산.
                 let abs_x = style.line_x_offset + x;
-                let next_abs = ((abs_x / tab_w).floor() + 1.0) * tab_w;
-                x = (next_abs - style.line_x_offset).max(x);
+                if tab_w > 0.0 {
+                    let next_abs = ((abs_x / tab_w).floor() + 1.0) * tab_w;
+                    x = (next_abs - style.line_x_offset).max(x);
+                }
                 tab_char_idx += 1;
             }
             positions.push(x);
@@ -645,8 +643,10 @@ impl EmbeddedTextMeasurer {
                 } else {
                     // 기본 등간격 탭: 라인 절대 위치(line_x_offset + total) 기준으로 계산
                     let abs_x = style.line_x_offset + total;
-                    let next_abs = ((abs_x / tab_w).floor() + 1.0) * tab_w;
-                    total = (next_abs - style.line_x_offset).max(total);
+                    if tab_w > 0.0 {
+                        let next_abs = ((abs_x / tab_w).floor() + 1.0) * tab_w;
+                        total = (next_abs - style.line_x_offset).max(total);
+                    }
                     tab_char_idx += 1;
                 }
                 continue;
@@ -864,6 +864,7 @@ pub(crate) fn resolved_to_text_style(
             hft_font_face: cs.hft_hangul_face_for_lang(lang_index),
             hft_fullwidth_dot: cs.hft_fullwidth_dot_for_lang(lang_index),
             font_size: cs.font_size_for_lang(lang_index),
+            resolved_font_size: true,
             color: cs.text_color,
             bold: cs.bold,
             italic: cs.italic,
@@ -1846,8 +1847,10 @@ pub(crate) fn estimate_text_width_unrounded(text: &str, style: &TextStyle) -> f6
         let c = chars[i];
         if c == '\t' {
             let abs_x = style.line_x_offset + total;
-            let next_abs = ((abs_x / tab_w).floor() + 1.0) * tab_w;
-            total = (next_abs - style.line_x_offset).max(total);
+            if tab_w > 0.0 {
+                let next_abs = ((abs_x / tab_w).floor() + 1.0) * tab_w;
+                total = (next_abs - style.line_x_offset).max(total);
+            }
             continue;
         }
         total += char_width(i);

@@ -999,11 +999,7 @@ fn prepare_paragraph_projection(
             .unwrap_or(index as u32);
         let char_shape_id = find_active_char_shape(&para.char_shapes, utf16_pos);
         let text_style = metric_scope.style(styles, char_shape_id, language_index, index);
-        let base_font_size = if text_style.font_size > 0.0 {
-            text_style.font_size
-        } else {
-            12.0
-        };
+        let base_font_size = text_style.effective_font_size();
         let effective_font_size_px = if text_style.superscript || text_style.subscript {
             base_font_size * crate::renderer::SCRIPT_FONT_SCALE
         } else {

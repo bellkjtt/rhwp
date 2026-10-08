@@ -99,11 +99,7 @@ fn emitted_run_layout_positions(
         }
     }
 
-    let base_font_size = if style.font_size > 0.0 {
-        style.font_size
-    } else {
-        12.0
-    };
+    let base_font_size = style.effective_font_size();
     let effective_font_size_px = if style.superscript || style.subscript {
         base_font_size * crate::renderer::SCRIPT_FONT_SCALE
     } else {
@@ -1994,11 +1990,7 @@ pub(crate) fn right_tab_block_width(
             let chars: Vec<char> = r.text.chars().collect();
             let fs = {
                 let ts = r.text_style(styles);
-                if ts.font_size > 0.0 {
-                    ts.font_size
-                } else {
-                    12.0
-                }
+                ts.effective_font_size()
             };
             w += fs * crate::renderer::composer::char_overlap_advance_units(&chars) as f64;
             continue;
@@ -3751,11 +3743,7 @@ impl LayoutEngine {
                 .map(|cs| cs.char_shape_id as u32)
                 .unwrap_or(0);
             let ts = resolved_to_text_style(styles, default_cs, 0);
-            if ts.font_size > 0.0 {
-                ts.font_size
-            } else {
-                12.0
-            }
+            ts.effective_font_size()
         };
 
         // [#7018] **런이 속한 저장 줄의 baseline 을 쓴다** — 문단 단위 판정이 아니다.
@@ -6952,11 +6940,7 @@ impl LayoutEngine {
                         ts.inline_tabs = composed.tab_extended.clone();
                         ts.extra_char_spacing = extra_char_sp;
                         if r.char_overlap.is_some() {
-                            let fs = if ts.font_size > 0.0 {
-                                ts.font_size
-                            } else {
-                                12.0
-                            };
+                            let fs = ts.effective_font_size();
                             let chars: Vec<char> = r.text.chars().collect();
                             fs * crate::renderer::composer::char_overlap_advance_units(&chars)
                                 as f64
@@ -8304,11 +8288,7 @@ impl LayoutEngine {
                 .unwrap_or(0);
             let full_width = if run.char_overlap.is_some() {
                 // 글자겹침: 한 컨트롤은 payload 글자 수와 무관하게 1글자 폭.
-                let fs = if text_style.font_size > 0.0 {
-                    text_style.font_size
-                } else {
-                    12.0
-                };
+                let fs = text_style.effective_font_size();
                 let chars: Vec<char> = run.text.chars().collect();
                 fs * crate::renderer::composer::char_overlap_advance_units(&chars) as f64
             } else if run.display_text.is_some()
@@ -10138,11 +10118,7 @@ impl LayoutEngine {
             }
             // 글자겹침 run: PUA 다자리 숫자는 1글자 폭, 그 외는 font_size * char_count
             if run.char_overlap.is_some() {
-                let fs = if ts.font_size > 0.0 {
-                    ts.font_size
-                } else {
-                    12.0
-                };
+                let fs = ts.effective_font_size();
                 let chars: Vec<char> = run.text.chars().collect();
                 let w = fs * crate::renderer::composer::char_overlap_advance_units(&chars) as f64;
                 est_x += w;

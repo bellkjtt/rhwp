@@ -773,11 +773,7 @@ fn push_tac_post_f081c_line(
     dpi: f64,
 ) {
     let style = resolved_to_text_style(styles, marker.char_style_id, marker.lang_index);
-    let font_size = if style.font_size > 0.0 {
-        style.font_size
-    } else {
-        12.0
-    };
+    let font_size = style.effective_font_size();
     // [#5785 후속] 표 오른쪽 끝 마커 위치도 흐름 폭과 같은 규칙을 써야 한다.
     let table_width_hu: u32 = table.flow_width_hu();
     let marker_x = col_area.x + hwpunit_to_px(table_width_hu as i32, dpi);

@@ -736,11 +736,7 @@ impl SvgRenderer {
                     let cx = node.bbox.x + node.bbox.width / 2.0;
                     let cy = node.bbox.y + node.bbox.height / 2.0;
                     let color = color_to_svg(run.style.color);
-                    let font_size = if run.style.font_size > 0.0 {
-                        run.style.font_size
-                    } else {
-                        12.0
-                    };
+                    let font_size = run.style.effective_font_size();
                     let font_family = if run.style.font_family.is_empty() {
                         "sans-serif".to_string()
                     } else {
@@ -804,11 +800,7 @@ impl SvgRenderer {
                         run.field_marker,
                         crate::renderer::render_tree::FieldMarkerType::None
                     );
-                    let font_size = if run.style.font_size > 0.0 {
-                        run.style.font_size
-                    } else {
-                        12.0
-                    };
+                    let font_size = run.style.effective_font_size();
                     // 공백·탭 기호: 각 문자 위치에 오버레이
                     if !run.text.is_empty() && !is_marker {
                         let char_positions = run.replay_positions_for(&run.text);
@@ -2454,11 +2446,7 @@ impl SvgRenderer {
         bbox_w: f64,
         bbox_h: f64,
     ) {
-        let font_size = if style.font_size > 0.0 {
-            style.font_size
-        } else {
-            12.0
-        };
+        let font_size = style.effective_font_size();
         let chars: Vec<char> = text.chars().collect();
         if chars.is_empty() {
             return;
@@ -2604,11 +2592,7 @@ impl SvgRenderer {
         bbox_w: f64,
         bbox_h: f64,
     ) {
-        let font_size = if style.font_size > 0.0 {
-            style.font_size
-        } else {
-            12.0
-        };
+        let font_size = style.effective_font_size();
         let box_size = font_size;
 
         // border_type=0이고 PUA 숫자이면 원형으로 자동 렌더링
@@ -3191,11 +3175,7 @@ impl Renderer for SvgRenderer {
         let text = &expand_pua_old_hangul(text);
 
         let color = color_to_svg(style.color);
-        let base_font_size = if style.font_size > 0.0 {
-            style.font_size
-        } else {
-            12.0
-        };
+        let base_font_size = style.effective_font_size();
         // 위첨자/아래첨자는 레이아웃 advance 는 원래 run 기준으로 유지하고,
         // 실제 SVG glyph 크기와 baseline 만 Canvas/HTML 출력과 동일하게 조정한다.
         let (font_size, y) = style.script_draw_metrics(base_font_size, y);

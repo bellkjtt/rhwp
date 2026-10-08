@@ -294,6 +294,9 @@ pub struct TextStyle {
     /// 표시용 대체 face와 구분한 원본 언어 슬롯의 HFT 선언이다.
     #[serde(skip_serializing)]
     pub source_font_is_hft: bool,
+    /// 원본 글자 스타일에서 크기를 해소했는지. 명시적인 0과 미지정을 구별한다.
+    #[serde(skip_serializing)]
+    pub resolved_font_size: bool,
     /// 글자 색상
     pub color: ColorRef,
     /// 진하게
@@ -473,6 +476,15 @@ pub const SUPERSCRIPT_RISE_EM: f64 = 0.3;
 pub const SUBSCRIPT_DROP_EM: f64 = 0.15;
 
 impl TextStyle {
+    /// 원본의 0 크기를 보존한다. 해소되지 않은 기본 스타일에만 기존 폴백을 쓴다.
+    pub(crate) fn effective_font_size(&self) -> f64 {
+        if self.resolved_font_size || self.font_size > 0.0 {
+            self.font_size
+        } else {
+            12.0
+        }
+    }
+
     /// 위첨자/아래첨자 run 의 **그리기** 글꼴 크기와 baseline 을 계산한다.
     ///
     /// SVG·Canvas·HTML·Skia·paint JSON 이 각자 하드코딩하던 동일 상수를 한곳으로
@@ -621,6 +633,7 @@ impl Default for TextStyle {
             font_size: 0.0,
             fixed_glyph_advances: false,
             source_font_is_hft: false,
+            resolved_font_size: false,
             color: 0,
             bold: false,
             italic: false,

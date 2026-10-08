@@ -18,11 +18,7 @@ impl CanvasTextFont {
     /// condensed-ratio rule, family chain and three-decimal CSS size verbatim.
     /// Registration must reject invalid styles; painting keeps its old fallback.
     pub fn for_positioned_text(style: &TextStyle, baseline: f64) -> Self {
-        let base_size = if style.font_size > 0.0 {
-            style.font_size
-        } else {
-            12.0
-        };
+        let base_size = style.effective_font_size();
         let (size, baseline) = style.script_draw_metrics(base_size, baseline);
         let (draw_size, horizontal_scale) = style.ratio_draw_params(size);
         let family = canvas_font_family_chain(&style.font_family);

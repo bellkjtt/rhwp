@@ -64,11 +64,7 @@ impl SkiaTextReplay<'_> {
                 if text.is_empty() && style.tab_leaders.is_empty() {
                     return;
                 }
-                let base_font_size = if style.font_size > 0.0 {
-                    style.font_size
-                } else {
-                    12.0
-                };
+                let base_font_size = style.effective_font_size();
                 // [#2771] 위첨자/아래첨자를 SVG/Canvas/HTML 과 동일한 계약(0.7 배
                 // 글꼴 + baseline 이동)으로 그린다. 종전 skia 경로는 첨자 분기가
                 // 아예 없어 본문과 같은 크기·같은 baseline 으로 그렸다.
@@ -903,11 +899,7 @@ impl SkiaTextReplay<'_> {
             if !output_options.show_paragraph_marks && !output_options.show_control_codes {
                 return;
             }
-            let font_size = if style.font_size > 0.0 {
-                style.font_size as f32
-            } else {
-                12.0
-            };
+            let font_size = style.effective_font_size() as f32;
             let make_mark_font = |size: f32| {
                 let mut font = match_system_family_style(
                     self.font_mgr,

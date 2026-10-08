@@ -940,11 +940,7 @@ impl WebCanvasRenderer {
             let cy = bbox.y + bbox.height / 2.0;
             let font_weight = if run.style.bold { "bold " } else { "" };
             let font_style_str = if run.style.italic { "italic " } else { "" };
-            let font_size = if run.style.font_size > 0.0 {
-                run.style.font_size
-            } else {
-                12.0
-            };
+            let font_size = run.style.effective_font_size();
             let font_family = super::canvas_font_family_chain(&run.style.font_family);
             let font = format!(
                 "{}{}{:.3}px {}",
@@ -973,11 +969,7 @@ impl WebCanvasRenderer {
                 run.field_marker,
                 crate::renderer::render_tree::FieldMarkerType::None
             );
-            let font_size = if run.style.font_size > 0.0 {
-                run.style.font_size
-            } else {
-                12.0
-            };
+            let font_size = run.style.effective_font_size();
             if !run.text.is_empty() && !is_marker {
                 let char_positions = run.replay_positions_for(&run.text);
                 let mark_font_size = font_size * 0.5;
@@ -3076,11 +3068,7 @@ impl WebCanvasRenderer {
         bbox_w: f64,
         bbox_h: f64,
     ) {
-        let font_size = if style.font_size > 0.0 {
-            style.font_size
-        } else {
-            12.0
-        };
+        let font_size = style.effective_font_size();
         let chars: Vec<char> = text.chars().collect();
         if chars.is_empty() {
             return;
@@ -3240,11 +3228,7 @@ impl WebCanvasRenderer {
         bbox_w: f64,
         bbox_h: f64,
     ) {
-        let font_size = if style.font_size > 0.0 {
-            style.font_size
-        } else {
-            12.0
-        };
+        let font_size = style.effective_font_size();
         let box_size = font_size;
 
         self.ctx.save();
