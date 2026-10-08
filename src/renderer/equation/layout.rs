@@ -341,7 +341,11 @@ impl EqLayout {
             .chars()
             .map(|ch| {
                 if ch.is_ascii_digit() {
-                    fs * 0.5
+                    if self.hancom_math_face {
+                        source_font_text::logical_advance(512, fs, self.dpi)
+                    } else {
+                        fs * 0.5
+                    }
                 } else {
                     estimate_text_width(&ch.to_string(), fs, false)
                 }
@@ -376,9 +380,17 @@ impl EqLayout {
             "'" => "′",
             _ => text,
         };
-        let w = estimate_text_width(display, fs, false);
+        let source_operator = self
+            .hancom_math_face
+            .then(|| source_font_symbol::operator_metrics(display, fs, self.dpi))
+            .flatten();
+        let w = source_operator
+            .map(|(width, _)| width)
+            .unwrap_or_else(|| estimate_text_width(display, fs, false));
         // 연산자 좌우 여백
-        let pad = if matches!(text, "+" | "-" | "=" | "<" | ">" | "×" | "÷") {
+        let pad = if source_operator.is_some() {
+            0.0
+        } else if matches!(text, "+" | "-" | "=" | "<" | ">" | "×" | "÷") {
             fs * 0.15
         } else if matches!(text, "(" | ")" | "[" | "]" | "'" | "′" | "″" | "‴") {
             // 보통 크기의 구분자는 관계·이항 연산자 여백을 갖지 않는다.

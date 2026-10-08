@@ -6,6 +6,20 @@ use super::{is_integral_symbol, EqLayout, EqNode, LayoutBox, LayoutKind};
 const SUPERSCRIPT_SHIFT_UP: f64 = 0.363;
 const SUPERSCRIPT_BOTTOM_MIN: f64 = 0.108;
 
+/// 한컴의 Latin 대문자 뒤 단일 위첨자는 정체/이탤릭 모두 0.15em을 예약한다.
+/// 명시 공백 또는 닫는 구분자 뒤에는 이 문자 전진을 중복 추가하지 않는다.
+fn ends_with_uppercase_letter(node: &EqNode) -> bool {
+    match node {
+        EqNode::Text(text) => text
+            .chars()
+            .last()
+            .is_some_and(|ch| ch.is_ascii_uppercase()),
+        EqNode::FontStyle { body, .. } => ends_with_uppercase_letter(body),
+        EqNode::Row(items) => items.last().is_some_and(ends_with_uppercase_letter),
+        _ => false,
+    }
+}
+
 impl EqLayout {
     pub(super) fn layout_superscript(&self, base: &EqNode, sup: &EqNode, fs: f64) -> LayoutBox {
         if matches!(base, EqNode::MathSymbol(symbol) if is_integral_symbol(symbol)) {
@@ -15,6 +29,11 @@ impl EqLayout {
         }
         let mut base_box = self.layout_node(base, fs);
         let mut sup_box = self.layout_node(sup, self.script_font_size(fs));
+        let letter_gap = if self.hancom_math_face && ends_with_uppercase_letter(base) {
+            fs * 0.15
+        } else {
+            0.0
+        };
 
         // 위첨자의 깊이를 포함해 본체 기준선 위에 하단 여유를 확보한다.
         // 키 큰 본체는 원래 기준선을 유지하므로 위첨자를 맞추려고 본체를 올리지 않는다.
@@ -23,14 +42,14 @@ impl EqLayout {
         let baseline = base_box.baseline.max(sup_box.baseline + shift);
         base_box.x = 0.0;
         base_box.y = baseline - base_box.baseline;
-        sup_box.x = base_box.width;
+        sup_box.x = base_box.width + letter_gap;
         sup_box.y = baseline - shift - sup_box.baseline;
 
         LayoutBox {
             font_size: fs,
             x: 0.0,
             y: 0.0,
-            width: base_box.width + sup_box.width,
+            width: sup_box.x + sup_box.width,
             height: (base_box.y + base_box.height).max(sup_box.y + sup_box.height),
             baseline,
             kind: LayoutKind::Superscript {

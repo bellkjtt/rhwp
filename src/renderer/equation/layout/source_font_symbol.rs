@@ -4,6 +4,20 @@
 
 use super::{LayoutBox, LayoutKind};
 
+/// 한컴 Print의 수학 전진폭과 자동 간격. 정체 ASCII 글꼴의 폭과 구분한다.
+pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    let (advance, padding) = match text {
+        "+" => (795, 0.14),
+        "=" => (795, 0.21),
+        "×" => (831, 0.14),
+        _ => return None,
+    };
+    Some((
+        super::source_font_text::logical_advance(advance, fs, dpi),
+        fs * padding,
+    ))
+}
+
 pub(super) fn layout(text: &str, fs: f64) -> Option<LayoutBox> {
     if !matches!(text, "'" | "′") {
         return None;
