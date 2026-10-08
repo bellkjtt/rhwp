@@ -77,8 +77,14 @@ impl EqLayout {
         let b = self.layout_node(base, fs);
         let s = self.layout_node(sub, self.script_font_size(fs));
 
-        let sub_shift = b.baseline * 0.4;
-        let total_h = (b.height).max(sub_shift + s.height);
+        let source_geometry = self
+            .hancom_math_face
+            .then(|| super::super::logical_font_frame::subscript_geometry(&b, &s, fs, self.dpi))
+            .flatten();
+        let sub_shift = source_geometry.map_or(b.baseline * 0.4, |(shift, _)| shift);
+        let total_h = source_geometry
+            .map_or(b.height, |(_, height)| height)
+            .max(sub_shift + s.height);
 
         let mut base_box = b;
         base_box.x = 0.0;

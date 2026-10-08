@@ -90,3 +90,45 @@ pub(super) fn for_size_at_dpi(fs: f64, dpi: f64) -> Option<FontFrameMetrics> {
         fraction: convert(metrics.fraction),
     })
 }
+
+/// 일반 글줄의 수학 축을 글자 크기의 논리 프레임에서 구한다.
+pub(super) fn line_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    if let Some(metrics) = for_size_at_dpi(fs, dpi) {
+        return Some(metrics.line);
+    }
+    // 기존 구조별 표에 없는 22pt의 일반 글줄만 독립 정상화로 확인했다.
+    // job ee04e67a-b8cb-4297-9f26-716027f9eb7e, a/n/x/m 모두 동일하다.
+    let hu = crate::renderer::px_to_hwpunit(fs, dpi) as u32;
+    if hu != 2200 {
+        return None;
+    }
+    let height = crate::renderer::hwpunit_to_px(2175, dpi);
+    Some((height, height * 0.86))
+}
+
+/// 일반 글줄 본체와 첨자의 논리 프레임. 문서 좌표나 수식별 예외가 아니다.
+/// 한컴 2020 정상화 job 57289556-fcb9-4edd-96df-f60e9d26ac53에서
+/// a_{n}/x_{m} 두 표현식의 같은 크기 높이·기준선이 모두 일치했다.
+pub(super) fn subscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    const FRAMES: [[u32; 3]; 15] = [
+        [600, 706, 73],
+        [700, 805, 73],
+        [800, 979, 71],
+        [900, 1078, 71],
+        [1000, 1177, 72],
+        [1100, 1350, 71],
+        [1200, 1450, 71],
+        [1300, 1548, 71],
+        [1400, 1723, 70],
+        [1500, 1821, 71],
+        [1600, 1920, 71],
+        [1800, 2155, 71],
+        [2000, 2428, 71],
+        [2200, 2626, 71],
+        [2400, 2899, 71],
+    ];
+    let hu = crate::renderer::px_to_hwpunit(fs, dpi) as u32;
+    let row = FRAMES.iter().find(|row| row[0] == hu)?;
+    let height = crate::renderer::hwpunit_to_px(row[1] as i32, dpi);
+    Some((height, height * f64::from(row[2]) / 100.0))
+}

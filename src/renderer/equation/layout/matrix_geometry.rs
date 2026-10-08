@@ -122,15 +122,16 @@ impl EqLayout {
         }
         let total_h = y - row_gap;
         let full_w = max_w + fs * 0.6;
-        // cases의 왼쪽 식은 가운데 행의 글자 기준선에 맞춘다.
-        // 물리 상자의 중간을 기준선으로 쓰면 모든 행이 글자 하강부만큼 내려간다.
-        let baseline = if self.hancom_math_face && !row_boxes.is_empty() {
-            let upper = &row_boxes[(row_boxes.len() - 1) / 2];
-            let lower = &row_boxes[row_boxes.len() / 2];
-            (upper.y + upper.baseline + lower.y + lower.baseline) * 0.5
+        // 행 구성과 관계없이 묶음의 수학 축을 가운데에 놓는다. 왼쪽 식의
+        // 기준선은 일반 글줄의 축 거리만큼 내려간다. 분수 행을 앞뒤로
+        // 옮겨도 두 글자 기준선의 평균으로 축이 바뀌지 않는다.
+        let axis_offset = if self.hancom_math_face {
+            super::super::font_frame_metrics::line_at_dpi(fs, self.dpi)
+                .map_or(fs * 0.3, |(height, baseline)| baseline - height / 2.0)
         } else {
-            total_h / 2.0
+            0.0
         };
+        let baseline = total_h / 2.0 + axis_offset;
 
         // 중괄호 포함 레이아웃 → Paren으로 래핑
         let inner = LayoutBox {

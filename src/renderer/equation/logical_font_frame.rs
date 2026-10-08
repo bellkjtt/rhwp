@@ -104,6 +104,27 @@ pub(super) fn superscript_shift(
     Some(shift)
 }
 
+/// 같은 일반 글줄의 첨자 프레임에서 하단 점유를 공유한다.
+/// 자식의 상단 위치 대신 본체·첨자 기준선과 실제 글줄 깊이를 연결한다.
+pub(super) fn subscript_geometry(
+    base: &LayoutBox,
+    sub: &LayoutBox,
+    fs: f64,
+    dpi: f64,
+) -> Option<(f64, f64)> {
+    if !font_line(base, fs)
+        || !font_line(sub, sub.font_size)
+        || (sub.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
+    {
+        return None;
+    }
+    let (height, baseline) = super::font_frame_metrics::subscript_at_dpi(fs, dpi)?;
+    let (line_height, line_baseline) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+    let sub_depth = (line_height - line_baseline) * sub.font_size / fs;
+    let baseline_drop = height - baseline - sub_depth;
+    Some((base.baseline + baseline_drop - sub.baseline, height))
+}
+
 fn contains_prime(value: &LayoutBox) -> bool {
     match &value.kind {
         LayoutKind::Symbol(s)
@@ -118,6 +139,11 @@ fn contains_prime(value: &LayoutBox) -> bool {
 }
 
 fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    if let LayoutKind::Subscript { base, sub } = &value.kind {
+        if subscript_geometry(base, sub, fs, dpi).is_some() {
+            return super::font_frame_metrics::subscript_at_dpi(fs, dpi);
+        }
+    }
     let metrics = super::font_frame_metrics::for_size_at_dpi(fs, dpi)?;
     if font_line(value, fs) {
         return Some(if contains_prime(value) {
@@ -181,7 +207,7 @@ fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
     }
 }
 
-/// 중첩 분수·배열·아래첨자·복합 첨자·일반 근호·다줄·다중 장식은 이 계약이 아니다.
+/// 중첩 분수·배열·중첩 첨자·복합 첨자·일반 근호·다줄·다중 장식은 이 계약이 아니다.
 pub(super) fn metrics(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
     frame(value, fs, crate::renderer::DEFAULT_DPI)
 }
