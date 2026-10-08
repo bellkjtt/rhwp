@@ -35,3 +35,21 @@ Stage11의 wasm-opt는 이미 컴파일한 바이너리만 최적화하므로 �
 `a5c3751b9`의 증거로 고정한다. 이 패키지를 수정 후 증거로 사용하지 않는다.
 다음 Cargo 검증은 현재 wrapper 종료 뒤 순차 실행한다. 수정 후 시각 판정은 아직이다.
 TSV·로그·진단 JSON·nextrun은 ignored output에 둔다.
+
+## 수정 후 Native 확인
+
+코드 head `98d14099bded29215992473414789bb5242e8615`의 Native Clippy와
+WASM Clippy는 각각 exit 0이다. `cargo fmt --all -- --check`도 exit 0이다.
+Native `release-test` 빌드는 exit 0, 5분 30초이며 고정 바이너리와 소스 해시는
+ignored `equation-command-operator-native-provenance.json`에 있다.
+
+같은 원본 17쪽은 **95.25802 → 96.95208%**, 독립 9/18pt 연산자 대조군은
+**85.84785 → 91.17251%**다. 수정 후 representative review와 같은 물리 영역의
+576dpi compare를 생성해 직접 판독했다. 둘째 줄의 `×100`·`×10`의 간격과 이후
+분수 시작 위치는 개선됐다. 곱셈 기호의 실제 ink 크기와 일부 기준선 차이는 남아 있어
+확대 판독 전체를 충족으로 기록하지 않는다. 공개 표시 글꼴과 원 face의 ink bounds를
+대조하는 진단 자료는 `math-fallback-glyph-bounds.json`에 보존한다.
+
+최신 source의 fresh WASM 및 전체 페이지 검증은 미검증이다. 이전 stage11 패키지의
+17쪽 WASM은 95.25802%로 Native와 같지만, 이것은 수정 전 결과다. 회귀 기대값이나
+baseline은 갱신하지 않았으며 PR 제출·승인·통합 완료로 판정하지 않는다.
