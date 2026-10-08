@@ -30,8 +30,14 @@ fn ends_with_script(node: &EqNode) -> bool {
 /// 인접한 닫는 괄호는 하나의 구분자 묶음이다. operand 끝만 자동 간격을 만든다.
 fn operand_end(node: &EqNode) -> bool {
     match node {
-        EqNode::Text(_) | EqNode::Number(_) => true,
-        EqNode::Symbol(text) | EqNode::MathSymbol(text) => matches!(text.as_str(), "'" | "′"),
+        EqNode::Text(_) | EqNode::Number(_) | EqNode::Function(_) => true,
+        EqNode::Symbol(text) | EqNode::MathSymbol(text) => {
+            matches!(text.as_str(), "'" | "′")
+                || (text.chars().count() == 1
+                    && text
+                        .chars()
+                        .all(|ch| matches!(ch, '\u{0391}'..='\u{03A9}' | '\u{03B1}'..='\u{03C9}')))
+        }
         EqNode::Row(items) => items
             .iter()
             .rfind(|item| !matches!(item, EqNode::Space(_) | EqNode::Empty))

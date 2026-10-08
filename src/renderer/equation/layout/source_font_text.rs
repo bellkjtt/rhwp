@@ -48,7 +48,9 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<Layo
             (false, true) => (&ROMAN_UPPER, b'A'),
             (false, false) => (&ROMAN_LOWER, b'a'),
         };
-        let width = if italic && ch == b'f' {
+        let width = if !italic {
+            super::source_roman_advance::measured(&char::from(ch).to_string(), fs, dpi)
+        } else if ch == b'f' {
             super::source_font_advance::measured(fs, dpi, 3)
         } else {
             None

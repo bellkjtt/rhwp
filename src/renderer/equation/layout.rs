@@ -4,6 +4,7 @@
 //! 각 요소의 크기와 위치를 계산한다.
 
 use super::ast::*;
+use super::symbols::FontStyleKind;
 
 mod big_op_geometry;
 mod cases_columns;
@@ -17,6 +18,7 @@ mod script_geometry;
 mod source_font_advance;
 mod source_font_symbol;
 mod source_font_text;
+mod source_roman_advance;
 mod symbol_advances;
 mod symbol_spacing;
 mod variable_style;
@@ -422,6 +424,17 @@ impl EqLayout {
             return layout;
         }
         if self.hancom_math_face {
+            if let Some(width) = source_roman_advance::measured(text, fs, self.dpi) {
+                return LayoutBox {
+                    font_size: fs,
+                    x: 0.0,
+                    y: 0.0,
+                    width,
+                    height: fs,
+                    baseline: fs * 0.8,
+                    kind: LayoutKind::MathSymbol(text.to_string()),
+                };
+            }
             // 명령으로 입력한 연산자도 직접 기호와 같은 논리 전진·표시 상자를 소비한다.
             // 독립 메트릭이 없는 다른 수학 명령은 기존 경로를 유지한다.
             if source_font_symbol::operator_metrics(text, fs, self.dpi).is_some() {
@@ -492,6 +505,22 @@ impl EqLayout {
     }
 
     fn layout_function(&self, name: &str, fs: f64) -> LayoutBox {
+        if self.hancom_math_face && !self.variable_bold {
+            if let Some(body) = source_font_text::layout(name, fs, self.dpi, false) {
+                return LayoutBox {
+                    font_size: fs,
+                    x: 0.0,
+                    y: 0.0,
+                    width: body.width,
+                    height: body.height,
+                    baseline: body.baseline,
+                    kind: LayoutKind::FontStyle {
+                        style: FontStyleKind::Roman,
+                        body: Box::new(body),
+                    },
+                };
+            }
+        }
         let w = glyph_advances::text_width(name, fs)
             .unwrap_or_else(|| estimate_text_width(name, fs, false));
         LayoutBox {
