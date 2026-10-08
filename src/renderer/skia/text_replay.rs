@@ -344,10 +344,9 @@ impl SkiaTextReplay<'_> {
                     .copied()
                     .unwrap_or_else(|| *char_positions.last().unwrap_or(&0.0))
                     as f32;
-                // [#5821] 압축 장평은 세로도 √r — SSOT 는 condensed_ratio_draw_params.
+                // SVG·Canvas와 같은 글꼴 출처별 장평 변환을 소비한다.
                 let (font_size, ratio) = {
-                    let (fs, r) =
-                        crate::renderer::condensed_ratio_draw_params(font_size as f64, style.ratio);
+                    let (fs, r) = style.ratio_draw_params(font_size as f64);
                     (fs as f32, r as f32)
                 };
                 let has_ratio = (ratio - 1.0).abs() > 0.01;

@@ -15,6 +15,7 @@ use super::super::{
     ShapeStyle, TabStop, TextStyle,
 };
 use super::border_rendering::create_border_line_nodes;
+use super::terminal_tracking::terminal_tracking_for_alignment;
 use super::text_measurement::{
     compute_char_positions, estimate_text_width, estimate_text_width_exact,
     estimate_text_width_unrounded, extract_tab_leaders_with_extended, find_next_tab_stop,
@@ -42,60 +43,6 @@ use crate::model::table::Table;
 use leading_justification::LeadingSpacePlan;
 
 const CAPTION_CELL_SENTINEL: usize = 65534;
-
-/// [#6699] 그림 뒤 문자열의 마지막 자간은 다음 글자가 없는 정렬 폭에 넣지 않는다.
-/// 글자 전진 폭과 그림 뒤 원본 공백은 유지하고, 가운데/오른쪽 정렬의 점유 폭만 줄인다.
-fn terminal_tracking_after_inline_picture(
-    line: &ComposedLine,
-    para: Option<&Paragraph>,
-    styles: &ResolvedStyleSet,
-    tac_offsets: &[(usize, f64, usize)],
-) -> f64 {
-    if tac_offsets.is_empty()
-        || line
-            .runs
-            .iter()
-            .any(|run| run.char_overlap.is_some() || run.display_text.is_some())
-    {
-        return 0.0;
-    }
-    let text_end = line.char_start
-        + line
-            .runs
-            .iter()
-            .map(|run| run.source_scalar_count())
-            .sum::<usize>();
-    // 문자열 뒤 개체에는 실제로 자간 다음 내용이 있으므로 기존 전진 폭을 쓴다.
-    if tac_offsets.iter().any(|(pos, _, _)| *pos >= text_end)
-        || !tac_offsets.iter().any(|(_, _, index)| {
-            matches!(
-                para.and_then(|p| p.controls.get(*index)),
-                Some(Control::Picture(picture)) if picture.common.treat_as_char
-            )
-        })
-    {
-        return 0.0;
-    }
-    let Some(run) = line.runs.iter().rev().find(|run| !run.text.is_empty()) else {
-        return 0.0;
-    };
-    let Some(last) =
-        unicode_segmentation::UnicodeSegmentation::graphemes(run.text.as_str(), true).next_back()
-    else {
-        return 0.0;
-    };
-    if last.chars().any(char::is_whitespace) {
-        return 0.0;
-    }
-    let mut style = run.text_style(styles);
-    if style.letter_spacing <= 0.0 || style.kerning {
-        return 0.0;
-    }
-    // 폰트별 글자 폭에 비례하는 자간을 기존 측정 함수로 구한다. 정수 반올림은 하지 않는다.
-    let tracked = estimate_text_width_unrounded(last, &style);
-    style.letter_spacing = 0.0;
-    (tracked - estimate_text_width_unrounded(last, &style)).max(0.0)
-}
 
 /// 저장 탭 확장 배열의 문단 전체 순번을 현재 줄 시작에서 복원한다.
 fn stored_tab_index_before_line(
@@ -7111,21 +7058,21 @@ impl LayoutEngine {
                 } else {
                     0.0
                 };
-            let terminal_tracking_width = if cell_ctx.is_some()
-                && matches!(alignment, Alignment::Center | Alignment::Right)
-                && !center_packed_cell_label_as_right
-                && !has_tabs
-                && extra_char_sp == 0.0
-            {
-                terminal_tracking_after_inline_picture(
-                    comp_line,
-                    para,
-                    styles,
-                    &line_tac_offsets_for_width,
-                )
-            } else {
-                0.0
-            };
+            let terminal_tracking_width =
+                if matches!(alignment, Alignment::Center | Alignment::Right)
+                    && !center_packed_cell_label_as_right
+                    && !has_tabs
+                    && extra_char_sp == 0.0
+                {
+                    terminal_tracking_for_alignment(
+                        comp_line,
+                        styles,
+                        &line_tac_offsets_for_width,
+                        center_excludes_trailing_ws || right_align_excludes_trailing_ws,
+                    )
+                } else {
+                    0.0
+                };
             let x_start = match alignment {
                 Alignment::Center => {
                     let align_offset = if center_packed_cell_label_as_right {

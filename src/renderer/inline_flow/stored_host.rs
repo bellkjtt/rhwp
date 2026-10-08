@@ -8,7 +8,7 @@ use crate::model::{
 };
 use crate::renderer::{hwpunit_to_px, px_to_hwpunit, style_resolver::ResolvedStyleSet};
 
-/// 다음 실제 줄의 원점이 증언하는 정상 저장 Square 호스트 예약.
+/// 다음 실제 줄의 원점이 증언하는 정상 저장 부동 개체 호스트 예약.
 pub(crate) fn plan_stored_empty_square_host(
     host: &Paragraph,
     next: &Paragraph,
@@ -35,7 +35,12 @@ pub(crate) fn plan_stored_empty_square_host(
             | Control::PageNumCtrl(_) => continue,
             _ => return None,
         };
-        if common.treat_as_char || common.text_wrap != TextWrap::Square {
+        if common.treat_as_char
+            || !matches!(
+                common.text_wrap,
+                TextWrap::Square | TextWrap::InFrontOfText | TextWrap::BehindText
+            )
+        {
             return None;
         }
         saw_float = true;
@@ -53,7 +58,7 @@ pub(crate) fn plan_stored_empty_square_host(
             s.tag & synthetic != 0
                 || s.vertical_pos != first.vertical_pos
                 || s.line_height <= 0
-                || s.line_spacing < 0
+                || i64::from(s.line_height) + i64::from(s.line_spacing) <= 0
         })
         || host
             .line_segs
@@ -81,17 +86,142 @@ pub(crate) fn plan_stored_empty_square_host(
         return None;
     }
     row.vertical_pos = 0;
+    // 음수 줄간격은 줄 상자의 높이와 다음 원점의 전진량을 다르게 만든다.
+    // 양수인 실제 전진량이 다음 저장 원점과 일치할 때만 그대로 소비한다.
     let end = style.spacing_before
-        + hwpunit_to_px(row.line_height + row.line_spacing, dpi)
+        + hwpunit_to_px(row.line_height.saturating_add(row.line_spacing), dpi)
         + style.spacing_after;
     Some(InlineFlowPlan {
         stored_empty_host: true,
+        stored_float_host: false,
         text_rows: Some(vec![row]),
         square_host_control: None,
         text_spacing_before: Some(style.spacing_before),
         square_host_placement: None,
         square_host_exclusion: None,
         start: 0.0,
+        end,
+        boxes: Vec::new(),
+        rows: Vec::new(),
+        carved: false,
+        next_row_top: end,
+        fallback_font_size: 0.0,
+    })
+}
+
+/// 실제 저장 첫 원점이 절대 전폭 표의 배제 하단일 때 앞 간격은 이미 트림됐다.
+/// 저장 줄의 원점과 끝을 측정·부분 본문 paint가 같은 계획으로 소비한다.
+pub(crate) fn plan_stored_body_wide_host(
+    host: &Paragraph,
+    next: &Paragraph,
+    styles: &ResolvedStyleSet,
+    body: &crate::renderer::page_layout::LayoutRect,
+    page_height: f64,
+    dpi: f64,
+) -> Option<InlineFlowPlan> {
+    use crate::model::shape::VertRelTo;
+    if host.stored_text_partition_is_dirty()
+        || host.cell_format_vpos_dirty
+        || next.stored_text_partition_is_dirty()
+        || next.cell_format_vpos_dirty
+        || !host
+            .text
+            .chars()
+            .any(|ch| ch > '\u{001f}' && !ch.is_whitespace() && ch != '\u{fffc}')
+        || !matches!(next.column_type, ColumnBreakType::None)
+    {
+        return None;
+    }
+    let mut bottom = None;
+    for control in &host.controls {
+        let table = match control {
+            Control::Table(table)
+                if !table.common.treat_as_char
+                    && table.common.text_wrap == TextWrap::TopAndBottom
+                    && matches!(table.common.vert_rel_to, VertRelTo::Paper | VertRelTo::Page)
+                    && table.caption.is_none() =>
+            {
+                table
+            }
+            Control::SectionDef(_) | Control::ColumnDef(_) => continue,
+            _ => return None,
+        };
+        if bottom.is_some() || hwpunit_to_px(table.common.width as i32, dpi) < body.width * 0.8 {
+            return None;
+        }
+        let (ref_y, ref_h) = if table.common.vert_rel_to == VertRelTo::Paper {
+            (0.0, page_height)
+        } else {
+            (body.y, body.height)
+        };
+        let (_, end) = crate::renderer::float_placement::absolute_table_vertical_geometry(
+            table,
+            ref_y,
+            ref_h,
+            hwpunit_to_px(table.common.height as i32, dpi),
+            dpi,
+        );
+        bottom = Some(end - body.y);
+    }
+    let start = bottom.filter(|v| *v > 0.0)?;
+    let first = host.line_segs.first()?;
+    let last = host.line_segs.last()?;
+    let following = next.line_segs.first()?;
+    let synthetic = LineSeg::TAG_IMPLEMENTATION_PROPERTY;
+    if (i64::from(first.vertical_pos) - i64::from(px_to_hwpunit(start, dpi))).abs() > 1
+        || host
+            .line_segs
+            .iter()
+            .chain(std::iter::once(following))
+            .any(|line| {
+                line.tag & synthetic != 0
+                    || line.line_height <= 0
+                    || i64::from(line.line_height) + i64::from(line.line_spacing) <= 0
+            })
+        || host.line_segs.windows(2).any(|pair| {
+            pair[1].vertical_pos
+                != pair[0]
+                    .vertical_pos
+                    .saturating_add(pair[0].line_height)
+                    .saturating_add(pair[0].line_spacing)
+        })
+    {
+        return None;
+    }
+    let after = styles
+        .para_styles
+        .get(host.para_shape_id as usize)?
+        .spacing_after;
+    let next_style = styles.para_styles.get(next.para_shape_id as usize)?;
+    let expected = i64::from(last.vertical_pos)
+        + i64::from(last.line_height)
+        + i64::from(last.line_spacing)
+        + i64::from(px_to_hwpunit(after + next_style.spacing_before, dpi));
+    if next_style.page_break_before || (expected - i64::from(following.vertical_pos)).abs() > 1 {
+        return None;
+    }
+    let mut rows = host.line_segs.clone();
+    for row in &mut rows {
+        row.vertical_pos = row.vertical_pos.saturating_sub(first.vertical_pos);
+    }
+    let end = start
+        + hwpunit_to_px(
+            last.vertical_pos
+                .saturating_sub(first.vertical_pos)
+                .saturating_add(last.line_height)
+                .saturating_add(last.line_spacing),
+            dpi,
+        )
+        + after;
+    Some(InlineFlowPlan {
+        stored_empty_host: false,
+        stored_float_host: true,
+        text_rows: Some(rows),
+        square_host_control: None,
+        text_spacing_before: Some(0.0),
+        square_host_placement: None,
+        square_host_exclusion: None,
+        start,
         end,
         boxes: Vec::new(),
         rows: Vec::new(),

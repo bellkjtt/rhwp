@@ -19,6 +19,7 @@
 )]
 
 pub mod converter;
+pub(crate) mod emfplus;
 pub mod parser;
 
 #[cfg(test)]

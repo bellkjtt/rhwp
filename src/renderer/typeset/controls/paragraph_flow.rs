@@ -98,6 +98,20 @@ pub(in crate::renderer::typeset) fn place(
         return;
     }
     let mut fmt = engine.format_paragraph(para, composed, styles, Some(host_col_w));
+    let stored_body_wide_host = (st.profile.hwp5_container() && !st.profile.session_edited())
+        .then(|| st.stored_body_wide_host_frame())
+        .flatten()
+        .and_then(|(body, page_height)| {
+            crate::renderer::inline_flow::plan_stored_body_wide_host(
+                para,
+                next_para?,
+                styles,
+                &body,
+                page_height,
+                engine.dpi,
+            )
+        });
+
     if let Some(plan) = crate::renderer::inline_flow::plan_square_table_host(
         para,
         para_idx,
@@ -315,6 +329,11 @@ pub(in crate::renderer::typeset) fn place(
                 || engine.profile.get().hwpx_stored_layout()
         },
     );
+
+    if let Some(plan) = stored_body_wide_host {
+        // 최초 host의 모든 글줄이 같은 단에 실제 수용됐을 때만 원점과 끝을 확정한다.
+        st.commit_stored_body_wide_host(para_idx, para, plan);
+    }
 
     // TAC 표 높이 보정 (Paginator engine.rs:123-179 동일)
     // [#2319] 저장 lineseg 없는(기계생성) 문단은 스킵 — cap 의 두 축(tac_seg_total

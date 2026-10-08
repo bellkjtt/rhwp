@@ -632,6 +632,7 @@ impl TypesetState {
             vpos_page_base: self.data.vpos_page_base,
             vpos_lazy_base: self.data.vpos_lazy_base,
             side_wrap_empty: self.data.side_wrap_exclusions.is_empty(),
+            trimmed_previous_spacing_before: self.data.vpos_prev_trimmed_sb_px,
             // layout의 단 초기 base와 같은 첫 완전한 표의 저장 줄을 읽는다.
             // PartialTable에는 소비된 컷이 있고, 문단 시작의 들여쓰기·앞 간격은
             // 별도 계약이므로 이 표 원점 조회에 섞지 않는다.
@@ -937,6 +938,37 @@ impl TypesetState {
             exclusions: preceding.then_some(&self.data.side_wrap_exclusions),
             visible_float_exclusions: preceding.then_some(&self.data.visible_float_exclusions),
         }
+    }
+
+    /// 새 다단 쪽의 첫 host에만 절대 전폭 예약의 좌표계를 제공한다.
+    pub(super) fn stored_body_wide_host_frame(&self) -> Option<(LayoutRect, f64)> {
+        (self.data.current_items.is_empty()
+            && self.data.current_column == 0
+            && self.data.col_count > 1
+            && self.data.current_start_height == 0.0
+            && self.data.current_zone_y_offset == 0.0
+            && !self.data.current_endnote_flow)
+            .then_some((self.data.layout.body_area, self.data.layout.page_height))
+    }
+
+    /// 부분 수용/이월이면 기존 소유자를 유지한다. 전체 수용한 줄의 원점과 전진 끝을 공유한다.
+    pub(super) fn commit_stored_body_wide_host(
+        &mut self,
+        para_index: usize,
+        para: &crate::model::paragraph::Paragraph,
+        plan: InlineFlowPlan,
+    ) {
+        if self.data.current_column != 0
+            || !matches!(self.data.current_items.first(),
+                Some(PageItem::PartialParagraph { para_index: owner, start_line: 0, end_line })
+                    if *owner == para_index && *end_line == para.line_segs.len())
+            || plan.end > self.available_height()
+        {
+            return;
+        }
+        // PartialParagraph의 측정은 이미 앞 간격을 제외한 글줄 전진량이다.
+        // 표 배치가 뒤 문단까지 수용했을 수 있으므로 그 소비 높이·좌표축을 되감지 않는다.
+        self.data.inline_flow_plans.insert(para_index, plan);
     }
 
     /// fit을 통과한 동일 plan을 배치 metadata와 높이에 함께 반영한다.

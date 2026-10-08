@@ -1720,9 +1720,13 @@ impl WebCanvasRenderer {
         let canvas_grad = match grad.gradient_type {
             2..=4 => {
                 // Radial / Conical / Square → radialGradient
-                let cx = x + w * (grad.center_x as f64 / 100.0);
-                let cy = y + h * (grad.center_y as f64 / 100.0);
-                let r = w.max(h) / 2.0;
+                let Some((cx, cy, r)) = super::gradient_geometry::radial_circle(
+                    (x, y, w, h),
+                    grad.center_x,
+                    grad.center_y,
+                ) else {
+                    return false;
+                };
                 match self.ctx.create_radial_gradient(cx, cy, 0.0, cx, cy, r) {
                     Ok(g) => g,
                     Err(_) => return false,
@@ -3459,11 +3463,42 @@ impl WebCanvasRenderer {
         original_size_hu: Option<(u32, u32)>,
     ) {
         let mode = fill_mode.unwrap_or(ImageFillMode::FitToSize);
+        let is_wmf = detect_image_mime_type(data) == "image/x-wmf";
+        let image_size = if is_wmf {
+            // 실제 표시되는 SVG와 동일한 viewport를 source rect에 사용한다.
+            // 로드된 이미지가 있으면 변환을 반복하지 않는다.
+            let cached = IMAGE_CACHE.with(|cache| cache.borrow().get(&hash_bytes(data)).cloned());
+            cached
+                .filter(|img| img.complete() && img.natural_width() > 0 && img.natural_height() > 0)
+                .map(|img| {
+                    (
+                        f64::from(img.natural_width()),
+                        f64::from(img.natural_height()),
+                    )
+                })
+                .or_else(|| {
+                    crate::renderer::svg::convert_wmf_to_svg(data)
+                        .and_then(|svg| super::metafile_geometry::svg_viewport(&svg))
+                })
+        } else {
+            parse_image_dimensions_canvas(data)
+                .map(|(w, h)| (f64::from(w), f64::from(h)))
+                .or_else(|| {
+                    (detect_image_mime_type(data) == "image/svg+xml")
+                        .then(|| super::metafile_geometry::svg_viewport(data))
+                        .flatten()
+                })
+        };
+        let original_size_hu = if is_wmf {
+            super::metafile_geometry::wmf_crop_reference(original_size_hu)
+        } else {
+            original_size_hu
+        };
         match mode {
             // [#7235] 채우기 유형 15(NONE)도 종횡비를 지켜 영역에 맞춘다.
             ImageFillMode::Zoom | ImageFillMode::None => {
-                let (img_w, img_h) = match parse_image_dimensions_canvas(data) {
-                    Some((w, h)) if w > 0 && h > 0 => (w as f64, h as f64),
+                let (img_w, img_h) = match image_size {
+                    Some((w, h)) if w > 0.0 && h > 0.0 => (w, h),
                     _ => {
                         self.draw_image(data, bbox.x, bbox.y, bbox.width, bbox.height);
                         return;
@@ -3494,9 +3529,7 @@ impl WebCanvasRenderer {
             ImageFillMode::FitToSize | ImageFillMode::Total => {
                 // crop이 있으면 source rect 기반 drawImage 사용
                 if let Some(crop_rect) = crop {
-                    if let Some((img_w, img_h)) = parse_image_dimensions_canvas(data) {
-                        let img_w = img_w as f64;
-                        let img_h = img_h as f64;
+                    if let Some((img_w, img_h)) = image_size {
                         let (src_x, src_y, src_w, src_h) =
                             crate::renderer::svg::compute_image_crop_src(
                                 crop_rect,

@@ -12173,6 +12173,10 @@ function __wbg_get_imports() {
         __wbg_moveTo_a5882cdf1a7d39d9: function(arg0, arg1, arg2) {
             arg0.moveTo(arg1, arg2);
         },
+        __wbg_naturalHeight_fc4deba91f58f42f: function(arg0) {
+            const ret = arg0.naturalHeight;
+            return ret;
+        },
         __wbg_naturalWidth_8c1fdea17f824ef1: function(arg0) {
             const ret = arg0.naturalWidth;
             return ret;

@@ -1,7 +1,7 @@
 //! Shared font setup for horizontal positioned Canvas2D text and its provider.
 //! This does not select an exact fallback face or authorize another backend.
 
-use super::{canvas_font_family_chain, condensed_ratio_draw_params, TextStyle};
+use super::{canvas_font_family_chain, TextStyle};
 
 #[derive(Debug, Clone)]
 pub struct CanvasTextFont {
@@ -24,7 +24,7 @@ impl CanvasTextFont {
             12.0
         };
         let (size, baseline) = style.script_draw_metrics(base_size, baseline);
-        let (draw_size, horizontal_scale) = condensed_ratio_draw_params(size, style.ratio);
+        let (draw_size, horizontal_scale) = style.ratio_draw_params(size);
         let family = canvas_font_family_chain(&style.font_family);
         let prefix = format!(
             "{}{}{:.3}px ",

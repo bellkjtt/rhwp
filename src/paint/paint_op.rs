@@ -257,9 +257,10 @@ impl PaintOp {
 
     pub fn image(
         bbox: BoundingBox,
-        image: ImageNode,
+        mut image: ImageNode,
         resolved: Option<ResolvedImagePayload>,
     ) -> Self {
+        image.original_size_hu = crate::renderer::image_resolver::image_crop_reference(&image);
         Self::Image {
             bbox,
             image: Box::new(image),

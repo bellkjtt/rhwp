@@ -1363,12 +1363,19 @@ impl SvgRenderer {
         let def = match grad.gradient_type {
             2 => {
                 // 원형 (Radial)
-                let cx = grad.center_x as f64;
-                let cy = grad.center_y as f64;
-                format!(
-                    "<radialGradient id=\"{}\" cx=\"{}%\" cy=\"{}%\" r=\"50%\" fx=\"{}%\" fy=\"{}%\">\n{}</radialGradient>\n",
-                    id, cx, cy, cx, cy, stops,
-                )
+                if let Some((cx, cy, radius)) =
+                    super::gradient_geometry::radial_circle(bbox, grad.center_x, grad.center_y)
+                {
+                    format!(
+                        "<radialGradient id=\"{}\" gradientUnits=\"userSpaceOnUse\" cx=\"{}\" cy=\"{}\" r=\"{}\" fx=\"{}\" fy=\"{}\">\n{}</radialGradient>\n",
+                        id, cx, cy, radius, cx, cy, stops,
+                    )
+                } else {
+                    format!(
+                        "<radialGradient id=\"{}\" cx=\"{}%\" cy=\"{}%\" r=\"50%\" fx=\"{}%\" fy=\"{}%\">\n{}</radialGradient>\n",
+                        id, grad.center_x, grad.center_y, grad.center_x, grad.center_y, stops,
+                    )
+                }
             }
             _ => {
                 // 선형 (Linear) — gradient_type 1(줄무늬), 3(원뿔), 4(사각) 모두 선형으로 근사
@@ -2081,6 +2088,18 @@ impl SvgRenderer {
         let data_uri = format!("data:{};base64,{}", render_mime, base64_data);
 
         let fill_mode = img.fill_mode.unwrap_or(ImageFillMode::FitToSize);
+        let image_size = parse_image_dimensions(&render_data)
+            .map(|(w, h)| (f64::from(w), f64::from(h)))
+            .or_else(|| {
+                (render_mime == "image/svg+xml")
+                    .then(|| super::metafile_geometry::svg_viewport(&render_data))
+                    .flatten()
+            });
+        let crop_reference = if mime_type == "image/x-wmf" {
+            super::metafile_geometry::wmf_crop_reference(img.original_size_hu)
+        } else {
+            img.original_size_hu
+        };
 
         match fill_mode {
             // [#7235] 채우기 유형 15(NONE): 한컴은 원래 픽셀 크기로 두지 않고 종횡비를
@@ -2088,12 +2107,8 @@ impl SvgRenderer {
             ImageFillMode::Zoom | ImageFillMode::None => {
                 // contain 비율은 최종적으로 보이는 crop 영역으로 계산한다.
                 // 맞춘 viewport 자체를 clip하여 잘려 나간 픽셀이 letterbox에 새지 않는다.
-                if let (Some(crop), Some((iw, ih))) =
-                    (img.crop, parse_image_dimensions(&render_data))
-                {
-                    let (iw, ih) = (iw as f64, ih as f64);
-                    let (sx, sy, sw, sh) =
-                        compute_image_crop_src(crop, img.original_size_hu, iw, ih);
+                if let (Some(crop), Some((iw, ih))) = (img.crop, image_size) {
+                    let (sx, sy, sw, sh) = compute_image_crop_src(crop, crop_reference, iw, ih);
                     let scale = (bbox.width / sw).min(bbox.height / sh);
                     let (w, h) = (sw * scale, sh * scale);
                     self.output.push_str(&format!(
@@ -2111,15 +2126,9 @@ impl SvgRenderer {
             ImageFillMode::FitToSize | ImageFillMode::Total => {
                 // 그림 자르기: crop이 있으면 원본 이미지의 일부만 표시
                 if let Some((cl, ct, cr, cb)) = img.crop {
-                    if let Some((img_w, img_h)) = parse_image_dimensions(&render_data) {
-                        let img_w = img_w as f64;
-                        let img_h = img_h as f64;
-                        let (src_x, src_y, src_w, src_h) = compute_image_crop_src(
-                            (cl, ct, cr, cb),
-                            img.original_size_hu,
-                            img_w,
-                            img_h,
-                        );
+                    if let Some((img_w, img_h)) = image_size {
+                        let (src_x, src_y, src_w, src_h) =
+                            compute_image_crop_src((cl, ct, cr, cb), crop_reference, img_w, img_h);
                         // 전체 이미지 대비 잘림이 있는지 확인
                         let is_cropped = src_x > 0.5
                             || src_y > 0.5
@@ -3204,9 +3213,8 @@ impl Renderer for SvgRenderer {
         };
         let old_hangul_font_family = format!("'RHWP Old Hangul',{}", font_family);
 
-        // [#5821] 압축 장평은 세로도 √r — SSOT 는 condensed_ratio_draw_params.
-        let (font_size, ratio) =
-            crate::renderer::condensed_ratio_draw_params(font_size, style.ratio);
+        // HFT와 TrueType의 장평 변환을 같은 스타일 계약에서 소비한다.
+        let (font_size, ratio) = style.ratio_draw_params(font_size);
         let has_ratio = (ratio - 1.0).abs() > 0.01;
 
         // 공통 스타일 속성 구성 (fill 제외 — 그림자/원본에서 각각 설정)
@@ -4021,7 +4029,16 @@ pub(crate) fn convert_wmf_to_svg(data: &[u8]) -> Option<Vec<u8>> {
     use crate::wmf::converter::{SVGPlayer, WMFConverter};
     let player = SVGPlayer::new();
     let converter = WMFConverter::new(data, player);
-    converter.run().ok()
+    let fallback = converter.run().ok()?;
+    // 표준 WMFC만 복원한다. 알 수 없는 escape나 불완전한 EMF+를 부분 표시하지 않는다.
+    if let Some(emf) = crate::parser::ole_container::emf_from_wmf_comment_chunks(data) {
+        if let Some(viewport) = super::metafile_geometry::svg_viewport(&fallback) {
+            if let Some(svg) = crate::emf::emfplus::convert_supported(&emf, viewport) {
+                return Some(svg);
+            }
+        }
+    }
+    Some(fallback)
 }
 
 /// 이미지 데이터에서 픽셀 크기(width, height)를 파싱한다.

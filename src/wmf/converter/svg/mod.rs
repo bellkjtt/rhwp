@@ -1,5 +1,6 @@
 mod device_context;
 mod node;
+mod saved_device_context;
 mod ternary_raster_operator;
 mod util;
 
@@ -19,7 +20,7 @@ use crate::wmf::{
 
 #[derive(Default)]
 pub struct SVGPlayer {
-    context_stack: Vec<DeviceContext>,
+    context_stack: Vec<saved_device_context::SavedDeviceContext>,
     context_current: DeviceContext,
     definitions: Vec<Node>,
     /// [#6469] 브러시 전용 ROP 근사의 짧은 PATINVERT → DPA → PATINVERT 상태.
@@ -114,6 +115,8 @@ impl crate::wmf::converter::Player for SVGPlayer {
 
         let mut document = Node::new("svg")
             .set("xmlns", "http://www.w3.org/2000/svg")
+            .set("width", vb_w_i32)
+            .set("height", vb_h_i32)
             .set("viewBox", format!("{vb_x} {vb_y} {vb_w_i32} {vb_h_i32}"));
 
         if !definitions.is_empty() {
@@ -1967,17 +1970,7 @@ impl crate::wmf::converter::Player for SVGPlayer {
         record_number: usize,
         record: META_RESTOREDC,
     ) -> Result<Self, PlayError> {
-        let context = if record.n_saved_dc < 0 {
-            self.context_current.clone().into()
-        } else if (record.n_saved_dc as usize) < self.context_stack.len() {
-            self.context_stack.remove(record.n_saved_dc as usize).into()
-        } else {
-            None
-        };
-
-        if let Some(ctx) = context {
-            self.context_current = ctx;
-        }
+        self.restore_playback_context(record.n_saved_dc);
 
         Ok(self)
     }
@@ -1992,7 +1985,7 @@ impl crate::wmf::converter::Player for SVGPlayer {
         record_number: usize,
         record: META_SAVEDC,
     ) -> Result<Self, PlayError> {
-        self.context_stack.push(self.context_current.clone());
+        self.save_playback_context();
 
         Ok(self)
     }

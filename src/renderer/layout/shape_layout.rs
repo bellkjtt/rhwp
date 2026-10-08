@@ -1106,7 +1106,13 @@ impl LayoutEngine {
         let shape_y = if !common.treat_as_char
             && common.flow_with_text
             && matches!(common.vert_rel_to, crate::model::shape::VertRelTo::Para)
-        {
+            // 머리말·꼬리말 도형은 본문 흐름에 참여하지 않는다. 구분선처럼
+            // 밴드 밖으로 뻗는 개체를 밴드 높이에 맞추면 유효한 문단 오프셋이
+            // 사라져 제목을 가로지른다. 본문 개체의 단 내부 제한만 적용한다.
+            && !matches!(
+                parent.node_type,
+                RenderNodeType::Header | RenderNodeType::Footer
+            ) {
             let total_h = shape_h
                 + caption_height
                 + if caption_height > 0.0 {
@@ -2563,6 +2569,7 @@ impl LayoutEngine {
                                         let b64 = base64::engine::general_purpose::STANDARD
                                             .encode(&svg_bytes);
                                         let href = format!("data:image/svg+xml;base64,{}", b64);
+                                        // OLE의 목적 extent는 WMF 창을 가로·세로 독립 환산한다.
                                         let svg_fragment = format!(
                                             "<image x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" preserveAspectRatio=\"none\" xlink:href=\"{}\" href=\"{}\"/>",
                                             render_x, render_y, render_w, render_h, href, href
@@ -2702,6 +2709,7 @@ impl LayoutEngine {
                                             let b64 = base64::engine::general_purpose::STANDARD
                                                 .encode(&svg_bytes);
                                             let href = format!("data:image/svg+xml;base64,{}", b64);
+                                            // OLE의 목적 extent는 WMF 창을 가로·세로 독립 환산한다.
                                             let svg_fragment = format!(
                                                 "<image x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" preserveAspectRatio=\"none\" xlink:href=\"{}\" href=\"{}\"/>",
                                                 render_x, render_y, render_w, render_h, href, href

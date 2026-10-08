@@ -377,14 +377,16 @@ impl Document {
 
     /// [#2403 Stage 1] 레이아웃 호환 정책 질의 표면.
     ///
-    /// 기존 분기의 1:1 파생 — `hwp3_layout` = `is_hwp3_variant`,
+    /// 계보와 실제 저장 포맷을 구분한다. HWP5의 문단 단위·저장 줄은 HWP5 계약을
+    /// 사용하고 `hwp3_lineage`만으로 HWP3 좌표 보정을 켜지 않는다.
     /// `hwpx_stored_layout` = (HWPX 컨테이너 && rhwp HWP5→HWPX 산출물 마커
     /// 없음) || rhwp HWPX→HWP 변환본. HWP5→HWPX 마커는 세션 중 부착될 수
     /// 있어 저장 값이 아닌 현재 문서 상태에서 파생한다. `native_hwp5_layout`은
-    /// 변환 계보가 없는 원본 HWP5 컨테이너에만 true다. HWP5-origin HWPX는
+    /// rhwp HWPX 변환 마커가 없는 실제 HWP5 컨테이너에 true다. HWP5-origin HWPX는
     /// `hwp5_stored_pagination_layout`으로 별도 호환 계약을 적용한다.
     pub fn layout_profile(&self) -> crate::model::provenance::LayoutCompatibilityProfile {
         use crate::model::provenance::SourceFormat;
+        let hwp5_container = self.provenance.format == SourceFormat::Hwp5;
         let hwp5_origin_hwpx = self.hwpx_aux_entry(HWP5_ORIGIN_HWPX_MARKER_PATH).is_some();
         // 원본 HWP3→HWPX 는 hwp3-origin 마커만 있다. lineage 만으로 hwp3_layout
         // 을 켜면 HWP3→HWP5 변환본 전용 계약(spacing_before *2 등)이 직파싱
@@ -396,7 +398,7 @@ impl Document {
             && self.hwpx_aux_entry(HWP3_ORIGIN_HWPX_MARKER_PATH).is_some()
             && !hwp5_origin_hwpx;
         crate::model::provenance::LayoutCompatibilityProfile::new(
-            self.provenance.hwp3_lineage && !native_hwp3_hwpx,
+            self.provenance.hwp3_lineage && !native_hwp3_hwpx && !hwp5_container,
             self.provenance.format == SourceFormat::Hwp3 || native_hwp3_hwpx,
             (self.provenance.format == SourceFormat::Hwpx
                 && !hwp5_origin_hwpx
@@ -404,11 +406,9 @@ impl Document {
                 || self.provenance.hwpx_lineage,
             self.provenance.format == SourceFormat::Hwpx && !native_hwp3_hwpx,
             hwp5_origin_hwpx,
-            self.provenance.format == SourceFormat::Hwp5
-                && !self.provenance.hwp3_lineage
-                && !self.provenance.hwpx_lineage,
+            hwp5_container && !self.provenance.hwpx_lineage,
         )
-        .with_hwp5_container(self.provenance.format == SourceFormat::Hwp5)
+        .with_hwp5_container(hwp5_container)
         .with_hwp3_password_layout(
             self.provenance.format == SourceFormat::Hwp3 && self.header.encrypted,
         )

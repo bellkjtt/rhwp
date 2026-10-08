@@ -566,6 +566,11 @@ pub(super) fn try_place_stored_tac_paragraph(
         para_idx
             .checked_sub(1)
             .and_then(|index| paragraphs.get(index)),
+        para_idx
+            .checked_sub(1)
+            .and_then(|index| paragraphs.get(index))
+            .and_then(|previous| styles.para_styles.get(previous.para_shape_id as usize))
+            .map_or(0.0, |shape| shape.spacing_after),
         paragraphs.get(para_idx + 1),
         paragraphs
             .get(para_idx + 1)

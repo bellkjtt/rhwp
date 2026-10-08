@@ -12,8 +12,6 @@ impl LayoutEngine {
         _composed: &[ComposedParagraph],
         styles: &ResolvedStyleSet,
         area: &LayoutRect,
-        body_area: &LayoutRect,
-        paper_area: &LayoutRect,
         table_area: Option<&LayoutRect>,
         page_index: u32,
         page_number: u32,
@@ -310,6 +308,9 @@ impl LayoutEngine {
                     );
                 }
                 // Shape 컨트롤 렌더링 (머리말/꼬리말 내 글상자 등)
+                // 머리말·꼬리말의 Paper/Page 개체도 이 틀 안에서 오프셋을 잰다.
+                // 그림의 배치 계약과 같으며, 본문의 물리 용지 원점을 전달하면
+                // Paper-Left/Right 글상자가 본문 여백 밖으로 이동한다.
                 for (ci, ctrl) in para.controls.iter().enumerate() {
                     if let Control::Shape(_) = ctrl {
                         self.layout_shape(
@@ -321,8 +322,8 @@ impl LayoutEngine {
                             if has_tac_shape { hf_shape_section } else { 0 },
                             styles,
                             area,
-                            body_area,
-                            paper_area,
+                            area,
+                            area,
                             y_offset,
                             Alignment::Left,
                             bin_data_content,
@@ -381,8 +382,8 @@ impl LayoutEngine {
                             0,
                             styles,
                             area,
-                            body_area,
-                            paper_area,
+                            area,
+                            area,
                             paragraph_origin_y,
                             Alignment::Left,
                             bin_data_content,

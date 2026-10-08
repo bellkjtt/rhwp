@@ -18,6 +18,8 @@ pub(in crate::renderer::typeset) struct StoredTacPage {
     pub vpos_col_anchor: f64,
     pub vpos_page_base: Option<i32>,
     pub vpos_lazy_base: Option<i32>,
+    /// 앞 문단의 흐름 예약에서 제외됐지만 실제 글줄 원점에는 소비된 앞 간격.
+    pub trimmed_previous_spacing_before: f64,
     pub side_wrap_empty: bool,
     pub stored_table_column_base: Option<i32>,
 }
@@ -40,6 +42,8 @@ pub(in crate::renderer::typeset) struct StoredTacControlPlacement {
 pub(super) fn prepare_coanchored_first_line(
     control_index: usize,
     para: &Paragraph,
+    next_para: Option<&Paragraph>,
+    next_spacing_before: f64,
     fmt: &FormattedParagraph,
     measured_body_height: f64,
     page: StoredTacPage,
@@ -74,6 +78,7 @@ pub(super) fn prepare_coanchored_first_line(
         return None;
     }
     let mut has_float = false;
+    let mut has_fixed_decoration = false;
     for (index, control) in para.controls.iter().enumerate() {
         if index == control_index {
             continue;
@@ -87,6 +92,18 @@ pub(super) fn prepare_coanchored_first_line(
             {
                 has_float = true;
             }
+            Control::Table(sibling)
+                if !sibling.common.treat_as_char
+                    && matches!(
+                        sibling.common.vert_rel_to,
+                        crate::model::shape::VertRelTo::Paper
+                            | crate::model::shape::VertRelTo::Page
+                    ) =>
+            {
+                // 용지·쪽 고정 표는 자체 원점을 소유한다. 본문의 TAC 줄 번호나
+                // 후행 간격을 소비하는 앞 개체로 해석하지 않는다.
+                has_fixed_decoration = true;
+            }
             Control::SectionDef(_)
             | Control::ColumnDef(_)
             | Control::Header(_)
@@ -94,7 +111,16 @@ pub(super) fn prepare_coanchored_first_line(
             _ => return None,
         }
     }
-    if !has_float {
+    let full_trailing = crate::renderer::composer::tac_next_line_full_spacing(
+        para,
+        next_para,
+        fmt.spacing_after,
+        next_spacing_before,
+        line,
+        page.profile,
+        dpi,
+    );
+    if !has_float && !(has_fixed_decoration && full_trailing) {
         return None;
     }
     let origin = page.vpos_col_anchor
@@ -105,7 +131,7 @@ pub(super) fn prepare_coanchored_first_line(
         );
     let end = origin
         + hwpunit_to_px(line.line_height, dpi)
-        + hwpunit_to_px(line.line_spacing, dpi) * 0.5
+        + hwpunit_to_px(line.line_spacing, dpi) * if full_trailing { 1.0 } else { 0.5 }
         + fmt.spacing_after;
     if origin < page.current_height || end > available_height {
         return None;
@@ -114,7 +140,7 @@ pub(super) fn prepare_coanchored_first_line(
         control_index,
         inline: InlineBoxPlacement {
             x: 0.0,
-            y: origin,
+            y: origin + hwpunit_to_px(i32::from(table.outer_margin_top), dpi),
             clearance: 0.0,
             advance_end: Some(end),
             stored_horizontal_pen: None,
@@ -354,6 +380,7 @@ pub(super) fn prepare(
     page: StoredTacPage,
     shared_spacing_before: f64,
     previous_para: Option<&Paragraph>,
+    previous_spacing_after: f64,
     next_para: Option<&Paragraph>,
     next_spacing_before: f64,
     available_height: impl Fn() -> f64,
@@ -516,11 +543,22 @@ pub(super) fn prepare(
                             .vertical_pos
                             .checked_add(last.line_height)
                             .and_then(|end| end.checked_add(last.line_spacing))
+                            .and_then(|end| {
+                                end.checked_add(crate::renderer::px_to_hwpunit(
+                                    previous_spacing_after + fmt.spacing_before,
+                                    dpi,
+                                ))
+                            })
                             == Some(next.vertical_pos);
                     let content_end = page.vpos_col_anchor
                         + hwpunit_to_px(last.vertical_pos.saturating_add(last.line_height), dpi);
+                    // 본문 예약은 저장 사다리에 든 앞 간격을 제외할 수 있다.
+                    // 실제 글줄 끝과 대조할 때만 그 소비 기록을 복원한다. 이 밴드의
+                    // 후행 간격과 다음 표 앞 간격은 확정된 저장 표 원점에 한 번 포함된다.
+                    let consumed_end = page.current_height + page.trimmed_previous_spacing_before
+                        - previous_spacing_after;
                     valid
-                        && (content_end - page.current_height).abs() <= dpi / 7200.0
+                        && (content_end - consumed_end).abs() <= dpi / 7200.0
                         && saved_origin >= page.current_height
                 });
                 if !same_frame && !inherited_trailing_band {

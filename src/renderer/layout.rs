@@ -3713,6 +3713,7 @@ pub(crate) mod table_layout;
 mod table_paragraph_cut;
 mod table_partial;
 mod table_rows;
+mod terminal_tracking;
 mod text_measurement;
 mod utils;
 
@@ -6050,13 +6051,6 @@ impl LayoutEngine {
                                 composed,
                                 styles,
                                 &layout.header_area,
-                                &layout.body_area,
-                                &LayoutRect {
-                                    x: 0.0,
-                                    y: 0.0,
-                                    width: layout.page_width,
-                                    height: layout.page_height,
-                                },
                                 header_table_area.as_ref(),
                                 page_content.page_index,
                                 page_content.page_number,
@@ -6199,13 +6193,6 @@ impl LayoutEngine {
                                 composed,
                                 styles,
                                 &layout.footer_area,
-                                &layout.body_area,
-                                &LayoutRect {
-                                    x: 0.0,
-                                    y: 0.0,
-                                    width: layout.page_width,
-                                    height: layout.page_height,
-                                },
                                 None,
                                 page_content.page_index,
                                 page_content.page_number,
@@ -7623,6 +7610,20 @@ impl LayoutEngine {
         // body_wide_reserved 푸시 후의 y_offset 이 첫 항목의 vpos(=base) 에 대응됨.
         // 이를 anchor 로 사용해야 vpos→y 변환이 정확함 (col_area.y 는 단 영역 top
         // 으로 vpos=0 이 아니라 vpos=base 도 아닌 일반적으로 어긋난 값).
+        // 첫 host 원점은 측정이 확정한 전폭 예약 계획과 같은 좌표를 소비한다.
+        if let Some(plan) = col_content.items.first().and_then(|item| match item {
+            PageItem::PartialParagraph {
+                para_index,
+                start_line: 0,
+                ..
+            } => col_content
+                .inline_flow_plans
+                .get(para_index)
+                .filter(|plan| plan.stored_float_host),
+            _ => None,
+        }) {
+            y_offset = col_area.y + plan.start;
+        }
         let col_anchor_y = y_offset;
 
         let mut para_start_y: std::collections::HashMap<usize, f64> =
@@ -11277,6 +11278,36 @@ impl LayoutEngine {
                 start_line,
                 end_line,
             } => {
+                if let Some(plan) = inline_flow_plans.get(para_index).filter(|plan| {
+                    plan.stored_float_host
+                        && *start_line == 0
+                        && plan
+                            .text_rows
+                            .as_ref()
+                            .is_some_and(|rows| rows.len() == *end_line)
+                }) {
+                    let para = &paragraphs[*para_index];
+                    self.apply_paragraph_numbering(
+                        composed.get(*para_index),
+                        para,
+                        styles,
+                        outline_numbering_id,
+                    );
+                    para_start_y.insert(*para_index, col_area.y + plan.start);
+                    self.layout_inline_flow_plan(
+                        tree,
+                        col_node,
+                        para,
+                        styles,
+                        col_area,
+                        page_content.section_index,
+                        *para_index,
+                        bin_data_content,
+                        measured_tables,
+                        plan,
+                    );
+                    return (col_area.y + plan.end, false);
+                }
                 if let Some(para) = paragraphs.get(*para_index) {
                     // Task #318: wrap=Square 표 호스트 문단의 텍스트는
                     // layout_wrap_around_paras (자가 wrap 경로) 가 처리한다. PartialParagraph
@@ -12100,15 +12131,16 @@ impl LayoutEngine {
                     }
                     Some(crate::model::style::Alignment::Center) => {
                         let tbl_w = hwpunit_to_px(t.common.width as i32, self.dpi);
-                        // 인라인 위치가 없는 TAC 표도 host 문단의 가용 줄 영역에서
-                        // 가운데 정렬한다. 왼쪽 여백만 있는 경우 단 전체 폭에서
-                        // 정렬하면 표가 여백의 절반만큼 왼쪽으로 치우친다.
+                        // 공백도 표 앞에서 줄 폭을 소비한다. 선행 전진량과 표의
+                        // 여백 상자를 함께 가운데 정렬한 뒤 표의 pen으로 전진한다.
                         let line_width =
                             (col_area.width - effective_margin - margin_right).max(0.0);
+                        let row_width = leading + om_l + tbl_w + om_r;
                         let center = col_area.x
                             + effective_margin
-                            + (line_width - tbl_w) / 2.0
-                            + (om_l - om_r) / 2.0;
+                            + (line_width - row_width) / 2.0
+                            + leading
+                            + om_l;
                         center.max(base_x)
                     }
                     _ => base_x,

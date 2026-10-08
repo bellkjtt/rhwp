@@ -30,6 +30,7 @@ pub(crate) mod font_rule_layout_metric_projection;
 pub(crate) mod font_rule_layout_name_projection;
 pub mod form_appearance;
 pub(crate) mod form_caption;
+pub(crate) mod gradient_geometry;
 pub(crate) mod hancom_pua;
 pub mod height_cursor;
 pub mod height_measurer;
@@ -46,6 +47,7 @@ pub mod layout;
 pub(crate) mod layout_frame;
 pub(crate) mod legacy_font_advances;
 pub(crate) mod line_style;
+mod metafile_geometry;
 pub(crate) mod note_separator;
 pub mod page_layout;
 pub mod page_number;
@@ -435,6 +437,11 @@ pub struct TextStyle {
     /// 측정 결정에만 쓴다 — 레이어 트리 직렬화 바이트를 보존하려고 직렬화에서 뺀다.
     #[serde(skip_serializing)]
     pub hft_hangul_face: bool,
+    /// 현재 언어 슬롯의 표시 face가 한글 HFT에서 치환됐는지.
+    /// ASCII 반각 폭의 문서별 수용 조건과 무관한 원본 글꼴 출처다.
+    /// 그리기 변환은 이 값을 쓰고, 폭 측정은 위 hft_hangul_face를 유지한다.
+    #[serde(skip_serializing)]
+    pub hft_font_face: bool,
     /// 원본 한글 HFT 기호 슬롯의 전각 폭 보존 여부. ASCII 반각 판정과 별개다.
     #[serde(skip_serializing)]
     pub hft_fullwidth_dot: bool,
@@ -533,6 +540,20 @@ impl TextStyle {
             Some((layout_cluster_advance - self.extra_char_spacing).max(0.0))
         } else {
             Some(layout_cluster_advance)
+        }
+    }
+
+    /// 글꼴 출처에 따른 장평의 그리기 변환. 배치 전진폭은 바꾸지 않는다.
+    ///
+    /// 한글 HFT의 한컴 Print Type3 출력은 선언 크기를 유지하고 Tz로 가로만
+    /// 압축한다. TrueType 출력에서 확인한 √r 세로 압축을 HFT 대체 face에도
+    /// 적용하면 같은 선언 크기의 글자가 작아진다. SVG·Canvas·Skia·glyph
+    /// lowering이 동일한 출처 판정을 소비한다.
+    pub(crate) fn ratio_draw_params(&self, font_size: f64) -> (f64, f64) {
+        if self.hft_font_face {
+            (font_size, if self.ratio > 0.0 { self.ratio } else { 1.0 })
+        } else {
+            condensed_ratio_draw_params(font_size, self.ratio)
         }
     }
 
@@ -640,6 +661,7 @@ impl Default for TextStyle {
             font_space_em: None,
             layout_half_space: false,
             hft_hangul_face: false,
+            hft_font_face: false,
             hft_fullwidth_dot: false,
             ascii_punct_latin: None,
         }

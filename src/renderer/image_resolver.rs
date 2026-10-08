@@ -415,6 +415,7 @@ pub(crate) fn image_node_with_resolved_payload(
         .flatten();
     let resolved = resolved.or(fallback.as_ref());
     let mut image = image.clone();
+    image.original_size_hu = image_crop_reference(&image);
     if let Some(payload) = resolved {
         image.data = Some(payload.data.clone());
         if payload.suppress_effects {
@@ -435,6 +436,20 @@ pub(crate) fn wmf_picture_parameters(image: &ImageNode) -> Option<(i8, i8, bool)
             image.contrast,
             image.effect == ImageEffect::GrayScale,
         ))
+}
+
+/// 형식 변환 전에 원본 메타파일의 자르기 좌표 범위를 확정한다.
+/// 변환된 SVG 바이트만 받는 paint·DOM 소비자도 같은 범위를 받는다.
+pub(crate) fn image_crop_reference(image: &ImageNode) -> Option<(u32, u32)> {
+    if image
+        .data
+        .as_deref()
+        .is_some_and(|data| detect_image_mime_type(data) == "image/x-wmf")
+    {
+        super::metafile_geometry::wmf_crop_reference(image.original_size_hu)
+    } else {
+        image.original_size_hu
+    }
 }
 
 /// 워터마크 bake 대상 판정. `paint::source_image_key` 의 variant 결정과 같은 술어를 써야

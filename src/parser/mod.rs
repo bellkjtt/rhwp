@@ -575,28 +575,9 @@ fn parse_hwp_with_cfb(
             if ps_r < 0.20 && cs_r < 0.20 {
                 doc.is_hwp3_variant = true;
                 doc.provenance.hwp3_lineage = true;
-                // [Task #1001 Stage 11] line_segs.vertical_pos /2 보정 revert —
-                // 실제 raw vpos 비교 결과 HWP5 변환본 vpos 는 HWP3 의 2배가 아닌
-                // ~1.15배 (15% 만 차이). /2 fix 시 HWP5 가 HWP3 보다 더 compact 되어
-                // 한컴 정합 페이지 분할 회귀 (한컴은 section 2 가 새 페이지 vs rhwp
-                // 는 같은 페이지에 packed). vpos 보정 없이 ParaShape /4 만으로 정합.
-
-                // [Task #1037 → #1042 정정] ParaShape unit semantic normalize.
-                // HWP3 vs HWP5 variant 비교 결과 (diag_1042_hwp3_vs_hwp5_paragraph):
-                //   - margin_left/right: HWP5 raw = HWP3 raw 동일 → /2 적용은 wrong
-                //   - spacing_before / spacing_after: HWP5 raw = HWP3 × 2 → /2 정합
-                // margin_left/right /2 제거 — HWP3 정답 paragraph 분포 정합.
-                //
-                // [Task #1472] indent /2 제거 — IR 은 정답(full HWPUNIT, HWPX 일치)로 둔다.
-                //   종전 indent /2 는 본문 내어쓰기를 절반으로 훼손(한컴/HWPX 와 어긋남)하면서,
-                //   미주 TAC 수식 흐름의 available_width 계산이 indent_scale=2.0 으로 이를 되돌려
-                //   "수식 effective indent = (indent/2)×2 = full" 로 페이지네이션을 한컴과 정합시켰다.
-                //   재설계: IR indent 는 full 로 두고, 미주 수식 흐름의 indent_scale 을 변환본에서만
-                //   절반(2.0→1.0)으로 낮춰 effective indent(=full) 를 불변 유지한다(아래 렌더러).
-                for ps in &mut doc.doc_info.para_shapes {
-                    ps.spacing_before /= 2;
-                    ps.spacing_after /= 2;
-                }
+                // 계보는 출처 정보다. HWP5의 문단 간격과 저장 vpos는 HWP5 계약으로
+                // 읽으며, 원본 HWP3의 좌표에 맞추어 저장 속성을 다시 줄이지 않는다.
+                // 정상 한컴 저장본에서 raw spacing_before / 2가 첫 저장 vpos와 일치한다.
             }
         }
     }
@@ -605,15 +586,6 @@ fn parse_hwp_with_cfb(
     // 이후 model::document::populate_external_images_from_dir (Task #741) 가 같은
     // dir 영역 basename 매칭 영역 image 영역 자동 load.
     populate_link_image_paths(&mut doc);
-
-    // [Task #1042 Stage 5] HWP5 variant 의 paragraph data raw vpos normalize —
-    // HWP3 vs HWP5 variant 진단 결과 HWP5 의 raw vpos = HWP3 vpos + cumulative
-    // spacing_before. paragraph 마다 +sb 누적 → paragraph_layout 의 외부 path
-    // (예: pagination engine 의 vpos 보정) 에서 cascade 차이 야기. HWP3 정합 위해
-    // paragraph 의 line_segs.vpos 에서 cumulative spacing_before 차감.
-    if doc.is_hwp3_variant {
-        normalize_variant_paragraph_vpos(&mut doc);
-    }
 
     if let Some(idx) = doc
         .extra_streams
@@ -626,51 +598,6 @@ fn parse_hwp_with_cfb(
         }
     }
     Ok(doc)
-}
-
-/// [Task #1042 Stage 5] HWP5 variant 의 paragraph data vpos 를 HWP3 형식으로 normalize.
-///
-/// HWP3 paragraph 사이 vpos diff = lh + ls (spacing_before 미포함)
-/// HWP5 variant paragraph 사이 vpos diff = lh + ls + sb (spacing_before 포함)
-///
-/// HWP5 variant 의 line_segs.vpos 에서 cumulative spacing_before 차감하여 HWP3
-/// 형식과 정합. paragraph_layout 의 spacing_before 적용 path 는 ParaShape 기반
-/// 으로 처리되므로 vpos normalize 후에도 동일.
-///
-/// paragraph local reset detection: 현재 paragraph 의 first vpos 가 이전
-/// paragraph 의 vpos 끝보다 작으면 reset 발생 (page boundary 등). cumulative_sb
-/// reset.
-fn normalize_variant_paragraph_vpos(doc: &mut crate::model::document::Document) {
-    let para_shapes = doc.doc_info.para_shapes.clone();
-    for section in doc.sections.iter_mut() {
-        let mut cumulative_sb: i32 = 0;
-        let mut prev_vpos_end: i32 = 0;
-        for para in section.paragraphs.iter_mut() {
-            if para.line_segs.is_empty() {
-                continue;
-            }
-            let sb = para_shapes
-                .get(para.para_shape_id as usize)
-                .map(|p| p.spacing_before)
-                .unwrap_or(0);
-            let first_vpos = para.line_segs[0].vertical_pos;
-            // paragraph local reset detection
-            if first_vpos < prev_vpos_end.saturating_sub(cumulative_sb + sb) {
-                cumulative_sb = 0;
-            }
-            cumulative_sb = cumulative_sb.saturating_add(sb);
-            for ls in para.line_segs.iter_mut() {
-                ls.vertical_pos = ls.vertical_pos.saturating_sub(cumulative_sb);
-            }
-            let last = para.line_segs.last().unwrap();
-            // 주변(saturating_sub/add)과 달리 여기만 raw 덧셈이라 손상 입력의 거대
-            // vpos/height 로 i32 오버플로 패닉하던 것을 saturating 으로 맞춘다.
-            prev_vpos_end = last
-                .vertical_pos
-                .saturating_add(last.line_height)
-                .saturating_add(last.line_spacing);
-        }
-    }
 }
 
 /// [Task #554] HWP3 → HWP5/HWPX 변환본 식별 휴리스틱 + 페이지 여백 보정
@@ -1131,15 +1058,6 @@ fn parse_hwp_with_lenient(
     // 이후 model::document::populate_external_images_from_dir (Task #741) 가 같은
     // dir 영역 basename 매칭 영역 image 영역 자동 load.
     populate_link_image_paths(&mut doc);
-
-    // [Task #1042 Stage 5] HWP5 variant 의 paragraph data raw vpos normalize —
-    // HWP3 vs HWP5 variant 진단 결과 HWP5 의 raw vpos = HWP3 vpos + cumulative
-    // spacing_before. paragraph 마다 +sb 누적 → paragraph_layout 의 외부 path
-    // (예: pagination engine 의 vpos 보정) 에서 cascade 차이 야기. HWP3 정합 위해
-    // paragraph 의 line_segs.vpos 에서 cumulative spacing_before 차감.
-    if doc.is_hwp3_variant {
-        normalize_variant_paragraph_vpos(&mut doc);
-    }
 
     Ok(doc)
 }

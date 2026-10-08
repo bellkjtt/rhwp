@@ -114,8 +114,8 @@ impl LayoutCompatibilityProfile {
         self.session_edited
     }
 
-    /// HWP3 계보 레이아웃 보정(ParaShape 단위 정규화 등) 적용 여부 —
-    /// 기존 `is_hwp3_variant` 분기 동치 (HWP3→HWP5 변환본 휴리스틱).
+    /// HWP3 좌표 호환 경로 적용 여부. 실제 HWP5 컨테이너는 자체 저장 계약을 쓴다.
+    /// 변환 계보를 보존하는 SourceProvenance::hwp3_lineage와 구분한다.
     pub fn hwp3_layout(&self) -> bool {
         self.hwp3_layout
     }
