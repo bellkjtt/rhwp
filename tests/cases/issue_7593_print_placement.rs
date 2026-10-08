@@ -18,6 +18,24 @@ fn descendants<'a>(node: &'a RenderNode, out: &mut Vec<&'a RenderNode>) {
     }
 }
 
+// 가장 안쪽 요소부터 모든 조상 변환을 소비한 실제 glyph 기준선이다.
+fn svg_text_origin(node: roxmltree::Node<'_, '_>) -> (f64, f64) {
+    let mut x: f64 = node.attribute("x").unwrap().parse().unwrap();
+    let mut y: f64 = node.attribute("y").unwrap().parse().unwrap();
+    for parent in node.ancestors().filter(|parent| parent.is_element()) {
+        let transform: svgtypes::Transform = parent
+            .attribute("transform")
+            .unwrap_or("matrix(1 0 0 1 0 0)")
+            .parse()
+            .unwrap();
+        (x, y) = (
+            transform.a * x + transform.c * y + transform.e,
+            transform.b * x + transform.d * y + transform.f,
+        );
+    }
+    (x, y)
+}
+
 #[test]
 fn master_separator_owns_the_saved_frame_without_advancing_body() {
     let core = DocumentCore::from_bytes(ORIGINAL).unwrap();
@@ -127,9 +145,29 @@ fn tall_cell_equation_keeps_print_baseline_order_and_inline_ownership() {
     assert_eq!(text.para_index, Some(cell.cell_para_index));
     assert!(equation_node.bbox.x + equation_node.bbox.width <= text_node.bbox.x);
     let text_baseline = text_node.bbox.y + text.baseline;
-    let visible_baseline = equation_node.bbox.y + equation.layout_box.baseline;
     assert!(
-        visible_baseline < text_baseline,
+        equation_node.bbox.height >= equation.layout_box.height,
+        "보기 ㄴ은 자연 glyph 높이를 담는 비압축 예약 프레임이다"
+    );
+    let fragment = format!("<svg>{}</svg>", equation.svg_content);
+    let xml = roxmltree::Document::parse(&fragment).unwrap();
+    let glyphs: Vec<_> = xml
+        .descendants()
+        .filter(|node| node.has_tag_name("text"))
+        .collect();
+    assert_eq!(
+        glyphs
+            .iter()
+            .filter_map(|node| node.text())
+            .collect::<String>(),
+        "AB",
+        "실제 표시 수식의 내용과 순서"
+    );
+    let origins: Vec<_> = glyphs.iter().map(|node| svg_text_origin(*node)).collect();
+    assert!(origins.windows(2).all(|pair| pair[0].0 < pair[1].0));
+    let visible_baseline = equation_node.bbox.y + origins[0].1;
+    assert!(
+        visible_baseline < text_baseline - text_baseline.abs() * f64::EPSILON * 128.0,
         "Print의 ㄴ 수식은 앞뒤 본문보다 위에 표시된다"
     );
     let Control::Table(table) = &core.document().sections[0].paragraphs
@@ -234,7 +272,12 @@ fn same_base_unit_keeps_arrow_paint_width_when_reserved_frames_differ() {
             .children()
             .filter(|n| n.has_tag_name("text"))
             .collect();
-        if texts.len() != 1 || texts[0].text() != Some("AB") {
+        if texts
+            .iter()
+            .filter_map(|node| node.text())
+            .collect::<String>()
+            != "AB"
+        {
             continue;
         }
         let Some(line) = group.children().find(|n| n.has_tag_name("line")) else {
@@ -255,11 +298,15 @@ fn same_base_unit_keeps_arrow_paint_width_when_reserved_frames_differ() {
             }
         }
         widths.push((x2 - x1).abs() * scale);
-        assert_ne!(
-            texts[0].attribute("font-style"),
-            Some("italic"),
-            "rm은 정체다"
-        );
+        let origins: Vec<_> = texts.iter().map(|node| svg_text_origin(*node)).collect();
+        assert!(origins.windows(2).all(|pair| pair[0].0 < pair[1].0));
+        for text in texts {
+            assert!(
+                text.ancestors()
+                    .all(|parent| parent.attribute("font-style") != Some("italic")),
+                "rm은 실제 글자와 조상 모두 정체다"
+            );
+        }
     }
     assert_eq!(widths.len(), 3, "발문·보기 ㄱ/ㄴ AB 장식 모두 보존");
     for width in &widths[1..] {
