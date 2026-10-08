@@ -12,7 +12,8 @@
 2. 같은 source의 Native/fresh WASM 시각 검증과 독립 Print PDF·확대 판독을 확인한다.
    이전 source로 실행 중인 36개 Native 비교는 이전 코드의 진단 자료로 보존한다.
    그 결과를 현재 source의 시각 통과로 대신하지 않는다.
-3. 실패한 원본의 검증 범위를 확인한다. 정상 출력의 회귀 대상으로 부적합한 문서는
+3. 실패한 원본의 검증 범위를 확인한다. 고정 base에서도 이미 90% 미만인 원본에 등록되어 있던
+   회귀 검사가 부적합한 경우에만
    [새 이슈 이관](../manual/pr_review/visual_fixture_evidence.md#90-미만-회귀-대상의-별도-이슈-이관)에
    따라 별도 등록·검사/원본/Print PDF 이관 후 해당 이슈에서 보정한다. 이번 수정으로 발생한
    실제 회귀는 이관으로 해결했다고 보고하지 않는다.
@@ -24,3 +25,17 @@
 
 로그·TSV·중간 JSON·nextrun은 `output/pr-review/issue7642/`에만 보존한다.
 현재 PR 준비 완료·전체 회귀 통과·최종 시각 수용을 선언하지 않는다.
+
+## 이관 조건의 명확화
+
+추가 사용자 지시에 따라 이관 조건을 고정한 `upstream/devel`에서 이미 90% 미만인 원본에
+등록되어 있던 회귀로 한정했다. 현재 source-frame 시각 자료는 이전 feature source이므로
+현재 upstream base의 미달 증거가 아니다. 현재 수정으로 새로 생긴 회귀는 현재 branch에서
+해결하며, base의 동일 입력 검증이 없으면 이관 대상 판정을 보류한다.
+현재 nextest는 `1e75981cf` source의 실행을 유지한다. 이번 추가 변경은 지침·기록만이며
+source/test 변경 없이 검증을 계속한다.
+
+지침 단서 변경 검증: 수정한 13개 문서의 상대 링크 검사와 `git diff --check`가 exit 0이다.
+Rust source/test 변경은 없다. 현재 source 검증의 포맷·manifest/단위-test 정책·Studio tsc는
+각각 exit 0이며, Studio node 검사는 1815 PASS / 0 FAIL / 2 SKIP, 82.524초로 종료했다.
+전체 nextest는 아직 실행 중이며 완료·통과로 기록하지 않는다.
