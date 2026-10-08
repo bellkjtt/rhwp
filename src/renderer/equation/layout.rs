@@ -423,6 +423,19 @@ impl EqLayout {
         {
             return layout;
         }
+        // 기호 명령으로 들어온 그리스 변수도 ASCII 변수와 같은 표시 스타일을 쓴다.
+        // AST와 논리 전진은 유지하고 SVG·Canvas·Skia가 소비할 글리프만 투영한다.
+        let kind = || {
+            if !text.is_empty() && text.chars().all(variable_style::is_greek_variable) {
+                LayoutKind::Text(variable_style::display_text(
+                    text,
+                    self.variable_italic,
+                    self.variable_bold,
+                ))
+            } else {
+                LayoutKind::MathSymbol(text.to_string())
+            }
+        };
         if self.hancom_math_face {
             if let Some(width) = source_roman_advance::measured(text, fs, self.dpi) {
                 return LayoutBox {
@@ -432,7 +445,7 @@ impl EqLayout {
                     width,
                     height: fs,
                     baseline: fs * 0.8,
-                    kind: LayoutKind::MathSymbol(text.to_string()),
+                    kind: kind(),
                 };
             }
             // 명령으로 입력한 연산자도 직접 기호와 같은 논리 전진·표시 상자를 소비한다.
@@ -462,7 +475,7 @@ impl EqLayout {
                     },
                 height: op_fs,
                 baseline: op_fs * 0.7, // 적분 기호 baseline: 기호 높이의 70%
-                kind: LayoutKind::MathSymbol(text.to_string()),
+                kind: kind(),
             };
         }
         let w = glyph_advances::text_width(text, fs)
@@ -474,7 +487,7 @@ impl EqLayout {
             width: w,
             height: fs,
             baseline: fs * 0.8,
-            kind: LayoutKind::MathSymbol(text.to_string()),
+            kind: kind(),
         };
         if super::symbols::is_relation_symbol(text) {
             // 관계 기호의 glyph와 양쪽 여백을 공통 배치 결과로 보존한다.
