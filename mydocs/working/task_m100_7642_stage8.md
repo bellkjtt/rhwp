@@ -68,3 +68,40 @@ Clippy는 각각 exit 0(1분 15초 / 1분 1초)이며 최종 Native 재출력과
 HWPX 100%로 첫 측정과 동일하다. HWP 미달과 HWPX 확대 판독 미충족은 유지한다.
 fresh WASM wrapper는 `stage8-explicit-zero-size-wasm-build.log`로 실행 중이며
 아직 통과로 기록하지 않는다. 최종 결과 전에는 Rust source를 수정하지 않는다.
+
+## fresh WASM과 다음 위치 보정의 근거
+
+wrapper는 exit 0(14분 22초)으로 종료됐다. `pkg`와 Studio public의 JS·WASM 해시가
+일치하며, frozen `wasm-explicit-zero-size-final`의 WASM SHA는
+`640a68c9e933c7eb1cf86a81f738497d2251443065f64d9b1add7995ab5ffef1`이다.
+같은 두 원본의 fresh WASM은 HWP 30.36053%, HWPX 100%로 Native와 동일하다.
+HWP 미달과 위첨자·기호의 확대 판독 미충족을 그대로 유지한다.
+
+한컴 2020에서 원본 HWP를 HWP로 다시 저장하면 수식 프레임과 후속 LineSeg가
+함께 갱신된다. `x^2 +1`은 7200×7200에서 2665×1163 HWPUNIT, `3`은 525×975로
+바뀐다. HWPX→HWP 저장은 원래 프레임을 남기지만, 그 HWP를 Print하면 동일하게
+작은 수식 흐름을 소비한다. HWPX 자체 Print는 큰 선언 프레임을 유지한다.
+컨테이너별 캐시 수용 계약을 분리할 근거이며, 특정 7200 값이나 문서명으로 분기할
+근거는 아니다. 원본을 재저장 대조군으로 교체하거나 이 관측을 원본 통과로 보고하지 않는다.
+
+떠 있는 수식의 기준 영역·정렬·signed offset은 현재 Equation 단축에서 누락된다.
+가로 오프셋, 세로 오프셋, 용지 가운데 정렬만 바꾼 HWPX 대조군을 각각 MCP 2020
+Print로 출력해 확인한다. 실제 위치는 기존 `ObjectPlacementFrame.position`에 연결하고,
+수식 프레임과 내용 상자를 구분한다. 인라인 좌표가 이미 등록된 경로는 해당 줄 소유를
+유지한다. 캐시 재계산·흐름 예약의 남은 차이는 별도 미충족으로 기록한다.
+
+진단 명령·해시·Print receipt·페이지별 TSV는
+`output/pr-review/issue7642/equation-regression-scope-20261008/`에 보존한다.
+관련 원본 전체의 90%·확대 판독을 충족하기 전에는 회귀 기대값을 변경하지 않는다.
+
+## 위치 보정 진행분과 HML 범위 이관
+
+세 위치 대조군의 수정 전 Native/fresh WASM은 각각 7.09220%, 0%, 0%다.
+공통 개체 배치를 소비하는 `layout/floating_equation.rs`를 분리하고, 용지 기준 수식을
+용지 레이어로 전달했다. 기존 큰 도형 모듈에서는 수식 배치 코드를 덜어 냈으며 새 모듈은
+1000줄 이하로 유지한다. 현재 Native 빌드는 실행 중이고 수정 후 통과는 아직 기록하지 않는다.
+
+그 뒤 사용자가 수식 관련 HML 회귀 검사를 제거하고 해당 문제를 #7445로 이관하도록
+지시했다. 다음 단계에서 수식 전용 검사를 분리하고 원본·한컴 저장본·Print 증거는 보존한다.
+HML 수식의 차이는 이번 PR의 완료 대상에서 빠지며 나머지 입력의 시각·전체 회귀 검증은
+계속한다. 이관을 HML 결함 해결 또는 시각 PASS로 표시하지 않는다.

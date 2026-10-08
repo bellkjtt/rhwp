@@ -3697,6 +3697,7 @@ mod fill_background;
 mod fixed_textbox_flow;
 mod hidden_paragraph_marker;
 mod note_reference;
+mod floating_equation;
 mod header_footer_layout;
 mod paragraph_border;
 mod paragraph_layout;
@@ -17040,6 +17041,7 @@ impl LayoutEngine {
                         Control::Table(t) => Some(&t.common),
                         // [#6266] 양식 개체도 용지/쪽 기준 배치를 가질 수 있다.
                         Control::Form(f) => Some(&f.common),
+                        Control::Equation(eq) => Some(&eq.common),
                         _ => None,
                     };
                     common
