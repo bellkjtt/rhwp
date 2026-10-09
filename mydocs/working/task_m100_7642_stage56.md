@@ -119,3 +119,10 @@ full review는 ignored `endnote-prefix-contract-focused-native/all-11/all-11/rev
 별도 영역 점수를 만들거나 본문 일치율 대신 사용하지 않았다. Print PNG의 높이는
 1122, Native는 1123이다. 관심 영역은 양쪽 범위 안에 있으며 재배율하지 않았다.
 뒤쪽 집중 검증·전체 페이지·fresh WASM은 아직 미완료다.
+
+fresh WASM 첫 시도의 실행 세션은 exit 143으로 종료됐다. 빌드 성공으로
+기록하지 않았고 첫 시도 provenance·로그를 별도로 보존했다. 실제 Cargo·rustc·
+wasm-pack 종료를 확인한 뒤 같은 source 파일 해시와 `HEAD:src` 일치 조건으로
+공용 캐시에서 재시작했다. 문서만 추가된 HEAD와 구현 source SHA를 구분한다.
+재시작은 실행 세션과 분리한 프로세스로 진행하며 성공 여부는 wrapper exit code와
+package/public 해시 일치로 확인한다. 현재 fresh WASM 통과는 여전히 미검증이다.
