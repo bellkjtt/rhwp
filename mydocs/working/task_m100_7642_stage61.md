@@ -138,3 +138,22 @@ source-side 정책 검사는 고정 base
 4198 tests / 298 modules를 유지했다. LaTeX pm/mp는 정규 명령 토큰으로
 전달해 기존 command의 첨자 처리도 유지한다. 아직 전체 Rust나 시각
 검증을 통과했다고 판정하지 않는다.
+
+## 새 Unicode 분류의 첨자 보존 보정
+
+초기 보정 commit 2e4b8f4c7을 추가 경계로 검토하자 직접 Unicode
+±/∓에 붙은 첨자 두 사례가 같은 기호 명령의 AST와 달랐다. 종전 Text
+분기는 try_parse_scripts를 호출했지만 새 Symbol 분기에서는 호출하지
+않아 첨자가 별도 빈 base로 붙는 코드 결함이었다. 실행 로그는
+stage61-script-boundary-before.log이며 해당 두 의미 검사만 실패했다.
+
+한컴 명령·직접 Unicode의 같은 기호 의미를 유지하도록 새 산술 기호
+분기에 기존 try_parse_scripts를 연결했다. 기존 관계 기호의 소비
+계약은 이 수정으로 확장하지 않는다. 코드가 바뀌기 전에 2e4b8f4c7의
+Native 빌드 소유 프로세스만 종료하고 종료 증거·부분 빌드 로그를
+보존했다. 이는 빌드 실패나 한컴 시각 불일치 재현이 아니라 구현의
+의미 결함을 확인한 뒤 수행한 검증 취소다.
+
+첨자 보정 뒤 여덟 명령/Unicode/LaTeX 첨자 동등성 검사와 문자·공백·
+인용 경계 진단은 모두 통과했고 실패 0건이다. 원본 모듈을 직접
+include한 실행이며 최종 Native/fresh WASM·전체 회귀는 계속 필요하다.
