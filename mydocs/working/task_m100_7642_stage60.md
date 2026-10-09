@@ -65,9 +65,10 @@ MCP 실제 상태·출력 해시는 `stage60-quoted-spacing-probe-mcp-print.json
 - 인용 x y와 명시적 Thin x`y는 같은 간격이다.
 - 인용/비인용 (x), 시작 +x와 끝 x+, 관계 기호 x<y의 표시가 대응한다.
 - 인용 x+-y는 두 기호를 보존하지만 비인용은 ±로 해석한다.
-- 인용 x/y는 한 줄의 slash를 보존하고 비인용은 분수 배치를 한다.
+- 인용/비인용 x/y는 같은 한 줄 slash 표시다. 확대 이미지의 인상만으로
+  비인용을 분수로 해석했던 기록은 아래 실제 메트릭 대조로 바로잡았다.
 
-따라서 인용 원문을 tokenizer/parser에 다시 넣는 해결은 두 마지막 경계를
+따라서 인용 원문을 tokenizer/parser에 다시 넣는 해결은 인용 x+-y의 기호 보존 경계를
 훼손한다. 준비한 문자별 EqNode의 공통 layout_row 연결은 명령·분수·첨자
 재해석을 하지 않고 glyph 종류와 자동 간격만 소비한다. 이를 다음 Native/
 fresh WASM의 같은 입력과 확대 판독으로 확인한다.
@@ -128,3 +129,25 @@ Native → 순차 Native lint/fresh WASM → 집중/전체 fresh WASM pipeline�
 22개 인용 기호 대조의 수정 전 Native는 97.16845%, 엄격 내용 픽셀은
 10.26565%다. 높은 점수에도 위 간격 차이가 있어 완료로 인정하지 않았다.
 새 소스의 실제 비교와 확대 판독 후 회귀 전환 선행 조건을 다시 확인한다.
+
+
+## 새 Native 비교와 남은 의미 차이
+
+f6f51dd5d의 Native 빌드는 exit 0으로 끝났고 집중/전체 Native가 실제 실행 중이다.
+인용 기호 22개 입력 1쪽은 97.16845%→98.63868%, 혼합 인용 24개 입력
+1쪽은 99.13060%→99.79610%, 그리스 명령 입력 1쪽은 100.00000%다.
+새 `stage60-current-quoted-spacing-before-after-print-detail.png`를 실제로 표시했고
+provenance에 같은 좌표·배율, source·Native·PDF·PNG 해시를 남겼다.
+
+인용 기호의 +/−/=, 공간과 괄호는 같은 비인용의 공통 배치로 개선됐다.
+그러나 비인용 x+-y는 Native에서 두 기호로 남으며 Print는 ± 하나다.
+이 기존 해석 결함을 인용 간격 보정의 완료로 대신하지 않는다.
+신규 회귀·baseline 갱신 없이 다음 보정 묶음의 독립 계약으로 분석한다.
+
+x/y를 비인용 분수라고 기록했던 해석은 잘못이었다. 실제 저장 선언은 인용/
+비인용 모두 폭 19.0, 높이 12.0이고, PDF의 양쪽 word는 같은 PUA
+U+E0FC·U+E054·U+E0FD이며 같은 줄의 크기로 출력된다.
+`stage60-quoted-spacing-probe/print-text-bbox.html`와 대응 Native LayoutBox로
+확인했다. 비인용 Native는 slash의 기본 여백 때문에 자연 폭이 20.2로
+증가하며 인용 Native는 선언과 같은 19.0이다. 원인을 분수 재조판으로
+잘못 분류하지 않고 기호 전진·여백 소비 경로로 조사한다.
