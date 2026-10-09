@@ -144,3 +144,63 @@ HeightCursor::seed_stored_flow_origin에 전달한다. 이 메서드는 저장 �
 사다리가 되감긴 뒤의 textless 수식도 이 원점을 이어받는다. 원래 저장
 되감김·원본 입력을 지우지 않았고 특정 문단 번호·높이·고정 하단 여유를
 구현 조건에 넣지 않았다. 새 source의 빌드·시각 판정은 아직 미검증이다.
+
+## 새 구현의 실제 실행 결과
+
+source `8ddb3b16963815c71da5e049f6b4ab8c2a8d111a`의 Native 빌드는
+837.59초에 exit 0으로 종료됐다. 고정 바이너리의 SHA-256은
+`a700b544c54fc499acd36dbf1f6cd7637a4155973536b30d82843606de3cc4ff`다.
+`endnote-rewind-contract-native-provenance.json`에서 빌드 전후 source 해시와
+고정 바이너리 해시를 확인했다. 앞 절의 fb627e534 출력과 구분한다.
+
+11월 구분선 위 9·미주 사이 8·구분선 아래 7 HWPX의 dump-pages는 exit 0이며
+전체 21쪽이다. 같은 원본 소유자 본문 298·미주 내부 13의 가상 문단 800이
+17쪽 왼쪽 `[0,1)`과 오른쪽 `[1,4)`로 이어진다. 실제 후보 조회는 end=3의
+occupied_bottom=1070.280, end=2의 1036.653, end=1의 1001.347을 같은
+가용 하단 1001.560에 대조했다. 기존 컷보다 작은 수용 가능한 컷을 최종 방출에서
+사용했음을 확인했다. 수치는 실행 관측값이며 회귀 검사에 고정하지 않는다.
+
+9월 미주 사이 20 HWP의 dump-pages도 exit 0이며 전체 24쪽이다.
+문단 872의 17쪽 왼쪽 `[0,1)`·오른쪽 `[1,6)` 소유가 유지된다.
+같은 입력 18쪽 render tree 출력은 exit 0이다. 실제 로그의 902 재시작은
+source=847240, origin=424.080, base=822237이다. 뒤의 904 lazy 조회가
+이 기준을 소비해 y_in=464.88과 result=464.88을 유지한다. 앞 source에서
+470.91로 다시 전진하던 간격을 추가하지 않는다.
+원본·PDF 해시, 실행 명령과 소유 결과는 `stage57-current-owner-diagnostic.json`,
+실제 컷·원점 로그는 `stage57-current-all-31-dump-pages.log`와
+`stage57-current-all-11-export-render-tree.log`에 보존했다.
+
+이 실행은 컷·원점 계약의 보정 증거다. 최신 소스의 전체 페이지 90% 이상이나
+수식 확대 판독 완료를 뜻하지 않는다. 동일 소스의 Native/fresh WASM 출력과
+전체 회귀·관계형 전환은 계속 검증한다.
+
+## 검증 환경 실패와 재실행
+
+Native fmt 검사는 77.96초에 exit 0으로 종료됐지만 뒤의 Native Clippy와
+시각 검증은 디스크 공간 부족(ENOSPC)으로 종료됐다. Clippy 로그에 임시
+디렉터리 생성 실패가 남고, 일부 큐 JSON도 쓰기 중 비어 있거나 잘렸다.
+이를 조판 회귀·시각 통과·Clippy 통과로 판정하지 않는다.
+
+종료된 이전 source의 전쪽 Native/WASM 실행과 집중 WASM 실행에서 중간
+SVG만 해시·경로 원장을 남겨 정리한다. 입력·독립 PDF·PNG·TSV·render tree·
+로그·고정 바이너리·package와 공유 target/pr-review는 보존한다.
+정리 원장은 `stage57-terminal-svg-disk-recovery.jsonl`이며 종료 요약은
+동일 stem의 `-summary.json`에 남긴다.
+
+원래 실패 자료를 덮어쓰지 않고 `endnote-rewind-contract-focused-native-retry`에
+8개 입력·37개 선택 페이지를 다시 출력한다. 각 문서의 측정 종료 뒤 해당
+실행의 중간 SVG를 정리해 공간 누적을 제한한다. Native fmt·Clippy 재실행은
+`endnote-rewind-contract-native-lint-retry.json`에 남긴다. 이 검사가 실제로
+통과한 뒤 같은 source의 fresh WASM을 순차 빌드한다.
+프로세스 소유·단계 상태는 `stage57-recovery-detached-owner.json`과
+`stage57-recovery-validation-driver.json`에 기록한다. Cargo 자식 종료 뒤
+owner의 복사·해시가 끝나기 전 빌드 실패로 판정했던 경합도 실제 owner를
+확인하도록 수정했다. 새 Native 빌드를 중복 실행하지 않았다.
+
+## 명시적 스타일 경계의 검증 범위
+
+21개 HWPX의 원본 header paraPr/breakSetting을 별도로 확인했다.
+확인한 스타일에는 widowOrphan·keepWithNext·keepLines·pageBreakBefore가
+켜진 사례가 없었다. 이 입력들이 통과해도 해당 속성이 켜진 경계의 검증
+증거로 대신하지 않는다. 원본 조사 결과는
+`stage57-hwpx-explicit-break-style-census.json`에 보존했다.
