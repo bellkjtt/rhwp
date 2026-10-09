@@ -50,7 +50,6 @@ pub(super) struct InitialFitInput<'a> {
     pub(super) default_between_notes_gap: bool,
     pub(super) zero_endnote_spacing_profile: bool,
     pub(super) compact_between_notes_gap: bool,
-    pub(super) allow_default_late_question_tail: bool,
     pub(super) has_treat_as_char_picture_shape: bool,
 }
 
@@ -67,6 +66,7 @@ pub(super) struct InitialFitResult {
     pub(super) compact_endnote_own_vpos_span_fits_for_flow: bool,
     pub(super) no_separator_compact_final_note_first_line_tail_fits: bool,
     pub(super) split_endnote_to_fit: Option<usize>,
+    pub(super) reflowed_fit: Option<super::reflow_fit::ReflowedEndnoteFit>,
     pub(super) late_internal_rewind_fit_split: bool,
     pub(super) compact_non_default_empty_column_rewind_fits: bool,
     pub(super) visible_compact_sequential_tail_fits_current_column: bool,
@@ -112,7 +112,6 @@ impl TypesetEngine {
             default_between_notes_gap,
             zero_endnote_spacing_profile,
             compact_between_notes_gap,
-            allow_default_late_question_tail,
             has_treat_as_char_picture_shape,
         } = input;
         let remaining_height = (available - st.current_height).max(0.0);
@@ -615,21 +614,17 @@ impl TypesetEngine {
         } else {
             split_endnote_to_fit
         };
-        let mut split_endnote_to_fit = split_endnote_to_fit.filter(|split| {
-            let single_line_tail_split_at_bottom = *split == 1
-                && !default_between_notes_gap
-                && !allow_default_late_question_tail
-                && !(late_internal_rewind_fit_split
-                    && has_visible_endnote_separator
-                    && compact_between_notes_gap)
-                && endnote_has_visible_payload;
-            let large_separator_title_tail_split = *split == 1
-                && large_separator_block
-                && ep_idx == 0
-                && st.current_column + 1 >= st.col_count
-                && st.current_height + en_fit > available
-                && endnote_has_visible_payload;
-            !single_line_tail_split_at_bottom && !large_separator_title_tail_split
+        let split_before_style_check = split_endnote_to_fit;
+        let mut split_endnote_to_fit = split_endnote_to_fit.filter(|&split| {
+            // 한 줄을 남길 수 있는지는 미주 간격이 아니라 원본 묶음 속성이다.
+            styles
+                .para_styles
+                .get(en_para.para_shape_id as usize)
+                .is_some_and(|style| {
+                    !style.keep_lines
+                        && (!style.widow_orphan
+                            || (split >= 2 && fmt.line_count().saturating_sub(split) >= 2))
+                })
         });
         if no_separator_visible_multiline_tail_fits_with_bleed {
             // 구분선이 없는 큰 미주 block에서 이미 보이는 다줄 tail이
@@ -661,6 +656,34 @@ impl TypesetEngine {
             && endnote_has_visible_payload
             && st.current_height + total_advance_fit
                 <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX;
+        let reflowed_fit = (ep_idx > 0 && !local_vpos_rewind && !internal_vpos_rewind)
+            .then(|| {
+                self.query_reflowed_endnote_fit(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                )
+            })
+            .flatten();
+        if let Some(fit) = reflowed_fit {
+            split_endnote_to_fit = match fit {
+                super::reflow_fit::ReflowedEndnoteFit::Split(line) => Some(line),
+                super::reflow_fit::ReflowedEndnoteFit::Whole
+                | super::reflow_fit::ReflowedEndnoteFit::Overflow => None,
+            };
+        }
+        if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
+            eprintln!(
+                "EN_CUT_FIT pi={en_para_idx} before_style={split_before_style_check:?} actual={reflowed_fit:?} cut={split_endnote_to_fit:?} column={} items={} height={:.3}",
+                st.current_column, st.current_items.len(), st.current_height,
+            );
+        }
         // [Task #1363 v2 Stage 3] A2: split 불가(단일줄 등) para 가 단을
         // 넘으면 먼저 단 advance (fit-or-advance). sim 이 렌더-정합이므로
         // overflow 판정이 신뢰 가능.
@@ -676,6 +699,7 @@ impl TypesetEngine {
             compact_endnote_own_vpos_span_fits_for_flow,
             no_separator_compact_final_note_first_line_tail_fits,
             split_endnote_to_fit,
+            reflowed_fit,
             late_internal_rewind_fit_split,
             compact_non_default_empty_column_rewind_fits,
             visible_compact_sequential_tail_fits_current_column,

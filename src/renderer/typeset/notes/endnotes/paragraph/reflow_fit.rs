@@ -12,7 +12,103 @@ pub(super) struct NewHeadFit {
     pub(super) can_stay: bool,
 }
 
+/// 같은 단에서 실제로 배치한 글줄의 수용 결과.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum ReflowedEndnoteFit {
+    Whole,
+    Split(usize),
+    Overflow,
+}
+
+impl ReflowedEndnoteFit {
+    pub(super) fn can_stay(self) -> bool {
+        matches!(self, Self::Whole | Self::Split(_))
+    }
+}
+
 impl TypesetEngine {
+    /// 연속된 일반 미주 글줄의 전체·앞부분 점유를 한 계약으로 조회한다.
+    /// 별도 개체 계획·명시적 경계·아직 조판하지 않은 keep 그룹은 대체하지 않는다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn query_reflowed_endnote_fit(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        formatted: &FormattedParagraph,
+        para_index: usize,
+        available: f64,
+        column_width: f64,
+        measured_tables: &[MeasuredTable],
+    ) -> Option<ReflowedEndnoteFit> {
+        if st.current_items.is_empty()
+            || formatted.line_count() <= 1
+            || formatted.line_count() != paragraph.line_segs.len()
+            || paragraph.column_type != ColumnBreakType::None
+            || paragraph.controls.iter().any(|control| match control {
+                crate::model::control::Control::Table(_)
+                | crate::model::control::Control::Picture(_)
+                | crate::model::control::Control::Shape(_) => true,
+                crate::model::control::Control::Equation(equation) => {
+                    !equation.common.treat_as_char
+                }
+                _ => false,
+            })
+        {
+            return None;
+        }
+        let style = styles.para_styles.get(paragraph.para_shape_id as usize)?;
+        if style.keep_with_next || style.page_break_before {
+            return None;
+        }
+        let whole = self
+            .measure_endnote_column_with_item(
+                st,
+                paragraphs,
+                styles,
+                available,
+                column_width,
+                Some(PageItem::FullParagraph { para_index }),
+                true,
+                None,
+                measured_tables,
+            )?
+            .occupied_bottom?;
+        if whole <= available {
+            return Some(ReflowedEndnoteFit::Whole);
+        }
+        if style.keep_lines {
+            return Some(ReflowedEndnoteFit::Overflow);
+        }
+        for end_line in (1..formatted.line_count()).rev() {
+            if style.widow_orphan && (end_line < 2 || formatted.line_count() - end_line < 2) {
+                continue;
+            }
+            let occupied = self
+                .measure_endnote_column_with_item(
+                    st,
+                    paragraphs,
+                    styles,
+                    available,
+                    column_width,
+                    Some(PageItem::PartialParagraph {
+                        para_index,
+                        start_line: 0,
+                        end_line,
+                    }),
+                    true,
+                    None,
+                    measured_tables,
+                )?
+                .occupied_bottom?;
+            if occupied <= available {
+                return Some(ReflowedEndnoteFit::Split(end_line));
+            }
+        }
+        Some(ReflowedEndnoteFit::Overflow)
+    }
+
     /// 앞 문단에 명시적인 묶음이 있을 때만 분할 불가인 다음 한 줄을 예약한다.
     /// 저장 vpos 되감김이나 내용 종류만으로 제목·수식을 묶지 않는다.
     #[allow(clippy::too_many_arguments)]

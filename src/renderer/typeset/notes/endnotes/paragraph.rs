@@ -890,6 +890,7 @@ impl TypesetEngine {
                 line_advances_sum.max(non_tac_object_height.unwrap_or(0.0))
             };
             let fit_split_column = (st.pages.len(), st.current_column);
+            let fit_item_count = st.current_items.len();
             let initial_fit::InitialFitResult {
                 remaining_height,
                 a2_overflow_with_para,
@@ -902,6 +903,7 @@ impl TypesetEngine {
                 compact_endnote_own_vpos_span_fits_for_flow,
                 no_separator_compact_final_note_first_line_tail_fits,
                 mut split_endnote_to_fit,
+                reflowed_fit,
                 late_internal_rewind_fit_split,
                 compact_non_default_empty_column_rewind_fits,
                 visible_compact_sequential_tail_fits_current_column,
@@ -943,7 +945,6 @@ impl TypesetEngine {
                 default_between_notes_gap,
                 zero_endnote_spacing_profile,
                 compact_between_notes_gap,
-                allow_default_late_question_tail,
                 has_treat_as_char_picture_shape,
             });
             if let Some(split) = local_rewind_prefix_split {
@@ -952,6 +953,7 @@ impl TypesetEngine {
             if ssot_level >= EnSsotLevel::A2
                 && a2_overflow_with_para == Some(true)
                 && split_endnote_to_fit.is_none()
+                && reflowed_fit != Some(reflow_fit::ReflowedEndnoteFit::Whole)
                 && !visible_compact_sequential_tail_fits_current_column
                 && !visible_separator_new_note_title_tail_fits_for_a2
                 && !st.current_items.is_empty()
@@ -968,14 +970,17 @@ impl TypesetEngine {
             if page_offcanvas_with_para
                 && !st.current_items.is_empty()
                 && split_endnote_to_fit.is_none()
+                && reflowed_fit != Some(reflow_fit::ReflowedEndnoteFit::Whole)
                 && !internal_vpos_rewind
             {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
                 prev_en_content_bottom_vpos = None;
             }
-            let large_between_split_head_render_overflows = self
-                .judge_large_between_split_head_render_overflows(
+            let large_between_split_head_render_overflows = !(fit_split_column
+                == (st.pages.len(), st.current_column)
+                && reflowed_fit.is_some_and(reflow_fit::ReflowedEndnoteFit::can_stay))
+                && self.judge_large_between_split_head_render_overflows(
                     st,
                     &fmt,
                     en_para,
@@ -1219,13 +1224,15 @@ impl TypesetEngine {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
             }
-            if ((large_between_tail_render_overflows
+            if (((large_between_tail_render_overflows
                 || large_between_tail_before_rewind_picture
                 || large_between_equation_tail_starts_next_column
                 || no_separator_last_column_tail_before_rewind_starts_next_page)
                 && !render_whole_fits(st))
                 || kept_successor_overflows
-                || no_separator_tail_table_starts_next_column
+                || no_separator_tail_table_starts_next_column)
+                && !(fit_split_column == (st.pages.len(), st.current_column)
+                    && reflowed_fit.is_some_and(reflow_fit::ReflowedEndnoteFit::can_stay))
             {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
@@ -1491,6 +1498,14 @@ impl TypesetEngine {
             if advance_for_fit && new_head_fit.can_stay {
                 advance_for_fit = false;
                 kept_new_head_in_current_column = true;
+            }
+            if fit_split_column == (st.pages.len(), st.current_column)
+                && fit_item_count == st.current_items.len()
+                && reflowed_fit.is_some_and(reflow_fit::ReflowedEndnoteFit::can_stay)
+            {
+                // 전체/부분 점유의 공통 결과를 이월 판정과 최종 컷에 함께 전달한다.
+                // 선행 방출이나 단 전환으로 항목이 바뀌면 이전 조회를 소비하지 않는다.
+                advance_for_fit = false;
             }
             if advance_for_fit
                 && ep_idx > 0
@@ -1996,6 +2011,18 @@ impl TypesetEngine {
                         Some(split)
                     }
                     (other, _) => other,
+                }
+            } else {
+                split_candidate
+            };
+            let split_candidate = if fit_split_column == (st.pages.len(), st.current_column)
+                && fit_item_count == st.current_items.len()
+            {
+                match reflowed_fit {
+                    Some(reflow_fit::ReflowedEndnoteFit::Whole)
+                    | Some(reflow_fit::ReflowedEndnoteFit::Overflow) => None,
+                    Some(reflow_fit::ReflowedEndnoteFit::Split(line)) => Some(line),
+                    None => split_candidate,
                 }
             } else {
                 split_candidate
