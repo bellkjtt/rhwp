@@ -880,6 +880,7 @@ impl TypesetEngine {
                 st,
                 paragraphs,
                 styles,
+                measured_tables,
                 endnote_refs,
                 en_ref_idx,
                 en_ref,

@@ -6,9 +6,9 @@ use crate::renderer::typeset::{
     endnote_last_column_tail_overflows_frame, hwpunit_to_px, line_has_visible_text_or_tac_equation,
     page_item_para_index, para_has_non_tac_picture_or_shape, para_has_visible_text_or_equation,
     para_is_treat_as_char_picture_only, paragraph_by_global_index, ComposedParagraph, Control,
-    EndnoteRef, FormattedParagraph, Paragraph, ResolvedStyleSet, TypesetEngine, TypesetState,
-    ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX, ENDNOTE_LAST_COLUMN_SPLIT_BLEED_PX,
-    ENDNOTE_PAGE_OFFCANVAS_GUARD_PX,
+    EndnoteRef, FormattedParagraph, MeasuredTable, PageItem, Paragraph, ResolvedStyleSet,
+    TypesetEngine, TypesetState, ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX,
+    ENDNOTE_LAST_COLUMN_SPLIT_BLEED_PX, ENDNOTE_PAGE_OFFCANVAS_GUARD_PX,
 };
 
 /// 호출 시점의 관측값. 페이지 상태를 변경할 수 없는 Query 입력이다.
@@ -16,6 +16,7 @@ pub(super) struct InitialFitInput<'a> {
     pub(super) st: &'a TypesetState,
     pub(super) paragraphs: &'a [Paragraph],
     pub(super) styles: &'a ResolvedStyleSet,
+    pub(super) measured_tables: &'a [MeasuredTable],
     pub(super) endnote_refs: &'a [EndnoteRef],
     pub(super) en_ref_idx: usize,
     pub(super) en_ref: &'a EndnoteRef,
@@ -77,6 +78,7 @@ impl TypesetEngine {
             st,
             paragraphs,
             styles,
+            measured_tables,
             endnote_refs,
             en_ref_idx,
             en_ref,
@@ -313,12 +315,26 @@ impl TypesetEngine {
             && !local_vpos_rewind
             && !internal_vpos_rewind
             && fmt.line_heights.len() > 1
-            && st.current_height + total_advance_fit > available + 1.0
+            && st.current_height + en_fit > available
             && endnote_has_visible_payload
-            && ((!default_between_notes_gap && st.current_height > available * 0.95)
-                || (zero_between_large_separator_margin
-                    && st.current_column + 1 >= st.col_count
-                    && st.current_height > available * 0.80));
+            // 저장 span의 허용치는 실제 내용이 본문 밖에 놓이는 근거가 아니다.
+            // paint와 같은 현재 단 문맥에서 전체 후보의 점유 끝을 확인한다.
+            && self
+                .simulate_endnote_column_with_item(
+                    st,
+                    paragraphs,
+                    styles,
+                    available,
+                    en_col_w,
+                    Some(PageItem::FullParagraph {
+                        para_index: en_para_idx,
+                    }),
+                    true,
+                    None,
+                    measured_tables,
+                    true,
+                )
+                .is_some_and(|bottom| bottom > available);
         let no_separator_saved_vpos_tail_outside = large_separator_block
             && !has_visible_endnote_separator
             && ep_idx > 0
@@ -410,17 +426,33 @@ impl TypesetEngine {
             } else {
                 remaining_height
             };
-            let mut sum = 0.0;
-            let mut split = 0usize;
-            for line_idx in 0..fmt.line_heights.len() {
-                let line_h = fmt.line_advance(line_idx);
-                if sum + line_h > split_remaining_height {
-                    break;
+            if compact_endnote_body_tail_overflows_frame {
+                // 실제 방출할 부분 문단으로 가장 긴 수용 가능한 prefix를 찾는다.
+                // 마지막 줄 뒤 간격의 합으로 보이는 내용의 fit을 대신하지 않는다.
+                self.reflowed_endnote_prefix_split(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    en_para_idx,
+                    0,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                )
+            } else {
+                let mut sum = 0.0;
+                let mut split = 0usize;
+                for line_idx in 0..fmt.line_heights.len() {
+                    let line_h = fmt.line_advance(line_idx);
+                    if sum + line_h > split_remaining_height {
+                        break;
+                    }
+                    sum += line_h;
+                    split = line_idx + 1;
                 }
-                sum += line_h;
-                split = line_idx + 1;
+                (split > 0 && split < fmt.line_heights.len()).then_some(split)
             }
-            (split > 0 && split < fmt.line_heights.len()).then_some(split)
         } else {
             None
         };
