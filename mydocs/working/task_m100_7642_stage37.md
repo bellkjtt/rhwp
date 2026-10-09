@@ -47,5 +47,22 @@ PR gate는 `re_review_required`다. 전체 통과로 보고하지 않는다.
 호출 경로를 현재 브랜치에서 계속 추적한다. 자료는 ignored
 `representative-native/nov2022-owned-span-p019/`와 `nov2022-owned-span-p020/`에 있다.
 
-fresh WASM 빌드는 같은 생산 소스로 진행 중이다. Rust 소스를 다시 바꾸기 전에는
-빌드 종료와 package 출처를 확인하고, 이후 변경 소스의 필요한 시각 검증을 다시 실행한다.
+fresh WASM 빌드는 exit 0, 1236.40초로 종료됐다. 검증 소스는 동일한 `94ebd9c0a`이며,
+고정한 24개 소스 해시가 빌드 전후 일치한다. frozen package의 JS SHA-256은
+`a043bdc9047d3ff5d89f55ccc21846f017ac109dad6de25b2885e43c44ee08da`, WASM은
+`178006490906ab412c905fa54b15fd9dc823c5e091bff9f5162c71ad79396a02`다.
+루트 pkg와 Studio public도 같은 해시다. 이 package의 HWPX/2024 전쪽 대조와
+동일 frozen Native의 HWP/2020 전쪽 대조를 시작했다. 실행 중 결과를 통과로 보고하지
+않으며, 다음 소스 변경 뒤에는 해당 소스의 Native/fresh WASM을 다시 검증한다.
+
+19쪽의 실제 호출 로그는 `prepare.rs`의 다음 미주 전체 선행 이월 분기로 연결된다.
+원본 본문 문단 379의 미주 제목·첫 본문은 `keepWithNext=0`, `keepLines=0`이며
+강제 쪽·단 나눔도 없다. 앞 미주의 저장 좌표 되감기만으로 다음 미주를 분할 불가
+묶음으로 취급한 가정을 다음 단계에서 제거한다. 기준 Print는 제목과 첫 본문을
+왼쪽 단 하단에 남기고 다음 문단을 오른쪽 단으로 넘긴다.
+
+사용자가 제시한 목록은 검사 제거 내역이며 관계형 전환 완료 목록이 아니다.
+현재 `tests/issue_1139_inline_picture_duplicate.rs`에는 폭 23.8·188.98과
+하단 1066.86 등 고정 px 선택·기대값이 남아 있다. 전체 전환은 미완료다.
+현재 작업에서는 실패 원본을 보정하고 90% 이상 및 확대 판독을 확인한 뒤 필요한
+검사를 관계형으로 바꾼다. 검사 삭제·허용치 완화로 실패를 해소하지 않는다.
