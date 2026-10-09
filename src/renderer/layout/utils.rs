@@ -122,6 +122,8 @@ pub(crate) fn picture_display_size_hu(picture: &Picture) -> (i32, i32) {
 /// 그림, current=367px 는 과대). 그 외(TAC 인라인, TopAndBottom 등)는 종전
 /// `picture_display_size_hu`(max(common, current)) 유지 — #1122 문26(주머니
 /// 그림: TAC, common.width 가 손상되어 current 가 정답) 회귀 방지.
+/// 상대 크기 축의 common 값은 비율이므로 저장된 현재 HU 크기를 사용한다.
+/// 이 물리 프레임을 배제 영역·저장 앵커 측정과 실제 그림 배치가 함께 소비한다.
 pub(crate) fn picture_flow_frame_size_hu(picture: &Picture) -> (i32, i32) {
     let flows_beside = !picture.common.treat_as_char
         && matches!(
@@ -131,7 +133,7 @@ pub(crate) fn picture_flow_frame_size_hu(picture: &Picture) -> (i32, i32) {
                 | crate::model::shape::TextWrap::Through
         );
     if flows_beside && picture.common.width > 0 && picture.common.height > 0 {
-        (picture.common.width as i32, picture.common.height as i32)
+        crate::renderer::stored_picture_metrics::stored_picture_size_hu(picture)
     } else {
         picture_display_size_hu(picture)
     }
