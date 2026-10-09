@@ -181,3 +181,28 @@ owned=660.320을 이어받는다. 다음 문27 제목 918은 690.5에 놓여 Pri
 `stage58-current-owned-line-observations.json`, 생산·소비 로그는 각 입력의
 `stage58-current-*-p019-render-tree.log`에 보존했다. 영향 페이지·정상 대조군의
 새 Native/fresh WASM 90% 이상 및 확대 판독은 계속 진행한다.
+
+## 새 review 직접 판독
+
+새 source de11af0c7의 Native SVG에서 독립 PDF 19쪽을 96dpi로 새로 산출해
+직접 비교했다. 11월 HWPX는 81.85884%→98.00415%, 9월 미주 사이 20 HWP는
+87.59770%→97.95371%로 개선됐다. 엄격 내용 픽셀은 각각 16.45283%·16.06705%다.
+새 review를 모두 직접 표시했다. 11월은 그림 뒤 빈 줄의 점유가 다음 문27 제목·
+그림·풀이에 보존되고, 9월은 문28 앞의 저장 간격 재가산이 사라져 Print의 위치로
+이어진다. 각 `stage58-current-selected-direct/<id>/p019/metrics.json`에 원본·PDF·
+SVG·바이너리 해시와 실제 raster·PDF 명령을 보존했다.
+
+17쪽은 같은 새 source의 Native 직접 비교에서 97.58115%다. 수정 전 8ddb3b169·
+수정 후 de11af0c7·Print를 같은 소유 영역 `[1,4)`과 좌표에서 3배 확대해
+`stage58-current-nov-p017-font-prefix-detail-review.png`로 직접 표시했다.
+`Rm` 문자가 사라졌고 정체 OM₁로 표시된다. 추가 글자 때문에 뒤의 분수와
+본문이 겹치던 결함도 사라졌다. crop의 근거·소유·동일 좌표·배율은 동일 stem의
+`-provenance.json`에 남겼다. 다른 수식·미세 간격 판독과 전체 페이지·fresh WASM은
+계속 검증하며 이 세 쪽의 개선을 문서 전쪽 통과로 바꾸어 보고하지 않는다.
+
+붙은 그리스 기호와 뒤 변수의 문법 경계를 추정으로 넓히지 않기 위해
+16개 합성 대조 사례도 준비했다. 2024 한컴 저장은 성공했고 해당 저장본의
+Print job을 모니터링 중이다. `stage58-greek-prefix-probe/input-plan.json`에
+생성 방식·template/입력 해시와 사례 목록, `stage58-greek-prefix-probe-mcp-*.json`에
+engine·제품·job·출력 해시를 보존한다. 합성 입력의 출력은 원래 검증 문서의
+대체 기준으로 사용하지 않는다. Print method와 실제 출력은 아직 확인되지 않았다.
