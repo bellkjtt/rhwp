@@ -67,4 +67,28 @@ exit 0이다. Studio `npx tsc --noEmit`도 exit 0이다.
 기록했다. 첨부의 제거 커밋 두 개와 브랜치는 현재 로컬 Git에서 확인되지 않았고,
 원격의 같은 브랜치도 조회 결과가 없어 제거·복원됐다고 단정하지 않는다.
 
-fresh WASM·전체 최종 검증·관계형 전환·PR 준비 완료로 판정하지 않는다.
+위 Native 1차 결과만으로 fresh WASM·전체 최종 검증·관계형 전환·PR 준비
+완료를 판정하지 않는다. 이후 같은 source의 WASM 결과는 다음 절에 기록한다.
+
+## 같은 source의 fresh WASM 재검증
+
+코드 커밋은 `c1cd0367f3db737ec424262c0bf916774f383926`이다. 루트 wrapper의
+web 빌드는 1008.72초, exit 0이며 source 해시를 빌드 전후 대조했다.
+frozen package의 JS·WASM과 Studio public 대응 파일의 SHA-256이 각각 일치한다.
+WASM SHA-256은
+`121161ed98b47cd1532ef85f7937361682ae2e05d1f187b75105ba6b335eab14`다.
+
+앞 표의 7개 페이지를 같은 원본·독립 Print로 fresh WASM에서도 실행했다.
+5개 실행의 gate가 모두 `passed`이고 Native와 페이지별 일치율이 같다.
+7개 대응 PNG도 SHA-256이 모두 같다. 확대 판독한 Native 이미지와 fresh WASM의
+실제 raster가 같은지 `source-math-axis-native-wasm-parity.json`으로 확인했다.
+정상 저장 수식 진단 전체 2쪽은 97.89256%·95.46958%, 구성요소 전체 1쪽은
+98.66658%다. 2022 HWPX는 18/19쪽, 2023 HWP/HWPX는 19쪽만 재검증했으므로
+그 문서의 전체 페이지 통과를 주장하지 않는다. Studio CanvasKit 변경의 실행
+검증도 SVG 기반 WASM 비교나 타입 검사로 대신하지 않으며 아직 미검증이다.
+
+최신 목표 파일에서도 입력 56개 경로와 Rust 파일 91개의 목록은 동일하다.
+현재 91개 파일은 원래 경로나 `tests/cases` 아래에 모두 존재한다. 첨부의
+삭제 상태를 현재 브랜치 상태로 단정하지 않는다. 입력·검사 목록은 ignored
+`updated-goal-source-inventory.json`·`updated-goal-regression-inventory.json`으로
+연결하고, 미달 원본의 실제 출력 보정 뒤 관계형 전환을 진행한다.
