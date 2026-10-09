@@ -100,3 +100,14 @@ job과 해시는 `negation-contract-mcp-save-v2.json`·`negation-contract-mcp-pr
 이 단계에서 회귀 테스트·fixture·baseline은 변경하지 않았다. 전체 52개 입력,
 기존 110개 실패와 #1139 파일의 관계형 전환도 완료가 아니다. 코드 보정을
 일반 커밋으로 고정한 뒤 같은 소스로 fresh WASM과 전쪽 검증을 계속한다.
+
+## fresh WASM 빌드 종료
+
+같은 생산 소스 `61bf910fae63d8be772a37942c3a54f2e7a6f917`의 WASM lib
+Clippy는 exit 0(62.29초), root wrapper는 exit 0(993.06초)이다. 전체 Rust
+파일 해시가 빌드 전후 같고, frozen package의 JS·WASM과 Studio public의
+해시가 각각 일치한다. WASM SHA-256은
+`21060cf2c13262b461be00ccc20541953caba64da8993c74e1042a7d61074db3`이다.
+
+원본 HWPX/2024와 HWP/2020의 전쪽 Native/fresh WASM 및 v2 진단의
+fresh WASM은 실행 중이다. 빌드 종료를 시각 검증 완료로 판정하지 않는다.
