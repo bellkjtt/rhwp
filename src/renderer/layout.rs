@@ -11104,7 +11104,7 @@ impl LayoutEngine {
                             self.dpi,
                         )
                         .unwrap_or(y_offset);
-                        let inline_flow_end = self.layout_inline_table_paragraph(
+                        let inline_geometry = self.layout_inline_table_paragraph(
                             tree,
                             col_node,
                             para,
@@ -11117,11 +11117,16 @@ impl LayoutEngine {
                             bin_data_content,
                             measured_tables,
                         );
-                        y_offset = if paint_y < para_flow_start {
-                            para_flow_start + (inline_flow_end - paint_y).max(0.0)
+                        let inline_geometry = if paint_y < para_flow_start {
+                            inline_geometry.at_flow_origin(paint_y, para_flow_start)
                         } else {
-                            inline_flow_end
+                            inline_geometry
                         };
+                        self.last_item_content_bottom
+                            .set(inline_geometry.content_bottom);
+                        self.last_item_flow_line_bottom
+                            .set(inline_geometry.line_box_bottom);
+                        y_offset = inline_geometry.flow_bottom;
                         // [#4532 기전 2호] 저장 lineseg 한 줄(표를 품는 거대 lh)을
                         // 재래핑이 여러 줄로 쪼개면 줄마다 lh 를 상속해 흐름이 배로
                         // 붊(사천시 21606965: 401.1px = 사다리 206.4 의 2배). 채택된

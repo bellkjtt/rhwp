@@ -44,6 +44,9 @@ use leading_justification::LeadingSpacePlan;
 
 const CAPTION_CELL_SENTINEL: usize = 65534;
 
+mod inline_table_geometry;
+pub(crate) use inline_table_geometry::InlineTableParagraphGeometry;
+
 /// 저장 탭 확장 배열의 문단 전체 순번을 현재 줄 시작에서 복원한다.
 fn stored_tab_index_before_line(
     composed: &ComposedParagraph,
@@ -3339,7 +3342,7 @@ impl LayoutEngine {
         para_index: usize,
         bin_data_content: &[BinDataContent],
         measured_tables: &[MeasuredTable],
-    ) -> f64 {
+    ) -> InlineTableParagraphGeometry {
         use crate::model::control::Control;
 
         // 1. 문단 스타일 조회
@@ -4410,14 +4413,26 @@ impl LayoutEngine {
                 seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
             })
             && max_table_bottom <= y + line_height + 0.5;
-        if stored_single_line_owns_tables {
-            return text_bottom.max(y + line_height + line_spacing) + spacing_after;
+        let flow_bottom = if stored_single_line_owns_tables {
+            text_bottom.max(y + line_height + line_spacing) + spacing_after
+        } else {
+            // 표와 텍스트 중 더 큰 하단을 사용한다.
+            max_table_bottom
+                .max(text_bottom)
+                .max(y + line_height + line_spacing)
+                + spacing_after
+        };
+        // 일반 문단과 같은 소비자에게 실제 배치에서 계산한 점유를 전달한다.
+        // 후행 줄간격·문단 간격은 흐름 전진에 남기고 줄 상자에 더하지 않는다.
+        InlineTableParagraphGeometry {
+            flow_bottom,
+            content_bottom: max_table_bottom.max(current_y + text_line_height),
+            line_box_bottom: max_table_bottom.max(if wrapped_below_table {
+                current_y + text_line_height
+            } else {
+                current_y + line_height
+            }),
         }
-        // 표와 텍스트 중 더 큰 하단을 사용
-        let effective_line_bottom = max_table_bottom
-            .max(text_bottom)
-            .max(y + line_height + line_spacing);
-        effective_line_bottom + spacing_after
     }
 
     /// 문단 전체를 레이아웃하여 단 노드에 추가
