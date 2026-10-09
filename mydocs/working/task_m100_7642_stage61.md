@@ -46,3 +46,30 @@ fresh WASM은 실제 빌드 중이다. 이 빌드 종료·패키지/Studio 해�
 전체 55개·853쪽 Native/fresh WASM, 직접 확대 판독, 기존 관련 회귀의
 관계형 전환과 전체 Rust/필수 lint는 원래 범위로 유지한다. 새 기대값과
 렌더 baseline은 90% 및 직접 판독 선행 조건 전에는 변경하지 않는다.
+
+
+## 네 크기의 실제 Print 완료
+
+48개 입력의 Print가 2쪽으로 완료됐다. job은
+`3b72b543-e788-476d-99cd-f4ffbf4883a8`, Hancom 13.0.0.3901,
+PrintMethod 0, frame_print_to_pdf_ex_one_up이다.
+PDF SHA-256은 `e9db1659fd6a3840381cd3af5d875cb3fc40739067fe8ef75505c3c227047da0`다.
+`stage61-binary-operator-probe-mcp-print.json`의 실제 결과와
+`stage61-binary-operator-probe/print-detail-provenance.json`에 페이지·원본
+해시·배율·좌표를 연결했다. `print-binary-operator-four-size-detail.png`를
+직접 열어 표시했다.
+
+네 크기에서 비인용 축약 +-는 ±, -+는 ∓이며 해당 Unicode와 대응한다.
+인용한 ASCII 두 기호는 각각 보존하고, 인용 Unicode ±/∓ 자체의 glyph와
+자동 간격은 같은 표시 계약을 따른다. slash는 인용/비인용 모두 같은 한 줄이다.
+
+다만 소문자 minusplus는 기호가 아니라 min 함수와 나머지 문자로 출력된다.
+현재 symbol table의 MINUSPLUS와 대소문자 재조회가 이를 기호로 바꾸는 가정도
+독립 Print와 대조해야 한다. 새 alias를 무작정 추가하지 않고 기존 등록의
+적합성과 LaTeX 확장/한컴 원문 계약을 구분해 다음 묶음에서 확인한다.
+plusminus는 이번 실제 Print에서 ±로 확인됐다. 미검증 별칭을 같은 것으로
+추정해 코드 변경의 기대값에 넣지 않는다.
+
+현재 source f6f51dd5d의 Native 빌드·fmt·Native Clippy는 통과했지만 전체
+55개·853쪽과 fresh WASM은 아직 실행 중이다. 기존 관련 회귀의 관계형
+전환도 선행 조건 뒤에 진행하며 최종 완료로 보고하지 않는다.
