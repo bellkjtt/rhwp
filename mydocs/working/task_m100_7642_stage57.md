@@ -204,3 +204,32 @@ owner의 복사·해시가 끝나기 전 빌드 실패로 판정했던 경합도
 켜진 사례가 없었다. 이 입력들이 통과해도 해당 속성이 켜진 경계의 검증
 증거로 대신하지 않는다. 원본 조사 결과는
 `stage57-hwpx-explicit-break-style-census.json`에 보존했다.
+
+## 복구 완료와 최신 17쪽 직접 판독
+
+종료된 실행의 중간 SVG 585개, 32,880,326,349바이트를 정리했다.
+`stage57-terminal-svg-disk-recovery-summary.json`의 state=complete와 원장에
+경로·크기·SHA-256이 남는다. 이전 source 전쪽 Native 14개·WASM 10개의
+유효한 문서별 completed.json은 별도의 terminal-enospc-recovery.json에
+연결했다. 일부 큐 JSON의 손상과 미실행 쪽을 완료로 바꾸지 않았다.
+
+재실행한 Native fmt는 44.52초, Native Clippy는 104.53초에 각각 exit 0으로
+종료됐다. 이후 같은 source의 fresh WASM을 detached owner에서 순차 빌드한다.
+이 단계에서 source를 바꾸지 않았다.
+
+최신 Native 17쪽의 직접 raster는 97.36303%로, 앞 source의 65.82691%에서
+개선됐다. 엄격 내용 픽셀은 32.92294%다. 새 review를 직접 표시했고 왼쪽
+하단의 이어지는 글줄이 Print와 같이 오른쪽 첫 줄로 이동함을 확인했다.
+증적은 `stage57-current-selected-direct/all-31`의 compare·overlay·review와
+metrics.json에 있다. 대형 SVG를 만드는 집중 실행에서 이미 완성된 같은
+source SVG를 사용했고 기준 PDF 17쪽도 96dpi로 새로 출력했다. 독립 Print
+PDF·입력·바이너리·SVG 해시와 실제 명령을 기록했다. compare 디렉터리 생성
+누락으로 멈춘 진단 driver는 같은 실행의 완료 PNG로 비교 생성을 마쳤다.
+
+그러나 본문 298·미주 내부 13·글줄 `[1,4)`을 render tree 소유 기준으로 같은
+좌표·4배 확대해 확인하니 첫 수식에 `Rm`이 글자로 표시된다. Print에는 해당
+글자가 없고 뒤의 분수와 본문이 겹치지 않는다. 최신 RHWP에서는 그 추가 글자가
+뒤 분수 위치를 밀어 본문과 겹친다. 따라서 97.36%를 최종 수식 통과로 판정하지 않는다.
+새 확대 review와 crop·소유·원본 출처는
+`stage57-current-nov-p017-prefix-equation-detail-review.png` 및 동일 stem의
+`-provenance.json`에 보존했다. 전체 문서·fresh WASM·관계형 회귀는 아직 미완료다.
