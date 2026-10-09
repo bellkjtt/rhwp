@@ -43,6 +43,7 @@ impl TypesetEngine {
             mut emitted_endnote_separator,
             mut current_endnote_had_inline_object_vpos_overestimate,
         } = carry;
+        let mut reserved_tail_spacing_px = 0.0;
         if !emitted_endnote_separator {
             if let (Some(shape), Some(profile)) = (endnote_shape, endnote_flow_profile) {
                 let sep_height = profile.separator_height_px(self.dpi);
@@ -522,7 +523,7 @@ impl TypesetEngine {
                                     } else {
                                         between_notes
                                     };
-                                st.apply_endnote_tail_spacing(
+                                reserved_tail_spacing_px = st.apply_endnote_tail_spacing(
                                     prev_local_idx,
                                     paragraphs.len() + prev_local_idx,
                                     render_between_notes,
@@ -536,6 +537,7 @@ impl TypesetEngine {
         }
         (
             EndnoteEmitVars {
+                reserved_tail_spacing_px,
                 boundary_prev_endnote_had_vpos_rewind,
                 endnote_has_vpos_rewind,
                 continued_endnote_tail_before_new_note,

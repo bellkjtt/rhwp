@@ -66,6 +66,7 @@ impl TypesetEngine {
         );
         let en_ctrl = projected_endnote.as_ref();
         let EndnoteEmitVars {
+            reserved_tail_spacing_px,
             boundary_prev_endnote_had_vpos_rewind,
             endnote_has_vpos_rewind,
             continued_endnote_tail_before_new_note,
@@ -86,6 +87,7 @@ impl TypesetEngine {
         } = flow;
         let mut pre_emitted_endnote_para_indices = std::collections::HashSet::new();
         let mut kept_new_head_in_current_column = false;
+        let reserved_tail_column = (st.pages.len(), st.current_column);
         for (ep_idx, en_para) in en_ctrl.paragraphs.iter().enumerate() {
             if pre_emitted_endnote_para_indices.remove(&ep_idx) {
                 emitted_endnote_count += 1;
@@ -843,6 +845,13 @@ impl TypesetEngine {
                     local_vpos_rewind_crosses_prev_content,
                     min_vpos_rewind_height,
                     new_endnote_between_notes_px,
+                    reserved_tail_spacing_px: if ep_idx == 0
+                        && reserved_tail_column == (st.pages.len(), st.current_column)
+                    {
+                        reserved_tail_spacing_px
+                    } else {
+                        0.0
+                    },
                     no_separator_new_note_head_fits_current_column,
                     ssot_debug,
                     ssot_level,
@@ -1760,6 +1769,13 @@ impl TypesetEngine {
                     local_vpos_rewind_crosses_prev_content,
                     min_vpos_rewind_height,
                     new_endnote_between_notes_px,
+                    reserved_tail_spacing_px: if ep_idx == 0
+                        && reserved_tail_column == (st.pages.len(), st.current_column)
+                    {
+                        reserved_tail_spacing_px
+                    } else {
+                        0.0
+                    },
                     no_separator_new_note_head_fits_current_column,
                     ssot_debug,
                     ssot_level,

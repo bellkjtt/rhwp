@@ -661,13 +661,13 @@ impl TypesetState {
         paragraph_index: usize,
         spacing: i32,
         dpi: f64,
-    ) {
+    ) -> f64 {
         let Some(paragraph) = self.data.endnote_paragraphs.get_mut(index) else {
-            return;
+            return 0.0;
         };
         let line_count = paragraph.line_segs.len();
         let Some(line) = paragraph.line_segs.last_mut() else {
-            return;
+            return 0.0;
         };
         let added = spacing.saturating_sub(line.line_spacing).max(0);
         line.line_spacing = spacing;
@@ -683,7 +683,11 @@ impl TypesetState {
             _ => false,
         });
         if owns_tail {
-            self.data.current_height += crate::renderer::hwpunit_to_px(added, dpi);
+            let reserved = crate::renderer::hwpunit_to_px(added, dpi);
+            self.data.current_height += reserved;
+            reserved
+        } else {
+            0.0
         }
     }
     pub(in crate::renderer::typeset) fn append_routed_item(
