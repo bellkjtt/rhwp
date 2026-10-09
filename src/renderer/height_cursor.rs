@@ -1463,7 +1463,6 @@ impl HeightCursor {
             .and_then(|p| p.line_segs.first())
             .map(|s| hwpunit_to_px(s.line_height.max(0), self.dpi))
             .unwrap_or(current_line_advance_px);
-        let equation_tail_prev_overlap_tolerance = if is_page_path { 6.0 } else { 0.0 };
         let col_bottom = self.col_area_y + self.col_area_height;
         let compact_endnote_question_title_bottom_fit = self.suppress_large_forward_jump
             && current_is_endnote_title
@@ -1545,18 +1544,6 @@ impl HeightCursor {
             && end_y <= y_offset + 96.0
             && (!follows_tall_inline_item || !prev_para.text.trim().is_empty())
             && y_offset <= self.col_area_y + self.col_area_height * 0.35;
-        let compact_endnote_equation_tail_fit = self.suppress_large_forward_jump
-            && !vpos_rewind
-            && paragraphs
-                .get(item_para)
-                .map(para_is_treat_as_char_equation_only)
-                .unwrap_or(false)
-            && current_line_advance_px > 0.0
-            && y_offset > self.col_area_y + self.col_area_height * 0.95
-            && end_y <= y_offset + 0.5
-            && end_y + current_line_advance_px > self.col_area_y + self.col_area_height + 0.5
-            && end_y + equation_tail_prev_overlap_tolerance >= prev_content_bottom_y
-            && end_y - current_line_advance_px <= y_offset;
         let compact_endnote_title_tail_backtrack = self.suppress_large_forward_jump
             && !is_page_path
             && !vpos_rewind
@@ -1912,15 +1899,6 @@ impl HeightCursor {
                     .max(self.col_area_y)
                     .min(y_offset)
             }
-        } else if compact_endnote_equation_tail_fit {
-            let prev_floor = prev_content_bottom_y - equation_tail_prev_overlap_tolerance;
-            // page-path compact 미주 하단의 수식-only tail은 저장 vpos가 직전
-            // 수식 line 하단보다 몇 px 위를 가리킬 수 있다. 이때 frame-fit을
-            // 우선하되 이전 line과 과도하게 겹치지 않도록 작은 허용폭만 둔다.
-            (col_bottom - current_line_advance_px - 2.0)
-                .max(prev_floor)
-                .max(self.col_area_y)
-                .min(y_offset)
         } else if compact_endnote_page_no_separator_tail_pullup {
             // 렌더용 lineSeg를 위로 당긴 page-path 한 줄 tail은 저장 end_y가
             // 의도한 위치다. 여기서 순차 y_offset을 고르면 127~129 같은 마지막
@@ -2085,11 +2063,11 @@ impl HeightCursor {
             }
             let path = if is_page_path { "page" } else { "lazy" };
             eprintln!(
-                "VPOS_CORR: path={} pi={} prev_pi={} prev_vpos={} prev_lh={} prev_ls={} vpos_end={} base={} col_y={:.2} y_in={:.2} end_y={:.2} result={:.2} stale_forward={} large_gap_body_stale={} current_title={} title_bottom={} page_tail={} equation_tail={} single_tail={} zero_gap_title={} compact_new_note={} compact_stale_note_gap={} compact_tac_pic_gap={} compact_bottom_rewind={} compact_deep_backtrack={} compact_safe_backtrack={} applied={}",
+                "VPOS_CORR: path={} pi={} prev_pi={} prev_vpos={} prev_lh={} prev_ls={} vpos_end={} base={} col_y={:.2} y_in={:.2} end_y={:.2} result={:.2} stale_forward={} large_gap_body_stale={} current_title={} title_bottom={} page_tail={} single_tail={} zero_gap_title={} compact_new_note={} compact_stale_note_gap={} compact_tac_pic_gap={} compact_bottom_rewind={} compact_deep_backtrack={} compact_safe_backtrack={} applied={}",
                 path, item_para, prev_pi, seg.vertical_pos, seg.line_height, seg.line_spacing,
                 vpos_end, base, self.col_area_y, y_offset, end_y, result, stale_forward,
                 compact_endnote_large_gap_body_stale_forward, current_is_endnote_title, compact_endnote_title_bottom_backtrack,
-                compact_endnote_page_tail_backtrack, compact_endnote_equation_tail_fit,
+                compact_endnote_page_tail_backtrack,
                 compact_endnote_single_line_tail_backtrack,
                 compact_endnote_zero_gap_title_forward,
                 compact_endnote_new_note_jump, compact_endnote_stale_note_gap,
