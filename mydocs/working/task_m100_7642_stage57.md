@@ -233,3 +233,17 @@ PDF·입력·바이너리·SVG 해시와 실제 명령을 기록했다. compare 
 새 확대 review와 crop·소유·원본 출처는
 `stage57-current-nov-p017-prefix-equation-detail-review.png` 및 동일 stem의
 `-provenance.json`에 보존했다. 전체 문서·fresh WASM·관계형 회귀는 아직 미완료다.
+
+## 최신 집중 검증의 추가 결과
+
+11월 HWPX의 7쪽 집중 검증은 601.11초에 종료됐다. 12·13·14·17·18·19·21쪽을
+모두 측정했고 누락은 없다. 17쪽은 97.36303%, 18쪽은 96.88649%로 개선됐지만
+19쪽은 81.85884%로 여전히 미달이다. 전체 쪽수는 Print와 같은 21쪽이며
+이 선택 범위의 gate는 re_review_required다. 문서 전쪽 검증은 아직 아니다.
+새 18·19쪽 review도 직접 표시했다. 문서별 completed.json과 실행 로그를 보존했다.
+
+9월 미주 사이 20 HWP 18쪽은 같은 최신 실행에서 97.27269%다. 앞 source의
+79.55629%와 같은 좌표의 Print를 3배 확대해 비교했다. 수식 뒤 본문에 추가되던
+전진이 사라지고 Print와 같은 간격으로 이어진다. 증적은
+`stage57-current-sep-note29-p018-spacing-detail-review.png`와 동일 stem의
+`-provenance.json`이다. 이 문서의 다른 선택 쪽과 전쪽 판정은 진행 중이다.
