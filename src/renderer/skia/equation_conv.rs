@@ -589,8 +589,25 @@ fn render_box(
             }
         }
         LayoutKind::Decoration { kind, body } => {
-            render_box(canvas, fonts, body, x, y, color, fs, italic, bold);
-            if *kind == DecoKind::Box {
+            render_box(
+                canvas,
+                fonts,
+                body,
+                x,
+                y,
+                color,
+                fs,
+                italic,
+                bold,
+            );
+            if *kind == DecoKind::StrikeThrough {
+                let g = crate::renderer::equation::negation_geometry::geometry(body);
+                canvas.draw_line(
+                    ((x + g.start.0) as f32, (y + g.start.1) as f32),
+                    ((x + g.end.0) as f32, (y + g.end.1) as f32),
+                    &stroke_paint(color, g.thickness),
+                );
+            } else if *kind == DecoKind::Box {
                 canvas.draw_rect(
                     skia_safe::Rect::from_xywh(
                         x as f32,

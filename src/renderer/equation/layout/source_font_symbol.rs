@@ -9,6 +9,11 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
     let (advance, padding) = match text {
         "+" => (795, 0.14),
         "=" => (795, 0.21),
+        // 독립 Print의 정상/부정 부등호는 같은 글자 전진폭을 사용한다.
+        // NOT 내부에서 대체 표시 글꼴의 폭과 연산자 여백을 함께 더하면
+        // 다음 피연산자가 선언 프레임 밖으로 밀린다.
+        "<" | ">" => (864, 0.21),
+        "≠" => (1024, 0.15),
         "×" => (831, 0.14),
         _ => return None,
     };
@@ -19,7 +24,7 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
 }
 
 pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
-    if text == "×" {
+    if matches!(text, "×" | "≠") {
         let (width, _) = operator_metrics(text, fs, dpi)?;
         let baseline = fs * 0.8;
         return Some(LayoutBox {
@@ -32,9 +37,11 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
             kind: LayoutKind::FontGlyph {
                 text: text.to_string(),
                 font_family: "Latin Modern Math, STIX Two Math, serif",
-                outline: Some(super::super::multiplication_outline::commands(
-                    fs, width, baseline,
-                )),
+                outline: Some(if text == "×" {
+                    super::super::multiplication_outline::commands(fs, width, baseline)
+                } else {
+                    super::super::not_equal_geometry::commands(fs, baseline)
+                }),
             },
         });
     }

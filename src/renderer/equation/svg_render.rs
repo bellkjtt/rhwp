@@ -446,7 +446,13 @@ fn render_box(
         }
         LayoutKind::Decoration { kind, body } => {
             render_box(svg, body, x, y, color, fs, italic, bold);
-            if *kind == DecoKind::Box {
+            if *kind == DecoKind::StrikeThrough {
+                let g = super::negation_geometry::geometry(body);
+                svg.push_str(&format!(
+                    "<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
+                    x + g.start.0, y + g.start.1, x + g.end.0, y + g.end.1, color, g.thickness,
+                ));
+            } else if *kind == DecoKind::Box {
                 svg.push_str(&format!(
                     "<rect x=\"{:.2}\" y=\"{:.2}\" width=\"{:.2}\" height=\"{:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
                     x, y, lb.width, lb.height, color, fs * 0.03,
@@ -726,7 +732,7 @@ fn draw_decoration(
             ));
         }
         _ => {
-            // Check, Acute, Grave, Arch, StrikeThrough 등 간략 처리
+            // Check, Acute, Grave, Arch 등 간략 처리
             svg.push_str(&format!(
                 "<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
                 mid_x - half_w * 0.5, y + fs * 0.1,

@@ -375,7 +375,15 @@ fn render_box(
         }
         LayoutKind::Decoration { kind, body } => {
             render_box(ctx, body, x, y, color, fs, italic, bold);
-            if *kind == DecoKind::Box {
+            if *kind == DecoKind::StrikeThrough {
+                let g = super::negation_geometry::geometry(body);
+                ctx.set_stroke_style_str(color);
+                ctx.set_line_width(g.thickness);
+                ctx.begin_path();
+                ctx.move_to(x + g.start.0, y + g.start.1);
+                ctx.line_to(x + g.end.0, y + g.end.1);
+                ctx.stroke();
+            } else if *kind == DecoKind::Box {
                 ctx.set_stroke_style_str(color);
                 ctx.set_line_width(fs * 0.03);
                 ctx.stroke_rect(x, y, lb.width, lb.height);

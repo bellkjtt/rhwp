@@ -20,6 +20,8 @@ mod font_style_runs;
 pub(crate) mod inline_box;
 pub(crate) mod integral_outline;
 pub(crate) mod multiplication_outline;
+pub(crate) mod negation_geometry;
+mod not_equal_geometry;
 pub use integral_outline::Command as GlyphOutlineCommand;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;

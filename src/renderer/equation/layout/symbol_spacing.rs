@@ -4,7 +4,7 @@
 use super::{estimate_text_width, source_font_symbol, EqLayout, EqNode, LayoutBox, LayoutKind};
 
 fn operator(node: &EqNode) -> bool {
-    matches!(node, EqNode::Symbol(s) | EqNode::MathSymbol(s) if super::super::hancom_glyphs::is_operator(s) || matches!(s.as_str(), "+" | "-" | "=" | "<" | ">" | "×" | "÷"))
+    matches!(node, EqNode::Symbol(s) | EqNode::MathSymbol(s) if super::super::hancom_glyphs::is_operator(s) || matches!(s.as_str(), "+" | "-" | "=" | "≠" | "<" | ">" | "×" | "÷"))
 }
 
 /// 분수의 내부 여백·닫는 괄호의 점유 뒤에 연산자 앞 여백을 중복 예약하지 않는다.

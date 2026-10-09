@@ -10,6 +10,22 @@ impl EqLayout {
         fs: f64,
     ) -> LayoutBox {
         let b = self.layout_node(body, fs);
+        // 부정 빗금은 위쪽 악센트가 아니다. 독립 Print의 저장 프레임은
+        // 본체와 같은 높이·기준선을 가지며 표시는 그 위에 겹친다.
+        if kind == super::super::symbols::DecoKind::StrikeThrough {
+            return LayoutBox {
+                font_size: fs,
+                x: 0.0,
+                y: 0.0,
+                width: b.width,
+                height: b.height,
+                baseline: b.baseline,
+                kind: LayoutKind::Decoration {
+                    kind,
+                    body: Box::new(b),
+                },
+            };
+        }
         // BOX는 위쪽 장식이 아니라 내용 전체를 감싼다. 원본 한컴 Print의
         // 일반 글자 상자는 글자 높이에 양쪽 0.1em 여유를 더한 높이다.
         if kind == super::super::symbols::DecoKind::Box {
