@@ -155,3 +155,26 @@ TSV를 실행하는 pipeline을 시작했다. Native lint와 fresh WASM 빌드�
 실제 테스트/전이 helper의 의미·대상 원본·독립 Print·최종 Native/fresh WASM
 선행 조건을 확인한 뒤 필요한 검사를 관계형으로 변경한다. #1139 전체 77개
 검사도 이 범위에 남아 있고 아직 변경하지 않았다.
+
+
+## 새 Native의 직접 검증
+
+새 Native 빌드는 exit 0으로 완료됐다. 실제 빌드한 라이브러리의 AST도
+9개 계약 모두 exit 0이다. 증거는
+`greek-prefix-contract-native-provenance.json`・
+`stage59-greek-prefix-contract-after.json`·log에 고정했다.
+
+greek-probe 1쪽은 92.56245%→100.00000%, quoted-probe 1쪽은
+99.07790%→99.13060%다. 새 before/after/Print 확대 이미지를 같은 입력·좌표·
+배율로 표시했다. `stage59-current-greek-command-before-after-print-detail.png`·
+`stage59-current-quoted-mode-before-after-print-detail.png`와 각각의 provenance에
+source commit·Native binary·PDF·PNG 해시를 남긴다.
+
+붙은 그리스 명령과 기본 이탤릭·정체 전환, 혼합 문자 표시가 개선됐다.
+그러나 인용 문자열의 +/−/= 양쪽 간격과 빼기 글리프 차이는 남는다.
+99%를 이유로 전체 완료 판정하지 않으며 다음 Stage 60의 독립 관측으로
+추가 보정을 진행한다. Stage 59 앞부분에서 ‘연산자 여백을 다시 넣지 않는다’고
+쓴 가정은 실제 Print의 수학 글리프·자동 간격과 다르므로 다음 단계에서 바로잡는다.
+
+Native fmt check·Native Clippy는 exit 0이다. fresh WASM build는 같은 source를
+유지하며 실행 중이다. 전체 Native TSV도 실행 중이며 최종 결과는 아직 없다.
