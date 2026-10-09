@@ -44,6 +44,18 @@ impl TypesetEngine {
             mut current_endnote_had_inline_object_vpos_overestimate,
         } = carry;
         let mut reserved_tail_spacing_px = 0.0;
+        if emitted_endnote_count > 0
+            && endnote_shape.is_some_and(|shape| endnote_between_notes_margin(shape) == 0)
+        {
+            if let Some(index) = last_render_endnote_para_local_idx {
+                let reclaimed =
+                    st.reclaim_endnote_tail_spacing(index, paragraphs.len() + index, self.dpi);
+                // 다음 미주의 저장 좌표 기준과 현재 단의 예약 공간은 같은 회수량을 쓴다.
+                // 앞 문단의 내용 끝과 내부 줄 원점은 이동하지 않는다.
+                vpos_offset = vpos_offset.saturating_sub(reclaimed);
+                prev_en_bottom_vpos = prev_en_bottom_vpos.map(|v| v.saturating_sub(reclaimed));
+            }
+        }
         if !emitted_endnote_separator {
             if let (Some(shape), Some(profile)) = (endnote_shape, endnote_flow_profile) {
                 let sep_height = profile.separator_height_px(self.dpi);

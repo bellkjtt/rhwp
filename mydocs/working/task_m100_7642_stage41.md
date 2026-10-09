@@ -40,3 +40,25 @@ RHWP는 앞 문단의 흐름 끝 249.04를 새 제목 원점으로 사용해 452
 진단 JSON·로그·TSV·nextrun은 ignored output에 보존한다. 실행 전후 source와
 입력·Print의 SHA를 고정하고, 이전 부정 기호 단계의 전쪽 결과는 해당 source로
 구분한다. 현재 단계의 구현·새 출력 검증은 아직 미완료다.
+
+## 최종 Native 후보의 선행 결과
+
+Native build exit 0(970.03초), Native Clippy exit 0(110.30초), fmt check
+exit 0(38.80초)이다. 생산 소스의 전체 Rust 파일 해시를 전후 대조했으며
+frozen 바이너리·명령은 `endnote-zero-tail-native-provenance.json`에 있다.
+
+| 구분선 위 / 미주 사이 / 구분선 아래 | 쪽 | 이전 Native | 보정 Native |
+| --- | --- | --- | --- |
+| 20 / 0 / 20 | 14 | 93.10374% | 96.06813% |
+| 20 / 0 / 20 | 15 | 75.79976% | 96.76117% |
+
+두 쪽의 일반 Visual Sweep은 exit 0, gate passed이며 문서 전체 쪽수는
+Native/Print 모두 21쪽이다. 새 15쪽 review PNG를 직접 열어 제목 이후의
+누적 세로 차이가 해소되고 내용·줄 순서가 유지됨을 판독했다. 일부 수식
+표시의 획·장평 차이는 여전히 별도로 확인한다. 선택 쪽 결과를 전쪽 완료로
+바꾸어 보고하지 않는다.
+
+`endnote-zero-tail-focused-native/`의 0/0/0 반례와 기본 미주 간격 대조는
+실행 중이다. 새 source의 전쪽 Native/fresh WASM과 회귀 검사는 미완료다.
+이전 source61bf의 원본 HWPX21쪽 fresh WASM은 exit 0, 최저90.64775%,
+누락·미달0으로 종료됐다. 이 결과는 새 간격0 보정 소스의 결과가 아니다.

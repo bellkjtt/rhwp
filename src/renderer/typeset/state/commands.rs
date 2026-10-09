@@ -655,6 +655,41 @@ impl TypesetState {
     pub(in crate::renderer::typeset) fn invalidate_vpos_after_clearance(&mut self, clearance: f64) {
         self.data.vpos_ladder_dirty |= clearance > 0.0;
     }
+    fn owns_endnote_tail(&self, paragraph_index: usize, line_count: usize) -> bool {
+        self.data.current_items.iter().any(|item| match item {
+            PageItem::FullParagraph { para_index } => *para_index == paragraph_index,
+            PageItem::PartialParagraph {
+                para_index,
+                end_line,
+                ..
+            } => *para_index == paragraph_index && *end_line == line_count,
+            _ => false,
+        })
+    }
+    /// 미주 사이 0 경계는 앞 미주의 내용 높이를 보존하고 마지막 줄 간격만 회수한다.
+    /// 앞 단의 tail이나 아직 마지막 줄을 소비하지 않은 조각은 변경하지 않는다.
+    pub(in crate::renderer::typeset) fn reclaim_endnote_tail_spacing(
+        &mut self,
+        index: usize,
+        paragraph_index: usize,
+        dpi: f64,
+    ) -> i32 {
+        let Some(paragraph) = self.data.endnote_paragraphs.get(index) else {
+            return 0;
+        };
+        let Some(line) = paragraph.line_segs.last() else {
+            return 0;
+        };
+        let spacing = line.line_spacing.max(0);
+        if spacing == 0 || !self.owns_endnote_tail(paragraph_index, paragraph.line_segs.len()) {
+            return 0;
+        }
+        if let Some(line) = self.data.endnote_paragraphs[index].line_segs.last_mut() {
+            line.line_spacing = 0;
+        }
+        self.data.current_height -= crate::renderer::hwpunit_to_px(spacing, dpi);
+        spacing
+    }
     pub(in crate::renderer::typeset) fn apply_endnote_tail_spacing(
         &mut self,
         index: usize,
@@ -673,15 +708,7 @@ impl TypesetState {
         line.line_spacing = spacing;
         // 간격은 완성된 마지막 줄이 소유한다. 앞 단의 tail이나 현재 단의
         // 미완성 조각에 같은 공간을 다시 청구하지 않는다.
-        let owns_tail = self.data.current_items.iter().any(|item| match item {
-            PageItem::FullParagraph { para_index } => *para_index == paragraph_index,
-            PageItem::PartialParagraph {
-                para_index,
-                end_line,
-                ..
-            } => *para_index == paragraph_index && *end_line == line_count,
-            _ => false,
-        });
+        let owns_tail = self.owns_endnote_tail(paragraph_index, line_count);
         if owns_tail {
             let reserved = crate::renderer::hwpunit_to_px(added, dpi);
             self.data.current_height += reserved;
