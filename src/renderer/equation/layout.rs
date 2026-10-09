@@ -405,9 +405,9 @@ impl EqLayout {
         // 연산자 좌우 여백
         let pad = if source_operator.is_some() {
             0.0
-        } else if matches!(text, "+" | "-" | "=" | "<" | ">" | "×" | "÷") {
+        } else if super::symbols::is_binary_symbol(text) || matches!(text, "=" | "<" | ">") {
             fs * 0.15
-        } else if matches!(text, "(" | ")" | "[" | "]" | "'" | "′" | "″" | "‴") {
+        } else if matches!(text, "(" | ")" | "[" | "]" | "'" | "′" | "″" | "‴" | "/") {
             // 보통 크기의 구분자는 관계·이항 연산자 여백을 갖지 않는다.
             0.0
         } else {

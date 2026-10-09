@@ -320,7 +320,12 @@ impl Tokenizer {
                 break;
             }
         }
-        Token::new(TokenType::Command, value, start)
+        // LaTeX 확장과 한컴의 일반 pm/mp 식별자를 구분한다.
+        match value.as_str() {
+            "pm" => Token::new(TokenType::Command, "PLUSMINUS", start),
+            "mp" => Token::new(TokenType::Command, "MINUSPLUS", start),
+            _ => Token::new(TokenType::Command, value, start),
+        }
     }
 
     /// 다중 문자 기호 읽기 (<=, >=, !=, ==, <<, >>, <<<, >>>)
@@ -329,6 +334,16 @@ impl Tokenizer {
         let ch = self.current()?;
         let next = self.peek(1).unwrap_or('\0');
         let third = self.peek(2).unwrap_or('\0');
+
+        // 붙은 ASCII 부호만 축약한다. 공백·Unicode minus·인용은 보존한다.
+        if let Some(symbol) = match (ch, next) {
+            ('+', '-') => Some("±"),
+            ('-', '+') => Some("∓"),
+            _ => None,
+        } {
+            self.pos += 2;
+            return Some(Token::new(TokenType::Symbol, symbol, start));
+        }
 
         // 3문자 기호
         if (ch == '<' || ch == '>') && next == ch && third == ch {
@@ -494,8 +509,11 @@ impl Tokenizer {
             return Token::new(TokenType::Symbol, sym, start);
         }
 
-        // Unicode 관계 기호는 비-ASCII 피연산자와 붙어도 독립 기호다.
-        if !ch.is_ascii() && super::symbols::is_relation_symbol(&ch.to_string()) {
+        // Unicode 산술·관계 기호는 비-ASCII 피연산자와 붙어도 독립 기호다.
+        if !ch.is_ascii()
+            && (super::symbols::is_relation_symbol(&ch.to_string())
+                || super::symbols::is_binary_symbol(&ch.to_string()))
+        {
             self.pos += 1;
             return Token::new(TokenType::Symbol, ch.to_string(), start);
         }
@@ -504,7 +522,11 @@ impl Tokenizer {
         if !ch.is_ascii() {
             let mut value = String::new();
             while let Some(c) = self.current() {
-                if c.is_ascii() || c == ' ' || super::symbols::is_relation_symbol(&c.to_string()) {
+                if c.is_ascii()
+                    || c == ' '
+                    || super::symbols::is_relation_symbol(&c.to_string())
+                    || super::symbols::is_binary_symbol(&c.to_string())
+                {
                     break;
                 }
                 value.push(c);
@@ -570,6 +592,7 @@ const GLUE_SAFE: &[&str] = &[
     "sec",
     "csc",
     "cot",
+    "min",
     // 장식
     "overrightarrow",
     "overleftarrow",

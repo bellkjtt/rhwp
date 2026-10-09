@@ -73,3 +73,68 @@ plusminus는 이번 실제 Print에서 ±로 확인됐다. 미검증 별칭을 �
 현재 source f6f51dd5d의 Native 빌드·fmt·Native Clippy는 통과했지만 전체
 55개·853쪽과 fresh WASM은 아직 실행 중이다. 기존 관련 회귀의 관계형
 전환도 선행 조건 뒤에 진행하며 최종 완료로 보고하지 않는다.
+
+## 명령 대소문자와 축약 경계의 추가 Print
+
+20개 입력의 독립 Print도 한 쪽으로 완료했다. job은
+`31102d20-a7a2-453a-aed7-f2a4b52d760a`, Hancom 13.0.0.3901,
+PrintMethod 0, frame_print_to_pdf_ex_one_up이며 PDF SHA-256은
+`61225a30eb585990266b9cf64262df092882cf9c8de85e7585e383530b6e34fe`다.
+`stage61-operator-alias-probe/print-alias-review.png`를 직접 열어 다음
+구별을 확인했다.
+
+| 입력 | 독립 Print의 해석 |
+| --- | --- |
+| plusminus / PLUSMINUS | ± |
+| MINUSPLUS | ∓ |
+| minusplus | 정체 min 함수와 이탤릭 usplus |
+| pm / PM / mp / MP | 일반 문자 |
+| 붙은 ASCII +- / -+ | ± / ∓ |
+| ordinary space로 분리한 + - / - + | 두 기호 보존 |
+| ASCII +와 Unicode −를 붙인 +− / −+ | 두 기호 보존 |
+| 직접 Unicode ± / ∓ | 수학 기호 |
+| 인용 ASCII +- / -+ | 두 기호 보존 |
+| 인용 Unicode ± / ∓ | 수학 기호 표시 |
+
+현재의 PM/MP alias와 MINUSPLUS의 무조건 대소문자 재조회는 이 계약과
+다르다. LaTeX 확장인 백슬래시 pm/mp는 별도의 명령 읽기 경로에서 보존하고
+한컴의 일반 문자열을 그 확장으로 해석하지 않는다. min 접두사는 실제
+함수 의미로 분리하며 인용 문자열과 완전한 명령의 경계는 보존한다.
+이 표는 실제 입력의 의미 근거이며 Native/fresh WASM 시각 통과를
+선언하거나 절대 px 회귀 기대값을 추가하는 근거로 대신하지 않는다.
+
+## 구현과 의미 진단
+
+비인용 tokenizer는 서로 붙은 ASCII +-/-+만 ±/∓로 변환한다. 인용과
+ordinary space 및 Unicode minus 혼용은 별도 경계로 유지한다. Unicode
+산술 기호는 문자 덩어리에 흡수하지 않고 parser의 수학 기호로 전달한다.
+일반 pm/PM/mp/MP는 별칭에서 제거했고 백슬래시 pm/mp는 LaTeX 읽기
+경로에서 기호로 전달한다. MINUSPLUS의 exact case와 min 함수 접두사도
+독립 Print 계약을 따른다. 기존 lookup_symbol(pm) 단위 기대값 한 건은
+이 독립 의미 근거에 따라 None으로 정정했다. 렌더 baseline은 변경하지 않았다.
+
+배치의 소비 경로는 tokenizer → parser Symbol/MathSymbol →
+layout_node → layout_symbol/layout_math_symbol → source_font_symbol의
+논리 전진 → row_children의 인접 여백 → layout_row의 최종 glyph 원점이다.
+인용도 명령을 재해석하지 않고 같은 Symbol 행으로 전달한다. ±/∓에는
+각각 UPM 1024 전진 831/1024와 이항 여백을 사용한다. slash는 같은
+전진 512를 소비하고 이항 여백을 예약하지 않는다. 문서 ID나 고정 px
+좌표로 분기하지 않는다.
+
+원본 모듈을 직접 include한 의미 진단은 수정 전 8건 실패, 수정 후
+0건 실패다. 축약·별칭·min 함수·LaTeX 확장·공백·Unicode minus·인용
+보존을 한 묶음으로 확인했다. 로그는 stage61-source-ast-before.log 및
+stage61-source-ast-after.log에 보존한다. 진단 결과는 실제 Native/fresh
+WASM의 시각 통과나 정식 렌더 회귀 검사의 대체가 아니다.
+
+이전 source f6f51dd5d의 fresh WASM은 exit 0, 1243.09초로 완료했다.
+패키지와 Studio의 rhwp.js/rhwp_bg.wasm SHA-256은 각각 일치하며,
+WASM은 9fad268accac7dd7570612cfc23cbee0db8a3134d9e5c2370634b1d1ba8be065다.
+수정 후 코드는 별도로 Native 빌드·기호 진단 전체 페이지·대표 원본을
+확인한 뒤 fresh WASM과 전체 55개·853쪽 검증으로 이어간다.
+
+source-side 정책 검사는 고정 base
+79abd9e49675f4286eaed38197f7e837afb744e7과 대조해 exit 0이며
+4198 tests / 298 modules를 유지했다. LaTeX pm/mp는 정규 명령 토큰으로
+전달해 기존 command의 첨자 처리도 유지한다. 아직 전체 Rust나 시각
+검증을 통과했다고 판정하지 않는다.

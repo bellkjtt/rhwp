@@ -240,7 +240,10 @@ impl EqParser {
                 // -> 는 →로 변환
                 if val == "->" {
                     EqNode::MathSymbol("→".to_string())
-                } else if !val.is_ascii() && super::symbols::is_relation_symbol(&val) {
+                } else if !val.is_ascii()
+                    && (super::symbols::is_relation_symbol(&val)
+                        || super::symbols::is_binary_symbol(&val))
+                {
                     EqNode::MathSymbol(val)
                 } else {
                     EqNode::Symbol(val)

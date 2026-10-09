@@ -17,9 +17,8 @@ impl EqLayout {
                 } else {
                     match ch {
                         // 인용 안의 기호도 공통 수학 글리프·인접 간격을 소비한다.
-                        '+' | '-' | '=' | '<' | '>' | '×' | '÷' | '(' | ')' => {
-                            EqNode::Symbol(literal)
-                        }
+                        '+' | '-' | '−' | '±' | '∓' | '=' | '<' | '>' | '×' | '÷' | '(' | ')'
+                        | '/' => EqNode::Symbol(literal),
                         ' ' => EqNode::Space(SpaceKind::Thin),
                         _ => EqNode::Number(literal),
                     }

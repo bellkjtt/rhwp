@@ -5,6 +5,11 @@
 
 use std::collections::HashMap;
 
+/// 이항 산술 기호는 직접 Unicode로 입력해도 문자 식별자와 분리한다.
+pub(crate) fn is_binary_symbol(symbol: &str) -> bool {
+    matches!(symbol, "+" | "-" | "−" | "±" | "∓" | "×" | "÷")
+}
+
 /// 피연산자를 비교하는 관계 기호. 명령 표기와 직접 Unicode 표기에 같은 간격을 준다.
 pub(crate) fn is_relation_symbol(symbol: &str) -> bool {
     matches!(
@@ -159,9 +164,7 @@ static OPERATORS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
         ("DIVDE", "÷"),
         ("DIVIDE", "÷"),
         ("PLUSMINUS", "±"),
-        ("PM", "±"),
         ("MINUSPLUS", "∓"),
-        ("MP", "∓"),
         ("CDOT", "·"),
         ("CIRC", "∘"),
         ("BULLET", "•"),
@@ -277,8 +280,6 @@ static OPERATORS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
         ("cdot", "·"),
         ("times", "×"),
         ("div", "÷"),
-        ("pm", "±"),
-        ("mp", "∓"),
         ("cup", "∪"),
         ("cap", "∩"),
         ("vdash", "⊢"),
@@ -605,6 +606,10 @@ pub fn is_function(cmd: &str) -> bool {
 /// 원래 대소문자로 먼저 찾고 실패하면 대문자 변환 후 재시도한다.
 /// 그리스 문자와 화살표는 대소문자가 의미를 가지므로 (alpha ≠ Alpha) 원래 값만 사용.
 pub fn lookup_symbol(cmd: &str) -> Option<&'static str> {
+    // 독립 한컴 Print에서 MINUSPLUS만 명령이며 minusplus는 min과 usplus다.
+    if cmd != "MINUSPLUS" && cmd.eq_ignore_ascii_case("MINUSPLUS") {
+        return None;
+    }
     // 1차: 원래 대소문자로 조회
     if let Some(s) = GREEK_LOWER
         .get(cmd)
@@ -718,7 +723,7 @@ mod tests {
         assert_eq!(lookup_symbol("leq"), Some("≤"));
         assert_eq!(lookup_symbol("geq"), Some("≥"));
         assert_eq!(lookup_symbol("inf"), Some("∞"));
-        assert_eq!(lookup_symbol("pm"), Some("±"));
+        assert_eq!(lookup_symbol("pm"), None);
         // 그리스 문자는 대소문자 구분 유지
         assert_eq!(lookup_symbol("alpha"), Some("α"));
         assert_eq!(lookup_symbol("Alpha"), Some("Α"));
