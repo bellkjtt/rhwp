@@ -30,6 +30,23 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
 }
 
 pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
+    if matches!(text, "±" | "∓") {
+        let (width, _) = operator_metrics(text, fs, dpi)?;
+        return Some(LayoutBox {
+            font_size: fs,
+            x: 0.0,
+            y: 0.0,
+            width,
+            height: fs,
+            baseline: fs * 0.8,
+            kind: LayoutKind::FontGlyph {
+                text: text.to_string(),
+                // 측정에 쓴 face를 표시에도 사용한다. 설치되지 않은 환경은 공개 face로 대체한다.
+                font_family: "HYhwpEQ, Latin Modern Math, STIX Two Math, serif",
+                outline: None,
+            },
+        });
+    }
     if matches!(text, "×" | "≠") {
         let (width, _) = operator_metrics(text, fs, dpi)?;
         let baseline = fs * 0.8;
