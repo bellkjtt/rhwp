@@ -181,32 +181,33 @@ fn render_box(
             render_box(ctx, bottom, x, y, color, fs, italic, bold);
         }
         LayoutKind::Sqrt { index, body } => {
-            let sign_h = lb.height;
-            let body_left = x + body.x - fs * 0.1;
-            let sign_x = x;
-            let v_top = y;
-            let v_mid_x = body_left - fs * 0.15;
-            let v_mid_y = y + sign_h;
-            let v_start_x = v_mid_x - fs * 0.3;
-            let v_start_y = y + sign_h * 0.6;
-            let tick_x = v_start_x - fs * 0.1;
-            let tick_y = v_start_y - fs * 0.05;
-
-            ctx.set_stroke_style_str(color);
-            ctx.set_line_width(fs * 0.04);
+            let geometry = super::radical_outline::geometry(lb, body, fs);
+            ctx.set_fill_style_str(color);
             ctx.begin_path();
-            ctx.move_to(tick_x, tick_y);
-            ctx.line_to(v_start_x, v_start_y);
-            ctx.line_to(v_mid_x, v_mid_y);
-            ctx.line_to(body_left, v_top);
-            ctx.line_to(x + lb.width, v_top);
+            for command in &geometry.outline {
+                use super::GlyphOutlineCommand as Command;
+                match *command {
+                    Command::Move((a, b)) => ctx.move_to(x + a, y + b),
+                    Command::Line((a, b)) => ctx.line_to(x + a, y + b),
+                    Command::Cubic([(a, b), (c, d), (e, f)]) => {
+                        ctx.bezier_curve_to(x + a, y + b, x + c, y + d, x + e, y + f)
+                    }
+                    Command::Close => ctx.close_path(),
+                }
+            }
+            ctx.fill();
+            ctx.set_stroke_style_str(color);
+            ctx.set_line_width(geometry.rule_thickness);
+            ctx.begin_path();
+            ctx.move_to(x + geometry.bar_start.0, y + geometry.bar_start.1);
+            ctx.line_to(x + geometry.bar_end.0, y + geometry.bar_end.1);
             ctx.stroke();
 
             if let Some(idx) = index {
                 render_box(
                     ctx,
                     idx,
-                    sign_x,
+                    x,
                     y,
                     color,
                     fs * RADICAL_DEGREE_SCALE,

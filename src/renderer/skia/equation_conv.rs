@@ -277,31 +277,48 @@ fn render_box(
             render_box(canvas, fonts, bottom, x, y, color, fs, italic, bold);
         }
         LayoutKind::Sqrt { index, body } => {
-            let sign_h = lb.height;
-            let body_left = x + body.x - fs * 0.1;
-            let sign_x = x;
-            let v_top = y;
-            let v_mid_x = body_left - fs * 0.15;
-            let v_mid_y = y + sign_h;
-            let v_start_x = v_mid_x - fs * 0.3;
-            let v_start_y = y + sign_h * 0.6;
-            let tick_x = v_start_x - fs * 0.1;
-            let tick_y = v_start_y - fs * 0.05;
-
+            let geometry = crate::renderer::equation::radical_outline::geometry(lb, body, fs);
             let mut path = PathBuilder::new();
-            path.move_to((tick_x as f32, tick_y as f32));
-            path.line_to((v_start_x as f32, v_start_y as f32));
-            path.line_to((v_mid_x as f32, v_mid_y as f32));
-            path.line_to((body_left as f32, v_top as f32));
-            path.line_to(((x + lb.width) as f32, v_top as f32));
-            canvas.draw_path(&path.detach(), &stroke_paint(color, fs * 0.04));
+            for command in &geometry.outline {
+                use crate::renderer::equation::GlyphOutlineCommand as Command;
+                match *command {
+                    Command::Move((a, b)) => {
+                        path.move_to(((x + a) as f32, (y + b) as f32));
+                    }
+                    Command::Line((a, b)) => {
+                        path.line_to(((x + a) as f32, (y + b) as f32));
+                    }
+                    Command::Cubic([(a, b), (c, d), (e, f)]) => {
+                        path.cubic_to(
+                            ((x + a) as f32, (y + b) as f32),
+                            ((x + c) as f32, (y + d) as f32),
+                            ((x + e) as f32, (y + f) as f32),
+                        );
+                    }
+                    Command::Close => {
+                        path.close();
+                    }
+                }
+            }
+            canvas.draw_path(&path.detach(), &fill_paint(color));
+            canvas.draw_line(
+                (
+                    (x + geometry.bar_start.0) as f32,
+                    (y + geometry.bar_start.1) as f32,
+                ),
+                (
+                    (x + geometry.bar_end.0) as f32,
+                    (y + geometry.bar_end.1) as f32,
+                ),
+                &stroke_paint(color, geometry.rule_thickness),
+            );
 
             if let Some(index) = index {
                 render_box(
                     canvas,
                     fonts,
                     index,
-                    sign_x,
+                    x,
                     y,
                     color,
                     fs * crate::renderer::equation::layout::RADICAL_DEGREE_SCALE,

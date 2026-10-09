@@ -191,27 +191,16 @@ fn render_box(
             render_box(svg, bottom, x, y, color, fs, italic, bold);
         }
         LayoutKind::Sqrt { index, body } => {
-            // √ 기호
-            let sign_h = lb.height;
-            let body_left = x + body.x - fs * 0.1;
-            let sign_x = x;
-            // V 모양 경로
-            let v_top = y;
-            let v_mid_x = body_left - fs * 0.15;
-            let v_mid_y = y + sign_h;
-            let v_start_x = v_mid_x - fs * 0.3;
-            let v_start_y = y + sign_h * 0.6;
-            let tick_x = v_start_x - fs * 0.1;
-            let tick_y = v_start_y - fs * 0.05;
-
+            let geometry = super::radical_outline::geometry(lb, body, fs);
             svg.push_str(&format!(
-                "<path d=\"M{:.2},{:.2} L{:.2},{:.2} L{:.2},{:.2} L{:.2},{:.2} L{:.2},{:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
-                tick_x, tick_y,
-                v_start_x, v_start_y,
-                v_mid_x, v_mid_y,
-                body_left, v_top,
-                x + lb.width, v_top,
-                color, fs * 0.04,
+                "<path d=\"{}\" transform=\"translate({x:.4},{y:.4})\" fill=\"{color}\"/>\n",
+                super::multiplication_outline::path_data(&geometry.outline),
+            ));
+            svg.push_str(&format!(
+                "<line x1=\"{:.4}\" y1=\"{:.4}\" x2=\"{:.4}\" y2=\"{:.4}\" stroke=\"{color}\" stroke-width=\"{:.4}\"/>\n",
+                x + geometry.bar_start.0, y + geometry.bar_start.1,
+                x + geometry.bar_end.0, y + geometry.bar_end.1,
+                geometry.rule_thickness,
             ));
 
             // 인덱스 (있으면)
@@ -219,7 +208,7 @@ fn render_box(
                 render_box(
                     svg,
                     idx,
-                    sign_x,
+                    x,
                     y,
                     color,
                     fs * super::layout::RADICAL_DEGREE_SCALE,
