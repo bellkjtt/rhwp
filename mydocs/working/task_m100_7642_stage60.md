@@ -78,3 +78,23 @@ cmap 훼손 때문에 명시적으로 거부했다. 해당 시도는 argument ex
 실행 중인 검증은 원본 글꼴 full 임베딩을 유지한다.
 `stage60-subset-font-diagnostic-status.json`에 구분했다. 실제 공급 glyph의
 outline/advance·cmap을 보존한 외부 subset을 full로 주는 별도 계약과 혼동하지 않는다.
+
+
+## 실제 소비 결과를 확인한 뒤 적용
+
+실제 Native의 대응 LayoutBox를 더 확인했다. 비인용 x+y는 공통
+symbol_spacing을 사용하며 같은 Print 선언 틀과 글리프 원점에 대응한다.
+일반 괄호 (x)의 실제 paint 결과도 이미 공통 Row로 변환되어 폭 17.84다.
+layout_paren의 private helper만 보고 최종 출력이 다르다고 판정하지 않는다.
+증거는 `stage60-current-quoted-paired-layouts.log`다.
+
+Stage 59 fresh WASM은 exit 0, 1212초로 종료했고 고정 패키지와 Studio
+public의 JS/WASM SHA-256 일치를 확인했다. 빌드 중 소스는 유지했다.
+종료 확인 뒤 Stage 60 수정안을 적용했다. AST의 인용 원문은 보존하고,
+문자별 표시 노드만 공통 줄 계산에 전달한다. +/−/=, Thin 공간, 괄호의
+측정과 paint가 같은 결과를 소비하며 여백을 나중에 clamp하지 않는다.
+
+새 Native를 빌드해 독립 Print 진단 입력 3개, 원본의 영향 페이지, 전체
+55개·853쪽 Native/fresh WASM TSV를 다시 확인한다. 앞 source의 47쪽은
+Native 최저 90% 이상이지만 새 source의 최종 증거로 사용하지 않는다.
+관련 회귀의 관계형 전환과 전체 Rust/lint는 아직 완료되지 않았다.
