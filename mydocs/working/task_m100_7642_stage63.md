@@ -92,3 +92,19 @@ PDF SHA-256은 60c3fc5eec33e5b262edc8886e6802cf5ee5ecda106bc9d43b4322fb853d0b0c�
 `cargo fmt --all -- --check`와 `git diff --check`는 exit 0이다.
 신규 소스 검사는 추가하지 않았고 source-side 기대값도 바꾸지 않았다.
 다음 고정 소스의 빌드·확대 판독 결과는 별도로 기록한다.
+
+## sample16의 다음 조사 경계
+
+기존 고정 Native source f6f51dd5d의 22쪽 첫 항목은 원본 문단 439다.
+독립 Print에서는 같은 문장이 21쪽 마지막 본문에 있고 22쪽은 문단 440의
+4번 제목으로 시작한다. 이 차이는 최신 수식 보정의 해결로 보고하지 않는다.
+
+원본 439는 저장 LineSeg가 없고 ParaShape 앞 간격 1704 HU,
+13pt/-12% 글자 간격이다. 440은 pageBreakBefore가 false이며 저장
+첫 vpos는 852 HU다. 엔진의 HWP3 변환본 앞 간격 생산·측정·배치가
+동일한 결과를 쓰는지, 이전 쪽 마지막 문단의 실제 점유를 확인한다.
+현재 실행 중인 81989aafb 빌드의 Rust 소스는 유지했다.
+
+stage63-ladder-before-frame-correction-detail-review.png는 실제 source
+00bac93e4의 원본 확대 대조다. 전체 쪽 79.64318% 및 내려간 괘선·숫자를
+확인했고 사용자에게 표시했다. 현재 source 81989aafb의 결과가 아니다.
