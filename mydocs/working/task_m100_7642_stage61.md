@@ -157,3 +157,19 @@ Native 빌드 소유 프로세스만 종료하고 종료 증거·부분 빌드 �
 첨자 보정 뒤 여덟 명령/Unicode/LaTeX 첨자 동등성 검사와 문자·공백·
 인용 경계 진단은 모두 통과했고 실패 0건이다. 원본 모듈을 직접
 include한 실행이며 최종 Native/fresh WASM·전체 회귀는 계속 필요하다.
+
+## 종료된 중간 산출물 정리
+
+소유 queue와 개별 입력의 종료를 확인하고, 해당 경로를 사용하는 실제
+프로세스가 없는 이전 중간 SVG만 삭제했다. 275개, 15,542,635,666bytes
+(약 14.48GiB)이며 해시·경로·소유 근거는
+stage61-terminal-obsolete-svg-cleanup.jsonl과 summary JSON에 보존한다.
+HWP/HWPX/PDF, PNG, TSV, 로그, 고정 바이너리/WASM 및 공용 Cargo
+캐시는 그대로 유지했다. input/PDF의 대조 근거를 삭제한 정리는 아니다.
+
+최종 보정 source 74d795e0d에서 별도의 Native 빌드와 48개 네 크기
+입력·20개 별칭/경계 입력·기존 인용/그리스 입력·대표 원본의 비교 및
+fmt/Native Clippy를 시작했다. 실제 종료 결과가 나오기 전에는
+시각 통과나 최종 검증 완료로 기록하지 않는다. 전체 55개·853쪽,
+fresh WASM, 확대 판독, 관계형 회귀 전환과 전체 Rust/필수 lint는
+계속 남아 있다.
