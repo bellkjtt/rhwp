@@ -3,6 +3,7 @@
 //! 문단 텍스트를 토큰화하고 줄 나눔을 수행한다.
 //! 한글 어절/글자, 영어 단어/하이픈, CJK 개별 분할을 지원한다.
 
+use super::picture_anchor_projection::{self, FramePurpose};
 use super::supplemental_clusters::ParagraphMetricScope;
 use super::{char_lang_slot, find_active_char_shape, is_lang_neutral, ComposedParagraph};
 use crate::model::control::{Control, CTRL_CHAR_CODE_UNITS};
@@ -470,7 +471,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
             let style_id = find_active_char_shape(char_shapes, utf16_pos);
             let ts = metric_scope.style(styles, style_id, current_lang, i);
             let font_size = token_line_font_size(styles, style_id);
-            let inline_width = inline_width_px_at(inline_controls, i);
+            let inline_width = inline_width_px_at(inline_controls, i, styles);
             let unspaced = crate::renderer::TextStyle {
                 letter_spacing: 0.0,
                 ..ts.clone()
@@ -615,7 +616,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                 let cluster: String = text_chars[i..cluster_end].iter().collect();
                 let mut w = estimate_text_width_unrounded(&cluster, &ts)
                     + (i..cluster_end)
-                        .map(|idx| inline_width_px_at(inline_controls, idx))
+                        .map(|idx| inline_width_px_at(inline_controls, idx, styles))
                         .sum::<f64>();
                 // 글자 모드에서도 **줄 머리 금칙**을 지킨다.
                 //
@@ -654,7 +655,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                     };
                     let follow_ts = metric_scope.style(styles, follow_style, follow_lang, i);
                     w += estimate_text_width_unrounded(&text_chars[i].to_string(), &follow_ts)
-                        + inline_width_px_at(inline_controls, i);
+                        + inline_width_px_at(inline_controls, i, styles);
                     i += 1;
                 }
                 tokens.push(BreakToken::Text {
@@ -750,7 +751,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                             let lang = if is_lang_neutral(c) { current_lang } else { 1 };
                             let ts = metric_scope.style(styles, sid, lang, ci);
                             estimate_text_width_unrounded(&c.to_string(), &ts)
-                                + inline_width_px_at(inline_controls, ci)
+                                + inline_width_px_at(inline_controls, ci, styles)
                         })
                         .collect();
                     tokens.push(BreakToken::Text {
@@ -776,7 +777,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                 let ts = metric_scope.style(styles, style_id, current_lang, i);
                 let fs = token_line_font_size(styles, style_id);
                 let w = estimate_text_width_unrounded(&ch.to_string(), &ts)
-                    + inline_width_px_at(inline_controls, i);
+                    + inline_width_px_at(inline_controls, i, styles);
                 tokens.push(BreakToken::Text {
                     start_idx: i,
                     end_idx: i + 1,
@@ -803,7 +804,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
             let ts = metric_scope.style(styles, style_id, current_lang, i);
             let fs = token_line_font_size(styles, style_id);
             let w = estimate_text_width_unrounded(&ch.to_string(), &ts)
-                + inline_width_px_at(inline_controls, i);
+                + inline_width_px_at(inline_controls, i, styles);
             tokens.push(BreakToken::Text {
                 start_idx: i,
                 end_idx: i + 1,
@@ -835,7 +836,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
             let ts = metric_scope.style(styles, style_id, lang, i);
             let fs = token_line_font_size(styles, style_id);
             let w = estimate_text_width_unrounded(&ch.to_string(), &ts)
-                + inline_width_px_at(inline_controls, i);
+                + inline_width_px_at(inline_controls, i, styles);
             tokens.push(BreakToken::Text {
                 start_idx: i,
                 end_idx: i + 1,
@@ -918,7 +919,7 @@ fn measure_token_char_widths(
         let ts = metric_scope.style(styles, style_id, lang, idx);
         let cluster: String = chars[offset..cluster_end].iter().collect();
         let width =
-            estimate_text_width_unrounded(&cluster, &ts) + inline_width_px_at(inline_controls, idx);
+            estimate_text_width_unrounded(&cluster, &ts) + inline_width_px_at(inline_controls, idx, styles);
         total += width;
         char_widths.push(width);
         for tail in offset + 1..cluster_end {
@@ -954,11 +955,17 @@ fn hangul_jamo_cluster_end(chars: &[char], start: usize) -> usize {
     end
 }
 
-fn inline_width_px_at(inline_controls: &[FlowInlineControl], char_idx: usize) -> f64 {
+fn inline_width_px_at(
+    inline_controls: &[FlowInlineControl],
+    char_idx: usize,
+    styles: &ResolvedStyleSet,
+) -> f64 {
+    // 스타일의 px 메트릭과 같은 배율로 원본 제어문의 HWPUNIT을 해소한다.
+    let dpi = styles.resolved_dpi.unwrap_or(crate::renderer::DEFAULT_DPI);
     inline_controls
         .iter()
         .filter(|control| control.char_position == char_idx)
-        .map(|control| control.width_hwp as f64 / 75.0)
+        .map(|control| hwpunit_to_px(control.width_hwp, dpi))
         .sum()
 }
 
@@ -1036,7 +1043,7 @@ fn prepare_paragraph_projection(
             '\t' | '\n' | '\r' => 0.0,
             ' ' => space_metric.space_advance(&text_style),
             _ => estimate_text_width_unrounded(&character.to_string(), &text_style),
-        } + inline_width_px_at(inline_controls, index);
+        } + inline_width_px_at(inline_controls, index, styles);
         pen += scalar_width.max(0.0);
         base_positions.push(pen);
     }
@@ -3438,7 +3445,25 @@ pub(crate) fn layout_paragraph_in_frame(
     styles: &ResolvedStyleSet,
     dpi: f64,
 ) -> Option<Vec<LineSeg>> {
-    layout_paragraph_in_frame_impl(para, frame, styles, dpi, true, 0)
+    layout_paragraph_in_frame_impl(para, frame, styles, dpi, true, 0, FramePurpose::Body)
+}
+
+/// 일반 본문 수용 조건을 유지하고 원본 선두 번호와 그림 앵커만 조회한다.
+pub(crate) fn layout_picture_anchor_in_frame(
+    para: &Paragraph,
+    frame: &mut LayoutFrame,
+    styles: &ResolvedStyleSet,
+    dpi: f64,
+) -> Option<Vec<LineSeg>> {
+    layout_paragraph_in_frame_impl(
+        para,
+        frame,
+        styles,
+        dpi,
+        true,
+        0,
+        FramePurpose::PictureAnchor,
+    )
 }
 
 fn layout_paragraph_in_frame_impl(
@@ -3448,14 +3473,20 @@ fn layout_paragraph_in_frame_impl(
     dpi: f64,
     allow_kerning: bool,
     start_char: usize,
+    purpose: FramePurpose,
 ) -> Option<Vec<LineSeg>> {
     // [#6102] 폭-중립 자리차지 표 host 도 fill 대상 — 표는 줄 폭을 소비하지
     // 않으므로(자기 레이아웃 소유자가 따로 배치) 텍스트만 재래핑하면 된다.
     // [#7160] 저장 줄이 없는 글자처럼 취급 표 host 는 이 채움이 유일한 소유자다.
-    if !supports_picture_band_frame_controls(para)
-        && !supports_cached_body_frame_controls(para)
-        && !(para.line_segs.is_empty() && supports_tac_table_band_frame_controls(para))
-    {
+    let supported = match purpose {
+        FramePurpose::Body => {
+            supports_picture_band_frame_controls(para)
+                || supports_cached_body_frame_controls(para)
+                || (para.line_segs.is_empty() && supports_tac_table_band_frame_controls(para))
+        }
+        FramePurpose::PictureAnchor => picture_anchor_projection::admits(para),
+    };
+    if !supported {
         return None;
     }
 
@@ -3518,7 +3549,7 @@ fn layout_paragraph_in_frame_impl(
     // Keep Equation width and height ownership with the current scalar
     // `FlowInlineControl` path. A non-TAC Picture deliberately contributes no
     // inline token: it is represented by the caller's exclusion instead.
-    let inline_controls = if let Some((_, controls)) = projected.as_ref() {
+    let mut inline_controls = if let Some((_, controls)) = projected.as_ref() {
         controls.clone()
     } else if para.line_segs.is_empty() && supports_tac_table_band_frame_controls(para) {
         // [#7160] 저장 줄이 없는 TAC 표 host 는 표 폭까지 줄 경계 판정에 넣는다.
@@ -3526,6 +3557,26 @@ fn layout_paragraph_in_frame_impl(
     } else {
         flow_inline_controls(para)
     };
+    if purpose == FramePurpose::PictureAnchor {
+        let prefix = crate::renderer::layout::leading_endnote_prefix_geometry(para, styles, 0);
+        if prefix.advance > 0.0 && prefix.height > 0.0 {
+            if std::env::var_os("RHWP_PICTURE_ANCHOR_DEBUG").is_some() {
+                eprintln!(
+                    "PICTURE_ANCHOR_PREFIX advance={:.4} height={:.4} baseline={:.4}",
+                    prefix.advance, prefix.height, prefix.baseline,
+                );
+            }
+            // 표시가 전진시키는 첫 본문의 원점을 동일한 inline 채움에 연결한다.
+            // 원본 scalar/control offset을 바꾸거나 번호를 문서에 삽입하지 않는다.
+            inline_controls.push(FlowInlineControl {
+                char_position: 0,
+                width_hwp: px_to_hwpunit(prefix.advance, dpi),
+                height_hwp: px_to_hwpunit(prefix.height, dpi),
+                baseline_distance_hwp: Some(px_to_hwpunit(prefix.baseline, dpi)),
+            });
+            inline_controls.sort_by_key(|control| control.char_position);
+        }
+    }
     // [#3128] 프레임이 들여쓰기 추적을 잃던 자리. 종전에는 여기서 `false` 를 박아
     // 두어, 저장 `LINE_SEG` 가 없는 들여쓴 셀 문단도 글꼴 고유 공백 폭으로 쟀다.
     // 실측: `76076_regulatory_analysis.hwp` 에서 이 술어를 만족하는 문단이 74 개고,
@@ -3921,7 +3972,9 @@ fn layout_paragraph_in_frame_impl(
     if kerning_failed {
         // 한 boundary라도 예산/범위 검증에 실패하면 일부 K1 row를 게시하지
         // 않고 문단 전체를 원래 scalar transaction으로 다시 실행한다.
-        return layout_paragraph_in_frame_impl(para, frame, styles, dpi, false, start_char);
+        return layout_paragraph_in_frame_impl(
+            para, frame, styles, dpi, false, start_char, purpose,
+        );
     }
     result
 }
@@ -4106,7 +4159,16 @@ pub(crate) fn resolve_stored_line_segs_in_frame(
                 u32::MAX,
                 para.text.chars().count(),
             );
-            if layout_paragraph_in_frame_impl(para, frame, styles, dpi, true, start_char).is_some()
+            if layout_paragraph_in_frame_impl(
+                para,
+                frame,
+                styles,
+                dpi,
+                true,
+                start_char,
+                FramePurpose::Body,
+            )
+            .is_some()
             {
                 return Some(StoredRowResolution::Reflowed);
             }

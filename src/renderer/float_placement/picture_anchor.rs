@@ -78,10 +78,10 @@ pub(crate) fn stored_picture_anchor_delta(
     if !paragraph_box.is_usable() {
         return None;
     }
-    let mut input = paragraph.clone();
-    input.line_segs.clear();
     let mut frame = paragraph_box.frame(0);
-    let rows = composer::layout_paragraph_in_frame(&input, &mut frame, styles, dpi)?;
+    // 이 조회는 저장 차선 폭을 재사용하지 않고 전폭 frame에 직접 채운다.
+    // 유효한 저장 줄의 들여쓰기 의도까지 지우지 않는다.
+    let rows = composer::layout_picture_anchor_in_frame(paragraph, &mut frame, styles, dpi)?;
     let first = rows.first()?;
     let anchor = rows.iter().rfind(|row| row.text_start <= raw_start)?;
     if debug {

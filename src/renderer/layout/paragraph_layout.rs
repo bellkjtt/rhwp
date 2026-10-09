@@ -2727,6 +2727,7 @@ const EMPTY_LINE_OWN_MARGIN_TOLERANCE_HU: i32 = 200;
 const TAC_OBJECT_ASCENT_RATIO: f64 = 0.85;
 
 mod endnote_prefix;
+pub(crate) use endnote_prefix::leading_endnote_prefix_geometry;
 mod inline_picture_alignment;
 
 /// [#7548] 문단의 전폭 저장 줄(가장 넓은 원본 줄)의 시작 cs 와 끝(cs+sw).
