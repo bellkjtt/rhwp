@@ -85,3 +85,41 @@ literal text 배치 경로로 연결한다. 숫자와 한글·기호·혼합 문
 새 배치 회귀·fixture·baseline은 전체 관련 출력 90% 이상과 직접 판독을
 충족한 뒤 관계형으로 추가·변경한다. 전체 55개·853쪽과 기존 검사 전환의
 원래 범위는 계속 유지한다.
+
+
+## 적용과 혼합 문자열의 독립 대조
+
+앞 소스 de11af0c7의 fresh WASM은 exit 0, 1274.62초로 종료했다.
+패키지·Studio public의 JS/WASM SHA-256 일치를 확인하고 수정안을 적용했다.
+앞 소스의 집중 fresh WASM은 고정한 바이너리·패키지로 별도 실행한다.
+새 소스와 혼동하지 않으며 빌드 중 source를 변경하지 않았다.
+
+현재 tokenizer/parser/ast 원본 모듈을 직접 include한 의미 진단에서 앞서 실패한
+9개 계약은 모두 통과하여 exit 0이다. `stage59-current-source-ast-after.json`·log에
+실제 source hash를 남겼다. 이 의미 검사로 출력 검증을 대체하지 않는다.
+
+추가 24개 혼합 문자열도 같은 정상 section과 수식 문단에서 생성한 뒤 한컴
+2024 Save/Print로 확인했다. Print job은 `27bbf59c-d23f-49f6-880a-c26029fa5780`,
+Hancom 13.0.0.3901, PrintMethod 0, frame_print_to_pdf_ex_one_up이다.
+PDF SHA-256은 `4f159634c2e1a458ba16161b9633827ddd44953c121b91b4c43cb3c33e4143d3`다.
+`stage59-quoted-mode-probe/input-plan.json`·`print-detail-provenance.json`과
+`stage59-quoted-mode-probe-mcp-print.json`에 생성·출력 증거를 보존했다.
+새 Print 확대 이미지를 직접 열어 표시했다.
+
+- 인용 x2와 비인용 x 2는 같은 이탤릭 x·정체 숫자다. rm/it/bold 전환도
+  문자와 숫자에 각각 적용되며, 인용을 이유로 전체 정체로 바뀌지 않는다.
+- 가x2·A1가B2에서 한글은 정체 본문 face, 라틴 문자는 이탤릭, 숫자는 정체다.
+- x+y·x-y·x=y·x_2·(x)는 문자 그대로 보존한다. 명령·첨자로 다시 해석하지 않는다.
+- sin은 인용하면 일반 변수 글꼴을 유지하고 rm에서만 정체다.
+
+`layout_literal_text`는 인용 문자열의 문자 순서를 유지한 채 공통 문자·숫자
+측정 결과를 나열한다. 기존 layout_text 전체 문자열 판정의 혼합 CJK 억제를
+인용 구간에 적용하지 않는다. 라틴·그리스와 CJK는 해당 기존 글리프 경로,
+숫자·문장 부호는 정체 literal 경로로 전달한다. 측정된 전진폭·기준선과 선택한
+LayoutKind를 SVG·Canvas가 그대로 소비하며 연산자 여백을 다시 넣지 않는다.
+절대 문단 위치·문서 ID·글자 수 조건은 추가하지 않는다.
+
+현재 출력 보정 묶음은 적용했고 Native 빌드·시각 검증은 다음 실행으로 확인한다.
+렌더 회귀 기대값이나 baseline은 변경하지 않았다. 두 alphabet 검사는 독립
+Print와 다른 순수 명령 해석 기대값만 보정했다. 전체 Native/fresh WASM·확대
+판독과 전체 원본의 선행 조건을 충족하기 전 관계형 배치 회귀 추가는 보류한다.

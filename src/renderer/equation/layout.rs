@@ -13,6 +13,7 @@ mod fraction_geometry;
 mod glyph_advances;
 mod integral_placement;
 mod limit_geometry;
+mod literal_text;
 mod matrix_geometry;
 mod script_geometry;
 mod source_font_advance;
@@ -167,7 +168,8 @@ impl EqLayout {
             EqNode::Symbol(s) => self.layout_symbol(s, fs),
             EqNode::MathSymbol(s) => self.layout_math_symbol(s, fs),
             EqNode::Function(s) => self.layout_function(s, fs),
-            EqNode::Quoted(s) => self.layout_number(s, fs),
+            // 인용은 명령 해석만 막고 현재 글꼴 전환은 보존한다.
+            EqNode::Quoted(s) => self.layout_literal_text(s, fs),
             EqNode::Fraction { numer, denom } => self.layout_fraction(numer, denom, fs),
             EqNode::Atop { top, bottom } => self.layout_atop(top, bottom, fs),
             EqNode::Sqrt { index, body } => self.layout_sqrt(index, body, fs),

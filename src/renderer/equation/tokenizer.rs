@@ -135,8 +135,8 @@ impl Tokenizer {
     /// [Task #576] times/sim 연산자 키워드도 변수와 인접 시 분리.
     /// HWP 수식 script 에서 "{a timesm}" → "a × m", "rm X simZ" → "X ~ Z"
     /// 의미. 광범위 sweep (158 fixture / 563 unique scripts) 결과 결함 발현
-    /// 키워드는 times/sim이었다 (대소문자 4개). 그리스 문자는 일반 식별자
-    /// 접두사로 임의 분리하지 않으며 닫는 구분자와의 명령 경계는 별도로 확인한다.
+    /// 키워드는 times/sim이었다 (대소문자 4개). 그리스 기호도 한컴 명령이며
+    /// 붙은 피연산자와 분리한다. 문자 그대로의 문자열은 따옴표로 구분한다.
     ///
     /// [Task #1122] HWP 수식 script 에서 분모 숫자가 OVER/ATOP 에 붙는 경우
     /// (`11 over20`, `3 over5`)가 있어 over/atop 뒤가 숫자인 경우에만 분리한다.
@@ -230,7 +230,7 @@ impl Tokenizer {
         }
 
         // 알려진 그리스 기호와 RIGHT가 닫는 구분자 앞에서 붙은 경우다.
-        // sigmaRIGHT )를 문자로 그리지 않으며 일반 그리스 접두사 변수는 보존한다.
+        // sigmaRIGHT )를 문자로 그리지 않으며 뒤의 구분자 경계를 보존한다.
         if let Some(prefix_len) = value
             .len()
             .checked_sub(5)
@@ -240,13 +240,7 @@ impl Tokenizer {
                 .iter()
                 .copied()
                 .find(|ch| !ch.is_ascii_whitespace());
-            let greek_symbol =
-                super::symbols::lookup_symbol(&value[..prefix_len]).is_some_and(|symbol| {
-                    symbol.chars().count() == 1
-                        && symbol
-                            .chars()
-                            .all(|ch| ('\u{0370}'..='\u{03ff}').contains(&ch))
-                });
+            let greek_symbol = is_greek_command(&value[..prefix_len]);
             if matches!(next, Some(')' | ']' | '}' | '|')) && greek_symbol {
                 self.pos = start + prefix_len;
                 return Token::new(TokenType::Command, value[..prefix_len].to_string(), start);
@@ -558,9 +552,9 @@ fn is_eq_keyword(s: &str) -> bool {
 }
 
 /// [#1204-E] glued 분리에 **안전한** 키워드 allowlist (소문자, 대소문자 무시 비교).
-/// hwpeq 에서 피연산자에 공백 없이 붙는 게 흔하고, 변수/그리스/`over`·`root` 등
-/// 모호 prefix 와 충돌하지 않는 명령만 포함한다.
-/// (제외: greek(alphabet), over/atop(overlap, #1122), root/sqrt(rootn), arg/max(argmax),
+/// hwpeq에서 피연산자에 붙는 명령이다. 그리스 기호 명령은 별도 기호표에서
+/// 확인하며, 문자 그대로의 식별자는 따옴표로 보호한다.
+/// (제외: over/atop(overlap, #1122), root/sqrt(rootn), arg/max(argmax),
 ///  ge/le 2자(LEFT 등 충돌) — 이들은 분리하지 않는다.)
 const GLUE_SAFE: &[&str] = &[
     // 삼각/쌍곡 함수 (longest-first 는 is_eq_keyword whole-check 가 보장)
@@ -611,9 +605,18 @@ const GLUE_SAFE: &[&str] = &[
     "ddots",
 ];
 
+/// 기호표가 실제 그리스 문자 하나로 해석하는 명령만 접두사로 분리한다.
+/// 대소문자별 그리스 이름은 기호표의 기존 계약을 그대로 따른다.
+fn is_greek_command(command: &str) -> bool {
+    super::symbols::lookup_symbol(command).is_some_and(|symbol| {
+        let mut chars = symbol.chars();
+        matches!((chars.next(), chars.next()), (Some(ch), None) if ('\u{0370}'..='\u{03ff}').contains(&ch))
+    })
+}
+
 fn is_glue_safe(s: &str) -> bool {
     let lower = s.to_ascii_lowercase();
-    GLUE_SAFE.contains(&lower.as_str())
+    GLUE_SAFE.contains(&lower.as_str()) || is_greek_command(s)
 }
 
 /// [#1204-E] glued identifier 의 앞쪽에 붙은 allowlist 키워드의 최장 prefix 길이.

@@ -265,10 +265,10 @@ fn test_glued_keyword_letter_split() {
     assert_eq!(values(&tokenize("coshx")), vec!["cosh", "x"]);
 }
 
-// [#1204-E] 회귀 가드: greek/root/arg 등 모호 prefix 는 분리 금지.
+// 알려진 전체 명령과 따옴표 문자열은 접두사 분리로 훼손하지 않는다.
 #[test]
 fn test_glued_keyword_no_oversplit() {
-    assert_eq!(values(&tokenize("alphabet")), vec!["alphabet"]); // greek 제외
+    assert_eq!(values(&tokenize("alphabet")), vec!["alpha", "bet"]); // 한컴 Print: αbet
     assert_eq!(values(&tokenize("argmax")), vec!["argmax"]); // arg/max 제외
     assert_eq!(values(&tokenize("rootn")), vec!["rootn"]); // root letter 제외
 }
@@ -360,9 +360,12 @@ fn test_task576_alpha_no_split() {
     // 회귀 차단: alpha 는 그 자체 keyword 이므로 분리되면 안 됨
     let tokens = tokenize("alpha");
     assert_eq!(values(&tokens), vec!["alpha"]);
-    // alphabet 은 일반 식별자 — 분리되지 않아야 함
+    // 한컴의 그리스 명령은 붙은 피연산자와 분리되며, 인용 문자열은 보존한다.
     let tokens = tokenize("alphabet");
-    assert_eq!(values(&tokens), vec!["alphabet"]);
+    assert_eq!(values(&tokens), vec!["alpha", "bet"]);
+    let literal = tokenize("\"alphabet\"");
+    assert_eq!(values(&literal), vec!["alphabet"]);
+    assert_eq!(types(&literal), vec![TokenType::Quoted]);
 }
 
 #[test]
