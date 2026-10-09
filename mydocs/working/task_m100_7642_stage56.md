@@ -73,3 +73,31 @@ widow_orphan/keep_lines가 켜진 경계와 별도 float 계획을 대조한다.
 `rhwp.js`와 `rhwp_bg.wasm`의 package/public SHA-256이 각각 일치했다.
 WASM SHA-256은 `4a9e7897de9d742d9d20920979f811cece3c995f387d1bec8623c51d34b561ad`다.
 그 고정 package의 전쪽 WASM TSV는 진행 중이며 새 수정의 결과로 재사용하지 않는다.
+
+## 새 source의 실행 증거
+
+구현 source는 `fb627e5345607de8556fba1ef1c2acf28b484161`이다. Native 빌드는
+751.03초에 exit 0으로 완료됐다. 같은 source의 `cargo fmt --all -- --check`는
+64.12초, Native `cargo clippy --locked --target-dir target/pr-review -- -D warnings`는
+249.88초에 각각 exit 0이었다. workspace·WASM Clippy·전체 nextest의 통과를
+뜻하지 않는다.
+
+고정 Native 실행 파일은 ignored `stage15-current-validation/rhwp-endnote-prefix-contract`이며
+SHA-256은 `4508949d2e5096f41791f318fbb4cc55aaee0713a79a0fc9af9e2deab3c431af`다.
+빌드 전후 source 파일 해시를 확인했고 `endnote-prefix-contract-native-provenance.json`에
+명령·source·실행 결과를 보존했다.
+
+새 진단은 실제 이전 컷과 최종 수용 결과를 확인했다. 본문 235, 미주 26 내부 5의
+가상 문단 872에서 `before_style=Some(1)`, `actual=Some(Split(1))`, `cut=Some(1)`이다.
+이때 단은 0, 앞 항목 수는 24, 기존 누계 높이는 975.680이었다. 이 높이는 관측값이며
+구현의 고정 허용값이 아니다. 새 `dump-pages`에서는 같은 원본 소유자를 가진
+PartialParagraph가 17쪽 왼쪽 단 `[0,1)`, 오른쪽 단 `[1,6)`으로 나타난다.
+줄 범위의 합집합은 원본 여섯 줄이고 교집합은 없다. 앞 내부 4는 왼쪽 단,
+뒤 내부 6·7은 오른쪽 단에 보존됐다.
+
+`stage56-paragraph-cut-owner-proof.json`에 원본·독립 Print PDF·진단 파일의 SHA-256과
+실제 항목을 함께 고정했다. 이 결과는 줄 소유·분할의 증거이며 시각 일치율이나
+수식 간격의 통과 판정으로 대신하지 않는다. Native 집중 검증은 8개 문서의
+37개 페이지를 진행 중이다. 같은 source의 fresh WASM은 루트 wrapper와 공용
+`target/pr-review`로 새로 빌드 중이다. 기존 source f2fa41f79의 전쪽 큐는
+별도의 변경 전 증거로 유지하며 최신 source의 통과 건수에 합산하지 않는다.
