@@ -4345,9 +4345,9 @@ export class CanvasKitLayerRenderer {
           && this.drawEquationLine(
             canvas,
             x + fontSize * 0.05,
-            y + layout.baseline,
+            y + layout.baseline - layout.kind.axisHeight,
             x + layout.width - fontSize * 0.05,
-            y + layout.baseline,
+            y + layout.baseline - layout.kind.axisHeight,
             color,
             fontSize * 0.04,
           )

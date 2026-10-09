@@ -171,11 +171,15 @@ fn render_box(
                 text_x, text_y, fi, color, EQ_FONT_FAMILY, esc,
             ));
         }
-        LayoutKind::Fraction { numer, denom } => {
+        LayoutKind::Fraction {
+            numer,
+            denom,
+            axis_height,
+        } => {
             // 분자
             render_box(svg, numer, x, y, color, fs, italic, bold);
             // 분수선 — baseline에서 axis_height 위에 배치
-            let line_y = y + lb.baseline - fs * super::layout::AXIS_HEIGHT;
+            let line_y = y + lb.baseline - axis_height;
             let line_thick = fs * 0.04;
             svg.push_str(&format!(
                 "<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",

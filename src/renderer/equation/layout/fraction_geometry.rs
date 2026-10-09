@@ -6,8 +6,12 @@
 
 use super::LayoutBox;
 
-pub(super) fn position(numer: &mut LayoutBox, denom: &mut LayoutBox, fs: f64) -> (f64, f64) {
-    let axis = fs * super::AXIS_HEIGHT;
+pub(super) fn position(
+    numer: &mut LayoutBox,
+    denom: &mut LayoutBox,
+    fs: f64,
+    axis: f64,
+) -> (f64, f64) {
     let half_rule = fs * super::FRAC_LINE_THICK * 0.5;
     let gap = fs * 120.0 / 1000.0;
     // FractionNumeratorDisplayStyleShiftUp와 FractionDenominatorDisplayStyleShiftDown.
@@ -50,7 +54,8 @@ impl EqLayout {
         n_box.x = (w - n_box.width) / 2.0;
         let mut d_box = d;
         d_box.x = (w - d_box.width) / 2.0;
-        let (total_h, baseline) = position(&mut n_box, &mut d_box, fs);
+        let axis_height = self.math_axis_height(fs);
+        let (total_h, baseline) = position(&mut n_box, &mut d_box, fs, axis_height);
 
         LayoutBox {
             font_size: fs,
@@ -62,6 +67,7 @@ impl EqLayout {
             kind: LayoutKind::Fraction {
                 numer: Box::new(n_box),
                 denom: Box::new(d_box),
+                axis_height,
             },
         }
     }

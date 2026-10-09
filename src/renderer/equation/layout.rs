@@ -143,6 +143,17 @@ impl EqLayout {
         }
     }
 
+    /// 정상 한컴 Print의 네 크기에서 본문 기준선과 분수선 중심을 대조한 축.
+    /// 명목 em의 약 0.32826이며 PDF의 실제 글자 행렬로 환산하면 0.3285다.
+    /// 원본의 논리 축과 표시 글꼴의 TeX 축을 서로 대신하지 않는다.
+    fn math_axis_height(&self, fs: f64) -> f64 {
+        fs * if self.hancom_math_face {
+            0.3285
+        } else {
+            AXIS_HEIGHT
+        }
+    }
+
     /// AST를 레이아웃 박스로 변환
     pub fn layout(&self, node: &EqNode) -> LayoutBox {
         self.layout_node(node, self.font_size)

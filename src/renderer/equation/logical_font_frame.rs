@@ -211,7 +211,9 @@ fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
         {
             Some(metrics.sup)
         }
-        LayoutKind::Fraction { numer, denom } if font_line(numer, fs) && font_line(denom, fs) => {
+        LayoutKind::Fraction { numer, denom, .. }
+            if font_line(numer, fs) && font_line(denom, fs) =>
+        {
             let numer_height = if contains_prime(numer) {
                 metrics.prime_line.0
             } else {

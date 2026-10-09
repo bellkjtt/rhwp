@@ -186,7 +186,7 @@ fn dump_layout(out: &mut String, lb: &LayoutBox, indent: usize) {
         LayoutKind::Function(text) => {
             let _ = writeln!(out, "{pad}Function({text:?}) {metrics}");
         }
-        LayoutKind::Fraction { numer, denom } => {
+        LayoutKind::Fraction { numer, denom, .. } => {
             let _ = writeln!(out, "{pad}Fraction {metrics}");
             let _ = writeln!(out, "{pad}  numer:");
             dump_layout(out, numer, indent + 2);

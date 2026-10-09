@@ -11,8 +11,7 @@ use glyphs::{draw_stretch_bracket, draw_text, draw_text_with_family};
 
 use crate::renderer::equation::ast::MatrixStyle;
 use crate::renderer::equation::layout::{
-    is_integral_symbol, LayoutBox, LayoutKind, AXIS_HEIGHT, BIG_OP_SCALE, INTEGRAL_SCALE,
-    SCRIPT_SCALE,
+    is_integral_symbol, LayoutBox, LayoutKind, BIG_OP_SCALE, INTEGRAL_SCALE, SCRIPT_SCALE,
 };
 use crate::renderer::equation::symbols::{DecoKind, FontStyleKind};
 
@@ -262,9 +261,23 @@ fn render_box(
                 false,
             );
         }
-        LayoutKind::Fraction { numer, denom } => {
-            render_box(canvas, fonts, numer, x, y, color, fs, italic, bold);
-            let line_y = y + lb.baseline - fs * AXIS_HEIGHT;
+        LayoutKind::Fraction {
+            numer,
+            denom,
+            axis_height,
+        } => {
+            render_box(
+                canvas,
+                fonts,
+                numer,
+                x,
+                y,
+                color,
+                fs,
+                italic,
+                bold,
+            );
+            let line_y = y + lb.baseline - axis_height;
             canvas.draw_line(
                 ((x + fs * 0.05) as f32, line_y as f32),
                 ((x + lb.width - fs * 0.05) as f32, line_y as f32),

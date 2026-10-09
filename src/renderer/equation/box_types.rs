@@ -49,6 +49,8 @@ pub enum LayoutKind {
     Fraction {
         numer: Box<LayoutBox>,
         denom: Box<LayoutBox>,
+        /// 측정에서 정한 기준선 위 수학 축. 각 출력 경로가 그대로 소비한다.
+        axis_height: f64,
     },
     /// 위아래 배치 (분수선 없음)
     Atop {

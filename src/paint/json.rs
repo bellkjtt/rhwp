@@ -3050,11 +3050,16 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
                 json_escape(name)
             );
         }
-        LayoutKind::Fraction { numer, denom } => {
+        LayoutKind::Fraction {
+            numer,
+            denom,
+            axis_height,
+        } => {
             buf.push_str("{\"type\":\"fraction\",\"numer\":");
             write_equation_layout_box(buf, numer);
             buf.push_str(",\"denom\":");
             write_equation_layout_box(buf, denom);
+            let _ = write!(buf, ",\"axisHeight\":{axis_height}");
             buf.push('}');
         }
         LayoutKind::Atop { top, bottom } => {

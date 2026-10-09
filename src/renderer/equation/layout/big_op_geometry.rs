@@ -53,7 +53,16 @@ impl EqLayout {
         .copied()
         .fold(0.0f64, f64::max);
 
-        let baseline = sup_h + op_h * 0.6;
+        // 표시 글리프의 축과 원본 논리 축의 차이를 부모 기준선에 반영한다.
+        // 기호만 이동하지 않고 위·아래 첨자도 같은 부모 원점을 소비한다.
+        let source_axis = self.math_axis_height(fs);
+        let baseline = sup_h
+            + op_h * 0.6
+            + if source_sum {
+                source_axis - fs * AXIS_HEIGHT
+            } else {
+                0.0
+            };
 
         let sup_laid = sup_box.map(|mut b| {
             b.x = (max_w - b.width) / 2.0;
@@ -67,7 +76,7 @@ impl EqLayout {
         });
 
         let op_baseline = if source_sum {
-            baseline + op_fs * AXIS_HEIGHT - fs * AXIS_HEIGHT
+            baseline + op_fs * AXIS_HEIGHT - source_axis
         } else {
             sup_h + op_fs * 0.8
         };
