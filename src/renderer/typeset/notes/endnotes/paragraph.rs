@@ -59,7 +59,11 @@ impl TypesetEngine {
         flow: EndnoteFlowState,
     ) -> EndnoteFlowState {
         let original_endnote = en_ctrl;
-        let projected_endnote = super::row_projection::project_equation_rows(en_ctrl, styles);
+        let projected_endnote = super::row_projection::project_equation_rows(
+            en_ctrl,
+            styles,
+            st.profile.hwpx_stored_layout() && !st.profile.session_edited() && st.col_count > 1,
+        );
         let en_ctrl = projected_endnote.as_ref();
         let EndnoteEmitVars {
             boundary_prev_endnote_had_vpos_rewind,

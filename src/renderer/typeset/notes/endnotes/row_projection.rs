@@ -7,17 +7,44 @@ use std::borrow::Cow;
 pub(super) fn project_equation_rows<'a>(
     original: &'a Endnote,
     styles: &ResolvedStyleSet,
+    stored_hwpx_columns: bool,
 ) -> Cow<'a, Endnote> {
+    let mut normalized = Cow::Borrowed(original);
+    if stored_hwpx_columns {
+        for (paragraph_index, paragraph) in original.paragraphs.iter().enumerate() {
+            for (index, rows) in paragraph.line_segs.windows(3).enumerate() {
+                let before = &rows[0];
+                let previous = &rows[1];
+                let current = &rows[2];
+                let before_advance = before.line_height.checked_add(before.line_spacing);
+                let previous_advance = previous.line_height.checked_add(previous.line_spacing);
+                // 다음 줄은 새 단 원점에서 직전 줄의 전진만큼 내려간다.
+                // 직전 줄의 0 원점만 누락된 저장본은 뒤 줄의 되감김에서
+                // 자르면 한 줄을 앞 단에 남긴다. 원문 대신 투영 사본을 고친다.
+                if before_advance.is_some_and(|advance| {
+                    advance > 0
+                        && before.vertical_pos.checked_add(advance) == Some(previous.vertical_pos)
+                }) && previous_advance.is_some_and(|advance| {
+                    advance > 0
+                        && current.vertical_pos == advance
+                        && current.vertical_pos < previous.vertical_pos
+                }) {
+                    normalized.to_mut().paragraphs[paragraph_index].line_segs[index + 1]
+                        .vertical_pos = 0;
+                }
+            }
+        }
+    }
     match crate::renderer::composer::stored_row_projection::project_equation_rows(
-        &original.paragraphs,
+        &normalized.paragraphs,
         styles,
     ) {
         Some(paragraphs) => {
-            let mut derived = original.clone();
+            let mut derived = normalized.into_owned();
             derived.paragraphs = paragraphs;
             Cow::Owned(derived)
         }
-        None => Cow::Borrowed(original),
+        None => normalized,
     }
 }
 
