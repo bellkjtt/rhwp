@@ -16,6 +16,7 @@ mod ladder_geometry;
 mod limit_geometry;
 mod literal_text;
 mod matrix_geometry;
+mod plain_matrix_geometry;
 mod script_geometry;
 mod source_font_advance;
 mod source_font_symbol;
@@ -39,6 +40,7 @@ pub struct EqLayout {
     hancom_latin: bool,
     latin_italic: bool,
     hancom_math_face: bool,
+    math_digit_advance: Option<u16>,
     variable_italic: bool,
     variable_bold: bool,
 }
@@ -114,6 +116,7 @@ impl EqLayout {
             hancom_latin: false,
             latin_italic: true,
             hancom_math_face: false,
+            math_digit_advance: None,
             variable_italic: true,
             variable_bold: false,
         }
@@ -130,6 +133,11 @@ impl EqLayout {
                 && equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
             latin_italic: true,
             hancom_math_face: equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
+            // 두 face의 수학 PUA 숫자만 같은 512/1024 전진폭이다.
+            // 영문·기호는 서로 다르므로 HancomEQN을 HYhwpEQ로 치환하지 않는다.
+            math_digit_advance: (equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
+                || equation.font_name.eq_ignore_ascii_case("HancomEQN"))
+            .then_some(512),
             variable_italic: true,
             variable_bold: false,
         }
@@ -353,8 +361,8 @@ impl EqLayout {
             .chars()
             .map(|ch| {
                 if ch.is_ascii_digit() {
-                    if self.hancom_math_face {
-                        source_font_text::logical_advance(512, fs, self.dpi)
+                    if let Some(advance) = self.math_digit_advance {
+                        source_font_text::logical_advance(advance, fs, self.dpi)
                     } else {
                         fs * 0.5
                     }

@@ -14,6 +14,9 @@ impl EqLayout {
         if matches!(style, MatrixStyle::Ladder | MatrixStyle::ShortLadder) {
             return self.layout_ladder(rows, style, fs);
         }
+        if style == MatrixStyle::Plain && !rows.is_empty() {
+            return self.layout_plain_matrix(rows, fs);
+        }
         if rows.is_empty() {
             return LayoutBox {
                 font_size: fs,

@@ -232,6 +232,8 @@ pub(crate) struct HeightCursor {
 
 #[path = "height_cursor_lazy_base.rs"]
 mod lazy_base_rounding;
+#[path = "height_cursor_saved_boundary.rs"]
+mod saved_boundary;
 
 impl HeightCursor {
     /// [#7665] 미주 흐름 문단이 미주의 첫 문단(새 문항 제목)인가 — 소유 경계.
@@ -1407,8 +1409,18 @@ impl HeightCursor {
             && end_y > y_offset + 32.0
             && end_y < y_offset + 120.0
             && y_offset > self.col_area_y + 1.0;
-        let title_body_gap_y = compact_endnote_title_body_stale_forward
-            .then_some(y_offset + prev_line_spacing_px.max(10.0).min(18.0));
+        // 연속된 저장 경계에서는 y_offset이 제목의 줄·간격을 이미 소비했다.
+        // 오래된 절대 원점의 drift를 별도 제목 간격으로 다시 더하지 않는다.
+        let title_body_gap = if paragraphs
+            .get(item_para)
+            .is_some_and(|current| saved_boundary::continuous(prev_para, current))
+        {
+            0.0
+        } else {
+            prev_line_spacing_px.max(10.0).min(18.0)
+        };
+        let title_body_gap_y =
+            compact_endnote_title_body_stale_forward.then_some(y_offset + title_body_gap);
         let compact_endnote_text_after_tall_tail_backtrack = self.suppress_large_forward_jump
             && is_page_path
             && !vpos_rewind
@@ -1708,7 +1720,7 @@ impl HeightCursor {
                 // 본문 첫 줄 vpos가 미주 사이만큼 stale-forward로 남는 경우가
                 // 있다. 제목 자체는 한컴 위치와 맞으므로 본문부터 순차 gap에
                 // 붙이고 후속 vpos 기준도 함께 당긴다.
-                y_offset + prev_line_spacing_px.max(10.0).min(18.0)
+                y_offset + title_body_gap
             } else if compact_endnote_page_title_mid_stale_gap {
                 // 보이는 구분선 + compact 미주의 page-path 중하단 제목은 저장
                 // vpos가 이전 미주 사이를 한 번 더 포함한 채 stale-forward로
@@ -1853,7 +1865,7 @@ impl HeightCursor {
             // page-path에서 새 문항 제목은 이미 올바른 tail 위치에 있고, 바로
             // 뒤 본문만 stale-forward vpos로 내려간 경우다. 본문은 제목 뒤
             // 순차 gap으로 붙이고 base를 옮겨 다음 풀이도 같은 기준을 따른다.
-            y_offset + prev_line_spacing_px.max(10.0).min(18.0)
+            y_offset + title_body_gap
         } else if compact_endnote_page_title_mid_stale_gap {
             // 보이는 구분선 + compact 미주의 중하단 제목은 저장 vpos의
             // stale-forward 간격을 한컴처럼 한 note gap만 접어 배치한다.

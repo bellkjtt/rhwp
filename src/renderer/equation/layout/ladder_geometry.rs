@@ -139,6 +139,9 @@ impl EqLayout {
             }
             y += height + fs * 0.15;
         }
+        // 한 줄의 기준선을 가운데 정렬한 전체 줄 묶음으로 옮긴다.
+        // 한컴 저장 기준선은 정수 %를 올림하므로 HWPUNIT 정수로 계산한다.
+        let baseline = centered_baseline(y, line_height, line_baseline, fs, self.dpi);
         // 모든 출력 경로가 같은 셀 원점·괘선 윤곽을 소비한다.
         dots.push(LayoutBox {
             font_size: fs,
@@ -146,7 +149,7 @@ impl EqLayout {
             y: 0.0,
             width,
             height: y,
-            baseline: y / 2.0,
+            baseline,
             kind: LayoutKind::FontGlyph {
                 text: String::new(),
                 font_family: "serif",
@@ -160,10 +163,29 @@ impl EqLayout {
             y: 0.0,
             width,
             height: y,
-            baseline: y / 2.0,
+            baseline,
             kind: LayoutKind::Matrix { cells, style },
         }
     }
+}
+
+pub(super) fn centered_baseline(
+    height: f64,
+    line_height: f64,
+    line_baseline: f64,
+    fs: f64,
+    dpi: f64,
+) -> f64 {
+    let pitch = line_height + fs * 0.15;
+    let single_percent = ((line_baseline + fs * 0.075) / pitch * 100.0).round() as u64;
+    let height_hu = (height * 7200.0 / dpi).round() as u64;
+    let pitch_hu = (pitch * 7200.0 / dpi).round() as u64;
+    if height_hu == 0 {
+        return 0.0;
+    }
+    let numerator = 50 * height_hu + single_percent.saturating_sub(50) * pitch_hu;
+    let percent = numerator.div_ceil(height_hu);
+    height * percent as f64 / 100.0
 }
 
 fn rectangle(commands: &mut Vec<Command>, x: f64, y: f64, width: f64, height: f64) {
