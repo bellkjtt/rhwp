@@ -126,3 +126,27 @@ CanvasKit의 matrix 분기는 plain 이외의 모든 스타일을 세로 괄호�
 exit 0이다. Rust 빌드 시작 뒤 Rust 소스는 바꾸지 않았다.
 빌드 source 00bac93e4와 Studio 소비 경로 변경을 구분해 기록한다.
 Studio 실제 fresh WASM 및 CanvasKit 출력은 아직 미검증이다.
+
+## #1139 전체 범위의 원본 대응 재확인
+
+실제 77개 test 함수의 파일 열기와 이름 있는 helper 호출을 추적해
+ignored stage62-issue1139-test-input-audit.tsv/json을 산출했다.
+73개는 원본 파일 검사, 4개는 빈 문서 생성 API의 합성 검사다.
+테이블로 지정한 원본도 별도로 확인했으며 파일명이 미확인인 행은 없다.
+이 후보 원장은 실행이나 관계형 전환 완료를 의미하지 않는다.
+
+문28 CQRT 검사는 9월 입력이 아니라 3-11월_실전_통합_2022.hwp다.
+이전에 9월 입력에서 해당 문자열을 찾은 진단을 이 검사의 근거로
+사용하지 않는다. 올바른 원본의 미주 s0:p318:ci0:note3에서
+control 0은 g(theta), control 1은 CQRT 식이고 둘 다 저장 위치 0과
+composed line 0을 공유한다. Native source 74d795e0d의 소유 진단에서
+CQRT는 가상 문단 804/control 1 및 같은 원본 NoteControlRef로 확인됐다.
+기존 고정 x/y 영역과 SVG의 CQRT/g 글자 문자열 대신 이 원본 소유와
+기준선·내용 순서로 검사해야 한다. 정식 검사는 시각 선행 조건 뒤 변경한다.
+
+비-TAC 원본의 font는 HancomEQN이며 MCP 기준 PDF도 HancomEQN이다.
+48개 새 진단의 HYhwpEQ와 폰트명을 동일하다고 추정하지 않는다.
+설치된 두 폰트의 수학 PUA 숫자는 UPM 1024, 전진폭 512이지만
+ASCII 숫자의 전진폭은 서로 다르다. 관련 메트릭은 ignored
+stage62-ladder-font-comparison.json에 보존했고 사설 폰트는 추가하지 않았다.
+최신 원본 대조에서 이 차이를 함께 판독한다.
