@@ -19,6 +19,8 @@ source `fb627e5345607de8556fba1ef1c2acf28b484161`의 11월 구분선 위 9·미�
 원본은 `samples/3-11월_실전_통합_2024-구분선위9미주사이8구분선아래7.hwpx`다.
 독립 기준은 `pdf/issue7642-failed-regression-print/3-11월_실전_통합_2024-구분선위9미주사이8구분선아래7-hwpx-print-2024.pdf`다.
 본문 298의 미주 내부 13은 스타일 3, 명시적 ColumnBreakType=None이다.
+원본 스타일 3의 attr1=10240이며 style_resolver의 비트 16·17·18에 따른
+widow_orphan·keep_with_next·keep_lines는 모두 꺼져 있다.
 저장 글줄 네 개의 시작 위치는 58802·60332·0·2522로 중간에 되감긴다.
 첫 줄과 둘째 줄의 선언 높이는 각각 2205지만 vpos 차이는 1530이다.
 원본 속성·수식 스크립트는 `stage57-nov-source298.json`에 보존했다.
@@ -48,3 +50,11 @@ keep_lines·widow_orphan·명시적 경계를 함께 확인한다. 저장 되감
 
 아직 새 코드 보정이나 최종 통과 판정은 아니다. 전체 Native/fresh WASM 90% 이상과
 확대 판독 전에는 해당 문서의 회귀 기대값·baseline을 변경하지 않는다.
+
+## 집중 검증의 실제 종료
+
+이 source의 all-31 Native 집중 실행은 956.79초에 종료됐다. 선택한 7쪽은 모두
+측정됐고 누락은 없다. 최저 40.56787%, exit 1이며 17·18·19쪽이 90% 미만이다.
+21쪽은 97.09637%지만 앞쪽 미달을 상쇄하지 않는다. 전체 쪽수는 Print와 같은
+21쪽이다. `completed.json`과 페이지별 metrics를 보존했고 새 17·18쪽 review를
+직접 표시했다. 동일 source fresh WASM은 아직 빌드 중이다.
