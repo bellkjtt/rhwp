@@ -123,3 +123,35 @@ LayoutKind를 SVG·Canvas가 그대로 소비하며 연산자 여백을 다시 �
 렌더 회귀 기대값이나 baseline은 변경하지 않았다. 두 alphabet 검사는 독립
 Print와 다른 순수 명령 해석 기대값만 보정했다. 전체 Native/fresh WASM·확대
 판독과 전체 원본의 선행 조건을 충족하기 전 관계형 배치 회귀 추가는 보류한다.
+
+
+## 실행 연결과 남은 전환 범위
+
+수식 보정 code head는 `992a275829741001740ef0deb2c6e192d7fbc555`다.
+Native 빌드가 실제 실행 중이며, 종료 뒤 집중 39쪽과 전체 55개·853쪽 Native
+TSV를 실행하는 pipeline을 시작했다. Native lint와 fresh WASM 빌드는 Cargo
+명령을 순차 실행하며, 새 패키지 검증 뒤 집중/전체 fresh WASM도 연결했다.
+`stage59-validation-pipeline.json`·`stage59-wasm-follow.json`과 각 build provenance에
+실제 owner·PID·명령·소스 해시·종료 코드를 보존한다. 예약한 검증은 통과가 아니다.
+
+고정 base `79abd9e49675f4286eaed38197f7e837afb744e7`의 source unit tier
+검사는 exit 0(4198 tests / 298 modules)이다. 로그는
+`stage59-source-unit-policy.log`다. 전체 Rust·workspace/WASM Clippy·시각
+검증과 관계형 전환은 아직 완료되지 않았다.
+
+앞 code head de11af0c7의 집중 Native는 8개·37쪽 모두 산출했고 최저
+91.47413% 이상이다. 새 그리스·인용 보정 이후 결과로 재사용하지 않는다.
+같은 앞 소스의 fresh WASM 집중 검증은 별도 frozen package로 진행 중이다.
+
+24개 혼합 인용 입력의 수정 전 Native는 99.07790%, 엄격 내용 픽셀
+9.35549%이며 자동 gate는 passed다. 그러나 기본 이탤릭 문자를 정체로
+그리는 실제 차이를 새 review에서 확인했다. 이 결과는 시각 완료가 아니다.
+`stage59-quoted-before-native/quoted-before`에 비교·overlay·review를 보존했다.
+
+요청한 91개 기존 Rust 파일 전체의 소스를 다시 조사해 고정 geometry 검토
+후보를 수집했다. `stage59-entire-regression-geometry-candidates.json`에
+현재 파일 SHA와 위치를 기록했다. 생산 코드와 수치 오차 허용값도 포함되는
+정적 후보이므로 모두 잘못된 회귀라는 뜻이나 전환 완료 증거가 아니다.
+실제 테스트/전이 helper의 의미·대상 원본·독립 Print·최종 Native/fresh WASM
+선행 조건을 확인한 뒤 필요한 검사를 관계형으로 변경한다. #1139 전체 77개
+검사도 이 범위에 남아 있고 아직 변경하지 않았다.
