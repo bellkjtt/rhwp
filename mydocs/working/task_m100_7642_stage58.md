@@ -129,3 +129,24 @@ owned_endnote_origin을 지역 결과로 보존하고 HeightCursor에 전달한�
 경로는 이 결과의 통과로 대신하지 않는다. 새 source의 Native/fresh WASM·
 소유 실행·정상 대조군은 다음 빌드에서 검증한다. 배치 회귀·fixture·baseline의
 기대값은 이 구현 묶음에서 변경하지 않았다.
+
+## 검증 실행 상태
+
+구현 commit은 `de11af0c78010970fea549380b3eecfdf0eb1fc3`다.
+source unit 정책은 기준 base `79abd9e49675f4286eaed38197f7e837afb744e7`을
+명시해 exit 0으로 종료됐다. 검사 결과는 4198 tests / 298 modules이며
+`stage58-unit-policy-check.json`과 log에 명령·base/head를 보존했다.
+이 기준은 현재 고정한 로컬 base이며 최종 PR base가 바뀌면 다시 대조한다.
+
+새 Native 빌드는 고정 target/pr-review에서 detached owner로 실행한다.
+source 파일 해시·commit·명령은 `endnote-owner-contract-native-provenance.json`,
+실제 owner는 `endnote-owner-contract-native-detached-owner.json`에 기록한다.
+빌드 종료 뒤 owner의 바이너리 고정·해시를 기다리고, 집중 Native 검증과
+fmt/Clippy를 수행한 뒤 fresh WASM을 순차 빌드하는 절차는
+`stage58-validation-pipeline.json`에 남긴다. 아직 빌드·시각 완료는 아니다.
+
+앞 source 8ddb3b169의 Native 집중 검증은 1851.17초에 8개 입력·37개 선택 쪽을
+모두 측정하며 종료됐다. 11월 HWPX 19쪽과 9월 미주 사이 20 HWP의
+19·21·23쪽이 미달이다. 나머지 6개 문서의 선택 범위 최저는 91.47413~97.60151%다.
+전쪽 문서 통과로 확장하지 않는다. 같은 이전 source의 fresh WASM 집중 검증도
+고정된 바이너리/package로 계속 실행한다. 새 구현 de11af0c7의 증거와 구분한다.
