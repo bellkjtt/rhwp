@@ -8243,6 +8243,41 @@ impl LayoutEngine {
                 prev_item_content_bottom_y,
                 hcursor.prev_item_flow_line_bottom_y,
             );
+            let complete_note_boundary = hcursor
+                .prev_layout_para
+                .zip(current_endnote_source.as_ref())
+                .is_some_and(|(previous_index, current_source)| {
+                    paragraphs.get(previous_index).is_some_and(|previous| {
+                        super::endnote_spacing::starts_note_after_complete_tail(
+                            self.endnote_para_source_for(previous_index).as_ref(),
+                            current_source,
+                            item,
+                            &col_content.items[..item_ordinal],
+                            previous_index,
+                            previous.line_segs.len(),
+                        )
+                    })
+                });
+            // 같은 단의 완성 미주 경계는 실제 점유 끝과 문서 간격을 소비한다.
+            // 단에 들어가지 않는 제목은 pagination의 fit 경로가 처리해야 한다.
+            hcursor.owned_endnote_origin = complete_note_boundary
+                .then(|| {
+                    let occupied = prev_item_occupied_end_y?;
+                    let origin = super::endnote_spacing::origin_after_gap(
+                        y_offset,
+                        Some(occupied),
+                        hwpunit_to_px(self.endnote_between_notes_hu.get().max(0), self.dpi),
+                    );
+                    let head = composed.get(item_para)?.lines.first()?;
+                    let spacing_before = paragraphs
+                        .get(item_para)
+                        .and_then(|p| styles.para_styles.get(p.para_shape_id as usize))
+                        .map_or(0.0, |s| s.spacing_before);
+                    (origin + spacing_before + hwpunit_to_px(head.line_height, self.dpi)
+                        <= col_area.y + col_area.height)
+                        .then_some(origin)
+                })
+                .flatten();
             // [#4613 · #4599 밴드-플로우] 전방 스냅 기각 판정용 — vpos_adjust 이전의 순차 흐름 위치.
             let y_before_vpos_adjust = y_offset;
             // [#4639 · #4599 ⑧] TAC-직후 보정 스킵의 예외 — 직전 TAC host 문단이 비-TAC
@@ -8688,21 +8723,6 @@ impl LayoutEngine {
                             .then_some(())
                     })
                     .is_some();
-            let complete_note_boundary = hcursor
-                .prev_layout_para
-                .zip(current_endnote_source.as_ref())
-                .is_some_and(|(previous_index, current_source)| {
-                    paragraphs.get(previous_index).is_some_and(|previous| {
-                        super::endnote_spacing::starts_note_after_complete_tail(
-                            self.endnote_para_source_for(previous_index).as_ref(),
-                            current_source,
-                            item,
-                            &col_content.items[..item_ordinal],
-                            previous_index,
-                            previous.line_segs.len(),
-                        )
-                    })
-                });
             // 실제 앞 미주의 마지막 줄을 소유하면 섹션 설정이 간격의
             // 근거다. 저장 줄에 큰 trailing 마커가 없는 정상 저장본도 있다.
             let owned_endnote_title_gap_px = if complete_note_boundary {

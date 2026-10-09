@@ -17,6 +17,20 @@ pub(crate) fn stored_picture_anchor_delta(
     let Control::Picture(picture) = paragraph.controls.get(control_index)? else {
         return None;
     };
+    let debug = std::env::var_os("RHWP_PICTURE_ANCHOR_DEBUG").is_some();
+    if debug {
+        eprintln!(
+            "PICTURE_ANCHOR_INPUT id={} ci={} rows={} dirty={} raw={:?} offset={} width={} height={}",
+            picture.common.instance_id,
+            control_index,
+            paragraph.line_segs.len(),
+            paragraph.stored_text_partition_is_dirty(),
+            paragraph.control_utf16_positions().get(control_index),
+            picture.common.vertical_offset,
+            picture.common.width,
+            picture.common.height,
+        );
+    }
     if picture.common.treat_as_char
         || picture.common.text_wrap != TextWrap::Square
         || picture.common.vert_rel_to != VertRelTo::Para
@@ -50,6 +64,9 @@ pub(crate) fn stored_picture_anchor_delta(
     if let Some(anchor) =
         stored_exclusion_anchor(paragraph, control_index, column_width, styles, dpi)
     {
+        if debug {
+            eprintln!("PICTURE_ANCHOR_SAVED ci={control_index} anchor={anchor:.4}");
+        }
         return Some(anchor);
     }
     let raw_start = *paragraph.control_utf16_positions().get(control_index)?;
@@ -67,6 +84,17 @@ pub(crate) fn stored_picture_anchor_delta(
     let rows = composer::layout_paragraph_in_frame(&input, &mut frame, styles, dpi)?;
     let first = rows.first()?;
     let anchor = rows.iter().rfind(|row| row.text_start <= raw_start)?;
+    if debug {
+        eprintln!(
+            "PICTURE_ANCHOR_FULL_WIDTH ci={} raw={} rows={} owner_start={} owner_vpos={} first_vpos={}",
+            control_index,
+            raw_start,
+            rows.len(),
+            anchor.text_start,
+            anchor.vertical_pos,
+            first.vertical_pos,
+        );
+    }
     Some(crate::renderer::hwpunit_to_px(
         anchor.vertical_pos.checked_sub(first.vertical_pos)?,
         dpi,
