@@ -150,3 +150,34 @@ fmt/Clippy를 수행한 뒤 fresh WASM을 순차 빌드하는 절차는
 19·21·23쪽이 미달이다. 나머지 6개 문서의 선택 범위 최저는 91.47413~97.60151%다.
 전쪽 문서 통과로 확장하지 않는다. 같은 이전 source의 fresh WASM 집중 검증도
 고정된 바이너리/package로 계속 실행한다. 새 구현 de11af0c7의 증거와 구분한다.
+
+## 새 구현의 빌드와 실제 경계 결과
+
+source de11af0c7의 Native 빌드는 449.21초에 exit 0으로 종료됐다.
+고정 바이너리 SHA-256은
+`ba98105a9d9be5bb69c9415847ce0b9d5da97953f4c10d75dac24d81dfbbdabb`다.
+Native fmt는 27.02초, Native Clippy는 100.54초에 각각 exit 0으로 종료됐다.
+같은 source의 fresh WASM은 이 종료 뒤에 순차 빌드 중이다.
+
+같은 tokenizer/AST probe는 수정 후 exit 0, 실패 0개다. 수정 전 실패한
+다섯 대소문자 혼용도 정상 소문자 계약과 같은 AST를 만든다. 따옴표 문자열은
+여전히 독립 Quoted 노드이며 일반 rm/RM·첨자·times/sim도 유지된다.
+`stage58-font-prefix-contract-after.json`과 log에 source·명령·원문 해시·결과를
+기록했다. 이미 통과한 기대값을 바꾸지 않고 실제 파서를 보정했다.
+
+두 입력의 19쪽 export-render-tree를 새 바이너리로 실행했고 둘 다 exit 0이다.
+11월 HWPX는 가상 문단 917의 빈 줄 648.3~660.3을 유지한다.
+뒤 TAC Shape의 EN_LINE_OWNER는 measured=NaN이지만 같은 호스트가 소비한
+owned=660.320을 이어받는다. 다음 문27 제목 918은 690.5에 놓여 Print의
+690.504와 대응한다. 앞 source의 672.5에서 실제 빈 줄 점유를 복원한 결과다.
+
+9월 HWP의 가상 문단 974는 실제 글줄 668.7~727.5와 이미 소비한 미주 사이를
+유지하며 다음 제목 975가 803.1에 놓인다. Print의 802.984와 대응한다.
+실제 EN_RENDER도 974의 흐름 끝 712.4를 975의 시작으로 소비한다.
+앞 source에서 저장 gap 55.16을 다시 더해 858.3이 되던 분기가 적용되지 않는다.
+
+이 수치는 독립 PDF와 실행의 관측값이며 회귀 기대 좌표가 아니다.
+소유·명령·출처는 `stage58-current-owner-diagnostic.json`, 실제 TextLine 관측은
+`stage58-current-owned-line-observations.json`, 생산·소비 로그는 각 입력의
+`stage58-current-*-p019-render-tree.log`에 보존했다. 영향 페이지·정상 대조군의
+새 Native/fresh WASM 90% 이상 및 확대 판독은 계속 진행한다.
