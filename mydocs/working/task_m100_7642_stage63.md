@@ -108,3 +108,27 @@ PDF SHA-256은 60c3fc5eec33e5b262edc8886e6802cf5ee5ecda106bc9d43b4322fb853d0b0c�
 stage63-ladder-before-frame-correction-detail-review.png는 실제 source
 00bac93e4의 원본 확대 대조다. 전체 쪽 79.64318% 및 내려간 괘선·숫자를
 확인했고 사용자에게 표시했다. 현재 source 81989aafb의 결과가 아니다.
+
+## 실제 보정 후 Native와 경계 진단
+
+Source 81989aafbc9b92f044a30177ce899ad1cb347539의 Native 빌드는
+exit 0, 481.25초다. 바이너리 SHA-256은
+225401625649e89a89d321d5ddfc0508a8f37e47d2c25a57403e8f8054088963이다.
+fmt check는 exit 0, 24.36초, Native Clippy는 exit 0, 81.15초다.
+
+원본 수식-문자처럼취급-아님.hwp의 전체 한 쪽은 100.00000%다.
+48개 HYhwpEQ 진단의 전체 세 쪽 최저값은 99.72145%다.
+원본의 보정 후 확대 stage63-ladder-after-frame-correction-detail-review.png를
+직접 표시하고 괘선·숫자가 Print와 같은 원점에 놓임을 확인했다.
+전체 PNG/TSV와 새 source를 연결했으며 이전 캡처 재사용이 아니다.
+WASM이나 전체 입력의 통과 판정으로 바꾸지 않는다.
+
+실제 원본 s0:p222의 제목/본문으로 새 경계 helper를 실행했다.
+원본 경계와 렌더용 미주 번호 삽입 뒤 경계는 PASS다.
+편집 무효화, 구현이 만든 줄, 새 단의 리셋, 비연속 gap은 모두
+수용하지 않는 검사도 PASS다. 진단은 ignored output에 있고
+정식 렌더링 회귀를 추가한 것이 아니다.
+
+Native lint가 종료됐으므로 같은 source의 fresh WASM 준비가 가능하다.
+wrapper는 루트 pkg와 Studio public을 동기화하고 양쪽 SHA-256을 확인한다.
+실제 WASM 빌드 종료와 원본 대조 전에는 완료로 판정하지 않는다.
