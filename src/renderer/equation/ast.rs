@@ -7,10 +7,12 @@ use super::symbols::{DecoKind, FontStyleKind};
 /// 행렬 스타일
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum MatrixStyle {
-    Plain,   // MATRIX — 괄호 없음
-    Paren,   // PMATRIX — 소괄호 ( )
-    Bracket, // BMATRIX — 대괄호 [ ]
-    Vert,    // DMATRIX — 세로줄 | |
+    Plain,       // MATRIX — 괄호 없음
+    Paren,       // PMATRIX — 소괄호 ( )
+    Bracket,     // BMATRIX — 대괄호 [ ]
+    Vert,        // DMATRIX — 세로줄 | |
+    Ladder,      // LADDER — 나눗셈 행과 마지막 결과 행
+    ShortLadder, // SLADDER — 나눗셈 행 오른쪽에 나머지 표시
 }
 
 /// 공백 종류

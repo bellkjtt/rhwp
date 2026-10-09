@@ -258,6 +258,8 @@ fn dump_layout(out: &mut String, lb: &LayoutBox, indent: usize) {
                 MatrixStyle::Paren => "Paren",
                 MatrixStyle::Bracket => "Bracket",
                 MatrixStyle::Vert => "Vert",
+                MatrixStyle::Ladder => "Ladder",
+                MatrixStyle::ShortLadder => "ShortLadder",
             };
             let _ = writeln!(out, "{pad}Matrix({style}) {metrics}");
             for (row_i, row) in cells.iter().enumerate() {

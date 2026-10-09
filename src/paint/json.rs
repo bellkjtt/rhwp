@@ -3265,6 +3265,8 @@ fn equation_matrix_style(style: MatrixStyle) -> &'static str {
         MatrixStyle::Paren => "paren",
         MatrixStyle::Bracket => "bracket",
         MatrixStyle::Vert => "vert",
+        MatrixStyle::Ladder => "ladder",
+        MatrixStyle::ShortLadder => "short_ladder",
     }
 }
 

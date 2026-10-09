@@ -12,6 +12,7 @@ mod decoration_geometry;
 mod fraction_geometry;
 mod glyph_advances;
 mod integral_placement;
+mod ladder_geometry;
 mod limit_geometry;
 mod literal_text;
 mod matrix_geometry;

@@ -59,3 +59,59 @@ row_children은 outline 유무와 관계없이 이 FontGlyph의 같은 연산자
 현재 source 변경은 아직 빌드·Native/fresh WASM으로 검증하지 않았다.
 앞 절의 진단 투영은 이 source의 실행 결과가 아니다. 다른 배치 원인의
 분석·보정을 모으고 실제 출력으로 다시 판정한다.
+
+## LADDER 구현의 독립 근거와 소비 경로
+
+한컴 공개 수식 사양 1.3의 10쪽은 LADDER의 마지막 행을 결과 수의
+나열로 설명하며, SLADDER는 나머지를 오른쪽에 표시하는 템플릿이다.
+근거: https://cdn.hancom.com/link/docs/%ED%95%9C%EA%B8%80%EB%AC%B8%EC%84%9C%ED%8C%8C%EC%9D%BC%ED%98%95%EC%8B%9D_%EC%88%98%EC%8B%9D_revision1.3.pdf
+
+48개 독립 입력은 2024 Save job d2c2367f-e5ba-4461-a88e-ff32d6239113,
+Print job 479ba0e8-fc3c-4288-91b8-b4374489b9bc로 완료됐다.
+13.0.0.3901, PrintMethod 0, frame_print_to_pdf_ex_one_up이다.
+Print SHA-256은 b713f227dfe5a0b2d8197dabf7d44d5c8729dfd1e33c5161a902d58184c6faab이다.
+입력·저장본·Print·문자 상자는 ignored stage62-ladder-contract-probe에 있다.
+
+같은 세 열 LADDER의 폭은 최대 셀 폭에 0.2em을 더한 열 슬롯 3개다.
+8/12/16/24pt의 저장 폭은 2730/4320/5910/8640 HWPUNIT이며,
+두 열은 같은 슬롯 2개다. 결과 행의 첫 수는 두 번째 열에 놓이고
+끝의 빈 칸은 자리표시다. 결과 행을 일반 행렬처럼 첫 열부터 그리지 않는다.
+한 행만 있는 LADDER는 그 행에도 ㄴ자 괘선을 표시한다.
+SLADDER 첫 행의 세 번째 칸은 표시하지 않고, 뒤 행의 나머지는
+두 번째 값 칸 다음 점 칸을 지나 독립 나머지 칸에 표시된다.
+
+행 피치는 기존 논리 글줄 높이에 0.15em을 더한 값이다.
+8/12/16/24pt에서 기존 글줄 높이 825/1200/1575/2400 HU가
+945/1380/1815/2760 HU의 피치를 만들고, 세 행 저장 높이와 일치한다.
+숫자 표시 글꼴의 자연 EM 상자와 논리 예약 프레임을 혼동하지 않는다.
+복합 셀은 독립 논리 프레임이 있는 구조는 그 프레임, 나머지는
+실제 셀의 기준선 위·아래 점유를 사용한다. 복합 셀 Print는 아직 미검증이다.
+
+소비 경로는 parser의 LADDER/SLADDER 스타일 보존 → layout_matrix →
+layout_ladder의 셀 폭·논리 줄 프레임·공유 괘선 → Matrix의 셀/표시 상자 →
+SVG·Canvas·Skia의 기존 FontGlyph 윤곽 경로다. 출력 backend에서
+셀 위치나 괘선 좌표를 재계산하지 않는다. paint JSON과 golden 덤프는
+새 스타일 이름을 읽도록 한정 수정했으며 golden 기대값을 갱신하지 않았다.
+
+이 구현은 실제 최신 Native/fresh WASM 출력 검증 전이다. 원본 비-TAC
+수식과 48개 진단 및 일반 MATRIX 대조를 직접 대조한 뒤 판단한다.
+
+## 소스 진단 결과
+
+48개 중 일반 MATRIX 4개를 제외한 44개는 수정 전 parser에서
+Plain으로 접혔다. 같은 소스 모듈의 진단 실행은 수정 전 exit 1,
+수정 후 exit 0이다. 기존 이항 기호·인용·첨자 진단도 통과했다.
+진단 컴파일의 경로 오류를 실제 결함 재현으로 세지 않았으며,
+최종 수정 전 실행에서 스타일 손실 44건을 확인했다.
+
+실제 layout 모듈의 최소 harness로 동일 HYhwpEQ 조건을 실행했다.
+한컴 저장본에서 읽은 네 크기의 폭/높이와 계산한 값이 모두 같고 exit 0이다.
+2730/2835, 4320/4140, 5910/5445, 8640/8280 HU다.
+harness의 환경 변환 함수는 96dpi/7200HU의 원래 변환과 같으며
+정식 제품 빌드나 페이지 Visual Sweep을 대체하지 않는다.
+정식 회귀와 기대값은 아직 변경하지 않았다.
+
+cargo fmt --all -- --check와 git diff --check는 통과했다.
+이제 고정 target/pr-review의 Native 빌드와 48개 Print·원본 비-TAC·
+연산자 대조를 실행한다. 실제 exit code와 원본 page review를 확인하기
+전에는 90% 통과나 결함 해결을 선언하지 않는다.

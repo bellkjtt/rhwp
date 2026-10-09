@@ -293,7 +293,7 @@ fn render_box(
                 MatrixStyle::Paren => ("(", ")"),
                 MatrixStyle::Bracket => ("[", "]"),
                 MatrixStyle::Vert => ("|", "|"),
-                MatrixStyle::Plain => ("", ""),
+                MatrixStyle::Plain | MatrixStyle::Ladder | MatrixStyle::ShortLadder => ("", ""),
             };
             if !bracket_chars.0.is_empty() {
                 draw_stretch_bracket(ctx, bracket_chars.0, x, y, fs * 0.3, lb.height, color, fs);

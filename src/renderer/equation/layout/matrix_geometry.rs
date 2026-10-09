@@ -11,6 +11,9 @@ impl EqLayout {
         style: MatrixStyle,
         fs: f64,
     ) -> LayoutBox {
+        if matches!(style, MatrixStyle::Ladder | MatrixStyle::ShortLadder) {
+            return self.layout_ladder(rows, style, fs);
+        }
         if rows.is_empty() {
             return LayoutBox {
                 font_size: fs,

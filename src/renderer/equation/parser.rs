@@ -428,7 +428,11 @@ impl EqParser {
                     body,
                 ])
             }
-            EqCommandClass::Ladder => self.parse_matrix(MatrixStyle::Plain),
+            EqCommandClass::Ladder => self.parse_matrix(if cu == "SLADDER" {
+                MatrixStyle::ShortLadder
+            } else {
+                MatrixStyle::Ladder
+            }),
             EqCommandClass::Benzene => EqNode::MathSymbol("⌬".to_string()),
             EqCommandClass::Bigg => self.parse_element(),
             EqCommandClass::Choose => {
