@@ -91,17 +91,10 @@ pub(crate) fn integral_geom(fs: f64) -> IntegralGeom {
     }
 }
 
-/// 큰 연산자(Σ/∏/∫) 뒤 피연산자와의 trailing 간격 (font_size 비율) — Task #1233.
-/// layout_row 는 형제를 간격 0으로 붙이므로, 큰 연산자 box width 에 이 trailing 공백을
-/// 더해 피연산자가 연산자에 붙지 않게 한다(TeX thin/med space 관례, 한컴 PDF 정합).
-///
-/// 인라인 수식은 svg.rs 에서 컨트롤 advance(tac_w)로 가로 스케일(scale_x = tac_w/자연폭)
-/// 되므로, 자연폭에 더한 pad 는 scale_x 만큼 줄어 렌더된다. 분수·괄호를 포함한 큰 수식은
-/// scale_x 가 작아(0.6~0.9) pad 가 약화되므로, 압축 후에도 충분한 간격이 남도록 0.45 로
-/// 둔다(작업지시자 시각 판정 — 0.25 는 부족, 0.45 가 적정).
-///
-/// 렌더러(svg_render/canvas_render)는 limits 연산자를 `max_w = lb.width - fs*PAD` 에
-/// 중앙정렬하므로(이 const 참조), pad 전체가 **순수 trailing** 이 되고 연산자는 첨자와 정렬된다.
+/// 기존 일반 limits 연산자의 피연산자 앞 여백(font_size 비율).
+/// 정상 한컴 합은 첨자 상자와 피연산자의 논리 전진을 그대로 잇는다.
+/// 그 경로에는 가로 압축을 보상하던 이 값을 적용하지 않는다.
+/// SVG/Canvas는 layout이 생산한 기호·첨자 원점을 그대로 소비한다.
 pub(crate) const BIG_OP_TRAIL_PAD: f64 = 0.45;
 const MATRIX_COL_GAP: f64 = 0.8; // 행렬 열 간격 (font_size 비율)
 const MATRIX_ROW_GAP: f64 = 0.3; // 행렬 행 간격 (font_size 비율)

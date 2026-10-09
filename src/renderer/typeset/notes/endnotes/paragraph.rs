@@ -1249,6 +1249,23 @@ impl TypesetEngine {
             } else {
                 None
             };
+            // 실제 제목의 fit은 다음 본문과 묶어 넘기는 추정보다 먼저 소비한다.
+            // keep_with_next가 없는 제목은 자체 점유와 설정 gap으로 소유를 정한다.
+            let mut new_head_fit = if ep_idx == 0 {
+                self.query_reflowed_endnote_new_head_fit(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                )
+            } else {
+                reflow_fit::NewHeadFit::default()
+            };
             let zero_between_large_separator_last_column_title_orphan =
                 compact_endnote_separator_profile
                     && has_visible_endnote_separator
@@ -1311,9 +1328,14 @@ impl TypesetEngine {
                 || default_large_below_last_column_title_orphan
                 || default_compact_below_last_column_title_orphan
             {
-                st.advance_column_or_new_page();
-                prev_en_bottom_vpos = None;
-                prev_en_content_bottom_vpos = None;
+                if new_head_fit.can_stay {
+                    kept_new_head_in_current_column = true;
+                } else {
+                    st.advance_column_or_new_page();
+                    new_head_fit = reflow_fit::NewHeadFit::default();
+                    prev_en_bottom_vpos = None;
+                    prev_en_content_bottom_vpos = None;
+                }
             }
             let tail_fit::TailFitResult {
                 allow_large_between_question_title_tail,
@@ -1433,25 +1455,25 @@ impl TypesetEngine {
                     st.advance_flow_by(next_fmt.total_height);
                     st.mark_endnote_flow();
                     pre_emitted_endnote_para_indices.insert(ep_idx + 1);
+                    // 선행 방출로 현재 단의 항목이 바뀌었으면 이전 fit을 재사용하지 않는다.
+                    new_head_fit = if ep_idx == 0 {
+                        self.query_reflowed_endnote_new_head_fit(
+                            st,
+                            paragraphs,
+                            styles,
+                            en_para,
+                            &fmt,
+                            en_para_idx,
+                            available,
+                            en_col_w,
+                            measured_tables,
+                        )
+                    } else {
+                        reflow_fit::NewHeadFit::default()
+                    };
                 }
             }
-            // 저장 높이로 단을 넘기기 전에 같은 paint 문맥의 새 제목 fit을
-            // 확인한다. 실제로 넘긴 뒤에 검사하면 앞 단의 잔여 공간을 잃는다.
-            let mut new_head_fit = if ep_idx == 0 {
-                self.query_reflowed_endnote_new_head_fit(
-                    st,
-                    paragraphs,
-                    styles,
-                    en_para,
-                    &fmt,
-                    en_para_idx,
-                    available,
-                    en_col_w,
-                    measured_tables,
-                )
-            } else {
-                reflow_fit::NewHeadFit::default()
-            };
+            // 같은 paint 문맥에서 구한 제목 fit을 일반 높이 추정에도 전달한다.
             if advance_for_fit && new_head_fit.can_stay {
                 advance_for_fit = false;
                 kept_new_head_in_current_column = true;

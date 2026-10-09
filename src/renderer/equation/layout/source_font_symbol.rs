@@ -8,6 +8,7 @@ use super::{LayoutBox, LayoutKind};
 pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f64)> {
     let (advance, padding) = match text {
         "+" => (795, 0.14),
+        "-" | "−" => (774, 0.14),
         "=" => (795, 0.21),
         // 독립 Print의 정상/부정 부등호는 같은 글자 전진폭을 사용한다.
         // NOT 내부에서 대체 표시 글꼴의 폭과 연산자 여백을 함께 더하면

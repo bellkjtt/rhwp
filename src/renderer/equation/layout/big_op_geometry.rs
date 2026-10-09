@@ -90,9 +90,15 @@ impl EqLayout {
             font_size: fs,
             x: 0.0,
             y: 0.0,
-            // Task #1233: 피연산자가 연산자에 붙지 않도록 trailing 간격 추가.
-            // sup/sub 중앙정렬은 max_w 기준 유지 → 연산자는 좌측, 우측에 순수 공백.
-            width: max_w + fs * BIG_OP_TRAIL_PAD,
+            // 정상 한컴의 합은 첨자 상자와 다음 피연산자의 전진을 그대로
+            // 잇는다. 제거된 가로 압축을 보상하던 여백을 다시 예약하지 않는다.
+            // 다른 표시 계약은 기존 trailing을 유지한다.
+            width: max_w
+                + if source_sum {
+                    0.0
+                } else {
+                    fs * BIG_OP_TRAIL_PAD
+                },
             height: if source_sum {
                 (total_h + head).max(op_baseline + head + op_fs * 0.25)
             } else {
