@@ -522,9 +522,11 @@ impl TypesetEngine {
                                     } else {
                                         between_notes
                                     };
-                                st.apply_endnote_render_tail_spacing(
+                                st.apply_endnote_tail_spacing(
                                     prev_local_idx,
+                                    paragraphs.len() + prev_local_idx,
                                     render_between_notes,
+                                    self.dpi,
                                 );
                             }
                         }

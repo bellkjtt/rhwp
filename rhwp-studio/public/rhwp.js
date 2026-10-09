@@ -10656,7 +10656,8 @@ export class HwpDocument {
         }
     }
     /**
-     * Native와 같은 조판 세대를 선택하고 공통 core에서 재페이지네이션한다.
+     * 실제 기준 출력의 한컴 세대를 선택한다. 저장 메타데이터로 추정하지 않는다.
+     * 기존 공통 경로가 캐시를 무효화하고 모든 섹션을 다시 조판한다.
      * @param {boolean} enabled
      */
     setHangul2024Compat(enabled) {

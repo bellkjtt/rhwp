@@ -43,3 +43,23 @@ Chrome에서 과거 Studio bundle을 실제로 열었으며 조판 세대 API �
 끝났고 wasm-opt 최적화가 계속 실행 중이다. 전체 wrapper 성공·Studio SHA 일치와
 새 bundle의 실제 실행은 아직 완료로 보고하지 않는다. 현재 commit은 세대 전달
 구현·계약 검사 결과를 고정하며, 전체 PR 검증 완료나 trailing commit이 아니다.
+
+
+## fresh WASM과 실제 브라우저 결과
+
+Stage31 source `230222e08`에 대응하는 fresh wrapper는 총 15분 03초, exit 0이다.
+JS SHA-256은 `a043bdc9047d3ff5d89f55ccc21846f017ac109dad6de25b2885e43c44ee08da`,
+WASM은 `fd573a21965c80e7e0023138e33ba7ee730f7e37c726fee63ed1bd2628f13f90`다.
+pkg와 Studio public의 각각 SHA도 일치한다. snapshot을 ignored
+`generation-fresh-wasm-package/`에 보존했다. 후속 Stage32 간격 코드는 이 bundle에 없다.
+
+Chrome에서 실제 문서의 2022 → 2024 → 2024 → 2022 전환을 실행했다. 쪽수는 모두
+2쪽이지만 render tree가 세대에 따라 바뀌고, 반복 2024 설정은 같으며 2022 복귀도
+처음 결과와 일치한다. `generation-wasm-toggle.json`의 changed/idempotent/restored가
+전부 true다. API 전달·캐시 무효화의 실행 증거이며 Print 시각 통과의 대용이 아니다.
+
+
+원본 `samples/eq-002.hwp`의 같은 2020 Print와 fresh WASM 1쪽은
+93.40659%, 페이지 수 1/1, exit 0이다. `generation-fresh-wasm-validation/`의
+review PNG를 실제 표시했다. 이 결과는 그 원본·source의 한 쪽에 한정하며
+중첩 근호의 미세 차이, 다른 원본 51건, Stage32 미주 보정의 완료를 뜻하지 않는다.

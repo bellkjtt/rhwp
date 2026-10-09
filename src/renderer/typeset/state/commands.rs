@@ -655,18 +655,35 @@ impl TypesetState {
     pub(in crate::renderer::typeset) fn invalidate_vpos_after_clearance(&mut self, clearance: f64) {
         self.data.vpos_ladder_dirty |= clearance > 0.0;
     }
-    pub(in crate::renderer::typeset) fn apply_endnote_render_tail_spacing(
+    pub(in crate::renderer::typeset) fn apply_endnote_tail_spacing(
         &mut self,
         index: usize,
+        paragraph_index: usize,
         spacing: i32,
+        dpi: f64,
     ) {
-        if let Some(seg) = self
-            .data
-            .endnote_paragraphs
-            .get_mut(index)
-            .and_then(|p| p.line_segs.last_mut())
-        {
-            seg.line_spacing = spacing;
+        let Some(paragraph) = self.data.endnote_paragraphs.get_mut(index) else {
+            return;
+        };
+        let line_count = paragraph.line_segs.len();
+        let Some(line) = paragraph.line_segs.last_mut() else {
+            return;
+        };
+        let added = spacing.saturating_sub(line.line_spacing).max(0);
+        line.line_spacing = spacing;
+        // 간격은 완성된 마지막 줄이 소유한다. 앞 단의 tail이나 현재 단의
+        // 미완성 조각에 같은 공간을 다시 청구하지 않는다.
+        let owns_tail = self.data.current_items.iter().any(|item| match item {
+            PageItem::FullParagraph { para_index } => *para_index == paragraph_index,
+            PageItem::PartialParagraph {
+                para_index,
+                end_line,
+                ..
+            } => *para_index == paragraph_index && *end_line == line_count,
+            _ => false,
+        });
+        if owns_tail {
+            self.data.current_height += crate::renderer::hwpunit_to_px(added, dpi);
         }
     }
     pub(in crate::renderer::typeset) fn append_routed_item(
