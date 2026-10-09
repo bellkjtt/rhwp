@@ -366,12 +366,11 @@ impl TypesetEngine {
                     geometry.as_ref().and_then(|result| result.occupied_bottom),
                 );
             }
-            return geometry.is_some_and(|result| {
-                result.flow_bottom > available
-                    || result
-                        .occupied_bottom
-                        .is_some_and(|bottom| bottom > available)
-            });
+            // 첫 줄의 내용과 줄 상자가 들어가면 앞 조각을 현재 단에 남긴다.
+            // 흐름 끝의 후행 줄간격은 뒤 조각의 원점이며 첫 줄 점유가 아니다.
+            return geometry
+                .and_then(|result| result.occupied_bottom)
+                .is_some_and(|bottom| bottom > available);
         }
         // 다줄의 분할 컷은 이 단일 줄 계약으로 바꾸지 않는다.
         if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
