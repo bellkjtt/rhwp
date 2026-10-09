@@ -8703,9 +8703,16 @@ impl LayoutEngine {
                         )
                     })
                 });
+            // 실제 앞 미주의 마지막 줄을 소유하면 섹션 설정이 간격의
+            // 근거다. 저장 줄에 큰 trailing 마커가 없는 정상 저장본도 있다.
+            let owned_endnote_title_gap_px = if complete_note_boundary {
+                hwpunit_to_px(self.endnote_between_notes_hu.get(), self.dpi)
+            } else {
+                prev_endnote_title_gap_px
+            };
             let should_preserve_endnote_title_gap = (current_is_endnote_question_title
                 || complete_note_boundary)
-                && prev_endnote_title_gap_px > 0.0
+                && owned_endnote_title_gap_px > 0.0
                 && !endnote_title_direct_bottom_fit
                 && !endnote_title_bottom_fit_applied
                 && !compact_endnote_title_gap_already_compacted
@@ -8720,7 +8727,7 @@ impl LayoutEngine {
                 let min_y = super::endnote_spacing::origin_after_gap(
                     y_before_vpos,
                     prev_item_occupied_end_y,
-                    prev_endnote_title_gap_px,
+                    owned_endnote_title_gap_px,
                 );
                 if y_offset < min_y {
                     if let Some(source) = current_endnote_source.clone() {
@@ -8743,7 +8750,7 @@ impl LayoutEngine {
                 let min_y = super::endnote_spacing::origin_after_gap(
                     y_before_vpos,
                     prev_item_occupied_end_y,
-                    prev_endnote_title_gap_px,
+                    owned_endnote_title_gap_px,
                 );
                 if y_offset < min_y {
                     let delta = min_y - y_offset;

@@ -41,3 +41,42 @@ Native 상단 862.3 / 독립 Print 이미지 객체 상단 855.384로 갈린다.
 후속 수식까지 직접 판독한다. 개선된 범위를 확인한 뒤 같은 source의 전체
 Native/fresh WASM TSV·확대 판독·관계형 회귀·전체 회귀를 이어간다. 모든
 실행 로그·TSV·JSON·nextrun은 ignored output에 두며 Git에 포함하지 않는다.
+
+## Native 실행 결과와 확대 판독
+
+빌드 입력은 계획 head `70c8e1113`와 이 단계의 두 production 파일 변경이며
+전체 1,453개 source 파일의 SHA-256을 빌드 전에 기록했다. 고정 review target의
+`cargo build --locked --profile release-test --bin rhwp`는 exit 0(407.88초),
+`cargo fmt --all -- --check`와 Native `cargo clippy --locked -- -D warnings`도
+exit 0이다. 정확한 명령·바이너리 해시·입력 목록은 ignored
+`endnote-owned-gap-native-provenance.json`, `endnote-owned-gap-native-lint.json`에 있다.
+
+| 원본 / 검증 범위 | 이 단계의 실제 관측 |
+| --- | --- |
+| 기존 다섯 쪽수 실패 | 모두 독립 Print와 일치: 네 원본 22/22, 9/8/7 HWPX 21/21 |
+| 9/8/7 HWPX 10·11쪽 | 96.43106% / 97.80799%, 선택 페이지 gate 통과 |
+| 구분선 없는 HWPX 10·11쪽 | 97.62596% / 97.94297%, 선택 페이지 gate 통과 |
+| 2022년 11월 HWPX 정상 대조군 4쪽 | 98.74440%, gate 통과 |
+| 구분선 없는 HWPX 11쪽 BMP 원점 | 862.3 → 856.3; 독립 Print 이미지 객체 855.384 |
+
+9/8/7 HWPX의 10쪽 미주 7 제목은 Native 278.7 / Print 278.664, 11쪽 미주 10
+제목은 Native 182.2 / Print 182.184로 복구됐다. 그림 크기는 유지했다. 이 좌표는
+원인 진단용 관측값이며 고정 px 회귀로 추가하지 않는다.
+
+확대 판독에서는 새로운 미충족 항목을 확인했다. 9/8/7 HWPX 10쪽의 미주 7
+합·근호·분수 여러 줄은 전체 페이지 96.43%와 달리 같은 영역의 2px 내용 실루엣
+보조값이 **86.02059%**다. Native의 수식 너비와 기호·간격 차이가 남는다.
+해당 영역은 문단 소유 483~486의 렌더 상자 합집합으로 선택했고, 독립 Print와
+Native의 같은 페이지 영역을 같은 배율로 대조했다. 페이지 overlay에 붙은 제목
+여백을 원본 좌표에 섞지 않고 두 원본 PNG로 차이 색상을 직접 다시 합성했다.
+
+새 그림·입력 경로·영역 유도 과정은 ignored
+`endnote-owned-gap-note7-equations-detail-review.png`와 같은 이름의 JSON에 있다.
+대표 페이지 review는 `endnote-owned-gap-focused-review/all-31/all-31/review/`
+아래에 보존했다. 경계 소유 분석은 `endnote-owned-gap-boundary-analysis/summary.json`,
+세 문서 선택 Sweep은 `endnote-owned-gap-focused-review-results.json`에 있다.
+
+**최종 판정: 미주 경계·그림 원점 부분 보정 완료, 수식 확대 판독 미충족.**
+관련 회귀 기대값을 바꾸지 않았다. 전체 55문서·853쪽의 최신 Native/fresh WASM
+및 전체 회귀는 미완료다. 페이지 90% 통과만으로 승인·PR·완료로 판정하지 않으며,
+다음 단계에서 수식의 실제 글꼴 메트릭·선언 프레임·장평·기호 간격을 함께 분석한다.

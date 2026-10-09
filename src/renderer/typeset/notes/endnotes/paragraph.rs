@@ -2030,8 +2030,23 @@ impl TypesetEngine {
             }
             if split_candidate.is_none() && !pre_emit_tail_before_non_tac_object_advance {
                 if let Some(frame) = stored_picture_frame {
-                    let placement =
-                        picture_frame::at_origin(frame, st.current_height + fmt.spacing_before);
+                    // 저장 높이 누계 대신 실제 현재 단의 흐름 원점을 소비한다.
+                    // 이전 단에서 줄을 남기거나 간격을 복구한 차이를 그림과
+                    // 후속 본문의 프레임 예약에도 함께 전달한다.
+                    let origin = self
+                        .measure_endnote_column_with_item(
+                            st,
+                            paragraphs,
+                            styles,
+                            available,
+                            en_col_w,
+                            None,
+                            true,
+                            None,
+                            measured_tables,
+                        )
+                        .map_or(st.current_height, |geometry| geometry.flow_bottom);
+                    let placement = picture_frame::at_origin(frame, origin + fmt.spacing_before);
                     en_advance =
                         placement.paragraph_end(st.current_height, 0.0) - st.current_height;
                     st.record_paragraph_float_placement((en_para_idx, 0), placement);
