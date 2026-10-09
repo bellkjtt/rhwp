@@ -98,3 +98,33 @@ public의 JS/WASM SHA-256 일치를 확인했다. 빌드 중 소스는 유지했
 55개·853쪽 Native/fresh WASM TSV를 다시 확인한다. 앞 source의 47쪽은
 Native 최저 90% 이상이지만 새 source의 최종 증거로 사용하지 않는다.
 관련 회귀의 관계형 전환과 전체 Rust/lint는 아직 완료되지 않았다.
+
+
+## 새 소스 검증과 이전 전체 큐의 정리
+
+보정 code head는 `f6f51dd5d`다. 새 Native 빌드 → 집중 40쪽/전체 55개·853쪽
+Native → 순차 Native lint/fresh WASM → 집중/전체 fresh WASM pipeline을
+시작했다. `stage60-validation-pipeline.json`·`stage60-wasm-follow.json`과
+각 Native/WASM provenance에서 실제 소스 해시·명령·owner·종료를 확인한다.
+현재 Native 빌드는 실행 중이며 예약한 검증은 통과 증거가 아니다.
+
+앞 code head 992a27582의 전체 Native에서는 원본 두 개의 47쪽이 완료됐다.
+미주 사이 20 HWP는 24/24쪽, 최저 92.13937%; 구분선 아래 20·위 20 HWP는
+23/23쪽, 최저 90.77312%이고 누락 쪽은 없다. `stage60-native-whole-checkpoint.json`
+에 원본·PDF·쪽수와 수치를 고정했다. 이 앞 소스 결과를 새 소스의 완료로
+대신하지 않는다.
+
+소스가 바뀐 뒤 중복 실행되는 앞 소스의 전체 Native/WASM 큐만 종료했다.
+해당 owner·하위 PID·명령 소유를 확인했으며 현재 보정과 무관한 프로세스,
+집중 검증과 공유 Cargo 작업은 보존했다. `stage60-superseded-whole-queues.json`
+에 실제 종료 대상과 새 검증의 전체 범위 유지 사유를 기록했다.
+
+종료된 두 전체 큐의 중간 SVG 115개, 9,274,982,034바이트를 해시 기록 뒤
+정리했다. PNG·TSV·tree·로그·원본·PDF·고정 Native/WASM·공유 target은 보존했다.
+파일별 기록은 `stage60-superseded-svg-cleanup.jsonl`, 최종 집계는
+`stage60-superseded-svg-cleanup-summary.json`이다. 현재 실행 중인 산출물은
+삭제하지 않았다.
+
+22개 인용 기호 대조의 수정 전 Native는 97.16845%, 엄격 내용 픽셀은
+10.26565%다. 높은 점수에도 위 간격 차이가 있어 완료로 인정하지 않았다.
+새 소스의 실제 비교와 확대 판독 후 회귀 전환 선행 조건을 다시 확인한다.
