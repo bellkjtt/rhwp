@@ -124,6 +124,51 @@ impl TypesetEngine {
                 )
                 .is_some_and(|occupied_end| occupied_end <= available)
     }
+
+    /// 별도 묶음이나 float 원점 계획이 없는 한 줄의 실제 점유를 확인한다.
+    /// 저장 높이 추정이 초과해도 물리 줄이 들어가면 앞 단에 남길 수 있다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn reflowed_endnote_single_line_fits(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        formatted: &FormattedParagraph,
+        para_index: usize,
+        available: f64,
+        column_width: f64,
+        measured_tables: &[MeasuredTable],
+    ) -> bool {
+        if st.current_items.is_empty()
+            || formatted.line_count() != 1
+            || paragraph.line_segs.len() != 1
+            || paragraph.column_type != ColumnBreakType::None
+            || !styles
+                .para_styles
+                .get(paragraph.para_shape_id as usize)
+                .is_some_and(|style| !style.keep_with_next && !style.page_break_before)
+            || paragraph.controls.iter().any(|control| match control {
+                crate::model::control::Control::Table(table) => !table.common.treat_as_char,
+                crate::model::control::Control::Picture(picture) => !picture.common.treat_as_char,
+                crate::model::control::Control::Shape(shape) => !shape.common().treat_as_char,
+                _ => false,
+            })
+        {
+            return false;
+        }
+        self.reflowed_endnote_whole_paragraph_fits(
+            st,
+            paragraphs,
+            styles,
+            paragraph,
+            para_index,
+            available,
+            column_width,
+            measured_tables,
+        )
+    }
+
     /// 이월 전에 실제 배치의 흐름 끝·점유 끝·간격을 함께 확인한다.
     /// 명시적 묶음은 유지하며, 저장 높이 추정만으로 제목을 넘기지 않는다.
     #[allow(clippy::too_many_arguments)]
@@ -161,7 +206,44 @@ impl TypesetEngine {
         let Some(occupied) = previous.occupied_bottom else {
             return NewHeadFit::default();
         };
-        let gap = crate::renderer::hwpunit_to_px(st.endnote_between_notes_hu.max(0), self.dpi);
+        let previous_index = st
+            .current_items
+            .iter()
+            .rev()
+            .find_map(crate::renderer::typeset::page_item_para_index);
+        let current_source = para_index
+            .checked_sub(paragraphs.len())
+            .and_then(|local| st.endnote_para_sources.get(local));
+        let between_complete_notes =
+            previous_index
+                .zip(current_source)
+                .is_some_and(|(previous_index, current_source)| {
+                    let previous_source = previous_index
+                        .checked_sub(paragraphs.len())
+                        .and_then(|local| st.endnote_para_sources.get(local));
+                    crate::renderer::typeset::paragraph_by_global_index(
+                        paragraphs,
+                        &st.endnote_paragraphs,
+                        previous_index,
+                    )
+                    .is_some_and(|previous| {
+                        crate::renderer::endnote_spacing::starts_note_after_complete_tail(
+                            previous_source,
+                            current_source,
+                            &PageItem::FullParagraph { para_index },
+                            &st.current_items,
+                            previous_index,
+                            previous.line_segs.len(),
+                        )
+                    })
+                });
+        // 첫 미주 앞의 본문·구분선 간격은 실제 흐름에 이미 반영돼 있다.
+        // 앞 미주의 마지막 줄을 소유할 때만 다른 미주 사이 간격을 적용한다.
+        let gap = if between_complete_notes {
+            crate::renderer::hwpunit_to_px(st.endnote_between_notes_hu.max(0), self.dpi)
+        } else {
+            0.0
+        };
         let origin = crate::renderer::endnote_spacing::origin_after_gap(
             previous.flow_bottom,
             Some(occupied),

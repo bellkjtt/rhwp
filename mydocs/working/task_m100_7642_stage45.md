@@ -55,3 +55,37 @@ Print에서 추출한 이미지를 같은 96 DPI 프레임으로 비교한 2px �
 전쪽 90%와 확대 판독을 충족한 원본에서 #1139 전체 및 관련 회귀를 관계형으로
 전환한다. 최신 전체 회귀·필수 lint·정책 검사, PR·CI·머지·후속 처리까지 계속한다.
 진단 로그·TSV·JSON·nextrun은 Git에 포함하지 않는다.
+
+## 실행 결과 — 부분 보정 완료
+
+빌드 입력은 계획 커밋 `119691fa7fd5396b94d5d79eb74d18a687b98c1b`와 이 단계의
+두 Rust 파일 변경이다. 전체 source SHA-256 목록을 빌드 전에 고정했고 빌드 뒤에도
+동일한 입력임을 확인했다. 구현 diff SHA-256은
+`5466db9f8754ce4d3c63e7e86e213af19deb5d8da100fd38b3cb854f24136b98`다.
+
+| 실행 | 결과 |
+| --- | --- |
+| `cargo build --locked --profile release-test --target-dir /home/tsjang/rhwp/target/pr-review --bin rhwp` | exit 0, 356.80초 |
+| `cargo fmt --all -- --check` | exit 0 |
+| `cargo clippy --locked --target-dir /home/tsjang/rhwp/target/pr-review -- -D warnings` | exit 0 |
+| 기존 쪽수 불일치 다섯 원본의 실제 렌더 쪽수 | 네 원본 22/22, 9/8/7 HWPX는 22/21로 미충족 |
+| 구분선 없는 2024 HWPX 10·11쪽 Native Sweep | 최저 95.48355%, 11쪽 65.07700% → 95.48355% |
+| 9/8/7 HWPX 10쪽 Native Sweep | 77.29898%, `re_review_required` |
+| 2022년 11월 HWPX 정상 대조군 4쪽 | 98.74440%, 21/21쪽 |
+
+보정한 11쪽의 코사인법칙 본문은 앞 단의 마지막 줄에 남고, 뒤 수식은 다음 단에
+소속된다. 원본 스타일의 명시적 나눔·묶음 속성도 대조했다. 새로 산출한 review의
+그림과 후속 수식에는 미세한 세로 위치 차이가 남아 직접 확대 판독과 원점 분석이
+필요하다. 이 차이는 95%라는 점수로 면제하지 않는다.
+
+빌드·lint·경계 분석·대표 review의 재현 기록은 앞서 기재한 ignored 진단 경로의
+`endnote-single-line-fit-native-provenance.json`,
+`endnote-single-line-fit-native-lint.json`,
+`endnote-single-line-fit-boundary-analysis/summary.json`,
+`endnote-single-line-fit-focused-review-results.json`에 보존했다. 새 review는
+`endnote-single-line-fit-focused-review/all-17/all-17/review/review_011.png`다.
+
+**최종 판정: 부분 보정 완료, 전체 검증 미완료.** 다섯 쪽수 불일치 중 네 건을
+해결했지만 전체 55문서·853쪽의 최신 Native/fresh WASM TSV와 확대 판독, 관계형
+회귀 변경, 전체 회귀 및 필수 lint 묶음은 아직 완료되지 않았다. 새 PR은 만들지
+않는다. 다음 단계에서 남은 9/8/7 HWPX의 단·줄 소유와 그림 원점을 함께 분석한다.

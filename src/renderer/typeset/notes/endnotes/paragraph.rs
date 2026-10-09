@@ -1456,6 +1456,24 @@ impl TypesetEngine {
                 advance_for_fit = false;
                 kept_new_head_in_current_column = true;
             }
+            if advance_for_fit
+                && ep_idx > 0
+                && self.reflowed_endnote_single_line_fits(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                )
+            {
+                // 본문 줄도 실제 배치 전에 확인한다. 넘긴 뒤의 overflow
+                // 검사만으로는 앞 단에 들어가는 줄의 소속을 복원할 수 없다.
+                advance_for_fit = false;
+            }
             if advance_for_fit {
                 // [#6574] 렌더 경로로 그려 이 문단이 현재 단에 통째로 들어가면 누계 기반 일반
                 // fit 판정으로 단을 넘기지 않는다. 누계는 렌더와 다른 항(제목의 저장 사다리
