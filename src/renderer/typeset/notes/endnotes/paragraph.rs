@@ -447,18 +447,16 @@ impl TypesetEngine {
                     .is_some_and(|style| style.keep_with_next)
                 && matches!((prev_en_bottom_vpos, this_first_offset),
                     (Some(previous), Some(first)) if first < previous)
-                && self
-                    .simulate_endnote_column_with_tail(
-                        st,
-                        paragraphs,
-                        styles,
-                        available,
-                        en_col_w,
-                        Some(en_para_idx),
-                        true,
-                        Some((&[], endnote_start, compact_no_separator_spacing)),
-                    )
-                    .is_some_and(|bottom| bottom <= available);
+                && self.reflowed_endnote_saved_boundary_fits(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                );
             // 저장 경계가 문단 사이에 있어도 실제 줄이 작아졌다면 앞부분을
             // 현재 단에 둘 수 있다. keep 계약과 실제 표 측정도 같은 경로로 확인한다.
             let local_rewind_prefix_split = (!local_rewind_tail_fits

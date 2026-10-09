@@ -571,6 +571,33 @@ impl TypesetEngine {
         future: Option<(&[Paragraph], i32, bool)>,
         measured_tables: &[MeasuredTable],
     ) -> Option<EndnoteColumnGeometry> {
+        self.measure_endnote_column_with_items(
+            st,
+            paragraphs,
+            styles,
+            available,
+            en_col_w,
+            extra_item.as_slice(),
+            sequential_compact_rewind,
+            future,
+            measured_tables,
+        )
+    }
+
+    /// fit 후보의 문단·표·그림을 최종 방출과 같은 순서로 측정한다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn measure_endnote_column_with_items(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        available: f64,
+        en_col_w: f64,
+        extra_items: &[PageItem],
+        sequential_compact_rewind: bool,
+        future: Option<(&[Paragraph], i32, bool)>,
+        measured_tables: &[MeasuredTable],
+    ) -> Option<EndnoteColumnGeometry> {
         if st.current_items.is_empty() {
             return None;
         }
@@ -582,7 +609,7 @@ impl TypesetEngine {
             .current_items
             .iter()
             .filter_map(page_item_para_index)
-            .chain(extra_item.as_ref().and_then(page_item_para_index))
+            .chain(extra_items.iter().filter_map(page_item_para_index))
         {
             if local_indices.iter().any(|(global, _)| *global == pi) {
                 continue;
@@ -617,9 +644,7 @@ impl TypesetEngine {
             // 구분선도 실제 흐름 항목이다. 제거하면 본문 후행 간격 회수와
             // 첫 미주 원점이 최종 배치와 달라진다.
             let mut local_items = st.current_items.clone();
-            if let Some(item) = &extra_item {
-                local_items.push(item.clone());
-            }
+            local_items.extend_from_slice(extra_items);
             if local_items.is_empty() {
                 return None;
             }
@@ -778,7 +803,7 @@ impl TypesetEngine {
         let mut y = st.current_start_height;
         // [#5886] 한 번 compact 되감김이 나오면 렌더처럼 나머지도 순차 적층한다.
         let mut stack_sequential = false;
-        for item in st.current_items.iter().chain(extra_item.as_ref()) {
+        for item in st.current_items.iter().chain(extra_items.iter()) {
             let Some(pi) = page_item_para_index(item) else {
                 continue;
             };

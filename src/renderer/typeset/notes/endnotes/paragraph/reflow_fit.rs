@@ -13,6 +13,49 @@ pub(super) struct NewHeadFit {
 }
 
 impl TypesetEngine {
+    /// 저장 단 경계의 현재 문단을 실제 소유·표 측정 문맥으로 대조한다.
+    /// 별도 PageItem/float 예약이 필요한 후보는 그 계획을 발행하기 전이므로
+    /// FullParagraph만으로 fit을 선언하지 않는다. 이전 항목의 계획은 유지한다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn reflowed_endnote_saved_boundary_fits(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        para_index: usize,
+        available: f64,
+        column_width: f64,
+        measured_tables: &[MeasuredTable],
+    ) -> bool {
+        let candidate_is_inline = paragraph.controls.iter().all(|control| match control {
+            crate::model::control::Control::Table(table) => table.common.treat_as_char,
+            crate::model::control::Control::Picture(picture) => picture.common.treat_as_char,
+            crate::model::control::Control::Shape(shape) => shape.common().treat_as_char,
+            _ => true,
+        });
+        if !candidate_is_inline || paragraph.column_type != ColumnBreakType::None {
+            return false;
+        }
+        let items = super::super::emit::endnote_paragraph_items(paragraph, para_index, false);
+        let geometry = self.measure_endnote_column_with_items(
+            st,
+            paragraphs,
+            styles,
+            available,
+            column_width,
+            &items,
+            true,
+            None,
+            measured_tables,
+        );
+        let occupied = geometry.and_then(|result| result.occupied_bottom);
+        if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
+            eprintln!("EN_REWIND_OCCUPIED pi={para_index} items={} bottom={occupied:?} available={available:.3}", items.len());
+        }
+        occupied.is_some_and(|bottom| bottom <= available)
+    }
+
     /// 저장 단의 잔여 높이는 현재 문단뿐 아니라 앞서 방출한 수식 줄에도 의존한다.
     pub(super) fn endnote_column_has_reissued_rows(
         &self,
