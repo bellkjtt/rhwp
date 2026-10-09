@@ -80,3 +80,52 @@ paragraph_layout은 실제 소비한 빈 줄의 끝을 last_item_flow_line_botto
 scratch 측정과 실제 배치가 이 결과를 소비하는지 함께 확인한다. TAC 그림 뒤 빈 줄,
 빈 줄 없는 그림, 같은 호스트의 복수 제어 항목과 새 소유자의 첫 문단을 대조한다.
 대조군을 조사한 뒤 이 보정을 붙은 글꼴 명령과 같은 구현 묶음에서 확인한다.
+
+## 원점 소비 뒤의 저장 간격 재가산 확인
+
+9월 미주 사이 20 HWP 19쪽 문28의 Print bbox는 802.984이며 Native는 858.3이다.
+직전 본문 320·미주 내부 18·가상 974의 실제 글줄은 668.7~727.5다.
+미주 간격은 5669HU, 즉 약 75.59이므로 실제 점유 끝 뒤의 한 번 예약은
+약 803.09로 Print에 대응한다. 원래 저장 원점에서는 가상 974의 시작
+1050933+높이 4410과 다음 제목 1059480의 차이가 4137HU, 즉 55.16이다.
+
+layout의 owned_endnote_origin을 HeightCursor가 먼저 소비해도, 뒤의
+큰 수식 tail·후속 큰 TAC 경로에서 saved_head_gap_px를 y_offset에 다시 더한다.
+실제 출력의 초과 55.16과 대응한다. 같은 helper를 먼저 사용한 것만으로 최종
+원점 공유가 끝나지 않은 사례다. 완성 미주 경계의 실제 점유 결과를 얻었으면
+그 뒤의 저장 좌표 기반 추정 간격·축약 분기를 사용하지 않는다. 실제 점유 결과가
+없는 경로는 기존 미측정 경로로 남겨 정상 대조군에서 별도로 검증한다.
+
+## 구현과 수정 전 진단
+
+앞 source 8ddb3b169의 fresh WASM은 1074.56초에 exit 0으로 종료됐다.
+고정 WASM SHA-256은
+`fe33db6db11248fbf5fb98faf964ccb507c0db7733014dea3f1abe8065c768cd`이며,
+JS는 `a043bdc9047d3ff5d89f55ccc21846f017ac109dad6de25b2885e43c44ee08da`다.
+원래 source 파일 해시와 package/public 해시를 확인하고 owner·wrapper·wasm-opt가
+종료된 뒤 수정 묶음을 적용했다. 이 고정 package의 시각 검증은 앞 소스의
+증거로 실행하며 새 구현의 시각 완료로 대신하지 않는다.
+
+수정 전 Native library로 원본 글꼴 전환 계약의 tokenizer/AST 진단을 실행했다.
+RmOM·rMOM·Itx·iTx·BoLdX 5개는 정상 소문자 계약과 달라 exit 1이다.
+rm/RM·공백 있는 Rm·일반 첨자·rmbar·times/sim 및 따옴표 문자열 대조군은
+보존됐다. `stage58-font-prefix-contract-before.json`·log와 probe 원문에
+출처·명령·SHA를 기록했다. 이 진단은 문서 전체 시각 검증을 뜻하지 않는다.
+
+붙은 글꼴 전환의 원래 철자를 보존하면서 대소문자 혼용을 분리한다.
+기존 tokenizer unit 모듈은 내용·검사 이름을 유지한 채 tokenizer/tests.rs로
+옮겼다. tokenizer.rs는 1000줄 이하로 유지하며 기존 정확한 기대값을 바꾸지 않았다.
+
+ParagraphLineBoxEnd는 실제 Full/PartialParagraph에서 생산한 글줄 점유 끝을
+같은 호스트의 TAC Shape에서도 이어받는다. 다른 소유자·독립 제어 항목으로
+바뀌면 이어받지 않는다. layout_column_item 뒤에서 이 결과를 다음 항목의
+occupied_end에 전달한다. column scratch 측정과 실제 column 배치가 같은
+호출 경로를 소비한다. EN_LINE_OWNER 로그로 생산·이어받은 끝을 대조한다.
+가시 콘텐츠 하단과 빈 줄이 점유한 흐름 줄 하단은 여전히 별도로 보존한다.
+
+owned_endnote_origin을 지역 결과로 보존하고 HeightCursor에 전달한다.
+이 결과가 있으면 뒤의 세 저장 좌표 기반 gap 추정/축약 경로를 건너뛴다.
+확인한 원점을 뒤 분기에서 다시 이동하지 않으며, 미측정·단 경계의 기존
+경로는 이 결과의 통과로 대신하지 않는다. 새 source의 Native/fresh WASM·
+소유 실행·정상 대조군은 다음 빌드에서 검증한다. 배치 회귀·fixture·baseline의
+기대값은 이 구현 묶음에서 변경하지 않았다.

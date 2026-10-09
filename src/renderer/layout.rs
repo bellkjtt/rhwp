@@ -7680,6 +7680,7 @@ impl LayoutEngine {
         let col_width_hu = (col_area.width / self.dpi * 7200.0).round() as i32;
         let mut prev_tac_seg_applied = false;
         let mut tac_seg_applied_para: Option<usize> = None;
+        let mut paragraph_line_box_end = super::endnote_spacing::ParagraphLineBoxEnd::default();
         let mut prev_endnote_title_gap_px = 0.0;
         let mut prev_endnote_title_gap_from_continued_partial = false;
         let mut pending_textless_equation_tail_gap_restore: Option<(EndnoteParaSource, f64)> = None;
@@ -8261,7 +8262,7 @@ impl LayoutEngine {
                 });
             // 같은 단의 완성 미주 경계는 실제 점유 끝과 문서 간격을 소비한다.
             // 단에 들어가지 않는 제목은 pagination의 fit 경로가 처리해야 한다.
-            hcursor.owned_endnote_origin = complete_note_boundary
+            let owned_endnote_origin = complete_note_boundary
                 .then(|| {
                     let occupied = prev_item_occupied_end_y?;
                     let origin = super::endnote_spacing::origin_after_gap(
@@ -8279,6 +8280,7 @@ impl LayoutEngine {
                         .then_some(origin)
                 })
                 .flatten();
+            hcursor.owned_endnote_origin = owned_endnote_origin;
             // [#4613 · #4599 밴드-플로우] 전방 스냅 기각 판정용 — vpos_adjust 이전의 순차 흐름 위치.
             let y_before_vpos_adjust = y_offset;
             // [#4639 · #4599 ⑧] TAC-직후 보정 스킵의 예외 — 직전 TAC host 문단이 비-TAC
@@ -8495,6 +8497,7 @@ impl LayoutEngine {
             let compact_single_equation_tail_gap_profile = self.endnote_between_notes_hu.get() > 0
                 && self.endnote_between_notes_hu.get() <= ENDNOTE_BETWEEN_NOTES_BASE_FLOW_HU;
             if compact_single_equation_tail_gap_profile
+                && owned_endnote_origin.is_none()
                 && current_is_endnote_question_title
                 && col_content.endnote_flow
                 && !endnote_title_direct_bottom_fit
@@ -8535,6 +8538,7 @@ impl LayoutEngine {
             // 이므로 제외 — flow_advance 만으로는 양자 시그니처가 동일(둘 다 ≈gap)해 구분 불가,
             // saved-vpos 점프량(원본 단/쪽 경계 신호)으로 구분한다.
             if current_is_endnote_question_title
+                && owned_endnote_origin.is_none()
                 && col_content.endnote_flow
                 && !compacted_equation_tail_title_gap
                 && !endnote_title_direct_bottom_fit
@@ -8580,6 +8584,7 @@ impl LayoutEngine {
                 }
             }
             if current_is_endnote_question_title
+                && owned_endnote_origin.is_none()
                 && col_content.endnote_flow
                 && !endnote_title_direct_bottom_fit
                 && !endnote_title_bottom_fit_applied
@@ -9680,6 +9685,29 @@ impl LayoutEngine {
                 &col_content.stored_column_top_spacings,
                 &col_content.float_pushed_line_spacings,
             );
+            // 같은 TAC 호스트가 소비한 빈 줄 상자는 뒤의 제어 방출에도 남는다.
+            let is_inline_control = match item {
+                PageItem::Shape { control_index, .. } => paragraphs
+                    .get(item_para)
+                    .and_then(|para| para.controls.get(*control_index))
+                    .is_some_and(|control| match control {
+                        Control::Picture(picture) => picture.common.treat_as_char,
+                        Control::Shape(shape) => shape.common().treat_as_char,
+                        Control::Equation(equation) => equation.common.treat_as_char,
+                        _ => false,
+                    }),
+                _ => false,
+            };
+            let measured_line_bottom = self.last_item_flow_line_bottom.get();
+            let owned_line_bottom =
+                paragraph_line_box_end.after_item(item, is_inline_control, measured_line_bottom);
+            self.last_item_flow_line_bottom
+                .set(owned_line_bottom.unwrap_or(f64::NAN));
+            if col_content.endnote_flow && std::env::var_os("RHWP_EN_SSOT_DEBUG").is_some() {
+                eprintln!(
+                    "EN_LINE_OWNER pi={item_para} inline={is_inline_control} measured={measured_line_bottom:.3} owned={owned_line_bottom:?}"
+                );
+            }
             // 명시적 부분 본문이 이미 줄 흐름을 소비한 확정 Exclusion 표는
             // 기하만 출력한다. 표의 시각 하단을 본문 전진으로 다시 더하지 않는다.
             if matches!(item, PageItem::Table { .. })

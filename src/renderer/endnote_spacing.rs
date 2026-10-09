@@ -66,3 +66,40 @@ pub(crate) fn gap_is_reserved(flow_origin: f64, occupied_end: f64, gap: f64) -> 
     let roundoff = (flow_origin.abs() + occupied_end.abs() + gap.abs()) * f64::EPSILON;
     end_with_gap <= flow_origin + roundoff
 }
+
+/// 인라인 제어 항목도 같은 호스트가 실제 소비한 글줄 상자의 끝을 이어받는다.
+/// 다른 문단·단이나 독립 개체의 점유를 호스트 글줄로 누적하지 않는다.
+#[derive(Default)]
+pub(crate) struct ParagraphLineBoxEnd {
+    owner: Option<usize>,
+    bottom: Option<f64>,
+}
+
+impl ParagraphLineBoxEnd {
+    pub(crate) fn after_item(
+        &mut self,
+        item: &PageItem,
+        is_inline_control: bool,
+        line_bottom: f64,
+    ) -> Option<f64> {
+        let measured = line_bottom.is_finite().then_some(line_bottom);
+        match item {
+            PageItem::FullParagraph { para_index }
+            | PageItem::PartialParagraph { para_index, .. } => {
+                self.owner = Some(*para_index);
+                self.bottom = measured;
+            }
+            PageItem::Shape { para_index, .. }
+                if is_inline_control && self.owner == Some(*para_index) =>
+            {
+                // Shape의 방출 순서는 이미 소비한 호스트 빈 줄을 지우지 않는다.
+                self.bottom = occupied_end(self.bottom, measured);
+            }
+            _ => {
+                self.owner = None;
+                self.bottom = measured;
+            }
+        }
+        self.bottom
+    }
+}
