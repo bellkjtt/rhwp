@@ -735,11 +735,15 @@ impl TypesetEngine {
             let mut col_area = st.inline_flow_column();
             col_area.width = en_col_w;
             col_area.height = available;
-            let page = st
+            let mut page = st
                 .pages
                 .last()
                 .cloned()
                 .unwrap_or_else(|| st.new_page_content(Vec::new()));
+            // flush_column과 같이 현재 단의 후보 항목을 페이지에도 게시한다.
+            // 빈 float host의 줄 예약은 페이지가 소유한 Shape 항목을 확인한다.
+            // 단만 전달하면 실제 개체가 있는데도 일반 빈 문단으로 측정한다.
+            page.column_contents.push(column.clone());
             let scratch = crate::renderer::layout::LayoutEngine::new(self.dpi);
             scratch.set_layout_profile(st.profile);
             scratch.set_endnote_para_sources(paragraphs.len(), &sources);
