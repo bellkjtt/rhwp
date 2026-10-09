@@ -115,3 +115,14 @@ cargo fmt --all -- --check와 git diff --check는 통과했다.
 이제 고정 target/pr-review의 Native 빌드와 48개 Print·원본 비-TAC·
 연산자 대조를 실행한다. 실제 exit code와 원본 page review를 확인하기
 전에는 90% 통과나 결함 해결을 선언하지 않는다.
+
+## Studio 소비 경로 보정
+
+CanvasKit의 matrix 분기는 plain 이외의 모든 스타일을 세로 괄호로
+그리는 기존 조건이었다. 새 ladder/short_ladder는 공유 셀 안에
+괘선이 있으므로 paren/bracket/vert에서만 별도 괄호를 그리도록 바꿨다.
+공개 TypeScript 스타일 타입에도 두 값을 추가했다.
+`rhwp-studio/node_modules/.bin/tsc --noEmit -p rhwp-studio/tsconfig.json`은
+exit 0이다. Rust 빌드 시작 뒤 Rust 소스는 바꾸지 않았다.
+빌드 source 00bac93e4와 Studio 소비 경로 변경을 구분해 기록한다.
+Studio 실제 fresh WASM 및 CanvasKit 출력은 아직 미검증이다.

@@ -1415,7 +1415,7 @@ export interface LayerControlLabelOp {
   color?: string;
 }
 
-export type LayerEquationMatrixStyle = 'plain' | 'paren' | 'bracket' | 'vert';
+export type LayerEquationMatrixStyle = 'plain' | 'paren' | 'bracket' | 'vert' | 'ladder' | 'short_ladder';
 export type LayerEquationDecoration =
   | 'box'
   | 'hat'

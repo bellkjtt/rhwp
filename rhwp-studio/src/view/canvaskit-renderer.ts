@@ -4424,7 +4424,7 @@ export class CanvasKitLayerRenderer {
       }
       case 'matrix': {
         let rendered = true;
-        if (layout.kind.style !== 'plain') {
+        if (layout.kind.style === 'paren' || layout.kind.style === 'bracket' || layout.kind.style === 'vert') {
           const brackets = layout.kind.style === 'paren'
             ? ['(', ')']
             : layout.kind.style === 'bracket'
