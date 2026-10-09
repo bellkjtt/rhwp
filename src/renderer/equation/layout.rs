@@ -18,6 +18,7 @@ mod script_geometry;
 mod source_font_advance;
 mod source_font_symbol;
 mod source_font_text;
+mod source_italic_advance;
 mod source_roman_advance;
 mod symbol_advances;
 mod symbol_spacing;

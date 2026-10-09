@@ -111,8 +111,20 @@ impl EqLayout {
         let pad = fs * SQRT_PAD;
         // 수식 face의 논리 전진폭. HYhwpEQ의 수학 radical은 1em,
         // 배포 Latin Modern Math의 U+221A는 833/1000em이다.
-        let sign_w = fs * if self.hancom_math_face { 1.0 } else { 0.833 };
-        let body_w = b.width + pad;
+        let sign_w = if self.hancom_math_face {
+            super::source_roman_advance::em_advance(fs, self.dpi).unwrap_or(fs)
+        } else {
+            fs * 0.833
+        };
+        // 정상 한컴 Save/Print의 숫자·변수·분수·중첩 근호 70건에서
+        // 기호의 논리 em과 별도로 0.17em의 끝 여백을 예약한다.
+        // 세로 여백은 같은 가로 비율로 덮어쓰지 않는다.
+        let right_pad = if self.hancom_math_face {
+            fs * 0.17
+        } else {
+            pad
+        };
+        let body_w = b.width + right_pad;
         let body_h = b.height + pad * 2.0;
 
         let idx = index.as_ref().map(|i| {

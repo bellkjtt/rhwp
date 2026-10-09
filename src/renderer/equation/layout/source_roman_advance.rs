@@ -77,3 +77,9 @@ pub(super) fn measured(text: &str, fs: f64, dpi: f64) -> Option<f64> {
     };
     Some(crate::renderer::hwpunit_to_px((advance * 75) as i32, dpi))
 }
+
+/// UPM 1024의 각 기호와 근호가 공유하는 논리 1em 전진이다.
+/// 독립 근호 70건의 추가 폭도 같은 em 격자를 소비함을 확인했다.
+pub(super) fn em_advance(fs: f64, dpi: f64) -> Option<f64> {
+    measured("∠", fs, dpi)
+}

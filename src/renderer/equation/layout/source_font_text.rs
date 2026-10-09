@@ -50,10 +50,12 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<Layo
         };
         let width = if !italic {
             super::source_roman_advance::measured(&char::from(ch).to_string(), fs, dpi)
-        } else if ch == b'f' {
-            super::source_font_advance::measured(fs, dpi, 3)
         } else {
-            None
+            super::source_italic_advance::measured(ch, fs, dpi).or_else(|| {
+                (ch == b'f')
+                    .then(|| super::source_font_advance::measured(fs, dpi, 3))
+                    .flatten()
+            })
         }
         .unwrap_or_else(|| logical_advance(advances[usize::from(ch - first)], fs, dpi));
         children.push(LayoutBox {
