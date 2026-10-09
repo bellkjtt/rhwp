@@ -49,3 +49,32 @@ Stage 59 fresh WASM이 실제로 종료되고 해시를 확인할 때까지 sour
 Native/fresh WASM·직접 확대 판독과 전체 55개·853쪽의 원래 검증 범위,
 관련 회귀의 관계형 전환·전체 Rust 및 필수 lint 범위는 계속 유지한다.
 렌더 회귀·baseline 기대값은 아직 변경하지 않는다.
+
+
+## 추가 Print의 실제 완료와 경계 판독
+
+같은 Save job을 끝까지 모니터링했고 Print job
+`211633cc-ce03-4f30-aef7-fd1261718b86`도 완료해 다운로드했다.
+Hancom 13.0.0.3901, PrintMethod 0, frame_print_to_pdf_ex_one_up이며
+PDF SHA-256은 `640c04b8a35154a6e3ab2c43de7c16e4413936e43891d5a384563a3a0d432c59`다.
+MCP 실제 상태·출력 해시는 `stage60-quoted-spacing-probe-mcp-print.json`,
+출력 이미지와 같은 배율/좌표는 `print-quoted-spacing-contract-detail.png`·
+`print-detail-provenance.json`에 보존했다. 새 확대 이미지를 직접 표시했다.
+
+- 인용/비인용 x+y·x-y·x=y는 같은 기호와 간격이다.
+- 인용 x y와 명시적 Thin x`y는 같은 간격이다.
+- 인용/비인용 (x), 시작 +x와 끝 x+, 관계 기호 x<y의 표시가 대응한다.
+- 인용 x+-y는 두 기호를 보존하지만 비인용은 ±로 해석한다.
+- 인용 x/y는 한 줄의 slash를 보존하고 비인용은 분수 배치를 한다.
+
+따라서 인용 원문을 tokenizer/parser에 다시 넣는 해결은 두 마지막 경계를
+훼손한다. 준비한 문자별 EqNode의 공통 layout_row 연결은 명령·분수·첨자
+재해석을 하지 않고 glyph 종류와 자동 간격만 소비한다. 이를 다음 Native/
+fresh WASM의 같은 입력과 확대 판독으로 확인한다.
+
+검증 성능 대안으로 CLI subset 옵션을 확인했으나 canonical Sweep가 Unicode
+cmap 훼손 때문에 명시적으로 거부했다. 해당 시도는 argument exit 2이고
+원본 출력의 렌더 실패가 아니다. 이 경로의 결과를 검증에 사용하지 않으며
+실행 중인 검증은 원본 글꼴 full 임베딩을 유지한다.
+`stage60-subset-font-diagnostic-status.json`에 구분했다. 실제 공급 glyph의
+outline/advance·cmap을 보존한 외부 subset을 full로 주는 별도 계약과 혼동하지 않는다.
