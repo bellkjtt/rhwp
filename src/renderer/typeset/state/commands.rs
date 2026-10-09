@@ -92,6 +92,15 @@ impl TypesetState {
         super::finalize::finalize_pages(&mut self.data.pages, entries, number, paragraphs);
     }
     pub(in crate::renderer::typeset) fn append_item(&mut self, item: PageItem) {
+        // 본문 표의 공통 이어받기도 등록된 미주 문단의 소속을 유지한다.
+        // 단 전환은 이 표시를 초기화하므로 각 조각의 소유에서 다시 게시한다.
+        if crate::renderer::typeset::page_item_para_index(&item).is_some_and(|index| {
+            self.data.endnote_para_base.is_some_and(|base| {
+                index >= base && index - base < self.data.endnote_paragraphs.len()
+            })
+        }) {
+            self.data.current_endnote_flow = true;
+        }
         self.data.current_items.push(item);
     }
     pub(in crate::renderer::typeset) fn remove_last_item(&mut self) -> Option<PageItem> {
@@ -459,6 +468,15 @@ impl TypesetState {
     ) {
         self.data.endnote_paragraphs.push(paragraph);
     }
+    pub(in crate::renderer::typeset) fn begin_endnote_paragraphs(&mut self, base: usize) {
+        self.data.endnote_para_base = Some(base);
+    }
+    pub(in crate::renderer::typeset) fn append_endnote_measured_table(
+        &mut self,
+        table: crate::renderer::height_measurer::MeasuredTable,
+    ) {
+        self.data.endnote_measured_tables.push(table);
+    }
     pub(in crate::renderer::typeset) fn append_endnote_source(
         &mut self,
         source: crate::renderer::pagination::EndnoteParaSource,
@@ -641,6 +659,7 @@ impl TypesetState {
             endnotes: self.data.endnotes,
             endnote_paragraphs: self.data.endnote_paragraphs,
             endnote_para_sources: self.data.endnote_para_sources,
+            endnote_measured_tables: self.data.endnote_measured_tables,
             endnote_between_notes_hu: self.data.endnote_between_notes_hu,
             endnote_separator_above_hu: self.data.endnote_separator_above_hu,
             endnote_separator_below_hu: self.data.endnote_separator_below_hu,

@@ -95,6 +95,8 @@ impl TypesetState {
                 endnotes: Vec::new(),
                 endnote_paragraphs: Vec::new(),
                 endnote_para_sources: Vec::new(),
+                endnote_para_base: None,
+                endnote_measured_tables: Vec::new(),
                 endnote_between_notes_hu: 0,
                 endnote_separator_above_hu: 0,
                 endnote_separator_below_hu: 0,

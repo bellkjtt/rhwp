@@ -84,3 +84,32 @@ DocumentCore 렌더 캐시의 section별 measured_tables → 최종 Table/Partia
 기존 본문 분할은 미주 소유를 자동으로 게시하지 않으므로 단 전환 뒤에도
 미주 조각 소속과 후속 간격 계약이 보존되는 소비 위치를 추가로 확인한다.
 현재 원장 연결이나 분할 방출 구현은 아직 시작하지 않았다.
+
+
+## 공통 조판과 소유 원장 연결
+
+source `c0d6903a8`의 수식 꼬리 줄 보정과 함께 확인할 구현을 추가했다.
+가시 호스트가 없는 문단에 문단 기준 TopAndBottom·flow_with_text 표만
+있으면 `flow_table.rs`에서 원본 표를 같은 profile·normalization으로 측정한다.
+각 표의 전역 문단/컨트롤 인덱스를 원장에 보존하며, 본문과 같은
+`format_table → typeset_block_table → prepare/scan/continuation`을 호출한다.
+가시 글줄·배경/전경·Square 개체와 명시적 단 경계는 기존 경로를 유지한다.
+문서 번호·행 수·진단 높이를 분기에 사용하지 않는다.
+
+진입 원점은 기존 항목의 공통 단 배치가 반환한 실제 흐름 끝이다.
+본문의 줄 높이 추정이나 개체 선언 높이로 예산을 대신하지 않는다.
+다음 문단 조회에는 본문·등록한 미주·아직 방출하지 않은 원본 미주 문단을
+같은 전역 인덱스로 제공한다. 명시적인 단 조각·내용 컷의 생산과 예약,
+최종 종료는 기존 본문 분할 경로를 사용한다.
+
+StateView는 가상 미주 문단의 시작과 표 측정을 소유한다. `append_item`은
+등록 범위 안의 Table/PartialTable 등 항목을 미주로 표시해 단 전환 뒤에도
+소속을 보존한다. 측정 원장은 `into_result → PaginationResult → pending/full/
+incremental 섹션 렌더 캐시 → LayoutEngine`으로 전달한다. 미주 fit 조회도
+caller에 없는 소유 표 측정과 같은 normalization을 보충한다. 따라서 표를
+조판할 때만 측정하고 최종 paint에서 다시 선언 높이를 선택하지 않는다.
+
+새 코드의 빌드와 실제 PartialTable 방출은 아직 검증 전이다. 앞 두 행과
+다음 마지막 행, 반복 머리행 부재, 후속 본문 보존 및 모든 대조군을 새
+Native/fresh WASM에서 확인해야 한다. 이전 source99의 진행 중인 전쪽
+Native는 보존용 전후 대조군이며 새 source의 결과로 보고하지 않는다.

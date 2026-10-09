@@ -239,6 +239,10 @@ pub(in crate::renderer::typeset) struct StateView {
     pub(in crate::renderer::typeset) endnotes: Vec<EndnoteRef>,
     pub(in crate::renderer::typeset) endnote_paragraphs: Vec<Paragraph>,
     pub(in crate::renderer::typeset) endnote_para_sources: Vec<EndnoteParaSource>,
+    /// 현재 구역의 본문 다음에 등록되는 가상 미주 문단 범위의 시작.
+    pub(in crate::renderer::typeset) endnote_para_base: Option<usize>,
+    pub(in crate::renderer::typeset) endnote_measured_tables:
+        Vec<crate::renderer::height_measurer::MeasuredTable>,
     /// [Task #1246] 현재 섹션 미주의 between-notes 마진(HU, 0=미적용). HeightCursor 가 미주 사이
     /// min-gap 보정에 사용. 모든 경계에서 동일한 섹션 설정값이므로 스칼라로 보관.
     pub(in crate::renderer::typeset) endnote_between_notes_hu: i32,

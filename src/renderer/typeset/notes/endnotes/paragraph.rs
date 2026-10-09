@@ -147,6 +147,23 @@ impl TypesetEngine {
                 .unwrap_or(st.layout.body_area.width);
             let fmt =
                 self.format_endnote_paragraph(en_para, Some(&composed), &styles, Some(en_col_w));
+            if self.typeset_endnote_flow_tables(
+                st,
+                paragraphs,
+                styles,
+                en_para_idx,
+                &fmt,
+                &en_ctrl.paragraphs[ep_idx + 1..],
+                endnote_start,
+                compact_no_separator_spacing,
+                measured_tables,
+            ) {
+                // 표 조각은 실제 행 높이를 수용했다. 다음 문단은 저장 host의
+                // 한 줄 높이로 그 소비량을 다시 추정하지 않는다.
+                prev_en_bottom_vpos = None;
+                prev_en_content_bottom_vpos = None;
+                continue;
+            }
             if kept_new_head_in_current_column
                 && ep_idx == 1
                 && self.reflowed_endnote_head_successor_first_line_overflows(

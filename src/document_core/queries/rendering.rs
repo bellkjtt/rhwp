@@ -4808,6 +4808,7 @@ impl DocumentCore {
                     endnotes: Vec::new(),
                     endnote_paragraphs: Vec::new(),
                     endnote_para_sources: Vec::new(),
+                    endnote_measured_tables: Vec::new(),
                     endnote_between_notes_hu: 0,
                     endnote_separator_above_hu: 0,
                     endnote_separator_below_hu: 0,
@@ -4826,6 +4827,8 @@ impl DocumentCore {
                 });
         }
         self.measured_tables[section_index] = pending.measured.tables.clone();
+        self.measured_tables[section_index]
+            .extend_from_slice(&self.pagination[section_index].endnote_measured_tables);
         self.measured_sections[section_index] = pending.measured;
         self.dirty_sections
             .resize(self.document.sections.len(), false);
@@ -5016,6 +5019,7 @@ impl DocumentCore {
                 endnotes: Vec::new(),
                 endnote_paragraphs: Vec::new(),
                 endnote_para_sources: Vec::new(),
+                endnote_measured_tables: Vec::new(),
                 endnote_between_notes_hu: 0,
                 endnote_separator_above_hu: 0,
                 endnote_separator_below_hu: 0,
@@ -5297,6 +5301,7 @@ impl DocumentCore {
             }
 
             self.measured_tables[idx] = measured.tables.clone();
+            self.measured_tables[idx].extend_from_slice(&result.endnote_measured_tables);
             self.measured_sections[idx] = measured;
 
             // ── 수렴 감지: 이전 페이지네이션과 비교하여 변경 흡수 지점 탐색 ──

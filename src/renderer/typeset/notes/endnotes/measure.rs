@@ -601,6 +601,18 @@ impl TypesetEngine {
         if st.current_items.is_empty() {
             return None;
         }
+        // 앞 미주에서 방출한 표 조각도 최종 paint와 같은 행 측정을 받는다.
+        // caller가 본문 측정만 전달하는 준비 조회에서는 소유 원장을 보충한다.
+        let mut measured_tables = std::borrow::Cow::Borrowed(measured_tables);
+        for table in &st.endnote_measured_tables {
+            if !measured_tables.iter().any(|measured| {
+                measured.para_index == table.para_index
+                    && measured.control_index == table.control_index
+            }) {
+                measured_tables.to_mut().push(table.clone());
+            }
+        }
+        let measured_tables = measured_tables.as_ref();
         let ssot_level = en_ssot_level();
         let ssot_debug = en_ssot_debug();
         let mut local_paras: Vec<Paragraph> = Vec::new();
@@ -746,6 +758,9 @@ impl TypesetEngine {
             page.column_contents.push(column.clone());
             let scratch = crate::renderer::layout::LayoutEngine::new(self.dpi);
             scratch.set_layout_profile(st.profile);
+            scratch.set_render_normalization_overlay(std::sync::Arc::clone(
+                &self.render_normalization,
+            ));
             scratch.set_endnote_para_sources(paragraphs.len(), &sources);
             scratch.set_endnote_shape_margins_hu(
                 st.endnote_separator_above_hu,
