@@ -1142,12 +1142,11 @@ impl TypesetEngine {
             let rewind_tail::RewindTailResult {
                 new_endnote_stale_forward_vpos,
                 large_between_tail_render_overflows,
-                large_between_tail_before_rewind_picture,
+                kept_successor_overflows,
                 no_separator_tail_table_starts_next_column,
                 no_separator_last_column_tail_before_rewind_starts_next_page,
                 no_separator_tail_after_picture_starts_next_page,
                 later_endnote_vpos_rewinds_after_current,
-                large_between_equation_tail_starts_next_column,
                 large_between_title_tail_render_overflows,
                 large_between_question_title_render_y,
                 large_between_question_title_head_inside_frame,
@@ -1166,8 +1165,8 @@ impl TypesetEngine {
                 ep_idx,
                 en_para,
                 fmt: &fmt,
-                composed: &composed,
                 endnote_start,
+                compact_no_separator_spacing,
                 prev_en_bottom_vpos,
                 emitted_endnote_count,
                 en_para_idx,
@@ -1225,6 +1224,7 @@ impl TypesetEngine {
                 || large_between_equation_tail_starts_next_column
                 || no_separator_last_column_tail_before_rewind_starts_next_page)
                 && !render_whole_fits(st))
+                || kept_successor_overflows
                 || no_separator_tail_table_starts_next_column
             {
                 st.advance_column_or_new_page();
@@ -1432,7 +1432,6 @@ impl TypesetEngine {
                 internal_rewind_full_advance_needed,
                 no_separator_tail_after_picture_starts_next_page,
                 later_endnote_vpos_rewinds_after_current,
-                large_between_equation_tail_starts_next_column,
                 large_between_question_title_render_y,
                 large_between_question_title_head_inside_frame,
                 large_between_question_title_head_fits_flow,
@@ -2001,8 +2000,8 @@ impl TypesetEngine {
             } else {
                 split_candidate
             };
-            // 내부 저장 단 경계도 현재 전체 줄이 실제로 들어가면 재조판한다.
-            // 한 줄만 남기는 컷을 유지해 다음 단을 불필요하게 일찍 시작하지 않는다.
+            // 저장 누계의 자동 컷보다 실제 방출할 문단의 점유를 먼저 확인한다.
+            // 명시적 묶음·단 경계·개체 계획은 이 일반 글줄 조회로 대체하지 않는다.
             let whole_internal_rewind_fits = internal_vpos_rewind
                 && split_candidate.is_some()
                 && self.reflowed_endnote_whole_paragraph_fits(
@@ -2020,6 +2019,19 @@ impl TypesetEngine {
             } else {
                 render_fit_split.or(split_candidate)
             };
+            let split_candidate = split_candidate.filter(|_| {
+                !whole_internal_rewind_fits
+                    && !self.reflowed_endnote_unsplit_candidate_fits(
+                        st,
+                        paragraphs,
+                        styles,
+                        en_para,
+                        en_para_idx,
+                        available,
+                        en_col_w,
+                        measured_tables,
+                    )
+            });
             // 실제 수식 줄 메트릭을 갱신하면 저장 컷 앞에 들어가는 줄도 달라진다.
             // 이전 컷을 고정하지 않고 방출할 부분 문단의 실제 점유를 대조한다.
             let split_candidate = split_candidate.map(|split| {

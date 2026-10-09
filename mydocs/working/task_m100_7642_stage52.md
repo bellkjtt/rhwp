@@ -113,3 +113,22 @@ caller에 없는 소유 표 측정과 같은 normalization을 보충한다. 따�
 다음 마지막 행, 반복 머리행 부재, 후속 본문 보존 및 모든 대조군을 새
 Native/fresh WASM에서 확인해야 한다. 이전 source99의 진행 중인 전쪽
 Native는 보존용 전후 대조군이며 새 source의 결과로 보고하지 않는다.
+
+## source 334246be3의 실행 결과
+
+Native 빌드는 411.78초에 exit 0, fmt check와 Native Clippy도 각각
+19.81초와 70.35초에 exit 0이었다. frozen binary SHA-256은
+`831b9ad02348d53c1f8c5ca5bceea038332f4406a01d99b259d213b0d6625e9d`다.
+빌드 전후 source 해시와 실제 검증 source를 ignored provenance에 보존했다.
+
+11월 구분선 없음 HWPX 13쪽의 실제 pagination은 같은 원본 본문 162,
+미주 내부 3, 컨트롤 0을 소유하는 PartialTable 두 개를 방출했다.
+왼쪽 단은 행 [0, 2), 오른쪽 단은 이어받기 행 [2, 3)이다. 행 범위가
+빠지거나 겹치지 않고 반복 머리행을 추가하지 않는다. 전체 쪽수는 Print와
+같은 22쪽이다. 13쪽은 63.65353%에서 91.47413%로 개선됐으며 12쪽은
+98.36368%다. 표 뒤 본문·그래프의 미세 간격은 추가 판독 대상이다.
+
+11월 구분선 위 9·미주 사이 8·구분선 아래 7 HWPX는 13쪽 69.57823%다.
+표 분할과 다른 원인으로 그래프 앞의 (iii) 제목이 다음 단으로 밀린다.
+원본 keepWithNext=0과 Print의 단 하단 제목을 확인했고 Stage55에서
+강제 묶음 판정을 분석한다. 전체 Native/fresh WASM 통과는 아직 미검증이다.

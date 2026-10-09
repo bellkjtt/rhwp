@@ -13,6 +13,99 @@ pub(super) struct NewHeadFit {
 }
 
 impl TypesetEngine {
+    /// 앞 문단에 명시적인 묶음이 있을 때만 분할 불가인 다음 한 줄을 예약한다.
+    /// 저장 vpos 되감김이나 내용 종류만으로 제목·수식을 묶지 않는다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn reflowed_endnote_kept_successor_overflows(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        para_index: usize,
+        available: f64,
+        column_width: f64,
+        measured_tables: &[MeasuredTable],
+        future: &[Paragraph],
+        endnote_start: i32,
+        compact_spacing: bool,
+    ) -> bool {
+        if st.current_items.is_empty()
+            || paragraph.column_type != ColumnBreakType::None
+            || !styles
+                .para_styles
+                .get(paragraph.para_shape_id as usize)
+                .is_some_and(|style| style.keep_with_next)
+        {
+            return false;
+        }
+        let Some(successor) = future.first() else {
+            return false;
+        };
+        // 다줄 successor의 부분 컷과 별도 float는 자신의 분할 계약을 따른다.
+        // 문단 전체를 임의로 예약해 한 줄 묶음을 확대하지 않는다.
+        let composed = crate::renderer::composer::compose_paragraph_in_context(successor, styles);
+        if self
+            .format_endnote_paragraph(successor, Some(&composed), styles, Some(column_width))
+            .line_count()
+            != 1
+        {
+            return false;
+        }
+        let items = super::super::emit::endnote_paragraph_items(paragraph, para_index, false);
+        self.measure_endnote_column_with_items(
+            st,
+            paragraphs,
+            styles,
+            available,
+            column_width,
+            &items,
+            true,
+            Some((&future[..1], endnote_start, compact_spacing)),
+            measured_tables,
+        )
+        .and_then(|geometry| geometry.occupied_bottom)
+        .is_some_and(|bottom| bottom > available)
+    }
+
+    /// 자동 분할 후보 전체가 실제로 들어가면 저장 누계의 컷을 취소한다.
+    /// 글줄과 별도 개체의 소유·원점 계획을 혼동하지 않는다.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn reflowed_endnote_unsplit_candidate_fits(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        para_index: usize,
+        available: f64,
+        column_width: f64,
+        measured_tables: &[MeasuredTable],
+    ) -> bool {
+        styles
+            .para_styles
+            .get(paragraph.para_shape_id as usize)
+            .is_some_and(|style| !style.keep_with_next && !style.page_break_before)
+            && !paragraph.controls.iter().any(|control| {
+                matches!(
+                    control,
+                    crate::model::control::Control::Table(_)
+                        | crate::model::control::Control::Picture(_)
+                        | crate::model::control::Control::Shape(_)
+                )
+            })
+            && self.reflowed_endnote_whole_paragraph_fits(
+                st,
+                paragraphs,
+                styles,
+                paragraph,
+                para_index,
+                available,
+                column_width,
+                measured_tables,
+            )
+    }
+
     /// 저장 단 경계의 현재 문단을 실제 소유·표 측정 문맥으로 대조한다.
     /// 별도 PageItem/float 예약이 필요한 후보는 그 계획을 발행하기 전이므로
     /// FullParagraph만으로 fit을 선언하지 않는다. 이전 항목의 계획은 유지한다.
