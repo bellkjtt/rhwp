@@ -157,6 +157,7 @@ impl TypesetEngine {
                     &fmt,
                     st.available_height(),
                     en_col_w,
+                    measured_tables,
                 )
             {
                 st.advance_column_or_new_page();
@@ -1327,7 +1328,7 @@ impl TypesetEngine {
                 default_question_title_tail_fits_by_line_height,
                 zero_question_title_tail_fits_by_line_height,
                 large_between_zero_above_whole_note_small_bleed_fits,
-                advance_for_fit,
+                mut advance_for_fit,
                 pre_emit_tail_before_non_tac_object_advance,
             } = self.query_tail_fit(tail_fit::TailFitInput {
                 default_question_group_title_tail,
@@ -1434,6 +1435,27 @@ impl TypesetEngine {
                     pre_emitted_endnote_para_indices.insert(ep_idx + 1);
                 }
             }
+            // 저장 높이로 단을 넘기기 전에 같은 paint 문맥의 새 제목 fit을
+            // 확인한다. 실제로 넘긴 뒤에 검사하면 앞 단의 잔여 공간을 잃는다.
+            let mut new_head_fit = if ep_idx == 0 {
+                self.query_reflowed_endnote_new_head_fit(
+                    st,
+                    paragraphs,
+                    styles,
+                    en_para,
+                    &fmt,
+                    en_para_idx,
+                    available,
+                    en_col_w,
+                    measured_tables,
+                )
+            } else {
+                reflow_fit::NewHeadFit::default()
+            };
+            if advance_for_fit && new_head_fit.can_stay {
+                advance_for_fit = false;
+                kept_new_head_in_current_column = true;
+            }
             if advance_for_fit {
                 // [#6574] 렌더 경로로 그려 이 문단이 현재 단에 통째로 들어가면 누계 기반 일반
                 // fit 판정으로 단을 넘기지 않는다. 누계는 렌더와 다른 항(제목의 저장 사다리
@@ -1455,6 +1477,7 @@ impl TypesetEngine {
                 );
                 if !render_fits_current_column {
                     st.advance_column_or_new_page();
+                    new_head_fit = reflow_fit::NewHeadFit::default();
                 }
                 prev_en_bottom_vpos = None;
                 prev_en_content_bottom_vpos = None;
@@ -1559,35 +1582,13 @@ impl TypesetEngine {
                 zero_question_title_tail_fits_by_line_height,
                 large_between_zero_above_whole_note_small_bleed_fits,
             });
-            let natural_new_head_overflows = ep_idx == 0
-                && self.reflowed_endnote_new_head_overflows(
-                    st,
-                    paragraphs,
-                    styles,
-                    en_para,
-                    &fmt,
-                    en_para_idx,
-                    available,
-                    en_col_w,
-                );
-            advance_for_new_endnote |= natural_new_head_overflows;
-            let kept_new_head = advance_for_new_endnote
-                && !natural_new_head_overflows
-                && ep_idx == 0
-                && self.reflowed_endnote_new_head_fits(
-                    st,
-                    paragraphs,
-                    styles,
-                    en_para,
-                    &fmt,
-                    en_para_idx,
-                    available,
-                    en_col_w,
-                );
+            advance_for_new_endnote |= new_head_fit.natural_overflows;
+            let kept_new_head = advance_for_new_endnote && new_head_fit.can_stay;
             if kept_new_head {
                 kept_new_head_in_current_column = true;
+                advance_for_new_endnote = false;
             }
-            if advance_for_new_endnote && !kept_new_head {
+            if advance_for_new_endnote {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
                 prev_en_content_bottom_vpos = None;
@@ -1957,6 +1958,7 @@ impl TypesetEngine {
                     en_para_idx,
                     available,
                     en_col_w,
+                    measured_tables,
                 );
             let split_candidate = if render_fits_whole || whole_internal_rewind_fits {
                 None

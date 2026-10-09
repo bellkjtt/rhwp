@@ -492,4 +492,3 @@ fn test_unknown_equation_values_survive_edit_undo_redo_and_save_state() {
         .expect("redo snapshot should restore");
     assert_values(&doc);
 }
-

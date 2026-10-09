@@ -418,4 +418,3 @@ fn convert_pua_enclosed_numbers(composed: &mut ComposedParagraph) {
         }
     }
 }
-

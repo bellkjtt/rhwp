@@ -606,16 +606,149 @@ impl TypesetEngine {
         // 저장 span/75% 되감김으로 순차 렌더(+69.7px)를 과소 계상해 알짜 풀이가
         // 용지 밖에 남았다. acc·A2 스냅은 그대로 휴리스틱.
         if ssot_level >= EnSsotLevel::A3 || sequential_compact_rewind {
-            return self
-                .simulate_endnote_column_extent(
-                    st,
-                    paragraphs,
-                    styles,
+            // 실제 paint와 같은 전역 문단 식별자를 보존한다. 로컬 재색인하면
+            // 본문/미주 구분, 원본 소유자와 다음 문단의 trailing 간격이 달라진다.
+            let future_count = future.map_or(0, |(tail, _, _)| tail.len());
+            let future_base = paragraphs.len() + st.endnote_paragraphs.len();
+            let mut paint_paras = vec![Paragraph::default(); future_base + future_count];
+            for (global, local) in &local_indices {
+                paint_paras[*global] = local_paras[*local].clone();
+            }
+            // 구분선도 실제 흐름 항목이다. 제거하면 본문 후행 간격 회수와
+            // 첫 미주 원점이 최종 배치와 달라진다.
+            let mut local_items = st.current_items.clone();
+            if let Some(item) = &extra_item {
+                local_items.push(item.clone());
+            }
+            if local_items.is_empty() {
+                return None;
+            }
+            let mut sources = st.endnote_para_sources.clone();
+            if let Some((tail, endnote_start, compact_spacing)) = future {
+                // 표/float/글상자는 이 scratch의 실제 측정 문맥이 부족하므로
+                // 원래 저장 단 경계를 유지한다. TAC 그림의 명시 크기는 동일 경로로 측정한다.
+                let supported = |paragraph: &Paragraph| {
+                    paragraph.controls.iter().all(|control| match control {
+                        crate::model::control::Control::Table(_)
+                        | crate::model::control::Control::Shape(_) => false,
+                        crate::model::control::Control::Picture(picture) => {
+                            picture.common.treat_as_char
+                                && picture.common.width > 0
+                                && picture.common.height > 0
+                        }
+                        _ => true,
+                    })
+                };
+                if local_paras.iter().any(|p| !supported(p))
+                    || tail.iter().any(|p| {
+                        !supported(p)
+                            || p.column_type != crate::model::paragraph::ColumnBreakType::None
+                    })
+                {
+                    return None;
+                }
+                let owner = sources.last()?.clone();
+                for (offset, paragraph) in tail.iter().enumerate() {
+                    let para_index = future_base + offset;
+                    paint_paras[para_index] = super::row_projection::render_paragraph(
+                        paragraph,
+                        endnote_start,
+                        compact_spacing,
+                    );
+                    let mut source = owner.clone();
+                    source.note_para_index += offset + 1;
+                    sources.push(source);
+                    local_items.push(PageItem::FullParagraph { para_index });
+                    for (control_index, control) in paragraph.controls.iter().enumerate() {
+                        if matches!(control, crate::model::control::Control::Picture(_)) {
+                            local_items.push(PageItem::Shape {
+                                para_index,
+                                control_index,
+                            });
+                        }
+                    }
+                }
+            }
+            let paint_composed: Vec<_> = paint_paras
+                .iter()
+                .map(|p| crate::renderer::composer::compose_paragraph_in_context(p, styles))
+                .collect();
+            // 아직 emit하지 않은 다음 내부 문단도 원본에서 확인한다. 같은 미주의
+            // 연속 여부는 현재 항목 목록의 끝과 무관하므로 paint의 소유자 계약을
+            // 유지해야 한다. 가상 본문이나 저장 LineSeg를 새로 만들지 않는다.
+            if let Some(last) = sources.last().cloned() {
+                let parent = paragraphs
+                    .get(last.para_index)
+                    .and_then(|p| p.controls.get(last.control_index));
+                if let Some(crate::model::control::Control::Endnote(note)) = parent {
+                    if last.note_para_index + 1 < note.paragraphs.len() {
+                        let mut next = last;
+                        next.note_para_index += 1;
+                        sources.push(next);
+                    }
+                }
+            }
+            // flush 뒤 실제 paint에 전달되는 단 문맥을 그대로 재생한다.
+            // 빈 inline 계획이나 가상 용지 원점은 이미 배치한 표의 높이와
+            // 이어지는 미주 원점을 다시 계산하게 하므로 사용할 수 없다.
+            let column = crate::renderer::pagination::ColumnContent {
+                column_index: st.current_column,
+                start_height: st.current_start_height,
+                endnote_flow: st.current_endnote_flow,
+                items: local_items,
+                zone_layout: st.current_zone_layout.clone(),
+                zone_y_offset: st.current_zone_y_offset,
+                wrap_around_paras: st.current_column_wrap_around_paras.clone(),
+                used_height: st.current_height,
+                wrap_anchors: st.current_column_wrap_anchors.clone(),
+                overlay_continuations: st.current_column_overlay_continuations.clone(),
+                overlay_cuts: st.current_column_overlay_cuts.clone(),
+                inline_placements: st.inline_placements.clone(),
+                inline_flow_plans: st.inline_flow_plans.clone(),
+                paragraph_float_placements: st.paragraph_float_placements.clone(),
+            };
+            let mut col_area = st.inline_flow_column();
+            col_area.width = en_col_w;
+            col_area.height = available;
+            let page = st
+                .pages
+                .last()
+                .cloned()
+                .unwrap_or_else(|| st.new_page_content(Vec::new()));
+            let scratch = crate::renderer::layout::LayoutEngine::new(self.dpi);
+            scratch.set_layout_profile(st.profile);
+            scratch.set_endnote_para_sources(paragraphs.len(), &sources);
+            scratch.set_endnote_shape_margins_hu(
+                st.endnote_separator_above_hu,
+                st.endnote_between_notes_hu,
+                st.endnote_separator_below_hu,
+            );
+            let (flow_bottom, occupied_bottom) = scratch.measure_endnote_column_bottom(
+                &column,
+                &page,
+                &paint_paras,
+                &paint_composed,
+                styles,
+                &col_area,
+                st.endnote_between_notes_hu,
+                measured_tables,
+            );
+            // 실제 배치는 용지 좌표, typeset 예산은 현재 단 원점 기준이다.
+            let flow_bottom = flow_bottom - col_area.y;
+            let occupied_bottom = occupied_bottom.map(|bottom| bottom - col_area.y);
+            if ssot_debug {
+                eprintln!(
+                    "EN_COLSIM start_h={:.1} avail={:.1} items={} bottom={:.1}",
+                    st.current_start_height,
                     available,
-                    en_col_w,
-                    extra_item.as_ref(),
-                )
-                .map(|(flow_bottom, occupied_bottom)| EndnoteColumnGeometry { flow_bottom, occupied_bottom });
+                    local_indices.len(),
+                    flow_bottom,
+                );
+            }
+            return Some(EndnoteColumnGeometry {
+                flow_bottom,
+                occupied_bottom,
+            });
         }
         let page_base = st
             .current_items

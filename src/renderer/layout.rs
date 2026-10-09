@@ -7041,6 +7041,62 @@ impl LayoutEngine {
         }
     }
 
+    /// 현재 단의 확정 배치·소유자·용지 문맥으로 실제 배치 경로를 재생한다.
+    /// 흐름 끝과 점유 끝은 용지 좌표로 반환하며 caller가 단 상대 예산으로 변환한다.
+    /// 가상 단·빈 inline 계획을 생성하면 본문 표와 미주를 함께 가진 단의
+    /// 높이를 실제 출력과 다르게 재계산하므로 caller의 ColumnContent를 소비한다.
+    pub(crate) fn measure_endnote_column_bottom(
+        &self,
+        col_content: &ColumnContent,
+        page_content: &PageContent,
+        paragraphs: &[Paragraph],
+        composed: &[ComposedParagraph],
+        styles: &ResolvedStyleSet,
+        col_area: &LayoutRect,
+        between_notes_hu: i32,
+        measured_tables: &[MeasuredTable],
+    ) -> (f64, Option<f64>) {
+        self.endnote_between_notes_hu.set(between_notes_hu);
+        // 원본 소유자와 본문/미주 경계는 caller가 실제 paint 문맥으로 설정한다.
+        // 이를 base=0으로 덮어쓰면 본문까지 미주로 해석하고 trailing이 달라진다.
+        let layout = &page_content.layout;
+        let zone_layout = col_content.zone_layout.as_ref().unwrap_or(layout);
+        // [#4277] 높이 측정 전용 — paint 트리가 아니라 흐름 상태만 만든다.
+        let mut frame = PageLayoutContext::new(
+            page_content.page_index,
+            layout.page_width,
+            layout.page_height,
+        );
+        let mut paper_images: Vec<RenderNode> = Vec::new();
+        let (_node, y_offset) = self.build_single_column(
+            &mut frame,
+            &mut paper_images,
+            col_content,
+            page_content,
+            paragraphs,
+            composed,
+            styles,
+            &[],
+            measured_tables,
+            layout,
+            zone_layout,
+            col_area,
+            0,
+            &[],
+            &[],
+        );
+        // y_offset 은 col_area 절대 프레임의 단 콘텐츠 bottom. 호출부가 `current_height`
+        // (=col_area.y 가 단 시작) 프레임과 정합하도록 그대로 반환한다.
+        let occupied_bottom = [
+            self.last_item_content_bottom.get(),
+            self.last_item_flow_line_bottom.get(),
+        ]
+        .into_iter()
+        .filter(|bottom| bottom.is_finite())
+        .reduce(f64::max);
+        (y_offset, occupied_bottom)
+    }
+
     /// [Task #2120] 문단 테두리/배경 연속 그룹 병합 렌더링 (Task #321 v6) —
     /// 원본 무변경 통이동. stroke signature 병합 + 그룹 사각형/테두리 방출.
     #[allow(clippy::too_many_arguments)]
