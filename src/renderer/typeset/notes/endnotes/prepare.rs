@@ -259,6 +259,9 @@ impl TypesetEngine {
             && !zero_between_question_group_title_tail
             && !visible_large_between_question_group_title_tail
             && st.current_height > st.available_height() * rewind_group_advance_threshold
+            // 앞 미주의 좌표 되감기로 다음 미주 전체의 분할 금지를 추정하지 않는다.
+            // 분할 가능한 내용은 아래의 문단별 fit이 남은 단 공간을 소비한다.
+            && self.endnote_is_indivisible(en_ctrl, styles, st)
         {
             let group_first = en_ctrl
                 .paragraphs
@@ -556,5 +559,43 @@ impl TypesetEngine {
                 current_endnote_had_inline_object_vpos_overestimate,
             },
         )
+    }
+
+    /// 다음 미주 전체가 명시적 문단 연결과 줄 묶음으로 분할 불가인지 확인한다.
+    /// 저장 좌표의 되감기나 다음 미주의 크기는 묶음 속성을 대신하지 않는다.
+    fn endnote_is_indivisible(
+        &self,
+        endnote: &crate::model::footnote::Endnote,
+        styles: &ResolvedStyleSet,
+        st: &TypesetState,
+    ) -> bool {
+        if endnote.paragraphs.is_empty() {
+            return false;
+        }
+        let column_width = st
+            .layout
+            .column_areas
+            .get(st.current_column as usize)
+            .map(|area| area.width)
+            .unwrap_or(st.layout.body_area.width);
+        endnote.paragraphs.iter().enumerate().all(|(index, para)| {
+            let Some(style) = styles.para_styles.get(para.para_shape_id as usize) else {
+                return false;
+            };
+            if para.column_type != crate::model::paragraph::ColumnBreakType::None
+                || style.page_break_before
+                || (index + 1 < endnote.paragraphs.len() && !style.keep_with_next)
+            {
+                return false;
+            }
+            if style.keep_lines {
+                return true;
+            }
+            let composed = crate::renderer::composer::compose_paragraph_in_context(para, styles);
+            self.format_endnote_paragraph(para, Some(&composed), styles, Some(column_width))
+                .line_heights
+                .len()
+                == 1
+        })
     }
 }
