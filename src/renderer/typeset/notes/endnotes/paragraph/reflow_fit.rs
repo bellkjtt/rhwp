@@ -26,6 +26,22 @@ impl ReflowedEndnoteFit {
     }
 }
 
+/// 측정 불가와 실제 수용 불가를 구분한 앞부분의 수용 결과.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum EndnotePrefixFit {
+    Split(usize),
+    Overflow,
+}
+
+impl EndnotePrefixFit {
+    pub(super) fn split_line(self) -> Option<usize> {
+        match self {
+            Self::Split(line) => Some(line),
+            Self::Overflow => None,
+        }
+    }
+}
+
 impl TypesetEngine {
     /// 연속된 일반 미주 글줄의 전체·앞부분 점유를 한 계약으로 조회한다.
     /// 별도 개체 계획·명시적 경계·아직 조판하지 않은 keep 그룹은 대체하지 않는다.
@@ -279,7 +295,8 @@ impl TypesetEngine {
         })
     }
 
-    /// 메트릭이 바뀐 저장 줄의 분할은 실제 앞부분의 점유로 확인한다.
+    /// 저장 컷의 확대·축소 모두 실제 앞부분의 점유로 확인한다.
+    /// 유효한 컷이 없으면 Overflow, 별도 배치 계약이면 None을 반환한다.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn reflowed_endnote_prefix_split(
         &self,
@@ -288,44 +305,66 @@ impl TypesetEngine {
         styles: &ResolvedStyleSet,
         paragraph: &Paragraph,
         para_index: usize,
-        saved_split: usize,
         available: f64,
         column_width: f64,
         measured_tables: &[MeasuredTable],
-    ) -> Option<usize> {
+    ) -> Option<EndnotePrefixFit> {
         let style = styles.para_styles.get(paragraph.para_shape_id as usize)?;
-        if paragraph.column_type != ColumnBreakType::None
-            || style.keep_lines
+        if st.current_items.is_empty()
+            || paragraph.column_type != ColumnBreakType::None
             || style.keep_with_next
-            || paragraph.controls.iter().any(|control| {
-                matches!(
-                    control,
-                    crate::model::control::Control::Table(_)
-                        | crate::model::control::Control::Picture(_)
-                        | crate::model::control::Control::Shape(_)
-                )
+            || style.page_break_before
+            || paragraph.stored_text_partition_is_dirty()
+            || paragraph.controls.iter().any(|control| match control {
+                crate::model::control::Control::Table(_)
+                | crate::model::control::Control::Picture(_)
+                | crate::model::control::Control::Shape(_) => true,
+                crate::model::control::Control::Equation(equation) => {
+                    !equation.common.treat_as_char
+                }
+                _ => false,
             })
         {
             return None;
         }
-        (saved_split + 1..paragraph.line_segs.len())
-            .rev()
-            .find(|&end_line| {
-                if style.widow_orphan
-                    && (end_line < 2 || paragraph.line_segs.len() - end_line < 2)
-                {
-                    return false;
-                }
-                let occupied = self.simulate_endnote_column_with_item(
-                    st, paragraphs, styles, available, column_width,
-                    Some(PageItem::PartialParagraph { para_index, start_line: 0, end_line }),
-                    true, None, measured_tables, true,
-                );
-                if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
-                    eprintln!("EN_PREFIX_OCCUPIED pi={para_index} end={end_line} bottom={occupied:?} available={available:.3}");
-                }
-                occupied.is_some_and(|bottom| bottom <= available)
-            })
+        let composed = crate::renderer::composer::compose_paragraph_in_context(paragraph, styles);
+        let formatted =
+            self.format_endnote_paragraph(paragraph, Some(&composed), styles, Some(column_width));
+        if formatted.line_count() <= 1 || formatted.line_count() != paragraph.line_segs.len() {
+            return None;
+        }
+        if style.keep_lines {
+            return Some(EndnotePrefixFit::Overflow);
+        }
+        for end_line in (1..formatted.line_count()).rev() {
+            if style.widow_orphan && (end_line < 2 || formatted.line_count() - end_line < 2) {
+                continue;
+            }
+            let occupied = self
+                .measure_endnote_column_with_item(
+                    st,
+                    paragraphs,
+                    styles,
+                    available,
+                    column_width,
+                    Some(PageItem::PartialParagraph {
+                        para_index,
+                        start_line: 0,
+                        end_line,
+                    }),
+                    true,
+                    None,
+                    measured_tables,
+                )?
+                .occupied_bottom?;
+            if std::env::var_os("RHWP_FLOW_BREAK_DEBUG").is_some() {
+                eprintln!("EN_PREFIX_OCCUPIED pi={para_index} end={end_line} bottom={occupied:.3} available={available:.3}");
+            }
+            if occupied <= available {
+                return Some(EndnotePrefixFit::Split(end_line));
+            }
+        }
+        Some(EndnotePrefixFit::Overflow)
     }
 
     #[allow(clippy::too_many_arguments)]

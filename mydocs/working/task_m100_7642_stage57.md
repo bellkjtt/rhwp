@@ -125,3 +125,22 @@ ignored `stage57-engine-correction.patch`에 다섯 source 파일의 수정안�
 현재 파일 해시와 `git apply --check`를 확인했다. 아직 source에 적용하지 않았다.
 실행 중인 같은 source의 WASM 최적화가 실제로 종료된 뒤 적용·빌드·Native/fresh WASM
 재검증한다. 회귀 테스트·fixture·baseline 변경은 이 수정 묶음에 포함하지 않는다.
+
+## 구현 상태
+
+앞 source fb627e534의 fresh WASM은 1670.36초에 exit 0으로 종료됐다.
+WASM SHA-256은 `43bf8042072202e9869e2d3ec8e28260402ff81f3944c249a9132eba4e2ddbd5`,
+JS는 `a043bdc9047d3ff5d89f55ccc21846f017ac109dad6de25b2885e43c44ee08da`다.
+package/public 해시와 source 파일 해시가 각각 일치한 뒤 수정안을 적용했다.
+고정된 이전 package의 WASM 집중 큐는 이전 소스의 증거로 계속 실행한다.
+
+세 컷 소비 지점을 EndnotePrefixFit으로 연결했다. Overflow는 미측정과 구분해
+최종 방출 전에 전체 문단을 다음 단으로 이월한다. 기존 컷보다 작은 후보도
+실제 column의 occupied_bottom을 확인하고 필요한 widow/keep 계약을 지킨다.
+
+layout_column_item 호출 직전 유효한 저장 미주 글줄의 최종 원점을
+HeightCursor::seed_stored_flow_origin에 전달한다. 이 메서드는 저장 첫 줄과
+실제 원점을 연결한 lazy base 및 확인한 column origin을 함께 기록한다.
+사다리가 되감긴 뒤의 textless 수식도 이 원점을 이어받는다. 원래 저장
+되감김·원본 입력을 지우지 않았고 특정 문단 번호·높이·고정 하단 여유를
+구현 조건에 넣지 않았다. 새 source의 빌드·시각 판정은 아직 미검증이다.

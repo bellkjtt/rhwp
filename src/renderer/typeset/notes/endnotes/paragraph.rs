@@ -492,11 +492,11 @@ impl TypesetEngine {
                     styles,
                     en_para,
                     en_para_idx,
-                    0,
                     available,
                     en_col_w,
                     measured_tables,
                 )
+                .and_then(reflow_fit::EndnotePrefixFit::split_line)
             })
             .flatten();
             if st.col_count > 1
@@ -2059,9 +2059,10 @@ impl TypesetEngine {
                         measured_tables,
                     )
             });
-            // 실제 수식 줄 메트릭을 갱신하면 저장 컷 앞에 들어가는 줄도 달라진다.
-            // 이전 컷을 고정하지 않고 방출할 부분 문단의 실제 점유를 대조한다.
-            let split_candidate = split_candidate.map(|split| {
+            // 기존 컷도 실제 배치에 들어가야 한다. 확대 후보만 검사한 뒤
+            // 넘치는 옛 컷을 재사용하지 않으며, 수용 불가와 미측정을 구분한다.
+            let mut prefix_overflows = false;
+            let split_candidate = split_candidate.and_then(|saved_split| {
                 if internal_vpos_rewind
                     && !st.profile.session_edited()
                     && (crate::renderer::composer::stored_row_projection::reissued_equation_rows(
@@ -2069,22 +2070,33 @@ impl TypesetEngine {
                         &composed,
                     ) || self.endnote_column_has_reissued_rows(st, paragraphs, styles))
                 {
-                    self.reflowed_endnote_prefix_split(
+                    match self.reflowed_endnote_prefix_split(
                         st,
                         paragraphs,
                         styles,
                         en_para,
                         en_para_idx,
-                        split,
                         available,
                         en_col_w,
                         measured_tables,
-                    )
-                    .unwrap_or(split)
+                    ) {
+                        Some(reflow_fit::EndnotePrefixFit::Split(line)) => Some(line),
+                        Some(reflow_fit::EndnotePrefixFit::Overflow) => {
+                            prefix_overflows = true;
+                            None
+                        }
+                        None => Some(saved_split),
+                    }
                 } else {
-                    split
+                    Some(saved_split)
                 }
             });
+            if prefix_overflows {
+                st.advance_column_or_new_page();
+                prev_en_bottom_vpos = None;
+                prev_en_content_bottom_vpos = None;
+                en_advance = fmt.total_height;
+            }
             // 저장 되감김을 같은 단에 수용한 뒤에도 후속 줄의 실제 점유를
             // 확인한다. 작아진 saved-delta 누계로 쪽 아래 넘침을 허용하지 않는다.
             if ep_idx > 0

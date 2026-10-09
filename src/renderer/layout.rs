@@ -9587,6 +9587,52 @@ impl LayoutEngine {
             self.item_flow_snap_context.set(
                 prev_item_content_bottom_y.map(|prev_bottom| (y_before_vpos_adjust, prev_bottom)),
             );
+            // 저장 되감김을 순차 흐름에 수용한 글줄은 최종 원점에서 사다리를
+            // 재시작한다. 앞 단계의 임시 y나 빈 텍스트 여부로 간격 소비를 추측하지 않는다.
+            if col_content.endnote_flow
+                && current_vpos_rewinds_from_prev
+                && !self.profile.get().session_edited()
+                && matches!(
+                    item,
+                    PageItem::FullParagraph { .. }
+                        | PageItem::PartialParagraph { start_line: 0, .. }
+                )
+                && !self.hidden_empty_paras.borrow().contains(&item_para)
+            {
+                if let Some(para) = paragraphs.get(item_para).filter(|para| {
+                    !para.stored_text_partition_is_dirty()
+                        && composed
+                            .get(item_para)
+                            .is_some_and(|actual| actual.lines.len() == para.line_segs.len())
+                        && !para.controls.iter().any(|control| match control {
+                            Control::Table(_) | Control::Picture(_) | Control::Shape(_) => true,
+                            Control::Equation(equation) => !equation.common.treat_as_char,
+                            _ => false,
+                        })
+                }) {
+                    if let Some(first) = para.line_segs.first().filter(|first| {
+                        first.line_height > 0
+                            && first.tag
+                                & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
+                                == 0
+                    }) {
+                        let spacing_before = styles
+                            .para_styles
+                            .get(para.para_shape_id as usize)
+                            .map_or(0.0, |style| style.spacing_before);
+                        hcursor
+                            .seed_stored_flow_origin(first.vertical_pos, y_offset + spacing_before);
+                        if std::env::var_os("RHWP_VPOS_DEBUG").is_some() {
+                            eprintln!(
+                                "VPOS_RESTART pi={item_para} source={} origin={:.3} base={:?}",
+                                first.vertical_pos,
+                                y_offset + spacing_before,
+                                hcursor.vpos_lazy_base
+                            );
+                        }
+                    }
+                }
+            }
             let item_start_y_for_band = y_offset;
             if std::env::var_os("RHWP_DIAG_FLOW_ORIGIN").is_some() {
                 eprintln!(

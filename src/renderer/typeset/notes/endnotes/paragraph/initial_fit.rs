@@ -434,11 +434,11 @@ impl TypesetEngine {
                     styles,
                     en_para,
                     en_para_idx,
-                    0,
                     available,
                     en_col_w,
                     measured_tables,
                 )
+                .and_then(super::reflow_fit::EndnotePrefixFit::split_line)
             } else {
                 let mut sum = 0.0;
                 let mut split = 0usize;

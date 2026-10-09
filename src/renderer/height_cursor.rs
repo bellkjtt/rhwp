@@ -283,6 +283,16 @@ impl HeightCursor {
         }
     }
 
+    /// 유효한 저장 글줄을 실제로 수용한 원점에서 뒤 사다리를 재시작한다.
+    /// 줄간격을 이미 소비한 흐름을 lazy 역산으로 다시 전진시키지 않는다.
+    pub(crate) fn seed_stored_flow_origin(&mut self, vertical_pos: i32, line_origin: f64) {
+        let base =
+            vertical_pos - crate::renderer::px_to_hwpunit(line_origin - self.col_area_y, self.dpi);
+        self.vpos_page_base = None;
+        self.vpos_lazy_base = Some(base);
+        self.stored_column_origin = Some((base, self.col_area_y));
+    }
+
     /// 항목 배치 직전, vpos 기반 y_offset 보정을 적용한다.
     ///
     /// 렌더러 `build_single_column` 의 inter-item VPOS_CORR 블록과 동작 동일.
