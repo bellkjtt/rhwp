@@ -101,3 +101,21 @@ PartialParagraph가 17쪽 왼쪽 단 `[0,1)`, 오른쪽 단 `[1,6)`으로 나타
 37개 페이지를 진행 중이다. 같은 source의 fresh WASM은 루트 wrapper와 공용
 `target/pr-review`로 새로 빌드 중이다. 기존 source f2fa41f79의 전쪽 큐는
 별도의 변경 전 증거로 유지하며 최신 source의 통과 건수에 합산하지 않는다.
+
+## 17쪽의 새 이미지와 확대 판독
+
+새 Native 17쪽의 일치율은 96.65449%다. 앞 source f2fa41f79의 69.67924%와
+같은 원본·Print PDF를 비교했다. 새 full review와 원본 소유자 872의 bbox로
+선택한 왼쪽 제목·오른쪽 이어받기 영역의 3배 확대를 직접 표시했다.
+제목 (iii)는 Print처럼 왼쪽 단 마지막 줄에 있고, 오른쪽 첫 줄은 A·B·C를
+한 명으로 묶는 설명부터 시작한다. 4!와 2의 곱, 6! 분모, 마지막 1/15의
+분수 구성과 설명의 줄 순서도 확대해 확인했다. 글꼴 획·래스터 차이는 남는다.
+이 페이지의 개선을 뒤쪽 페이지나 fresh WASM의 통과로 확대하지 않는다.
+
+full review는 ignored `endnote-prefix-contract-focused-native/all-11/all-11/review/review_017.png`,
+확대 이미지는 `stage56-sep-note26-p017-split-detail-review.png`다.
+`stage56-sep-note26-p017-split-detail-provenance.json`에 변경 전후 PNG·Print PNG의
+해시, 원본 소유자, 관심 영역과 배율을 보존했다. 같은 좌표에서 잘라 확대했으며
+별도 영역 점수를 만들거나 본문 일치율 대신 사용하지 않았다. Print PNG의 높이는
+1122, Native는 1123이다. 관심 영역은 양쪽 범위 안에 있으며 재배율하지 않았다.
+뒤쪽 집중 검증·전체 페이지·fresh WASM은 아직 미완료다.
