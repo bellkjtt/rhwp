@@ -53,3 +53,25 @@ fresh WASM·시각 검증 후 PR/CI/merge를 진행하며, code CI 종료 뒤 PR
 Native와 같은 62.18357 / 61.77429%, HWP/2020은 62.24026 / 61.94278%다.
 이 결과는 새 소스의 통과 증거가 아니다. 종료된 실행의 재생성 가능한 SVG는
 해시 기록 후 정리하고 판독 PNG·TSV·JSON·Print·frozen 빌드는 보존한다.
+
+## 전쪽 Native 복구와 새 package 종료
+
+진행 프로세스가 실제로 종료돼 Native 16쪽에서 중단됐음을 확인했다. 같은 frozen
+소스·입력·PDF·SVG를 고정하고 완료된 PNG 16개는 보존한 채 나머지 5쪽만 같은
+webfont rasterizer로 산출했다. `endnote-explicit-keep-native-recovery-provenance.json`에
+21개 SVG/PNG 해시, 추가 raster 5개와 원 실행의 입력·빌드 출처를 연결했다.
+전체 PNG 쌍 TSV는 exit 0, 21/21쪽, 최저 90.64221%, 미달·누락 0이다.
+Native export와 PDF의 전체 쪽수도 별도로 21/21 확인했다. PNG 쌍 측정 자체의
+gate는 `not_evaluated`이며 확대 판독에서 확인한 `not=` 결함이 남아 있다.
+
+WASM 최적화도 종료된 PID와 `Terminated` 로그를 확인한 뒤 같은 소스·공용 캐시에서
+재실행했다. 재실행은 exit 0, 544.46초로 완료됐고 소스 해시가 전후 일치한다.
+새 frozen WASM SHA-256은 `2659d2fad218b7e0441680cd6e345046c48a23ee38dec780ccc64029095ec264`다.
+JS/WASM은 루트 pkg와 Studio public의 해시도 일치한다. 이 frozen package의 전쪽
+대조를 별도 프로세스로 시작했으며, 이후 소스 변경의 결과와 구분한다.
+
+`not=`의 Print text trace는 등호 U+E047과 빗금 U+E054가 같은 원점에 표시됨을
+입증한다. 한 글자 `≠`로 바꿔 동일한 표시라고 추정하지 않는다. 여러 크기의 재생성
+자료에서도 빗금은 별도 glyph이며 크기와 대상에 따라 비율이 다르다. 4개 크기에서
+부정 등호·부등호와 정상 기호를 비교하는 저장본 및 Print를 다음 단계의 독립 근거로
+사용한다. 수동 진단 입력의 생성·저장 정보는 공개하며 원본의 일치로 대체하지 않는다.
