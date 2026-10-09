@@ -8632,7 +8632,23 @@ impl LayoutEngine {
                             .then_some(())
                     })
                     .is_some();
-            let should_preserve_endnote_title_gap = current_is_endnote_question_title
+            let complete_note_boundary = hcursor
+                .prev_layout_para
+                .zip(current_endnote_source.as_ref())
+                .is_some_and(|(previous_index, current_source)| {
+                    paragraphs.get(previous_index).is_some_and(|previous| {
+                        super::endnote_spacing::starts_note_after_complete_tail(
+                            self.endnote_para_source_for(previous_index).as_ref(),
+                            current_source,
+                            item,
+                            &col_content.items[..item_ordinal],
+                            previous_index,
+                            previous.line_segs.len(),
+                        )
+                    })
+                });
+            let should_preserve_endnote_title_gap = (current_is_endnote_question_title
+                || complete_note_boundary)
                 && prev_endnote_title_gap_px > 0.0
                 && !endnote_title_direct_bottom_fit
                 && !endnote_title_bottom_fit_applied
@@ -8641,7 +8657,8 @@ impl LayoutEngine {
                 && !textless_equation_tail_gap_already_visible
                 && !current_title_tail_backtracked
                 && !current_large_gap_title_compacted_by_cursor
-                && (prev_endnote_title_gap_from_continued_partial
+                && (complete_note_boundary
+                    || prev_endnote_title_gap_from_continued_partial
                     || y_offset > y_before_vpos + 0.5);
             if textless_equation_tail_gap_already_visible {
                 let min_y = super::endnote_spacing::origin_after_gap(
