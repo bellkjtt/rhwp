@@ -320,17 +320,26 @@ impl EqParser {
     /// 넘으면 더 내려가지 않고 `Empty` 를 돌려준다(명령 토큰은 호출부에서 이미
     /// 소비했으므로 진행이 보장된다).
     fn parse_command(&mut self, cmd: &str) -> EqNode {
+        self.parse_command_with_tail(cmd, true)
+    }
+
+    // 첨자 span에서는 뒤 marker의 소속을 부모 슬롯이 먼저 판정한다.
+    fn parse_command_atom(&mut self, cmd: &str) -> EqNode {
+        self.parse_command_with_tail(cmd, false)
+    }
+
+    fn parse_command_with_tail(&mut self, cmd: &str, attach_scripts: bool) -> EqNode {
         self.depth += 1;
         if self.depth > MAX_EQ_DEPTH {
             self.depth -= 1;
             return EqNode::Empty;
         }
-        let node = self.parse_command_inner(cmd);
+        let node = self.parse_command_inner(cmd, attach_scripts);
         self.depth -= 1;
         node
     }
 
-    fn parse_command_inner(&mut self, cmd: &str) -> EqNode {
+    fn parse_command_inner(&mut self, cmd: &str, attach_scripts: bool) -> EqNode {
         let cmd_upper = cmd.to_ascii_uppercase();
         let cu = cmd_upper.as_str();
         match classify_command(cmd) {
@@ -382,7 +391,7 @@ impl EqParser {
                     .unwrap_or("∫")
                     .to_string();
                 let node = EqNode::MathSymbol(symbol);
-                self.try_parse_scripts(node)
+                self.finish_command_atom(node, attach_scripts)
             }
             EqCommandClass::BigOperator => {
                 let symbol = if is_big_operator(cu) {
@@ -401,7 +410,7 @@ impl EqParser {
                 // ★ KeepGong fix: 구분기호 그룹(left|...right| 등) 뒤 첨자(^/_)를 그룹 전체에 부착.
                 //   기존엔 try_parse_scripts 를 안 거쳐 |x|^3 의 ^3 가 base 없는 고아 첨자가 됐다.
                 let node = self.parse_left_right();
-                self.try_parse_scripts(node)
+                self.finish_command_atom(node, attach_scripts)
             }
             EqCommandClass::RightDiscard => EqNode::Empty,
             EqCommandClass::Rel => {
@@ -486,14 +495,14 @@ impl EqParser {
             }
             EqCommandClass::Sup | EqCommandClass::Sub => {
                 let body = self.parse_single_or_group();
-                self.try_parse_scripts(body)
+                self.finish_command_atom(body, attach_scripts)
             }
-            EqCommandClass::Fallback => self.parse_command_fallback(cmd),
+            EqCommandClass::Fallback => self.parse_command_fallback(cmd, attach_scripts),
         }
     }
 
     /// 장식·글꼴·기호·함수·미지 명령. 분류표에 없는 이름만 여기로 온다.
-    fn parse_command_fallback(&mut self, cmd: &str) -> EqNode {
+    fn parse_command_fallback(&mut self, cmd: &str, attach_scripts: bool) -> EqNode {
         // [#1204] hwpeq 명령은 대소문자 무시 — DECORATIONS/FONT_STYLES 는 소문자 키이므로
         // 1차 lookup 실패 시 소문자 fallback (`RM`/`BAR` 등 대문자 변형이 leak 되지 않도록).
         let cmd_lower = cmd.to_ascii_lowercase();
@@ -549,14 +558,17 @@ impl EqParser {
         // Unicode 기호 매핑 — 함수보다 우선 (hwpeq inf=∞ vs LaTeX \inf=infimum 충돌 방지)
         if let Some(symbol) = lookup_symbol(cmd) {
             let node = EqNode::MathSymbol(symbol.to_string());
-            return self.try_parse_scripts(node);
+            return self.finish_command_atom(node, attach_scripts);
         }
 
         if is_function(cmd) {
             let func_name = lookup_function(cmd).unwrap_or(cmd).to_string();
             // 함수명 뒤 Thin 공백은 종전대로 소비하되, 바로 뒤가 첨자면 남겨서
             // try_parse_scripts 가 폭을 보존하며 결합하게 한다(#5534).
-            if self.current_type() == TokenType::Whitespace && self.current_value() == "`" {
+            if attach_scripts
+                && self.current_type() == TokenType::Whitespace
+                && self.current_value() == "`"
+            {
                 let after_space_is_script = self.tokens.get(self.pos + 1).is_some_and(|t| {
                     t.ty == TokenType::Subscript || t.ty == TokenType::Superscript
                 });
@@ -565,11 +577,19 @@ impl EqParser {
                 }
             }
             let node = EqNode::Function(func_name);
-            return self.try_parse_scripts(node);
+            return self.finish_command_atom(node, attach_scripts);
         }
 
         let node = EqNode::Text(cmd.to_string());
-        self.try_parse_scripts(node)
+        self.finish_command_atom(node, attach_scripts)
+    }
+
+    fn finish_command_atom(&mut self, node: EqNode, attach_scripts: bool) -> EqNode {
+        if attach_scripts {
+            self.try_parse_scripts(node)
+        } else {
+            node
+        }
     }
 
     /// 중괄호 그룹 파싱: {...} (깊이 가드).

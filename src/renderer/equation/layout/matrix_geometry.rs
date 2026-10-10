@@ -9,6 +9,7 @@ use super::{
 pub(super) fn is_standalone_eqalign(node: &EqNode) -> bool {
     match node {
         EqNode::EqAlign { .. } => true,
+        EqNode::Row(items) if items.iter().any(|item| matches!(item, EqNode::Newline)) => true,
         EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => is_standalone_eqalign(body),
         EqNode::Row(items) if items.len() == 1 => is_standalone_eqalign(&items[0]),
         _ => false,
@@ -206,6 +207,19 @@ impl EqLayout {
     }
 
     pub(super) fn layout_eqalign(&self, rows: &[(EqNode, EqNode)], fs: f64) -> LayoutBox {
+        self.layout_aligned_rows(rows, fs, fs * 0.15)
+    }
+
+    pub(super) fn layout_newline_rows(&self, children: &[EqNode], fs: f64) -> LayoutBox {
+        // 빈 행도 남기고, 일반 줄은 & 정렬 여백 없이 왼쪽 원점을 공유한다.
+        let rows: Vec<_> = children
+            .split(|node| matches!(node, EqNode::Newline))
+            .map(|line| (EqNode::Empty, EqNode::Row(line.to_vec()).simplify()))
+            .collect();
+        self.layout_aligned_rows(&rows, fs, 0.0)
+    }
+
+    fn layout_aligned_rows(&self, rows: &[(EqNode, EqNode)], fs: f64, align_gap: f64) -> LayoutBox {
         // 독립 정렬 묶음의 Print 피치는 1.1em이다. 분수·CASES 등 실제
         // 부모가 있으면 바깥 leading을 그 부모가 소유하므로 중복 예약하지 않는다.
         let row_gap = fs
@@ -218,7 +232,6 @@ impl EqLayout {
             } else {
                 MATRIX_ROW_GAP
             };
-        let align_gap = fs * 0.15; // & 기준 좌우 사이 간격
 
         // 각 행의 왼쪽/오른쪽 레이아웃 계산
         let nested = Self {

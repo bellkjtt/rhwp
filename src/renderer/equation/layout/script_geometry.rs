@@ -21,6 +21,28 @@ fn ends_with_uppercase_letter(node: &EqNode) -> bool {
 }
 
 impl EqLayout {
+    fn script_superscript_shift(&self, base: &LayoutBox, sup: &LayoutBox, fs: f64) -> f64 {
+        self.hancom_math_face
+            .then(|| super::super::logical_font_frame::superscript_shift(base, sup, fs, self.dpi))
+            .flatten()
+            .unwrap_or_else(|| {
+                (fs * SUPERSCRIPT_SHIFT_UP)
+                    .max(sup.height - sup.baseline + fs * SUPERSCRIPT_BOTTOM_MIN)
+            })
+    }
+
+    fn script_subscript_geometry(&self, base: &LayoutBox, sub: &LayoutBox, fs: f64) -> (f64, f64) {
+        let source = self
+            .hancom_math_face
+            .then(|| super::super::logical_font_frame::subscript_geometry(base, sub, fs, self.dpi))
+            .flatten();
+        let y = source.map_or(base.baseline * 0.4, |(y, _)| y);
+        let height = source
+            .map_or(base.height, |(_, height)| height)
+            .max(y + sub.height);
+        (y, height)
+    }
+
     pub(super) fn layout_superscript(&self, base: &EqNode, sup: &EqNode, fs: f64) -> LayoutBox {
         if matches!(base, EqNode::MathSymbol(symbol) if is_integral_symbol(symbol)) {
             return self
@@ -37,18 +59,7 @@ impl EqLayout {
 
         // 위첨자의 깊이를 포함해 본체 기준선 위에 하단 여유를 확보한다.
         // 키 큰 본체는 원래 기준선을 유지하므로 위첨자를 맞추려고 본체를 올리지 않는다.
-        let sup_depth = sup_box.height - sup_box.baseline;
-        let shift = self
-            .hancom_math_face
-            .then(|| {
-                super::super::logical_font_frame::superscript_shift(
-                    &base_box, &sup_box, fs, self.dpi,
-                )
-            })
-            .flatten()
-            .unwrap_or_else(|| {
-                (fs * SUPERSCRIPT_SHIFT_UP).max(sup_depth + fs * SUPERSCRIPT_BOTTOM_MIN)
-            });
+        let shift = self.script_superscript_shift(&base_box, &sup_box, fs);
         let baseline = base_box.baseline.max(sup_box.baseline + shift);
         base_box.x = 0.0;
         base_box.y = baseline - base_box.baseline;
@@ -77,14 +88,7 @@ impl EqLayout {
         let b = self.layout_node(base, fs);
         let s = self.layout_node(sub, self.script_font_size(fs));
 
-        let source_geometry = self
-            .hancom_math_face
-            .then(|| super::super::logical_font_frame::subscript_geometry(&b, &s, fs, self.dpi))
-            .flatten();
-        let sub_shift = source_geometry.map_or(b.baseline * 0.4, |(shift, _)| shift);
-        let total_h = source_geometry
-            .map_or(b.height, |(_, height)| height)
-            .max(sub_shift + s.height);
+        let (sub_shift, total_h) = self.script_subscript_geometry(&b, &s, fs);
 
         let mut base_box = b;
         base_box.x = 0.0;
@@ -126,27 +130,10 @@ impl EqLayout {
         let sb = self.layout_node(sub, self.script_font_size(fs));
         let sp = self.layout_node(sup, self.script_font_size(fs));
 
-        let sup_shift = b.baseline - sp.height * 0.7;
-        let sub_shift = b.baseline * 0.4;
-
-        let ascent = if sup_shift < 0.0 {
-            sp.height - sup_shift.abs()
-        } else {
-            sp.height.max(0.0)
-        };
-        let top = sup_shift.min(0.0).abs();
-        let total_h = (top + b.height)
-            .max(top + sub_shift + sb.height)
-            .max(ascent + b.height);
-
-        let base_y = top.max(
-            if sup_shift > 0.0 {
-                0.0
-            } else {
-                sp.height - sup_shift.abs() - b.baseline
-            }
-            .max(0.0),
-        );
+        let shift = self.script_superscript_shift(&b, &sp, fs);
+        let sup_y = b.baseline - shift - sp.baseline;
+        let (sub_y, sub_height) = self.script_subscript_geometry(&b, &sb, fs);
+        let base_y = (-sup_y).max(-sub_y).max(0.0);
 
         let mut base_box = b;
         base_box.x = 0.0;
@@ -154,11 +141,15 @@ impl EqLayout {
 
         let mut sup_box = sp;
         sup_box.x = base_box.width;
-        sup_box.y = 0.0;
+        sup_box.y = base_y + sup_y;
 
         let mut sub_box = sb;
         sub_box.x = base_box.width;
-        sub_box.y = base_y + sub_shift;
+        sub_box.y = base_y + sub_y;
+        let total_h = (base_y + sub_height)
+            .max(base_box.y + base_box.height)
+            .max(sup_box.y + sup_box.height)
+            .max(sub_box.y + sub_box.height);
 
         let script_w = sup_box.width.max(sub_box.width);
         let total_w = base_box.width + script_w;
@@ -168,9 +159,7 @@ impl EqLayout {
             x: 0.0,
             y: 0.0,
             width: total_w,
-            height: total_h
-                .max(base_box.y + base_box.height)
-                .max(sub_box.y + sub_box.height),
+            height: total_h,
             baseline: base_box.y + base_box.baseline,
             kind: LayoutKind::SubSup {
                 base: Box::new(base_box),

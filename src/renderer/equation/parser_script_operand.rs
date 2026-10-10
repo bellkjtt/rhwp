@@ -52,6 +52,10 @@ impl EqParser {
                 };
                 self.pos += 1;
                 EqNode::MathSymbol(text.to_owned())
+            } else if ty == TokenType::Command {
+                let command = self.current_value().to_owned();
+                self.pos += 1;
+                self.parse_command_atom(&command)
             } else {
                 self.parse_single_or_group()
             };

@@ -242,6 +242,9 @@ impl EqLayout {
     }
 
     fn layout_row(&self, children: &[EqNode], fs: f64) -> LayoutBox {
+        if children.iter().any(|node| matches!(node, EqNode::Newline)) {
+            return self.layout_newline_rows(children, fs);
+        }
         if children.is_empty() {
             return LayoutBox {
                 font_size: fs,
