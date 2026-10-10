@@ -61,5 +61,33 @@ FontGlyph를 모두 같은 AST 연산자의 전진·여백으로 처리하며,
 `logical_font_frame.rs`의 font_line·prime 판별도 FontGlyph를
 지원한다. NOT의 등호 판별은 FontGlyph를 함께 인식하도록
 바꿨다. 실제 사선 기하의 계산·논리 크기를 변경하지 않는다.
-현재 후보는 아직 빌드·시각 확인 전이며 기대값·baseline과
-정식 실물 회귀는 변경하지 않았다.
+기대값·baseline과 정식 실물 회귀는 변경하지 않았다.
+
+## 확인한 실행 결과
+
+- 검증 source는 `acf766cc9b8d4e3548261bdbe0373b84b6079709`다.
+  고정 Native 바이너리 SHA-256은
+  `f3594ef7dbd0651d1d770a58fbf5a3e2e57b65d20f03c75a03bfe506a1df28ac`이며,
+  `--profile release-test --target-dir target/pr-review --bin rhwp` 빌드는
+  exit 0이다. fmt와 Native Clippy도 exit 0이다. 나머지 필수 lint와 전체 회귀를
+  통과한 결과로 확대하지 않는다.
+- 저장 크기별 NOT 원본 HWPX의 300dpi 전체 한 쪽은 같은 독립 Print와
+  94.57865% → 95.41683%다. 6/9/12/18pt 등호의 가로선은 Print 높이에
+  가까워졌으며, 사선·다음 본문의 물리 위치도 함께 판독했다.
+  `output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/`
+  아래 `stage85-operator-origin-selected-detail-review.png`와 provenance가
+  같은 입력·물리 영역의 수정 전/후/Print/overlay를 연결한다.
+- 루트 WASM wrapper는 exit 0으로 완료했고 고정 package의 JS/WASM과
+  Studio public 파일 SHA가 일치한다. source별 Native/fresh WASM 집중 검증은
+  계속 진행 중이다. package 준비만으로 실제 Studio 출력 통과를 선언하지 않는다.
+- 변경 전 source `cd1b2b029`의 전체 원본 검증에서 9월 2024 HWPX
+  `samples/3-09월_교육_통합_2024-구분선아래20구분선위20.hwpx`의 21쪽은
+  89.39422%다. 같은 입력·독립 Print를 이번 source로 재출력한 결과도
+  89.89297%로 미달이다. 쪽수는 양쪽 23쪽으로 일치한다.
+  `stage85-september-hwpx-current-review/.../review/review_021.png`를 직접
+  확인했으며 문29 앞 간격 차이는 다음 단계에서 원인을 보정한다.
+  이 원본을 통과 목록으로 집계하거나 관계형 테스트의 선행 조건으로 쓰지 않는다.
+
+Native/fresh WASM 전체 55개·853쪽의 최신 source 검증, 대문자 W의
+표시 차이, 관련 기존 검사의 관계형 전환과 최종 게이트는 미완료다.
+이 기록은 부분 개선의 증거이며 PR 제출·전체 완료 판정이 아니다.
