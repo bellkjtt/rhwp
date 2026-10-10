@@ -100,3 +100,13 @@ Print job은 각각 `d36105af-df31-4077-90c2-83f9a4ff69f2`,
 
 이 구현 묶음의 lint·빌드·새 출력은 아직 미검증이다. 이전 Stage95 결과를 적용하지 않는다.
 독립 진단과 실물 원본의 재출력, Native/fresh WASM TSV, 확대 판독 후 관계형 회귀를 변경한다.
+
+
+### 조립 연결 경계의 선행 보정
+
+초기 실행은 `48e7c7224`의 Native Clippy 진행 중 조립 경계 결함을 발견해 명시적으로 중단했다.
+관측 timeout이나 출력 공백 때문이 아니다. 해당 source의 lint·빌드 통과로 기록하지 않는다.
+공개 MATH extender는 선택 부품이다. 3행의 실제 잉크 높이에 최소 한 개를 강제하면
+connector 최대 overlap을 초과하므로 0개부터 필요한 개수를 선택하도록 보정했다.
+독립 Print 3/4행 높이 8건과 공개 MATH 연결 범위를 대조했으며 모두 유효한 overlap이다.
+근거는 `stage96-public-brace-connector-check.json`이다. 새 source에서 검사·빌드를 다시 실행한다.

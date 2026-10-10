@@ -94,8 +94,10 @@ fn commands_at_frame(
         });
         return out;
     }
-    // 위·아래 extender를 같은 수만큼 넣어 중괄호의 가운데 축을 보존한다.
-    let mut repeats = 1;
+    // extender는 필요한 높이일 때만 넣는다. cap·middle·tail만으로 맞는
+    // 원 face의 잉크 프레임도 공개 MATH의 connector 범위 안에서 연결한다.
+    // 위·아래 extender의 수는 같아야 중괄호의 가운데 축을 보존한다.
+    let mut repeats = 0;
     let parts = loop {
         let parts: Vec<_> = data::PARTS
             .iter()
