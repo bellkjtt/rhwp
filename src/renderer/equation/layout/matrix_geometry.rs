@@ -119,7 +119,6 @@ impl EqLayout {
             };
         let mut row_boxes = self.layout_cases_rows(rows, fs);
 
-        let max_w = row_boxes.iter().map(|b| b.width).fold(0.0f64, f64::max);
         let mut y = 0.0;
         for b in &mut row_boxes {
             b.x = fs * 0.3; // 왼쪽 중괄호 여백
@@ -127,7 +126,13 @@ impl EqLayout {
             y += b.height + row_gap;
         }
         let total_h = y - row_gap;
-        let full_w = max_w + fs * 0.6;
+        // 실제 행 원점과 점유 끝을 폭으로 공유한다. 중괄호의 예약은
+        // 아래 Paren의 body.x에서 한 번 소비하며, 빈 오른쪽 여백을
+        // Row 폭에 다시 넣으면 뒤 본문과 delimiter가 그만큼 밀린다.
+        let full_w = row_boxes
+            .iter()
+            .map(|row| row.x + row.width)
+            .fold(0.0f64, f64::max);
         // 행 구성과 관계없이 묶음의 수학 축을 가운데에 놓는다. 왼쪽 식의
         // 기준선은 일반 글줄의 축 거리만큼 내려간다. 분수 행을 앞뒤로
         // 옮겨도 두 글자 기준선의 평균으로 축이 바뀌지 않는다.
