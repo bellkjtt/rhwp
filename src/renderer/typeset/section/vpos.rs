@@ -121,7 +121,7 @@ impl TypesetEngine {
                     })
                     .flatten()
             }),
-            owned_endnote_origin: None,
+            owned_paragraph_origin: None,
             last_compacted_endnote_title_gap: false,
             min_flow_floor: f64::MIN,
             session_edited: self.profile.get().session_edited(),

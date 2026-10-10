@@ -129,3 +129,10 @@ format의 균등 확대와 paint의 마지막 행 확대는 같은 판별 결과
 
 후보의 fmt와 diff 공백 검사는 통과했다. Native/WASM Clippy·Skia check와
 실제 재출력은 아직 미완료이며, 정식 회귀·기대값은 바꾸지 않았다.
+
+첫 Native Clippy는 새 원점 필드의 section cursor 초기화와 단위 변환 함수
+import 누락으로 실패했다. 두 연결을 교정하고 기존 실패 receipt·로그를
+`stage89-*-attempt1`에 보존했다. 이 컴파일 실패는 조판 결함의 수정 전 FAIL
+증거로 세지 않는다. 교정된 source에서 lint 묶음을 다시 실행한다.
+Stage 88의 fresh WASM이 생성한 Canvas `lineJoin`·`miterLimit` import도
+`rhwp-studio/public/rhwp.js`에 함께 보존한다.

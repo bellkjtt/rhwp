@@ -15,6 +15,7 @@ use crate::renderer::height_measurer::{
     fit_stored_hwpx_no_adjust_rowspans, fit_stored_inline_picture_frame,
     trim_stored_hwpx_inline_row_trailing_spacing, MeasuredTable,
 };
+use crate::renderer::hwpunit_to_px;
 use crate::renderer::pagination::estimate_footnote_note_height;
 use crate::renderer::style_resolver::ResolvedStyleSet;
 

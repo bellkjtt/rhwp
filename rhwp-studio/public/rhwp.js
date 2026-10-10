@@ -12287,8 +12287,14 @@ function __wbg_get_imports() {
         __wbg_set_lineCap_ec484c1489fa48bc: function(arg0, arg1, arg2) {
             arg0.lineCap = getStringFromWasm0(arg1, arg2);
         },
+        __wbg_set_lineJoin_645744ec04386dd0: function(arg0, arg1, arg2) {
+            arg0.lineJoin = getStringFromWasm0(arg1, arg2);
+        },
         __wbg_set_lineWidth_5f9aefcc32e60287: function(arg0, arg1) {
             arg0.lineWidth = arg1;
+        },
+        __wbg_set_miterLimit_db0797fa63d61672: function(arg0, arg1) {
+            arg0.miterLimit = arg1;
         },
         __wbg_set_shadowBlur_8f0ba721d1bde0ba: function(arg0, arg1) {
             arg0.shadowBlur = arg1;
