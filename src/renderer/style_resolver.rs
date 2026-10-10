@@ -310,40 +310,36 @@ fn resolve_single_char_style(cs: &CharShape, doc_info: &DocInfo, dpi: f64) -> Re
         font_families_hft_hangul
             .push(decision.substitution_boundary == Some(FontSubstitutionBoundary::Hft));
         font_families_hft_fullwidth_dot.push(decision.alt_type == Some(2) && !substituted);
-        // [#7391] legacy-latin 폴백이 선언 face 를 한글 face 로 보내면서, 우리가 이미 가진
-        // 그 face 자신의 폭 표를 버리는 경우만 되돌린다. HFT/TTF 경계는 손대지 않는다 —
-        // HFT 한글 전용 face 의 반각 ASCII 회계(#7051)가 치환된 이름에 걸려 있다.
-        let singraphic_hft = decision.substitution_boundary == Some(FontSubstitutionBoundary::Hft)
-            && decision.requested_face.as_deref() == Some("신명 신그래픽");
-        font_families_metric_face.push(if singraphic_hft {
-            // exam_kor 한컴 PDF 17쪽의 T16: 괄호는 한글 전진폭의 절반이다.
-            // 굴림 대체 글꼴의 0.375em 괄호를 폭 기준으로 쓰면 가운데 정렬한
-            // 그림과 제목 전체가 오른쪽으로 밀린다. 표시 글꼴은 그대로 둔다.
-            Some("HY신명조".to_string())
-        } else {
-            (decision.substitution_boundary == Some(FontSubstitutionBoundary::LegacyLatin))
-                .then(|| {
-                    decision
-                        .requested_face
-                        .as_deref()
-                        .filter(has_own_metric_table)
-                        .filter(|face| {
-                            decision.alt_type == Some(2) || !hft_program_metric_face(face)
-                        })
-                })
-                .flatten()
-                .map(str::to_string)
-        });
+        // [#7391] legacy-latin은 선언 face의 기존 표를 사용한다. HFT는
+        // 프로그램 자체를 확인한 표만 사용하며 표시용 TTF와 구분한다.
+        // HWP3 ASCII 반각 여부는 기존 문서의 저장 줄 증인이 계속 결정한다.
+        font_families_metric_face.push(
+            if decision.substitution_boundary == Some(FontSubstitutionBoundary::Hft) {
+                // 원본 HFT 프로그램의 폭과 설치 대체 face의 표시를 구분한다.
+                decision
+                    .requested_face
+                    .as_deref()
+                    .and_then(crate::renderer::font_metrics_data::legacy_hft_metric_face)
+                    .map(str::to_string)
+            } else {
+                (decision.substitution_boundary == Some(FontSubstitutionBoundary::LegacyLatin))
+                    .then(|| {
+                        decision
+                            .requested_face
+                            .as_deref()
+                            .filter(has_own_metric_table)
+                            .filter(|face| decision.alt_type == Some(2) || !hft_program_metric_face(face))
+                    })
+                    .flatten()
+                    .map(str::to_string)
+            },
+        );
         font_families.push(decision.css_family_chain.join(","));
 
-        // 같은 PDF의 T16 한글 5자는 44px 글꼴에 장평 90%를 적용한
-        // 39.6px 간격으로 놓인다. 저장 자간 -5%를 다시 빼면 37.4px가 되어
-        // 제목 줄이 약 22px 짧아진다. 이 HFT face의 자간은 출력에서 적용되지 않는다.
-        let spacing_percent = if singraphic_hft {
-            0.0
-        } else {
-            cs.spacings[lang] as f64
-        };
+        // 굵기의 추가 전진은 측정에서 별도로 소비한다. 음수 자간과 상쇄되는
+        // 사례도 저장 자간을 무시하는 근거가 아니므로 원본 값을 유지한다.
+        let spacing_percent = cs.spacings[lang] as f64;
+
         ratios.push(cs.ratios[lang] as f64 / 100.0);
         // 100%는 저장 줄과 같은 원래 크기를 보존한다. 먼저 곱하고 나누면
         // 반올림 잔차로 글꼴이 저장 줄보다 커져 유효한 0 간격이 재계산된다.

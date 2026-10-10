@@ -388,6 +388,7 @@ pub fn extract_tab_leaders_with_extended(
 fn compute_char_positions_walk(
     text: &str,
     style: &TextStyle,
+    include_hft_bold_tracking: bool,
     inline_tab_x: &dyn Fn(usize, f64, &[u16; 7], &[char], &[u8], &dyn Fn(usize) -> f64) -> f64,
 ) -> Vec<f64> {
     let (_, _, tab_w) = style_params(style);
@@ -402,12 +403,13 @@ fn compute_char_positions_walk(
 
     let supplemental = super::super::supplemental_metrics::standalone_scalar_mask(text, style);
     let char_width = |i: usize| -> f64 {
-        char_width_decision(
+        char_width_decision_with_hft_tracking(
             &chars,
             &cluster_len,
             i,
             style,
             supplemental.as_ref().is_some_and(|mask| mask[i]),
+            include_hft_bold_tracking,
         )
         .final_width_px
     };
@@ -666,6 +668,17 @@ impl TextMeasurer for EmbeddedTextMeasurer {
     }
 
     fn compute_char_positions(&self, text: &str, style: &TextStyle) -> Vec<f64> {
+        self.compute_char_positions_with_hft_tracking(text, style, true)
+    }
+}
+
+impl EmbeddedTextMeasurer {
+    fn compute_char_positions_with_hft_tracking(
+        &self,
+        text: &str,
+        style: &TextStyle,
+        include_hft_bold_tracking: bool,
+    ) -> Vec<f64> {
         let (font_size, _ratio, _tab_w) = style_params(style);
         // [#2132] 인라인 탭 divergent 경로 훅 — HWP5 raw ext 인코딩 legacy 해석 유지
         // (Issue #630 Stage 4/6, Task #874 계열 — 원본 무변경 이동).
@@ -826,7 +839,7 @@ impl TextMeasurer for EmbeddedTextMeasurer {
             }
             x
         };
-        compute_char_positions_walk(text, style, &inline_tab_x)
+        compute_char_positions_walk(text, style, include_hft_bold_tracking, &inline_tab_x)
     }
 }
 
@@ -1461,6 +1474,17 @@ pub(crate) fn char_width_decision<'a>(
     style: &'a TextStyle,
     allow_supplemental: bool,
 ) -> CharWidthDecision<'a> {
+    char_width_decision_with_hft_tracking(chars, cluster_len, i, style, allow_supplemental, true)
+}
+
+fn char_width_decision_with_hft_tracking<'a>(
+    chars: &[char],
+    cluster_len: &[u8],
+    i: usize,
+    style: &'a TextStyle,
+    allow_supplemental: bool,
+    include_hft_bold_tracking: bool,
+) -> CharWidthDecision<'a> {
     let (font_size, ratio, _) = style_params(style);
     let c = chars[i];
     // [#7418] 영문 슬롯으로 재는 구두점 — 글꼴·폭 표·자간·장평만 영문 슬롯 값이고, 배치가
@@ -1727,6 +1751,19 @@ pub(crate) fn char_width_decision<'a>(
     } else {
         base_width_raw
     };
+    // 원본 HFT의 굵기는 intrinsic 글리프 폭을 바꾸지 않고 약0.05em의
+    // 추가 전진을 준다. 독립 Print 22행의 굵기·크기·자간 대조를 따른다.
+    // 표시용 TTF의 bold 메트릭이나 배분 자간과 구분하고 원본 자간을 함께 소비한다.
+    let font_tracking = if include_hft_bold_tracking
+        && style.bold
+        && metric
+            .as_ref()
+            .is_some_and(|found| font_metrics_data::is_legacy_hft_metric_face(found.metric.name))
+    {
+        font_size * 0.05
+    } else {
+        0.0
+    };
     // 보충 메트릭은 백엔드가 실제로 그리는 전진폭이라 그 값을 그대로 쓴다(#7084).
     let glyph_advance_px = if supplemented {
         base_width_px * ratio
@@ -1750,7 +1787,7 @@ pub(crate) fn char_width_decision<'a>(
             matches!(c, ' ' | '\u{00A0}'),
         )
     };
-    let mut final_width_px = glyph_advance_px + style.extra_char_spacing;
+    let mut final_width_px = glyph_advance_px + font_tracking * ratio + style.extra_char_spacing;
     final_width_px += crate::renderer::legacy_font_advances::bold_advance(
         style,
         c,
@@ -1892,6 +1929,24 @@ pub(crate) fn hancom_regenerated_space_width(style: &TextStyle) -> Option<f64> {
 /// run 내부 상대 좌표이며, 절대 좌표는 run.bbox.x + charX[i]로 계산한다.
 pub(crate) fn compute_char_positions(text: &str, style: &TextStyle) -> Vec<f64> {
     default_measurer().compute_char_positions(text, style)
+}
+
+/// 실제 원점의 전진과 glyph 폭 맞춤을 구분할 HFT 굵기 간격의 존재 여부.
+pub(crate) fn has_hft_bold_tracking(style: &TextStyle) -> bool {
+    let own_metric =
+        |face: Option<&str>| face.is_some_and(font_metrics_data::is_legacy_hft_metric_face);
+    style.bold
+        && (own_metric(style.metric_font_family.as_deref())
+            || style
+                .ascii_punct_latin
+                .as_ref()
+                .is_some_and(|latin| own_metric(latin.metric_font_family.as_deref())))
+}
+
+/// 같은 문자·탭 walk에서 HFT 굵기 전진만 제외한 glyph-fit 경계.
+/// 원점은 굵기 간격을 포함한 layout positions를 계속 사용한다.
+pub(crate) fn compute_glyph_fit_positions(text: &str, style: &TextStyle) -> Vec<f64> {
+    default_measurer().compute_char_positions_with_hft_tracking(text, style, false)
 }
 
 /// 기존 문자 경계값과 exact-font pair positioning을 한 번만 계산하는 공통 진입점.

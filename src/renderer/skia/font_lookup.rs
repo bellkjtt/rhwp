@@ -4,7 +4,9 @@ use std::collections::{HashMap, HashSet};
 use skia_safe::{FontMgr, FontStyle, Typeface};
 
 use super::font_catalog::TypefaceCatalog;
-use crate::renderer::base_family_without_weight_suffix;
+use crate::renderer::{
+    base_family_without_weight_suffix, installed_render_font_aliases, internal_font_family_members,
+};
 
 pub(super) type SystemFontFamilies = HashSet<String>;
 
@@ -87,15 +89,18 @@ pub(super) fn supplied_family_names(data: &[u8], face_index: u32, primary: &str)
 
 pub(super) fn text_family_candidates(requested: &str) -> Vec<String> {
     let mut families = Vec::new();
-    for requested in requested
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
-        if !families.iter().any(|family| family == requested) {
-            families.push(requested.to_string());
+    // CSS 체인을 하나의 family 이름으로 조회하면 설치된 첫 face도 놓친다.
+    // SVG/Canvas와 같은 원본 순서·설치 별칭·굵기 접미사 해소를 소비한다.
+    for requested_family in internal_font_family_members(requested) {
+        if !families.iter().any(|family| family == requested_family) {
+            families.push(requested_family.to_string());
         }
-        if let Some(base) = base_family_without_weight_suffix(requested) {
+        for alias in installed_render_font_aliases(requested_family) {
+            if !families.iter().any(|family| family == alias) {
+                families.push((*alias).to_string());
+            }
+        }
+        if let Some(base) = base_family_without_weight_suffix(requested_family) {
             if !families.iter().any(|family| family == &base) {
                 families.push(base);
             }

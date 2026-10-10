@@ -271,7 +271,11 @@ pub(crate) fn glyph_fit_positions<'a>(
     layout_positions: Option<&[f64]>,
     char_positions: &'a [f64],
 ) -> std::borrow::Cow<'a, [f64]> {
-    if style.kerning && validated_replay_positions(replay_text, layout_positions).is_some() {
+    if layout::has_hft_bold_tracking(style) {
+        // 원본 HFT의 굵기 간격은 글자 원점만 전진시키며 intrinsic 폭은 유지한다.
+        // backend는 원래 char_positions를 위치로, 이 경계를 glyph-fit 폭으로 쓴다.
+        std::borrow::Cow::Owned(layout::compute_glyph_fit_positions(replay_text, style))
+    } else if style.kerning && validated_replay_positions(replay_text, layout_positions).is_some() {
         std::borrow::Cow::Owned(layout::compute_char_positions(replay_text, style))
     } else {
         std::borrow::Cow::Borrowed(char_positions)
@@ -2698,6 +2702,13 @@ pub fn base_family_without_weight_suffix(font_family: &str) -> Option<String> {
 /// face 가 있다. 아래 중고딕 arm 의 주석을 볼 것.
 fn installed_render_font_aliases(font_family: &str) -> &'static [&'static str] {
     match font_family {
+        // 공식 설치 글꼴의 한국어 이름과 영문 family 이름을 함께 조회한다.
+        "굴림" => &["Gulim"],
+        "굴림체" => &["GulimChe"],
+        "돋움" => &["Dotum"],
+        "돋움체" => &["DotumChe"],
+        "바탕" => &["Batang"],
+        "바탕체" => &["BatangChe"],
         // [#6171] 이름 셋 중 `HYGothic` 만 Windows 에서 해석된다. headless Chrome
         // 통제 실측(`'X',serif` 를 없는 글꼴 기준선과 픽셀 차분):
         // `HY중고딕` 0px · `HYGothic-Medium` 0px · **`HYGothic` 3,287px**.

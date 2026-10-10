@@ -11,6 +11,13 @@ use crate::renderer::font_rule_layout_metric_projection::find_font_rule_layout_m
 #[path = "font_metric_han_santteut.rs"]
 mod han_santteut;
 
+#[path = "font_metric_legacy_hft.rs"]
+mod legacy_hft;
+
+pub(crate) use legacy_hft::{
+    is_metric_face as is_legacy_hft_metric_face, metric_face_name as legacy_hft_metric_face,
+};
+
 #[derive(Debug)]
 pub struct HangulMetric {
     pub cho_groups: u8,
@@ -316,6 +323,7 @@ impl FontMetrics {
             .iter()
             .chain(MEASURED_FONT_METRIC_OVERLAYS.iter())
             .chain(han_santteut::METRICS.iter())
+            .chain(legacy_hft::METRICS.iter())
     }
 }
 
