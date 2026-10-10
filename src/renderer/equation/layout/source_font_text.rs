@@ -65,7 +65,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<Layo
         let kind = if let Some(outline) = outline {
             LayoutKind::FontGlyph {
                 text: display,
-                font_family: "Latin Modern Math, STIX Two Math, serif".to_owned(),
+                font_family: "Latin Modern Math, STIX Two Math, serif",
                 outline: Some(outline),
             }
         } else {
