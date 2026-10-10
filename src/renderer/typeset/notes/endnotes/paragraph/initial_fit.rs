@@ -656,7 +656,10 @@ impl TypesetEngine {
             && endnote_has_visible_payload
             && st.current_height + total_advance_fit
                 <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX;
-        let reflowed_fit = (ep_idx > 0 && !local_vpos_rewind && !internal_vpos_rewind)
+        // 저장 줄의 자동 단 컷도 현재 단의 실제 점유로 재검증한다.
+        // vpos 되감김만으로 들어가는 앞부분까지 통째로 넘기지 않는다.
+        // 명시적 묶음·단 나눔·별도 개체 계획은 조회 자체의 guard가 보존한다.
+        let reflowed_fit = (ep_idx > 0)
             .then(|| {
                 self.query_reflowed_endnote_fit(
                     st,

@@ -1500,11 +1500,12 @@ impl TypesetEngine {
             }
             if fit_split_column == (st.pages.len(), st.current_column)
                 && fit_item_count == st.current_items.len()
-                && reflowed_fit.is_some_and(reflow_fit::ReflowedEndnoteFit::can_stay)
             {
                 // 전체/부분 점유의 공통 결과를 이월 판정과 최종 컷에 함께 전달한다.
                 // 선행 방출이나 단 전환으로 항목이 바뀌면 이전 조회를 소비하지 않는다.
-                advance_for_fit = false;
+                if let Some(fit) = reflowed_fit {
+                    advance_for_fit = !fit.can_stay();
+                }
             }
             if advance_for_fit
                 && ep_idx > 0

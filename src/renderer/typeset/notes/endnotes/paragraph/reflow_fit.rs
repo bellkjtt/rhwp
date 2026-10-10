@@ -43,7 +43,8 @@ impl EndnotePrefixFit {
 }
 
 impl TypesetEngine {
-    /// 연속된 일반 미주 글줄의 전체·앞부분 점유를 한 계약으로 조회한다.
+    /// 일반 inline 미주 글줄의 전체·앞부분 점유를 한 계약으로 조회한다.
+    /// 저장 좌표의 자동 단 컷이 있어도 현재 방출할 줄 범위를 직접 측정한다.
     /// 별도 개체 계획·명시적 경계·아직 조판하지 않은 keep 그룹은 대체하지 않는다.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn query_reflowed_endnote_fit(
