@@ -38,3 +38,25 @@ logical em을 사용해 hmtx를 반올림한다. 독립 Print의 22pt X 전진�
 
 fmt 실행은 종료 코드 0이다. 새 구현의 lint·빌드·12종 시각 대조와 전체 검증은
 아직 미실행이다. 정식 회귀 추가·기대값 변경은 하지 않았다.
+
+## 초기 정적 검사와 문자 전진의 독립 대조
+
+구현 SHA는 `3d89e1f45`다. `stage99-brace-type-checks.json`의 fmt·Native Clippy·
+WASM Clippy·Skia lib check는 모두 종료 코드 0이다. 전체 workspace/회귀 통과는 아니다.
+Native 빌드와 실제 출력 대조는 실행 중이다.
+
+ASCII 전진 변경의 일반성을 확인하기 위해 11/22pt의 대소문자 전체와 정체·이탤릭
+8식을 추가 정상 저장/Print했다. 정상 저장 job은 `1ad5bf74-c099-4bec-af7d-a12066ab26c2`,
+Print는 `4f94a68e-d3eb-4816-98bf-beebff2809c4`다. 실제 한컴 11.0.0.9136, engine 2020,
+method 0·one-up이며 PDF는 전체 1쪽이다. `stage99-ascii-advance-counterexamples`의
+8식 원문·BaseUnit 보존과 PDF 각 행의 문자 27개를 확인했다. 분석용 HWPX는 로컬 export다.
+
+각 문자열 끝에 대조 문자를 두어 A..Z/a..z의 실제 다음 문자 원점으로 전진을 읽었다.
+`print-advance-origins.json`의 208개 glyph 전진은 설치 face의 hmtx와 logical em의
+75HU 반올림 격자에 모두 일치한다. nominal em만 사용하는 값은 11pt에서 29개,
+22pt에서 38개가 다르다. 기존 측정 전진 표는 그대로 우선하며, 이 대조는 미측정
+fallback의 logical em 공유를 입증한다. 사설 font 곡선은 추출하지 않았다.
+
+이 추가 8식을 포함한 실제 Native 대조는 총 13문서/14쪽/208식으로 확장한다.
+전체 55원본/853쪽 검증 범위를 대신하지 않는다. 새 확대·fresh WASM·전체 검증과
+관계형 회귀 변경·PR 절차는 미완료다.
