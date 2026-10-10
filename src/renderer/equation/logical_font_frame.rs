@@ -163,6 +163,7 @@ pub(super) fn superscript_shift(
     // shift로 대신하지 않고 같은 크기의 글줄·첨자 기준선 거리를 소비한다.
     let vector_base = accent_font_line(base, fs, DecoKind::Vec)
         && !contains_prime(base)
+        && !contains_prime(sup)
         && vector_sup_metrics(fs, dpi).is_some();
     if !(font_line(base, fs) || vector_base)
         || !font_line(sup, sup.font_size)
@@ -276,6 +277,7 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
     if let LayoutKind::Superscript { base, sup } = &value.kind {
         if accent_font_line(base, fs, DecoKind::Vec)
             && !contains_prime(base)
+            && !contains_prime(sup)
             && font_line(sup, sup.font_size)
             && (sup.font_size - fs * 0.68).abs() <= f64::EPSILON * fs * 4.0
         {
