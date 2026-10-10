@@ -3587,6 +3587,8 @@ pub struct LayoutEngine {
     /// Set for one column item only; other page-top paragraphs keep their
     /// existing trim contract.
     page_top_float_caption_spacing_para: std::cell::Cell<Option<usize>>,
+    /// 새 축으로 이어지는 첫 저장 본문의 확정 간격. 실제 owner가 한 번 소비한다.
+    page_top_axis_restart_spacing: std::cell::Cell<Option<(usize, ParagraphVerticalSpacing)>>,
     /// [#6267] 지금 배치하는 자리차지(TopAndBottom) 표의 호스트 문단이 **이미 그린
     /// 본문 텍스트를 가지고 있는지**. body_bottom 클램프 해제(#5699 J3)의 판별자다 —
     /// 하단 고정 틀(#1658/#1858)은 빈 host 라 클램프가 흐름을 넘어도 겹칠 텍스트가
@@ -3767,6 +3769,7 @@ impl LayoutEngine {
             keep_continuation_column_top_spacing_before: std::cell::Cell::new(false),
             reapply_snap_anchored_spacing_before: std::cell::Cell::new(false),
             page_top_float_caption_spacing_para: std::cell::Cell::new(None),
+            page_top_axis_restart_spacing: std::cell::Cell::new(None),
             para_float_host_has_text: std::cell::Cell::new(false),
             item_flow_snap_context: std::cell::Cell::new(None),
             hwpx_page_preview: std::cell::RefCell::new(None),
@@ -7923,6 +7926,39 @@ impl LayoutEngine {
                 && (host_saved_gap - host_spacing).abs() < 0.5)
                 .then_some(*first_pi)
         })();
+        let page_top_axis_restart_spacing = (|| {
+            if self.profile.get().session_edited()
+                || !(self.profile.get().hwp5_stored_pagination_layout()
+                    || self.profile.get().hwpx_stored_layout())
+                || col_content.endnote_flow
+                || (y_offset - col_area.y).abs() > f64::EPSILON
+            {
+                return None;
+            }
+            let Some(PageItem::FullParagraph { para_index: first }) = col_content.items.first()
+            else {
+                return None;
+            };
+            let next = match col_content.items.get(1)? {
+                PageItem::FullParagraph { para_index }
+                | PageItem::PartialParagraph {
+                    para_index,
+                    start_line: 0,
+                    ..
+                } => *para_index,
+                _ => return None,
+            };
+            if first.checked_add(1) != Some(next) {
+                return None;
+            }
+            crate::renderer::reflow_spacing::stored_axis_restart_spacing(
+                paragraphs.get(*first)?,
+                paragraphs.get(next)?,
+                styles,
+                self.dpi,
+            )
+            .map(|spacing| (*first, spacing))
+        })();
         let mut deferred_paragraph_spacing = std::collections::HashMap::new();
         // [#7418] host 글 조각 기록은 같은 단 안의 바로 다음 표만 쓴다 — 앞 쪽 끝의 기록이
         // 새 쪽 첫 표로 새면 앞 쪽 좌표가 문단 상단이 된다(1480000 4구역: 칸 줄 550개가
@@ -7938,6 +7974,12 @@ impl LayoutEngine {
         let mut prev_item_ink_bottom_y: Option<f64> = None;
         self.stored_textless_host_end.set(None);
         for (item_ordinal, item) in col_content.items.iter().enumerate() {
+            self.page_top_axis_restart_spacing
+                .set(if item_ordinal == 0 {
+                    page_top_axis_restart_spacing
+                } else {
+                    None
+                });
             self.page_top_float_caption_spacing_para.set(
                 (item_ordinal == 0)
                     .then_some(page_top_float_caption_spacing_para)
