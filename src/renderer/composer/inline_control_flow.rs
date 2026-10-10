@@ -1,6 +1,6 @@
 //! 실제 텍스트 경계에 속한 인라인 개체의 흐름 메트릭 목록.
 
-use super::{flow_inline_baseline_hwp, inline_control_size_hwp, Control, FlowInlineControl, Paragraph};
+use super::{flow_inline_baseline_hwp, inline_control_size_hwp, Control, FlowInlineControl, LineBreakResult, Paragraph};
 
 pub(super) fn flow_inline_controls(para: &Paragraph) -> Vec<FlowInlineControl> {
     let text_len = para.text.chars().count();
@@ -30,4 +30,15 @@ pub(super) fn flow_inline_controls(para: &Paragraph) -> Vec<FlowInlineControl> {
             })
         })
         .collect()
+}
+
+/// 종단 개체는 명시적 개행 뒤의 마지막 빈 줄이 소유한다.
+/// 개행 앞 줄의 end_idx도 text_len과 같으므로 끝 좌표만으로 고르지 않는다.
+pub(super) fn owns_line(
+    control: &FlowInlineControl,
+    line: &LineBreakResult,
+    text_len: usize,
+) -> bool {
+    (line.start_idx..line.end_idx).contains(&control.char_position)
+        || (!line.has_line_break && line.end_idx == text_len && control.char_position == text_len)
 }

@@ -3832,9 +3832,7 @@ fn layout_paragraph_in_frame_impl(
                         maximum_font_size = maximum_font_size.max(break_font_size);
                     }
                     for control in inline_controls.iter().filter(|control| {
-                        (line.start_idx..line.end_idx).contains(&control.char_position)
-                            || (line.end_idx == text_chars.len()
-                                && control.char_position == text_chars.len())
+                        inline_control_flow::owns_line(control, line, text_chars.len())
                     }) {
                         inline_metrics = match inline_metrics {
                             Some((height_hwp, baseline_distance_hwp))
@@ -5073,10 +5071,7 @@ fn reflow_line_segs_impl(
         }
         if let Some(control) = inline_controls
             .iter()
-            .filter(|control| {
-                (lb.start_idx..lb.end_idx).contains(&control.char_position)
-                    || (lb.end_idx == text_len && control.char_position == text_len)
-            })
+            .filter(|control| inline_control_flow::owns_line(control, lb, text_len))
             .max_by_key(|control| (control.height_hwp, control.baseline_distance_hwp))
         {
             let inline_owns_row_height = control.height_hwp > text_seg.line_height;
