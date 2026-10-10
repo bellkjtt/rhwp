@@ -369,9 +369,12 @@ SIL OFL 1.1을 유지한다. 원본 경로·SHA-256·변환 방법은 [폰트 �
 `src/renderer/equation/multiplication_outline.rs`,
 `src/renderer/equation/radical_outline.rs`,
 `src/renderer/equation/brace_outline.rs`,
+`src/renderer/equation/brace_stretch_data.rs`,
 `src/renderer/equation/operator_outline.rs`의 윤곽 상수는 동봉된 Latin Modern Math
 1.959의 `integral`·`multiply`·`radical`·`braceleft`·`plus`·`minus`·`equal` glyph에서
-추출한 공개 윤곽이다. 원본 Copyright 2012--2014
+추출한 공개 윤곽이다. `brace_stretch_data.rs`는 중괄호의 MATH 크기별 variant와
+`uni23A7`·`uni23A8`·`uni23A9`·`braceleft.ex` 조립 부품의 윤곽·연결 메트릭도 포함한다.
+원본 SHA-256과 추출 방법을 해당 파일에 기록한다. 원본 Copyright 2012--2014
 B. Jackowski, P. Strzelczyk, P. Pianowski를 보존하고, 해당 윤곽 데이터는
 GUST Font License를 유지한다. rhwp는 글꼴 파일을 개명·수정하는 대신 이 윤곽의
 좌표를 공통 수식 ink 영역으로 변환한다. 한컴 사설 글꼴의 윤곽은 포함하지 않는다.
