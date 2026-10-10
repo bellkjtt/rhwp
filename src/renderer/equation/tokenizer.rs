@@ -324,6 +324,8 @@ impl Tokenizer {
         match value.as_str() {
             "pm" => Token::new(TokenType::Command, "PLUSMINUS", start),
             "mp" => Token::new(TokenType::Command, "MINUSPLUS", start),
+            // 한컴 NOT의 한 글자 소비와 LaTeX의 그룹 인자를 구별한다.
+            "not" => Token::new(TokenType::Command, r"\not", start),
             _ => Token::new(TokenType::Command, value, start),
         }
     }

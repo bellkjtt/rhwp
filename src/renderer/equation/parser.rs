@@ -13,6 +13,9 @@ use super::tokenizer::{tokenize, Token, TokenType};
 #[path = "parser_root.rs"]
 mod root;
 
+#[path = "parser_negation.rs"]
+mod negation;
+
 /// 수식 중첩 깊이 상한.
 ///
 /// 적대적으로 깊게 중첩된 입력(`{{{…}}}`, `sqrt sqrt …`, `LEFT ( LEFT ( …`,
@@ -488,6 +491,16 @@ impl EqParser {
         // [#1204] hwpeq 명령은 대소문자 무시 — DECORATIONS/FONT_STYLES 는 소문자 키이므로
         // 1차 lookup 실패 시 소문자 fallback (`RM`/`BAR` 등 대문자 변형이 leak 되지 않도록).
         let cmd_lower = cmd.to_ascii_lowercase();
+
+        if cmd_lower == "not" {
+            return self.parse_hancom_not();
+        }
+        if cmd == r"\not" {
+            return EqNode::Decoration {
+                kind: symbols::DecoKind::StrikeThrough,
+                body: Box::new(self.parse_single_or_group()),
+            };
+        }
 
         if let Some(&deco) = DECORATIONS
             .get(cmd)

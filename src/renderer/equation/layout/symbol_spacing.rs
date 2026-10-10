@@ -9,6 +9,14 @@ fn operator(node: &EqNode) -> bool {
             || matches!(s.as_str(), "=" | "≠" | "<" | ">"))
 }
 
+fn opening_delimiter(node: &EqNode) -> bool {
+    match node {
+        EqNode::Symbol(text) => matches!(text.as_str(), "(" | "[" | "{"),
+        EqNode::Decoration { body, .. } | EqNode::FontStyle { body, .. } => opening_delimiter(body),
+        _ => false,
+    }
+}
+
 /// 분수·근호의 끝 여백·닫는 괄호의 점유 뒤에 연산자 앞 여백을 중복 예약하지 않는다.
 fn reserves_operator_gap(node: &EqNode) -> bool {
     match node {
@@ -105,6 +113,7 @@ impl EqLayout {
                 let padding = source_metrics.map_or(fs * 0.15, |(_, padding)| padding);
                 let left = if position == 0
                     || operator(&nodes[significant[position - 1]])
+                    || opening_delimiter(&nodes[significant[position - 1]])
                     || (source_metrics.is_some()
                         && reserves_operator_gap(&nodes[significant[position - 1]]))
                 {

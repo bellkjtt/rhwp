@@ -35,6 +35,22 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
 }
 
 pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
+    if matches!(text, "{" | "}") {
+        return Some(LayoutBox {
+            font_size: fs,
+            x: 0.0,
+            y: 0.0,
+            // 독립 Print의 보통 크기 중괄호와 설치 HYhwpEQ의 UPM 1024 전진폭.
+            width: super::source_font_text::logical_advance(594, fs, dpi),
+            height: fs,
+            baseline: fs * 0.8,
+            kind: LayoutKind::FontGlyph {
+                text: text.to_string(),
+                font_family: "HYhwpEQ, Latin Modern Math, STIX Two Math, serif",
+                outline: None,
+            },
+        });
+    }
     if text == "%" {
         let (width, _) = operator_metrics(text, fs, dpi)?;
         return Some(LayoutBox {
