@@ -104,3 +104,18 @@ Native/fresh WASM와 전체 원본·관계형 회귀 전환은 여전히 미완�
 분리해 교정했다. SansSerif 등은 기존 정체 전진을 보존하며, 검증되지 않은
 새 윤곽을 선택하지 않는다. 동일한 Source 결과의 `outline_contract`만 표시
 적용 여부를 정한다. 실제 바깥 앵커·clamp에 별도 보정을 추가하지 않았다.
+
+
+## 최종 후보의 타입 확인과 실제 빌드
+
+후보 source는 `b4d47e2554f3de6d2c5f024e7b29fecc0e2f53e9`다.
+비적용 측정 경로 교정 뒤 fmt·Native Clippy·WASM Clippy·Skia check를 순차로
+재실행해 **모두 exit 0**을 확인했다. `stage88-variable-style-type-checks.json`에
+source SHA와 source/asset 파일 해시·명령·PID·최종 exit를 보존했다.
+Studio `tsc --noEmit`도 exit 0이며 로그는 `stage88-studio-tsc.log`다.
+
+같은 source의 `--features native-skia` release-test CLI 빌드를 시작했다.
+종료를 추정하지 않고 실제 Cargo/자식과 최종 receipt를 확인한다. 성공 뒤 고정
+바이너리로 대조군 300dpi 확대 비교 및 기존 원본·경계 33개 입력/81개 선택 쪽을
+실행한다. 페이지 점수와 수식 소유 영역을 확인한 뒤 fresh WASM을 산출한다.
+새 후보의 실제 시각 결과·전체 원본 TSV·전체 회귀 및 관계형 전환은 미완료다.
