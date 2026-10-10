@@ -17,7 +17,7 @@ use super::{
     float_placement::ObjectPlacementFrame,
     height_measurer::MeasuredTable,
     hwpunit_to_px,
-    layout::{estimate_text_width, estimate_text_width_unrounded, resolved_to_text_style},
+    layout::{estimate_text_width_unrounded, resolved_to_text_style},
     layout_frame::{FrameExclusion, LayoutFrame},
     px_to_hwpunit,
     style_resolver::{detect_lang_category, ResolvedParaStyle, ResolvedStyleSet},
@@ -274,11 +274,9 @@ pub(crate) fn plan(
         let cs = super::composer::find_active_char_shape(&para.char_shapes, stream_position);
         let lang = detect_lang_category(ch);
         let text_style = resolved_to_text_style(styles, cs, lang);
-        let width = if ch == ' ' || picture_rows {
-            estimate_text_width_unrounded(&ch.to_string(), &text_style)
-        } else {
-            estimate_text_width(&ch.to_string(), &text_style)
-        };
+        // 같은 글리프 전진량을 줄 수용과 실제 box 원점에 보존한다.
+        // 문자마다 정수 px로 반올림하면 긴 prefix의 줄 경계가 달라진다.
+        let width = estimate_text_width_unrounded(&ch.to_string(), &text_style);
         // 표시 relSz는 글리프 크기다. 새 그림 글줄도 일반 문단과 같이
         // 선언 글자 크기를 줄 상자·간격에 사용하고 표시 크기는 style에 보존한다.
         let line_font_size = if picture_rows {
@@ -335,6 +333,7 @@ pub(crate) fn plan(
     let word_ranges = super::composer::text_word_ranges(para, styles);
     let mut words = word_ranges.iter().peekable();
     let mut word_metrics = std::collections::BTreeMap::new();
+    let mut attached_word_metrics = std::collections::BTreeMap::new();
     let (separator_spaces, object_separator_spaces) = separator_spaces::classify(&atoms, &chars);
     let mut index = 0;
     while index < atoms.len() {
@@ -375,6 +374,13 @@ pub(crate) fn plan(
             index += 1;
         }
         word_metrics.insert(start, metrics);
+        if let Some(Atom::Box(next)) = atoms.get(index) {
+            if matches!(next.content, InlineFlowContent::Table { .. }) {
+                // 구분 공백 없이 붙은 TAC는 앞 어절의 수용 후보에 속한다.
+                // 후보가 한 줄보다 크면 새 줄에서 개체 앞 경계를 분리한다.
+                attached_word_metrics.insert(start, metrics.with(next));
+            }
+        }
     }
     let mut exclusions = preceding.to_vec();
     let horizontal = frame.container.x..frame.container.x + frame.container.width;
@@ -445,6 +451,14 @@ pub(crate) fn plan(
                 let row_horizontal =
                     paragraph_row_horizontal(&horizontal, style, result.boxes.is_empty());
                 let row_width = row_horizontal.end - row_horizontal.start;
+                // 공백의 끝과 다음 pen의 줄 소속을 구분한다. 아직 줄 안의
+                // pen에서 시작하는 구분 공백은 우단 밖으로 전진할 수 있다.
+                let object_separator = matches!(&item.content, InlineFlowContent::Text { range, .. }
+                    if object_separator_spaces.contains(&range.start));
+                let first_overhang_space = object_separator
+                    && separator_spaces::has_flow_content(&row, &chars)
+                    && row_metrics.width <= row_width + 0.01
+                    && row_metrics.width + item.width > row_width + 0.01;
                 // A separator consumed by a soft wrap remains in the source
                 // row. It must not create a whitespace-only row before the
                 // next word/table. Space-only paragraphs and authored breaks
@@ -452,21 +466,14 @@ pub(crate) fn plan(
                 if matches!(&item.content, InlineFlowContent::Text { range, .. }
                     if separator_spaces.contains(&range.start))
                     && row_metrics.width + item.width > row_width + 0.01
-                    && row.iter().any(|existing| match &existing.content {
-                        InlineFlowContent::Text { range, .. } => {
-                            chars[range.clone()].iter().any(|ch| !ch.is_whitespace())
-                        }
-                        InlineFlowContent::Table { .. } | InlineFlowContent::Picture { .. } => true,
-                        InlineFlowContent::FloatingTable { .. } => false,
-                    })
+                    && !first_overhang_space
+                    && separator_spaces::has_flow_content(&row, &chars)
                 {
                     item.width = 0.0;
                     // 개체 앞의 넘친 공백은 앞 줄에서 소비하고 그 줄을 끝낸다.
                     // 이후 작성된 공백은 다음 물리 줄에 남아 개체의 전진량과
                     // 함께 fit한다. 모두 폭 0으로 흡수하면 표 소유 줄을 잃는다.
-                    if matches!(&item.content, InlineFlowContent::Text { range, .. }
-                        if object_separator_spaces.contains(&range.start))
-                    {
+                    if object_separator {
                         row.push(item);
                         finish_row(
                             &mut result,
@@ -482,10 +489,15 @@ pub(crate) fn plan(
                     }
                 }
                 let lookahead = match &item.content {
-                    InlineFlowContent::Text { range, .. } => word_metrics
+                    InlineFlowContent::Text { range, .. } => attached_word_metrics
                         .get(&range.start)
-                        .filter(|metrics| metrics.width <= row_width + 0.01)
                         .copied()
+                        .or_else(|| {
+                            word_metrics
+                                .get(&range.start)
+                                .filter(|metrics| metrics.width <= row_width + 0.01)
+                                .copied()
+                        })
                         .unwrap_or_else(|| RowMetrics::default().with(&item)),
                     _ => RowMetrics::default().with(&item),
                 };
@@ -511,7 +523,8 @@ pub(crate) fn plan(
                     next.1 > old.1 + 0.01
                 };
                 if !row.is_empty()
-                    && (row_metrics.width + lookahead.width > row_width + 0.01
+                    && ((row_metrics.width + lookahead.width > row_width + 0.01
+                        && !first_overhang_space)
                         || moves_existing_row)
                 {
                     finish_row(

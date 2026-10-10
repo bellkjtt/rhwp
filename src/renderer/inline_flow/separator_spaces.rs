@@ -4,6 +4,16 @@ use std::collections::BTreeSet;
 
 use super::{Atom, InlineFlowBox, InlineFlowContent};
 
+pub(super) fn has_flow_content(row: &[InlineFlowBox], chars: &[char]) -> bool {
+    row.iter().any(|item| match &item.content {
+        InlineFlowContent::Text { range, .. } => {
+            chars[range.clone()].iter().any(|ch| !ch.is_whitespace())
+        }
+        InlineFlowContent::Table { .. } | InlineFlowContent::Picture { .. } => true,
+        InlineFlowContent::FloatingTable { .. } => false,
+    })
+}
+
 pub(super) fn classify(atoms: &[Atom], chars: &[char]) -> (BTreeSet<usize>, BTreeSet<usize>) {
     let mut separators = BTreeSet::new();
     let mut object_separators = BTreeSet::new();
