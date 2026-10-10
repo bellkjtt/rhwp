@@ -4589,6 +4589,8 @@ impl LayoutEngine {
         wrap_around_paras: &[super::pagination::WrapAroundPara],
     ) -> PageRenderTree {
         let layout = &page_content.layout;
+        // 바탕쪽이 없는 페이지의 머리말도 현재 용지·본문 좌표계를 소비한다.
+        self.prime_page_layout_env(layout);
         // [#6175] 본문 저장 행 admission의 외부-기하 증거 - 조판이 구역당 한 번
         // 계산하는 것과 **같은 함수·같은 입력**이라 두 경로가 갈리지 않는다.
         *self.body_float_carve_evidence.borrow_mut() =
@@ -5630,14 +5632,7 @@ impl LayoutEngine {
                 // HWP/HWPX에서 `PAGE` 기준은 물리 용지(PAPER)가 아니라 본문 영역 기준이다.
                 // 바탕쪽은 본문보다 먼저 렌더링되므로 표 위치 계산용 현재 페이지 context를
                 // 여기서 명시적으로 채워야 `vertRelTo=PAGE`, `horzRelTo=PAGE`가 올바르게 동작한다.
-                self.current_paper_width.set(layout.page_width);
-                self.current_page_height.set(layout.page_height);
-                self.current_body_area.set((
-                    body_area.x,
-                    body_area.y,
-                    body_area.width,
-                    body_area.height,
-                ));
+                self.prime_page_layout_env(layout);
                 let mut mp_node = RenderNode::new(
                     mp_id,
                     RenderNodeType::MasterPage,
@@ -7493,20 +7488,21 @@ impl LayoutEngine {
         }
     }
 
+    /// 페이지·바탕쪽·단 프로브가 같은 물리 용지와 본문 좌표계를 소비한다.
+    fn prime_page_layout_env(&self, layout: &PageLayoutInfo) {
+        self.current_paper_width.set(layout.page_width);
+        self.current_page_height.set(layout.page_height);
+        let ba = &layout.body_area;
+        self.current_body_area
+            .set((ba.x, ba.y, ba.width, ba.height));
+    }
+
     /// 단(column) 콘텐츠 레이아웃 전에 페이지 좌표계 상태를 채운다.
     /// build_single_column 과 [#4149] 셀 커서 fast path 프로브가 공유한다 —
     /// 프로브가 전량 빌드와 동일한 좌표계(용지 폭/본문 영역)에서 동작해야
     /// cell_units 메모 등 포인터-키 캐시가 동일 값으로 채워진다.
     pub(crate) fn prime_column_layout_env(&self, layout: &PageLayoutInfo) {
-        // 현재 페이지 용지 너비 설정 (표 HorzRelTo::Paper 위치 계산용)
-        self.current_paper_width.set(layout.page_width);
-        // [#3637] 쪽 높이도 여기서 채운다. 바탕쪽 분기(위)에서만 채우면 바탕쪽 없는
-        // 문서에서 0 으로 남아 셀 넘침 진단이 통째로 침묵한다.
-        self.current_page_height.set(layout.page_height);
-        // 현재 페이지 본문 영역 설정 (표 HorzRelTo::Page / VertRelTo::Page 계산용 — Task #347)
-        let ba = &layout.body_area;
-        self.current_body_area
-            .set((ba.x, ba.y, ba.width, ba.height));
+        self.prime_page_layout_env(layout);
 
         // 문단 테두리 범위 수집 초기화
         self.para_border_ranges.borrow_mut().clear();

@@ -1231,6 +1231,7 @@ impl TypesetEngine {
                 || kept_successor_overflows
                 || no_separator_tail_table_starts_next_column)
                 && !(fit_split_column == (st.pages.len(), st.current_column)
+                    && fit_item_count == st.current_items.len()
                     && reflowed_fit.is_some_and(reflow_fit::ReflowedEndnoteFit::can_stay))
             {
                 st.advance_column_or_new_page();

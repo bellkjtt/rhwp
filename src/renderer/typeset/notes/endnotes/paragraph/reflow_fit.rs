@@ -60,7 +60,7 @@ impl TypesetEngine {
         measured_tables: &[MeasuredTable],
     ) -> Option<ReflowedEndnoteFit> {
         if st.current_items.is_empty()
-            || formatted.line_count() <= 1
+            || formatted.line_count() == 0
             || formatted.line_count() != paragraph.line_segs.len()
             || paragraph.column_type != ColumnBreakType::None
             || paragraph.controls.iter().any(|control| match control {
