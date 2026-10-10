@@ -159,3 +159,16 @@ canonical Native SVG/fresh WASM의 전체 제출 TSV 완료로 바꾸어 보고�
 `samples/exam_math_no.hwp`(all-41)는77.76098%에서85.26152%로 개선됐다.
 미달 쪽은 각각2·9·17쪽과1·9·13·16·17·18쪽이다. 90% 미달 상태의 기대값 변경이나
 PR 생성은 계속 보류한다. 대조군 5개/51쪽의 새 source 재검증은 별도로 진행 중이다.
+
+
+22행 합성 대조군도 같은 source dfb의 canonical Native SVG로 독립 Print와 비교했다.
+Native와 PDF의 전체 쪽수는2/2이며 페이지별 TSV는58.73752%와49.88545%다.
+원본 시험지 통과 근거로 쓰지 않으며 이 대조군에도 정식 회귀를 추가하지 않는다.
+`actual-native-print-baseline-comparison.json`은0·10·21% 위치, 정체·굵게, 서로 다른
+자간/크기의22개 행을 Native와 Print에서 소유 순서대로 대조한다. 실제 기준선의
+최대 차이는0.88524px이다. 이 값은 진단 관측이며 회귀의 px 허용치로 사용하지 않는다.
+Print 드라이버의 좌표 스케일·격자 잔차와 가로 폭 차이를 구분한다. 음수 위치,
+언어별 다른 상대 크기, 첨자와의 조합은 아직 이 독립 대조군에서 검증하지 않았다.
+RHWP의 compat는2022로 실행했다. MCP engine2020과 RHWP compat 값은 다른 계약이다.
+초기 잘못된 compat2020 호출은 CLI 사용법 오류(exit2)였고 렌더를 실행하지 않았다.
+정상 재실행은 미달 TSV를 보존하고 gate 때문에exit1로 끝났다.
