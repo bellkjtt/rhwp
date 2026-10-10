@@ -79,3 +79,58 @@ worker exit3221225477로 terminal failed다. 초기 합성 입력의 미사용 c
 이번 구현은 실제 누락 속성의 복원이며 현재 결과를 90% 통과로 선언하지 않는다.
 정식 회귀·기대값은 아직 변경하지 않았다. 선행 검사·Native 빌드와 같은 원본 전체
 직접 비교, Native/fresh WASM·전체 회귀의 필수 검증은 이어서 실행한다.
+
+
+## 실제 코드 검증과 새 원인 증거
+
+구현 source는 `dfb7748b51ad6fb0daa7057e26d37930be9e05e3`다.
+`stage92-font-position-type-checks.json`에서 fmt, Native Clippy, WASM lib Clippy,
+Skia lib check의 exit code가 모두 0이다. 고정 `target/pr-review`의 순차 Native
+release-test/native-skia 빌드는 exit 0, 422.31초다.
+`font-position-native-provenance.json`은 빌드 전후 source 해시와 고정 실행 파일을 기록한다.
+workspace/all-target Clippy, 전체 nextest, fresh WASM과 55원본/853쪽의 최종 검증은
+아직 완료되지 않았다. 일부 선행 검사 통과로 전체 통과를 보고하지 않는다.
+
+같은 원본 `samples/exam_math.hwp`와 독립 Print PDF의 canonical Native SVG 17쪽을
+재출력했다. `stage92-math-font-native-svg/math-font/silhouette.tsv`는
+**85.39350%**다. 이전 source c6의 78.96865%보다 개선됐지만 90% 미만이며,
+`re_review_required`다. 새 실제 출력으로 만든
+`stage92-math-native-review/review/review_017.png`를 직접 열어 사용자에게 표시했다.
+제목의 큰 기준선 차이는 줄었으나 제목의 글자 사이 간격과 작은 머리글의 폭·굵기 차이가
+남아 있다. 이 PNG는 앞선 수정 SVG 대조군과 구분한다. 기존 회귀와 기대값은 변경하지 않았다.
+191쪽 원본 9개와 대조군 51쪽의 직접 Skia 비교는 같은 고정 binary로 실행 중이다.
+실행 중인 receipt를 전체 완료 증거로 쓰지 않는다.
+
+합성 입력 v3에서는 정상 template의 기존 font 참조를 유지하고 원본의 두 HFT face만
+추가했다. bold 노드도 charPr의 정상 자식 순서로 배치했다. HWPX 직접 open job
+`1b886c80-2dae-4570-931e-ea2ef736b966`도 terminal failed다. 같은 내용을 RHWP가
+HWP로 저장한 뒤 한컴에 전달해 open 경로를 분리했다. RHWP 변환의 `--verify`는
+exit 0이며, 한컴 정상 저장 job `f09a59cc-403e-41a8-905f-2d942973fe8b`와 Print job
+`4fa30e0a-5eb9-4350-8626-44b953bab6d9`는 모두 succeeded다.
+실제 engine 2020, Hancom `11.0.0.9136`, Print method 0,
+`hancom2020_pdf_driver_one_up`, PDF 2쪽을 확인했다.
+
+이어 같은 두 face의 정체 ASCII 94자씩을 별도 한컴 저장·Print로 산출했다.
+저장 job `3bbb775d-da72-4447-8a95-5c1874e67f05`, Print job
+`1e01a81c-9469-457c-a32d-bde6e39e4045`는 succeeded이며 같은 engine/Print 계약과
+전체 1쪽이다. 정상 저장 HWP와 PDF 4개는
+`pdf/issue7642-hft-char-style-diagnostic/`에 원본 byte를 보존했다.
+아직 정식 회귀 fixture가 아니며 Git에 추가하지 않았다. 입력·산출 SHA, 22개 행의
+속성 보존 및 188개 ASCII 메트릭은 ignored output의
+`stage92-char-style-probe/independent-font-program-evidence.json`과
+`preserved-independent-outputs.json`에 기록했다.
+
+한컴 정상 저장본을 RHWP가 HWPX로 진단 추출한 `export-hwpx --verify`는 exit 3이다.
+23개 문단의 저장 LineSeg가 추출 HWPX에서 생략된 차이다. 이 실패를 round-trip 성공으로
+보고하지 않는다. 별도로 추출 charPr를 원본 합성 행과 대조하여 22개 행 모두의
+height·bold·언어별 ratio/spacing/offset이 보존된 사실을 확인했다. 이 추출본은
+정상 한컴 HWP 원본이나 독립 Print를 대신하는 기준 파일이 아니다.
+
+독립 Type3 /Widths에서 디나루 숫자는 660/1000em, 신그래픽 숫자는620/1000em이며
+두 face의 괄호는500/1000em이다. 작은 머리글 숫자를 설치 대체 글꼴의 폭으로 재면
+행 전체 폭과 가운데 정렬 원점이 달라진다. 22행 대조는 굵기만 바꿔도 전진폭이
+증가함을 보여 준다. 정체·굵게 Type3의 intrinsic /Widths는 동일하고 실제 TJ 간격이
+다르다. 기존 신그래픽의 자간 무시 정책은 이 굵기 전진과 음수 자간이 상쇄되는 사례를
+자간 전체의 비적용으로 해석했을 가능성이 있다. 이는 다음 일반 보정의 원인 근거이며,
+특정 쪽의 px 차이를 보정 값으로 사용하는 근거가 아니다. 정확한 굵기 간격과 공백·
+슬롯·마지막 글자 소비를 독립 출력으로 확인하고 메트릭/자간 소비 경로를 함께 보정한다.
