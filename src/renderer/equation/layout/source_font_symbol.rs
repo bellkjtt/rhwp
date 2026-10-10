@@ -36,6 +36,18 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
 }
 
 pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
+    if matches!(text, "←" | "→") {
+        let em = super::source_roman_advance::em_advance(fs, dpi).unwrap_or(fs);
+        return Some(LayoutBox {
+            font_size: fs,
+            x: 0.0,
+            y: 0.0,
+            width: super::source_font_text::logical_advance(1024, em, dpi),
+            height: fs,
+            baseline: fs * 0.8,
+            kind: LayoutKind::MathSymbol(text.to_owned()),
+        });
+    }
     if matches!(text, "{" | "}") {
         return Some(LayoutBox {
             font_size: fs,

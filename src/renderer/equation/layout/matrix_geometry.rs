@@ -128,7 +128,7 @@ impl EqLayout {
                 MATRIX_ROW_GAP
             };
         let brace_width = if self.hancom_math_face {
-            super::source_font_text::logical_advance(512, fs, self.dpi)
+            super::source_font_advance::curly_slot(fs, self.dpi)
         } else {
             // 이전 두 0.3em 예약의 실제 본체 원점·전체 폭을 보존한다.
             fs * 0.6

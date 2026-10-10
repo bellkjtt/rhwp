@@ -19,6 +19,9 @@ mod negation;
 #[path = "parser_alignment.rs"]
 mod alignment;
 
+#[path = "parser_script_operand.rs"]
+mod script_operand;
+
 /// 수식 중첩 깊이 상한.
 ///
 /// 적대적으로 깊게 중첩된 입력(`{{{…}}}`, `sqrt sqrt …`, `LEFT ( LEFT ( …`,
@@ -761,47 +764,6 @@ impl EqParser {
         }
     }
 
-    /// 현재 토큰이 "공백 없이 붙은 관계연산자"인지 (#1304).
-    /// HWP 무브레이스 하한 operand 의 연결 구분자 — `sum_k=1`, `lim_x->0`, `1<=k`.
-    /// 관계연산자 앞에 공백이 있으면(`x^2 = 4`) false 를 돌려 묶지 않는다.
-    fn is_tight_relational(&self) -> bool {
-        match self.tokens.get(self.pos) {
-            Some(t) => {
-                t.ty == TokenType::Symbol
-                    && !t.space_before
-                    && matches!(
-                        t.value.as_str(),
-                        "=" | "<" | ">" | "<=" | ">=" | "!=" | "==" | "->"
-                    )
-            }
-            None => false,
-        }
-    }
-
-    /// 무브레이스 아래첨자/하한 operand 파싱 (#1304).
-    /// `원자 (공백없는 관계연산자 원자)*` 패턴으로 하나의 operand 를 묶는다.
-    /// `sum_k=1 ^6` 의 하한이 `k=1` 전체가 되도록 한다.
-    /// 위첨자(`^`)에는 적용하지 않는다 — `x^2=4` 류 위첨자 등식 보호.
-    fn parse_script_operand(&mut self) -> EqNode {
-        let first = self.parse_single_or_group();
-        if !self.is_tight_relational() {
-            return first;
-        }
-        let mut items = vec![first];
-        while self.is_tight_relational() {
-            let sym = self.current_value().to_string();
-            self.pos += 1;
-            // `->` 는 화살표 기호로 변환 (parse_element 와 동일)
-            if sym == "->" {
-                items.push(EqNode::MathSymbol("→".to_string()));
-            } else {
-                items.push(EqNode::Symbol(sym));
-            }
-            items.push(self.parse_single_or_group());
-        }
-        EqNode::Row(items).simplify()
-    }
-
     /// 첨자(subscript/superscript) 파싱 시도
     /// 한컴 수식에서 함수/기호 뒤에 Thin 공백(`)이 오고 첨자가 따라오는 패턴이 일반적이므로,
     /// Thin 공백 뒤에 첨자가 있으면 공백을 건너뛰고 첨자를 파싱한다.
@@ -836,11 +798,11 @@ impl EqParser {
             let ty = self.current_type();
             if ty == TokenType::Subscript && !has_sub {
                 self.pos += 1;
-                sub = Some(self.parse_script_operand());
+                sub = Some(self.parse_script_operand(has_sup));
                 has_sub = true;
             } else if ty == TokenType::Superscript && !has_sup {
                 self.pos += 1;
-                sup = Some(self.parse_single_or_group());
+                sup = Some(self.parse_superscript_operand(has_sub));
                 has_sup = true;
             } else {
                 break;
@@ -1211,10 +1173,10 @@ impl EqParser {
             }
             if self.current_type() == TokenType::Subscript && sub.is_none() {
                 self.pos += 1;
-                sub = Some(Box::new(self.parse_script_operand()));
+                sub = Some(Box::new(self.parse_script_operand(sup.is_some())));
             } else if self.current_type() == TokenType::Superscript && sup.is_none() {
                 self.pos += 1;
-                sup = Some(Box::new(self.parse_single_or_group()));
+                sup = Some(Box::new(self.parse_superscript_operand(sub.is_some())));
             } else {
                 break;
             }
@@ -1229,7 +1191,7 @@ impl EqParser {
 
         if self.current_type() == TokenType::Subscript {
             self.pos += 1;
-            sub = Some(Box::new(self.parse_script_operand()));
+            sub = Some(Box::new(self.parse_script_operand(false)));
         }
 
         EqNode::Limit { is_upper, sub }

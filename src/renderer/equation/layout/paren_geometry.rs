@@ -1,7 +1,6 @@
 //! 괄호 슬롯·본체 원점·논리 프레임을 한 배치에서 결정한다.
 use super::{
-    delimiter_advance, source_font_advance, source_font_text, EqLayout, EqNode, LayoutBox,
-    LayoutKind, PAREN_PAD,
+    delimiter_advance, source_font_advance, EqLayout, EqNode, LayoutBox, LayoutKind, PAREN_PAD,
 };
 impl EqLayout {
     pub(super) fn layout_paren(
@@ -39,7 +38,7 @@ impl EqLayout {
         // Times New Roman '(' advance (em 기준) = 0.333. 텍스트 높이 glyph는 이 폭을 유지하고,
         // 큰 둥근 괄호 path는 한컴 HyhwpEQ 출력에 가깝게 더 좁게 잡는다. (Task #283, #1139)
         let paren_w = if source_curly {
-            source_font_text::logical_advance(512, fs, self.dpi)
+            source_font_advance::curly_slot(fs, self.dpi)
         } else if source_round {
             source_font_advance::paren(fs, self.dpi)
         } else if use_stretch_round {

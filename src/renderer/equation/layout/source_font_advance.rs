@@ -35,3 +35,10 @@ pub(super) fn paren(fs: f64, dpi: f64) -> f64 {
     }
     measured(fs, dpi, 1).unwrap_or_else(|| super::source_font_text::logical_advance(398, fs, dpi))
 }
+
+/// CASES와 LEFT/RIGHT curly는 같은 논리 em의 절반을 예약한다.
+/// 독립 22pt 3/4행 저장 폭에서 각 슬롯 1125HU를 확인했다.
+pub(super) fn curly_slot(fs: f64, dpi: f64) -> f64 {
+    let em = super::source_roman_advance::em_advance(fs, dpi).unwrap_or(fs);
+    super::source_font_text::logical_advance(512, em, dpi)
+}
