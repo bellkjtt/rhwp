@@ -86,3 +86,31 @@ fit·높이·paint를 계산한다. 본문 단어 앞 구분 공백의 기존 �
 증적은 `stage75-paired-geometry-findings.json`과
 `stage75-cases-paired-before-native/`,
 `stored-frame-space-flow-focused-native/cases-paired-probe/`에 보존했다.
+
+## 표 공백 검증과 수정된 Native 재검증
+
+수식 수용 가정은 `9a56582e9fecdcdf0410e67623ffc00aef4aff02`에서
+제거했고 equation/mod.rs는 source b6a1269b3와 동일하다. 표 공백
+보정은 유지한다. 수정된 source의 Native 빌드와 같은 57개 영향·대조
+페이지의 재검증을 시작했다. 아직 그 source의 완료 결과는 없다.
+
+1d5261f0e의 한컴 저장 공백 대조 전체 4쪽은 각각 91.90886%,
+90.83965%, 90.44731%, 91.65757%다. 3개 공백 사례는 기존
+73.60264%에서 개선됐다. 이 문서는 Equation control이 없으므로
+수식 프레임 변경의 결과와 구분한다. Native fmt·Native Clippy도
+1d5261f0e에서 exit 0이며 수정된 source의 전체 필수 lint를 대신하지 않는다.
+
+합계 행의 병합 차이로 보였던 것은 패널 비교를 잘못 읽은 추정이었다.
+원본 XML과 한컴 저장본의 셀 주소·span이 같고, `계`와 `131,200`의
+실제 좌표를 Print와 같은 좌표계에서 대조해 일치함을 확인했다.
+`stage75-tac-last-row-text-diagnostic.json`은 진단 자료이며 고정 px
+회귀 기대값이 아니다. 임의로 span이나 정렬을 바꾸지 않는다.
+
+저장 줄 없는 진단 HWPX는 1쪽 47.93986%로 미달했다. 변경 전
+b6a1269b3와 변경 후 1d5261f0e의 해당 쪽 render tree가 완전히 같다.
+따라서 이번 공백 변경으로 새로 생긴 회귀라고 분류하지 않는다.
+첫 단위 표기의 줄바꿈이 Print와 달라 표의 시작 높이까지 영향을
+준다. 저장 줄 대조 통과로 이 재조판 경로의 일치를 주장하지 않으며
+실제 원본 배포 문서도 따로 확인한다. `stage75-tac-reflow-before-tree-comparison.json`
+과 `tac-reflow-probe/review/review_001.png`에 근거를 보존했다.
+기존 회귀·baseline·golden은 변경하지 않았고, 새로운 fixture도 추가하지 않았다.
