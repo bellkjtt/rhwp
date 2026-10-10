@@ -127,8 +127,12 @@ format의 균등 확대와 paint의 마지막 행 확대는 같은 판별 결과
 `HeightCursor::owned_paragraph_origin`으로 연결해 저장 vpos 기준도 같은
 원점으로 재연결한다. 뒤에서 오래된 좌표로 다시 덮어쓰지 않게 한다.
 
-후보의 fmt와 diff 공백 검사는 통과했다. Native/WASM Clippy·Skia check와
-실제 재출력은 아직 미완료이며, 정식 회귀·기대값은 바꾸지 않았다.
+교정된 source `9605623089dd2540e63abc3782efa129351a2fc3`에서 fmt,
+Native Clippy, WASM Clippy, Skia check가 모두 exit 0으로 종료했다.
+`stage89-table-row-frame-type-checks.json`에 실행 명령과 source 파일 해시를
+보존했다. 실제 재출력과 전체 검증은 아직 미완료이며, 정식 회귀·기대값은
+바꾸지 않았다. 이 네 결과를 workspace 전체 lint나 전체 회귀의 통과로
+대신하지 않는다.
 
 첫 Native Clippy는 새 원점 필드의 section cursor 초기화와 단위 변환 함수
 import 누락으로 실패했다. 두 연결을 교정하고 기존 실패 receipt·로그를
@@ -136,3 +140,21 @@ import 누락으로 실패했다. 두 연결을 교정하고 기존 실패 recei
 증거로 세지 않는다. 교정된 source에서 lint 묶음을 다시 실행한다.
 Stage 88의 fresh WASM이 생성한 Canvas `lineJoin`·`miterLimit` import도
 `rhwp-studio/public/rhwp.js`에 함께 보존한다.
+
+## 선택 쪽 검증의 반복 조판 비용
+
+기존 Native 검증은 선택 쪽마다 render tree를 산출하면서 같은 문서를 반복
+조판했다. 검증용 ignored adapter에서 tree 전체를 한 번 산출한 뒤 선택 쪽만
+기존 비교 입력에 복사한다. SVG 렌더, PDF 래스터, 실루엣 계산과 gate는
+정본 도구를 그대로 사용한다. `scripts/visual_sweep.py`는 수정하지 않았다.
+
+Stage 88의 고정 Native 실행 파일과 원본 all-20에서 13·16·17·19·20·21쪽의
+개별 산출 tree와 한 번에 산출한 tree의 SHA-256 및 JSON이 모두 같음을
+실제로 확인했다. `stage89-tree-batch-equivalence/receipt.json`에 그 결과와
+명령을 보존했다. 이는 산출 방법의 동일성 근거이며 현재 후보의 시각 통과
+근거가 아니다. 새 후보는 별도로 다시 렌더한다.
+
+현재 후보의 선택 검증은 네 실패 원본을 먼저 처리하고 변수·미주 대조군을
+포함한 37개 입력·97개 선택 쪽을 유지한다. 준비 스크립트의 변수 대조군
+경로 오기를 실행 전에 교정했다. 실제 원본 전체 55개·853쪽과 기존 91개
+테스트 파일의 범위는 줄이지 않는다.
