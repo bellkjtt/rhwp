@@ -152,3 +152,31 @@ Stage93 전체 Native/fresh WASM 작업은 고정 이전 바이너리·패키지
 79abd9e49675f4286eaed38197f7e837afb744e7`는 exit 0이다.
 4198 tests / 298 modules이며 로그는 `stage94-unit-test-tiers.log`에 있다.
 이 정책 통과는 Native/fresh WASM 시각 검증이나 전체 nextest를 대신하지 않는다.
+
+
+## Native 완료와 직접 판독 결과
+
+최종 후보의 Native 빌드는 516.47초, exit 0이다. 고정 바이너리
+`rhwp-empty-row-v2`의 SHA-256은
+`d2d2df4e69116a4ab6d43ab875e60857150e703ed12c9093eefc9002c74b0e4c`이다.
+첫 비교 controller는 시스템 Python에 `pymupdf`가 없어 종료됐다. venv로 재실행한
+진단에서는 compare/review 디렉터리 준비 누락도 발견해 보정했다. 이 두 실패는
+스크립트 실행 준비 실패이며 렌더러 결함의 FAIL 증거로 세지 않는다. 실패 receipt와
+로그를 보존하고 성공 바이너리를 재빌드하지 않은 채 비교 단계만 재실행했다.
+
+`stage94-v2-original-skia/receipt.json`에서 수학 원본 두 파일의 40쪽은 모두
+90% 이상이며 최저값은 각각 92.90370%, 91.69986%이다.
+`stage94-v2-micro-review/question4-empty-row-before-after-print.png`를 직접 열었다.
+명시적 빈 행을 보존해 구간별 함수의 행 간격은 개선됐다. 중괄호는 여전히
+Print보다 가늘고 가운데 굴곡이 약하다. 이 차이를 점수 통과로 면제하지 않는다.
+
+`stage94-v2-independent-skia/receipt.json`의 진단은 v2 78.93164%,
+v3 81.79280%, 분수 반례 83.36939%다. 정식 fixture로 추가할 수 있는 결과가 아니다.
+같은 자기닫힘 HWPX를 새 source로 변환하면 수식 12개가 모두 보존되며,
+변경 전에는 1개였다. 이 보존 진단을 시각 통과로 바꾸어 보고하지 않는다.
+
+남은 원인은 중괄호의 임의 stroke와 중복 가로 여백, 실제 폰트 줄 프레임 대신
+자연 상자를 쓰는 정렬 행의 기준선·점유다. 독립 Print의 정렬 높이 전부는
+일반 줄의 1125HU/2175HU 프레임과 빈 줄의 한 글자 크기, 독립 묶음의 0.1em
+leading으로 설명된다. 이 근거를 다음 단계에서 공통 줄 프레임과 실제 표시 경로에
+연결한다. 현재 단계는 부분 보정이며 전체 목표·관계형 회귀·PR 준비는 미완료다.
