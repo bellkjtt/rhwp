@@ -9,6 +9,8 @@ use crate::renderer::hwpunit_to_px;
 use crate::renderer::style_resolver::ResolvedStyleSet;
 
 /// 재조판 뒤 저장 빈 줄만 이어지면 옛 자동 쪽 경계를 복원하지 않는다.
+/// 다만 실제 소비한 흐름 끝이 저장 경계와 일치하면 재조판 이력만으로
+/// 그 경계를 버리지 않는다. 같은 쪽 소유는 기존 저장 끝/실제 흐름 대조로 확인한다.
 /// 저장 본문/개체를 다시 소비한 경계는 그 저장 흐름의 소유다. 따라서 쪽에
 /// 재조판 항목이 한 번 있었다는 사실을 쪽 전체의 무효 상태로 사용하지 않는다.
 /// 명시적 쪽/단 나누기는 이 검사 이전의 entry 경로에서 처리한다.
@@ -17,6 +19,9 @@ pub(in crate::renderer::typeset) fn stored_page_boundary_invalidated_by_reflow(
     col_count: u16,
     current_items: &[crate::renderer::pagination::PageItem],
     paragraphs: &[Paragraph],
+    para_idx: usize,
+    current_height_px: f64,
+    dpi: f64,
 ) -> bool {
     if col_count != 1 || !(profile.hwpx_stored_layout() || profile.hwp5_stored_pagination_layout())
     {
@@ -35,7 +40,17 @@ pub(in crate::renderer::typeset) fn stored_page_boundary_invalidated_by_reflow(
             return false;
         };
         if crate::renderer::para_has_no_stored_line_segs(para) {
-            return true;
+            let boundary_matches_actual_flow = paragraphs.get(para_idx).is_some_and(|current| {
+                !current.stored_text_partition_is_dirty()
+                    && crate::renderer::typeset::stored_vpos_restarts_near_body_top(current)
+                    && crate::renderer::typeset::stored_rewind_boundary_matches_current_flow(
+                        paragraphs,
+                        para_idx,
+                        current_height_px,
+                        dpi,
+                    )
+            });
+            return !boundary_matches_actual_flow;
         }
         if !para.text.trim().is_empty() {
             return false;

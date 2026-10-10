@@ -50,12 +50,13 @@ impl TypesetEngine {
                 .map(|s| s.vertical_pos);
             if let (Some(cv), Some(pv)) = (curr_first_vpos, prev_last_vpos) {
                 // 저장 쪽 경계는 그 쪽의 줄 구성에 의존한다. 현재 쪽에서
-                // 재조판 줄을 소비했다면 뒤의 저장 빈 문단 두 개가 서로 연속해도
-                // 그 이전 줄 구성의 쪽 경계를 복구할 수 없다. 명시적 쪽/단 나눔은
-                // entry 단계에서 처리하며 여기서는 남은 공간으로 실제 fit한다.
+                // 재조판 뒤 빈 저장 줄의 연속성만으로 옛 경계를 복구하지 않는다.
+                // 실제 흐름 끝이 저장 끝과 일치하는 경계는 공통 판정에서 보존한다.
+                // 명시적 쪽/단 나눔은 entry 단계에서 처리한다.
                 let stored_boundary_invalidated_by_reflow =
                     crate::renderer::typeset::paragraph::stored_lines::stored_page_boundary_invalidated_by_reflow(
                         profile, st.col_count, &st.current_items, paragraphs,
+                        para_idx, st.current_height, self.dpi,
                     );
                 // 현재 문단의 vpos가 직전 문단의 마지막 vpos보다 작은 경우 — 컬럼/페이지 reset 시그널.
                 // - 단일 단: cv == 0 만 인정 (Task #321 보수적 기준 유지).

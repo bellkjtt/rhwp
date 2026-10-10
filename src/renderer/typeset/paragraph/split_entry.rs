@@ -109,6 +109,7 @@ pub(in crate::renderer::typeset) fn inspect_entry(
         && !current_page_has_stale_hwpx_line_metrics
         && !super::stored_lines::stored_page_boundary_invalidated_by_reflow(
             page.profile, page.col_count, page.current_items, paragraphs,
+            para_idx, page.current_height, dpi,
         )
         && para
             .line_segs
