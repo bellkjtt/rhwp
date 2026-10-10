@@ -20,6 +20,10 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
         // 독립 6/9/12/18pt Print와 설치 HYhwpEQ의 UPM 1024 전진폭.
         "±" => (831, 0.14),
         "∓" => (1024, 0.14),
+        // 독립 9/11/16/22pt Print: BULLET은 U+2219, CDOT은 U+22C5다.
+        // 같은 논리 em 전진을 갖지만 CDOT에는 이항 자동 여백이 없다.
+        "∙" => (1024, 0.14),
+        "⋅" => (1024, 0.0),
         // slash는 이항 연산자 여백이 없는 수학 구분자다.
         "/" => (512, 0.0),
         // 수학 PUA U+E042는 853/1024다. 본문 ASCII %의 938/1024와 구분한다.
@@ -83,7 +87,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
             kind: LayoutKind::Symbol(text.to_string()),
         });
     }
-    if matches!(text, "±" | "∓") {
+    if matches!(text, "±" | "∓" | "∙" | "⋅") {
         let (width, _) = operator_metrics(text, fs, dpi)?;
         return Some(LayoutBox {
             font_size: fs,

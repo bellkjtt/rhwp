@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 /// 이항 산술 기호는 직접 Unicode로 입력해도 문자 식별자와 분리한다.
 pub(crate) fn is_binary_symbol(symbol: &str) -> bool {
-    matches!(symbol, "+" | "-" | "−" | "±" | "∓" | "×" | "÷")
+    matches!(symbol, "+" | "-" | "−" | "±" | "∓" | "×" | "÷" | "∙" | "⋅")
 }
 
 /// 피연산자를 비교하는 관계 기호. 명령 표기와 직접 Unicode 표기에 같은 간격을 준다.
@@ -165,9 +165,9 @@ static OPERATORS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
         ("DIVIDE", "÷"),
         ("PLUSMINUS", "±"),
         ("MINUSPLUS", "∓"),
-        ("CDOT", "·"),
+        ("CDOT", "⋅"),
         ("CIRC", "∘"),
-        ("BULLET", "•"),
+        ("BULLET", "∙"),
         ("AST", "∗"),
         ("STAR", "★"),
         ("DSUM", "⊞"),
@@ -277,7 +277,7 @@ static OPERATORS: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(
         ("aleph", "ℵ"),
         ("therefore", "∴"),
         ("because", "∵"),
-        ("cdot", "·"),
+        ("cdot", "⋅"),
         ("times", "×"),
         ("div", "÷"),
         ("cup", "∪"),

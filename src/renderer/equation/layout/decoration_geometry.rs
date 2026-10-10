@@ -57,12 +57,26 @@ impl EqLayout {
 
         let mut body_box = b;
         body_box.y = deco_h;
+        // 독립 정상 저장/Print의 단순·첨자·분수 본체 모두 같은 논리 em 여유를 쓴다.
+        // 본체 원점과 장식의 중심을 함께 이동하며 글리프 크기는 바꾸지 않는다.
+        let side_padding = if self.hancom_math_face
+            && matches!(
+                kind,
+                super::super::symbols::DecoKind::Bar
+                    | super::super::symbols::DecoKind::Vec
+                    | super::super::symbols::DecoKind::Dyad
+            ) {
+            super::source_roman_advance::em_advance(fs, self.dpi).unwrap_or(fs) * 0.05
+        } else {
+            0.0
+        };
+        body_box.x = side_padding;
 
         LayoutBox {
             font_size: fs,
             x: 0.0,
             y: 0.0,
-            width: body_box.width,
+            width: body_box.width + 2.0 * side_padding,
             height: body_box.height + deco_h,
             baseline: body_box.y + body_box.baseline,
             kind: LayoutKind::Decoration {
