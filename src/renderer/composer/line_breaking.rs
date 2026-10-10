@@ -2913,43 +2913,17 @@ fn flow_inline_controls_with_tac_tables(
     controls
 }
 
-fn flow_inline_controls(para: &Paragraph) -> Vec<FlowInlineControl> {
-    let text_len = para.text.chars().count();
-    para.controls
-        .iter()
-        .zip(para.control_text_positions())
-        .zip(para.control_utf16_positions())
-        .filter_map(|((control, char_position), utf16_position)| {
-            // 글자처럼 취급되는 표는 renderer가 control 위치를 기준으로 별도
-            // TextRun/Table 경계를 만든다. 보이지 않는 PARA_TEXT 위치의 다음
-            // 글자 폭에 표 전체 폭을 더하면 HML의 `abc + table + efg`처럼
-            // 기존 경계를 잃는다. #3211의 HWP oracle은 수식·그림 계열의
-            // 재조판 폭을 대상으로 하므로 표는 기존 control 배치 경로에 둔다.
-            if matches!(control, Control::Table(_)) {
-                return None;
-            }
-            let (width_hwp, height_hwp) = inline_control_size_hwp(control)?;
-            let baseline_distance_hwp = flow_inline_baseline_hwp(control, height_hwp);
-            (char_position < text_len).then_some(FlowInlineControl {
-                char_position,
-                utf16_position,
-                width_hwp,
-                height_hwp,
-                baseline_distance_hwp,
-            })
-        })
-        .collect()
-}
+#[path = "inline_control_flow.rs"]
+mod inline_control_flow;
+use inline_control_flow::flow_inline_controls;
 
-fn flow_inline_baseline_hwp(control: &Control, height_hwp: i32) -> Option<i32> {
+fn flow_inline_baseline_hwp(control: &Control, _height_hwp: i32) -> Option<i32> {
     match control {
-        // This percentage is the source object's alignment contract. The AST
-        // baseline describes glyph painting inside its box, a different origin.
-        Control::Equation(equation) if equation.baseline > 0 => Some(
-            height_hwp
-                .saturating_mul(i32::from(equation.baseline))
-                .saturating_div(100),
-        ),
+        // 현재 브랜치의 공통 수식 메트릭을 일반 흐름과 편집 프레임이 함께 소비한다.
+        Control::Equation(equation) => {
+            let baseline = crate::renderer::equation::flow_metrics_hwp(equation).2;
+            (baseline > 0).then_some(baseline)
+        }
         _ => None,
     }
 }
@@ -3570,6 +3544,7 @@ fn layout_paragraph_in_frame_impl(
             // 원본 scalar/control offset을 바꾸거나 번호를 문서에 삽입하지 않는다.
             inline_controls.push(FlowInlineControl {
                 char_position: 0,
+                utf16_position: 0,
                 width_hwp: px_to_hwpunit(prefix.advance, dpi),
                 height_hwp: px_to_hwpunit(prefix.height, dpi),
                 baseline_distance_hwp: Some(px_to_hwpunit(prefix.baseline, dpi)),
