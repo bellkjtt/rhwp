@@ -45,3 +45,43 @@ Stage 83의 Native/fresh WASM 빌드 해시와 현재 frontend SHA를
 설치본과 PDF subset의 윤곽 해시도 같다. 이 독립 변환과 글꼴
 공급 문제는 아직 해결하지 않았다. 해당 차이는 별도 잔여로
 기록하고 이번 CanvasKit 소비 계약 보정으로 완료 판정하지 않는다.
+
+## 후보 구현과 실행 증거
+
+표시 함수는 `canvaskit/equation-text-replay.ts`로 분리했다.
+CanvasKit은 Latin Modern Math를 먼저 선택하고 표시 글리프의
+자연 전진을 유지한다. 가운데 기호만 예약 폭의 가운데에서
+정렬한다. 기존 대형 renderer의 호출·공급 경로를 바꿨으며
+Rust 레이아웃과 NOT 기하는 변경하지 않았다.
+
+`tsc --noEmit --pretty false` exit 0, 기존 preflight·font-plan
+검사 10개 PASS, `node e2e/renderer-contract.test.mjs` exit 0이다.
+renderer 계약 검사의 기존 분수 대역에 필수 `axisHeight`가
+없어 실패했다. 실제 layout JSON 계약에 맞춰 글자 크기의
+1/4 축을 공급했고 기존 표시 수량·미지원 연산 assertion은
+유지했다. 정식 실물 문서 회귀를 새로 추가한 것은 아니다.
+
+실제 CanvasKit software surface의 후보 출력도 렌더 완료,
+오류·미지원 연산 0개다. 본문 face를 공급하지 않은 대조는
+300dpi에서 87.74143%이며 함초롬돋움이 Noto Sans KR로
+대체됐다. 이를 한컴과 같은 글꼴 환경의 완료 증거로 사용하지 않는다.
+공식 설치 `HANDotum.ttf`를 기존 host font provider로 공급한
+별도 캡처에서는 face 1개 적재, 대체 0개, 실패 0개를 확인했다.
+이 캡처의 Print 점수·확대 판독은 진행 중이다.
+
+Rust source tree `0b3c6d19a743beefdcde83b562f9576d755febae`의
+Stage 83 fresh WASM 빌드는 exit 0, 903.50초다. WASM SHA-256
+`9075485e35b5ba9dc847b9fa4da0d2b05001f6250b0a9700b6a3c969a0770608`과
+JS SHA-256 `a043bdc9047d3ff5d89f55ccc21846f017ac109dad6de25b2885e43c44ee08da`가
+Studio public과 각각 일치한다. 같은 Rust source의 NOT 경계
+8개는 Native/fresh WASM 모두 99.29469% 이상이다. frontend
+후보의 캡처는 위 Rust source와 구분해 기록한다.
+
+전체 Native 원본은 4개·81쪽까지 최저 90.76899% 이상이고
+전체 fresh WASM은 1개·15쪽까지 95.12426%다. 나머지 원본의
+Native/fresh WASM TSV 산출을 계속한다. 전체 관련 회귀의
+관계형 전환과 최종 필수 게이트는 미완료다.
+
+상기 증거는 ignored
+`output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/`
+아래의 `stage84-*` 로그·PNG·receipt와 `not-glyph-frame-*` 원장이다.

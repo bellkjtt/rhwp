@@ -69,6 +69,7 @@ import {
 } from './render-backend';
 import { imageCropSelectionIsEmpty } from './image-crop-scale.ts';
 import { magnificationFiltering } from './image-sampling.ts';
+import { drawEquationTextWithFonts } from './canvaskit/equation-text-replay.ts';
 import {
   boundedCanvasKitSourceImageKey,
   canvasKitImageCacheKey,
@@ -573,7 +574,7 @@ export class CanvasKitLayerRenderer {
     }
     let mathFallbackTypeface: Typeface | null = null;
     try {
-      const response = await fetch(options.mathFallbackFontUrl ?? 'fonts/NotoSansMath-Regular.woff2');
+      const response = await fetch(options.mathFallbackFontUrl ?? 'fonts/LatinModernMath-Regular.woff2');
       if (response.ok) {
         const bytes = await readBoundedResponseArrayBuffer(response, {
           maxBytes: CanvasKitLayerRenderer.MAX_BUNDLED_FONT_BYTES,
@@ -4548,10 +4549,18 @@ export class CanvasKitLayerRenderer {
     ) {
       return false;
     }
-    return this.drawStaticControlText(canvas, text, { x, y: baselineY, fontSize: Math.max(1, fontSize),
-      color, italic, bold, targetWidth, centered,
-      fontFamilies: [/[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\uac00-\ud7ff]/u.test(text) ? '함초롬바탕' : fontFamily,
-        'Latin Modern Math', '함초롬바탕', 'Noto Serif KR', 'Noto Serif CJK KR', 'Noto Sans KR', 'Noto Sans CJK KR'] });
+    if (textRequiresComplexShaping(text) || /[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\uac00-\ud7ff]/u.test(text)) {
+      return this.drawStaticControlText(canvas, text, { x, y: baselineY, fontSize: Math.max(1, fontSize),
+        color, italic, bold, targetWidth, centered,
+        fontFamilies: [/[\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\uac00-\ud7ff]/u.test(text) ? '함초롬바탕' : fontFamily,
+          'Latin Modern Math', '함초롬바탕', 'Noto Serif KR', 'Noto Serif CJK KR', 'Noto Sans KR', 'Noto Sans CJK KR'] });
+    }
+    return drawEquationTextWithFonts({
+      canvasKit: this.canvasKit,
+      typefaces: [this.findPreparedTypeface(fontFamily, { bold, italic })?.typeface ?? null, this.mathFallbackTypeface, this.defaultTypeface, this.symbolFallbackTypeface],
+      maxTextLength: CanvasKitLayerRenderer.MAX_EQUATION_TEXT_LENGTH,
+      makeFillPaint: (fillColor) => this.makeFillPaint(fillColor),
+    }, canvas, text, x, baselineY, fontSize, color, italic, bold, targetWidth, centered);
   }
 
   /** Shape static labels without recomputing producer-owned positions or equation widths. */

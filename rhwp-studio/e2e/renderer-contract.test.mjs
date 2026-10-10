@@ -1936,6 +1936,8 @@ function runExecutableEquationFallback() {
       baseline: 10,
       kind: {
         type: 'fraction',
+        // 수학 축은 글자 크기에 대한 비율이며 실제 layout JSON의 필수 필드다.
+        axisHeight: 12 * 0.25,
         numer: { x: 2, y: 0, width: 8, height: 8, baseline: 7, kind: { type: 'text', text: 'x' } },
         denom: { x: 2, y: 12, width: 8, height: 8, baseline: 7, kind: { type: 'number', text: '2' } },
       },
