@@ -81,3 +81,19 @@ CASES 32개 2쪽 최저 94.02899%, 한글·분수 36개 2쪽 최저 97.01003%,
 않고 실제 호출 경로와 Print 세대를 대조한다. 전체 관계형 전환·전체
 회귀·3종 Clippy·Skia·PR 생성은 미완료다. ignored output의 실행 원장과
 `stage78-next-run.json`에 다음 작업을 기록하며 Git에 넣지 않는다.
+
+## fresh WASM과 후속 source 구분
+
+같은 source `c60e2e58b`의 루트 wrapper fresh WASM 빌드는 exit 0이다.
+고정 package의 JS·WASM과 `rhwp-studio/public`은 각각 SHA-256이 일치했다.
+실제 Studio 브라우저 재확인은 별도 미완료 항목이다. 원본 10월 HWPX
+8–10쪽과 후속 본문·CASES·한글/분수·분수 경계 대조의 fresh WASM
+최저값은 각각 91.43010%, 98.72170%, 94.02899%, 97.01003%, 99.05440%다.
+이 선택 범위의 값은 같은 source Native와 같았다.
+
+11월 HWP 변형 21쪽의 73.81482% 미달은 fresh WASM에서도 검출했다.
+Stage 79에서 현재 줄을 다음 저장 좌표 되감김만으로 넘기는 원인을
+제거했고, Stage 80에서는 마지막 줄 후행 간격의 별도 경로를 보정한다.
+종료한 이 source의 전체 Native TSV는 55개 중 5개·101쪽만 완료됐다.
+모두 90% 이상이지만 새 source의 최종 전체 증거로 쓰지 않는다.
+미완료 전체 작업만 종료·SVG 정리했으며 완료 TSV·PNG·로그는 보존했다.
