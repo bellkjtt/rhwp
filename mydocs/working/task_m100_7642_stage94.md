@@ -66,10 +66,10 @@ SVG `render_box`, Rust Canvas `render_box`, Skia `equation_conv::render_box`가 
 행 소속과 명령 구분은 유지한다. 기존 parser 본체는 원래 1000줄을 넘는 파일이며
 이번에는 관련 행 파서만 분리하고 무관한 파서 전체 재구성은 하지 않았다.
 
-`EqLayout`은 CASES의 간격 소유 여부를 자식 배치로 전달한다. HFT 수학 face의
+`EqLayout`은 CASES의 간격 소유 여부를 자식 배치로 전달한다. HYhwpEQ 수학 face의
 독립 EQALIGN은 0.1em leading, CASES 안은 바깥 leading을 소비한다.
 행 높이는 기준선 위·아래 점유를 각각 합치며 빈 행도 최소 한 글자 크기를 점유한다.
-HFT EQALIGN의 묶음 기준선은 첫 행에 연결한다. 오른쪽 칸이 없으면 phantom
+HYhwpEQ EQALIGN의 묶음 기준선은 첫 행에 연결한다. 오른쪽 칸이 없으면 phantom
 정렬 gap을 폭에 넣지 않으며, 완전히 빈 수식은 독립 Print의 반각 자리 폭을 예약한다.
 일반 face의 정렬 묶음 기준선·leading 정책은 기존 값을 사용한다.
 
@@ -116,3 +116,17 @@ Stage93 전체 Native/fresh WASM 작업은 고정 이전 바이너리·패키지
 `stage94-invalid-owner-candidate-build-stop.json`에 종료 이유와 소유 근거를 보존했다.
 관측 시간 만료로 재시작한 것이 아니며 새 독립 반례가 잘못된 조건을 드러냈다.
 첫 후보의 lint 통과는 교정한 source의 lint 근거가 아니므로 새 경로에 재실행한다.
+
+
+분수 반례의 HWP 저장 job은 `becb1177-0156-4f1f-85a1-8a5e66d64210`, Print job은
+`0c2ca41e-bb7c-49ef-981d-06a7b67284b0`이다. 실제 Print method 0과 제품 빌드를
+확인했으며 PDF SHA-256은
+`e4de9cc3e3372c85cc47ab5aee91e006e0089218643f3da2b73e594e59ed1a02`다.
+
+교정한 code source는 `5654d84514780e7b07f15b9d7c1bb3bb099c03d0`다.
+`layout → is_standalone_eqalign → layout_eqalign`에서 실제 부모 소속을 판단한다.
+글꼴·색상과 단일 행 포장만 통과시키고 분수·조건식 등 소유 구조는 독립 묶음으로
+취급하지 않는다. 각 정렬 행의 자식 배치에는 독립 상태를 다시 전달하지 않는다.
+정식 회귀 기대값은 여전히 바꾸지 않았다. 새 source 검증은
+`stage94-empty-row-v2-type-checks.json`, `empty-row-v2-native-provenance.json`,
+`stage94-v2-validation-controller.json`에 별도로 보존한다.
