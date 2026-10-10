@@ -48,9 +48,9 @@ fn accent_font_line(value: &LayoutBox, fs: f64, accent: DecoKind) -> bool {
     }
 }
 
-/// 독립 한컴 정상 저장의 벡터 바깥 위첨자 프레임.
+/// 독립 한컴 정상 저장의 벡터 안 위첨자 프레임.
 /// 32개 본체 대조군의 9/11/16/22pt에서 확인했다. 다른 장식·중첩 본체는 수용하지 않는다.
-fn vector_sup_metrics(fs: f64, dpi: f64) -> Option<(f64, f64)> {
+fn vector_inner_sup_metrics(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     // job b599ad0e-cb8d-449d-92d5-bf289839d52d, Print d69615b4-ca03-449f-8288-82d7196787e2.
     const FRAMES: [[u32; 3]; 4] = [
         [900, 1230, 90],
@@ -159,13 +159,7 @@ pub(super) fn superscript_shift(
     fs: f64,
     dpi: f64,
 ) -> Option<f64> {
-    // 벡터는 본체 글자의 기준선을 바꾸지 않는다. 장식 높이를 일반 MATH
-    // shift로 대신하지 않고 같은 크기의 글줄·첨자 기준선 거리를 소비한다.
-    let vector_base = accent_font_line(base, fs, DecoKind::Vec)
-        && !contains_prime(base)
-        && !contains_prime(sup)
-        && vector_sup_metrics(fs, dpi).is_some();
-    if !(font_line(base, fs) || vector_base)
+    if !font_line(base, fs)
         || !font_line(sup, sup.font_size)
         || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
         || (super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200
@@ -246,6 +240,19 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
             return Some((ascent + descent, ascent));
         }
         LayoutKind::Decoration {
+            kind: DecoKind::Vec,
+            body,
+            ..
+        } if matches!(&body.kind, LayoutKind::Superscript { base, sup }
+            if font_line(base, fs)
+                && !contains_prime(base)
+                && !contains_prime(sup)
+                && font_line(sup, sup.font_size)
+                && (sup.font_size - fs * 0.68).abs() <= f64::EPSILON * fs * 4.0) =>
+        {
+            return vector_inner_sup_metrics(fs, dpi);
+        }
+        LayoutKind::Decoration {
             kind: DecoKind::Bar | DecoKind::Vec | DecoKind::Dyad,
             body,
             ..
@@ -272,16 +279,6 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
     if roman && font_line(value, fs) && !contains_prime(value) {
         if let Some(frame) = super::font_frame_metrics::roman_at_dpi(fs, dpi, false) {
             return Some(frame);
-        }
-    }
-    if let LayoutKind::Superscript { base, sup } = &value.kind {
-        if accent_font_line(base, fs, DecoKind::Vec)
-            && !contains_prime(base)
-            && !contains_prime(sup)
-            && font_line(sup, sup.font_size)
-            && (sup.font_size - fs * 0.68).abs() <= f64::EPSILON * fs * 4.0
-        {
-            return vector_sup_metrics(fs, dpi);
         }
     }
     if let LayoutKind::Subscript { base, sub } = &value.kind {

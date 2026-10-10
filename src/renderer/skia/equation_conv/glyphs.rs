@@ -1,5 +1,7 @@
 //! 수식 Skia의 실제 face 선택·텍스트 표시와 늘인 괄호 표시.
-use super::super::font_lookup::{select_typeface_for_character, text_family_candidates, typeface_candidates_for_families};
+use super::super::font_lookup::{
+    select_typeface_for_character, text_family_candidates, typeface_candidates_for_families,
+};
 use super::{stroke_paint, EquationFonts, EQ_FONT_FAMILY};
 use skia_safe::{font, paint, Canvas, Color, Font, FontStyle, Paint, PathBuilder};
 
@@ -15,7 +17,9 @@ pub(super) fn draw_text(
     color: Color,
     centered: bool,
 ) {
-    draw_text_with_family(canvas, fonts, text, x, baseline_y, font_size, italic, bold, color, centered, None);
+    draw_text_with_family(
+        canvas, fonts, text, x, baseline_y, font_size, italic, bold, color, centered, None,
+    );
 }
 
 pub(super) fn draw_text_with_family(
@@ -31,7 +35,6 @@ pub(super) fn draw_text_with_family(
     centered: bool,
     explicit_family: Option<&str>,
 ) {
-
     if text.is_empty() {
         return;
     }
@@ -199,4 +202,3 @@ pub(super) fn draw_stretch_bracket(
         }
     }
 }
-

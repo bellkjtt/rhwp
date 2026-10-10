@@ -15,13 +15,6 @@ fn ends_with_uppercase_letter(node: &EqNode) -> bool {
             .last()
             .is_some_and(|ch| ch.is_ascii_uppercase()),
         EqNode::FontStyle { body, .. } => ends_with_uppercase_letter(body),
-        EqNode::Decoration {
-            kind:
-                super::super::symbols::DecoKind::Bar
-                | super::super::symbols::DecoKind::Vec
-                | super::super::symbols::DecoKind::Dyad,
-            body,
-        } => ends_with_uppercase_letter(body),
         EqNode::Row(items) => items.last().is_some_and(ends_with_uppercase_letter),
         _ => false,
     }

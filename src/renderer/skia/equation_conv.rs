@@ -245,17 +245,7 @@ fn render_box(
             denom,
             axis_height,
         } => {
-            render_box(
-                canvas,
-                fonts,
-                numer,
-                x,
-                y,
-                color,
-                fs,
-                italic,
-                bold,
-            );
+            render_box(canvas, fonts, numer, x, y, color, fs, italic, bold);
             let line_y = y + lb.baseline - axis_height;
             canvas.draw_line(
                 ((x + fs * 0.05) as f32, line_y as f32),
@@ -592,17 +582,7 @@ fn render_box(
             negation,
             outline,
         } => {
-            render_box(
-                canvas,
-                fonts,
-                body,
-                x,
-                y,
-                color,
-                fs,
-                italic,
-                bold,
-            );
+            render_box(canvas, fonts, body, x, y, color, fs, italic, bold);
             if let Some(commands) = outline {
                 super::equation_glyph::draw_outline(canvas, commands, x, y, color, None);
             } else if *kind == DecoKind::StrikeThrough {

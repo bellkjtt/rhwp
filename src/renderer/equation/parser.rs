@@ -522,11 +522,11 @@ impl EqParser {
             .or_else(|| DECORATIONS.get(cmd_lower.as_str()))
         {
             let body = self.parse_single_or_group();
-            let node = EqNode::Decoration {
+            let body = self.finish_command_atom(body, attach_scripts);
+            return EqNode::Decoration {
                 kind: deco,
                 body: Box::new(body),
             };
-            return self.finish_command_atom(node, attach_scripts);
         }
 
         if let Some(&style) = FONT_STYLES
