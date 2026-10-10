@@ -43,3 +43,34 @@ source의 fresh WASM 및 전체 55개를 검증한다. 아직 sample16의 26/41�
 같은 원인으로 판정하지 않았으며, 이 변경으로 전부 해결됐다고 주장하지 않는다.
 TSV·로그·JSON·진단은 ignored output에 두고 정식 회귀 변경은 관련 전체
 페이지 90% 이상과 직접 확대 판독 뒤 수행한다.
+
+## 실제 커밋과 실행 상태
+
+두 구현 변경은 4ad34f7f236ae1449e6dd03ff77f81b722faf47d에 커밋했다.
+이 커밋의 Native 빌드를 공용 target/pr-review에서 시작했다. 성공 뒤
+sample16의 12개 영향/인접 쪽, #7160 전체 3쪽, 기존 미주 대조 15쪽의
+총 30쪽 스윕과 Native lint를 실행한다. 빌드가 끝나기 전에는 실제
+시각 보정 완료나 관계형 회귀 변경을 보고하지 않는다.
+
+새 restart_below_origin helper를 실제 원본 141/142로 실행한 진단은
+새 축 3152 수용과 유효한 기존 축 경계 거부를 확인했다. 편집 무효화,
+합성 줄, 음수 좌표, 문단 내부 혼합 축도 모두 거부했다(compile/run exit 0).
+helper 소스는 이번 커밋이며 parser만 직전 Native의 model 라이브러리를
+사용했다. 라이브러리 해시는 컴파일 전후 대조했다. 이 진단은 전체
+렌더러 실행이나 정식 회귀 테스트의 증거를 대신하지 않는다.
+
+직전 81989aafb의 fresh WASM은 원본 사다리 한 쪽 100.00000%,
+HYhwpEQ 3쪽 최저 99.72145%, HancomEQN 3쪽 최저 99.54211%다.
+해당 7쪽의 Native/WASM 실제 PNG SHA-256도 모두 동일하다.
+JS SHA-256 a043bdc9047d3ff5d89f55ccc21846f017ac109dad6de25b2885e43c44ee08da,
+WASM SHA-256 433891ebd705dfcd195c233fe8d6de8cd3ac0787f628091803881bbc8395cea7이며
+root pkg/Studio public도 일치한다. 새 4ad34f7f2의 WASM 증거가 아니다.
+
+직전 Native의 sample16 전체 64쪽은 최저 25.69946%,
+미달은 6/21/22/23/24/26/41쪽이다. 각각
+38.80217/74.90908/25.69946/51.14497/48.80107/34.07849/73.41189%다.
+새 raster에서 만든 6/22/41쪽 review를 직접 표시했다. 41쪽은 빈 쪽이
+아니며 별첨자료 목차의 상자 기호·본문 간격/위치 차이가 있다.
+26/41쪽은 새 변경의 결과로 다시 확인하며 해결됐다고 선판정하지 않는다.
+ignored stage63-sample16-current-selected-review/provenance.json과
+stage64-stored-axis-source-probe.json/log에 실제 입력·Print·raster·실행을 연결했다.
