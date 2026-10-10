@@ -42,3 +42,30 @@ CJK 대조 두 쪽의 최저 점수는 98.14749%다. 새 1쪽 review PNG를 직�
 Native Clippy는 기본 폭 튜플에 불필요한 지연 closure를 사용한 오류로
 exit 101이었다. 계산된 값은 유지하고 `unwrap_or`로 수정한다. 새 source의
 빌드·lint·시각 결과를 별도로 기록하며 실패한 lint를 통과로 보고하지 않는다.
+
+## 최신 코드의 확인 결과
+
+8e405023cb5d29af301225cbe577185ff8e7f8e8의 Native 빌드 exit 0,
+446.47초다. fmt 검사 exit 0, 32.11초와 Native Clippy exit 0,
+112.73초를 순차 확인했다. 전체 lint·회귀 완료를 뜻하지 않는다.
+
+동일 source의 CJK 대조 두 쪽은 최저 98.14749%, sample16 영향 12쪽은
+최저 91.94535%다. 23쪽 93.94446%, 24쪽 94.47213%이며 쪽 소속·
+이어받기 개선을 유지했다. sample16 전체 64쪽과 fresh WASM은 미완료다.
+`shared-fit-math-lint-fixed-focused-native`의 결과와 빌드 원장에 연결했다.
+
+36개 독립 저장 크기와 같은 source의 layout/paint 메트릭을 비교했다.
+모든 흐름 높이는 저장값과 일치하고 단독 CJK/숫자 분수의 괄호 폭은 맞는다.
+복합 산식 1·2·14·25·26·36 등에는 폭 차이가 남아 있다. 13·14·25·26의
+최신 Native와 Print를 같은 좌표·배율의 확대 review PNG로 직접 표시했다.
+페이지 점수로 이 차이를 면제하지 않으며 후속 경계·자식 폭 분석을 진행한다.
+
+배포 문서 표 호스트 47은 실제로 저장 LineSeg가 없고, 텍스트 끝 세 공백
+뒤에 TAC 표를 소유한다. 한컴 저장 job a86c872c-87a4-476a-833e-89ba08967515는
+terminal failed·출력 0바이트다. 같은 요청을 재시작하지 않았으며 기존 독립
+Print PDF를 유지한다. 원점 차이의 원인 보정은 미완료다.
+
+Native lint와 진단 프로세스 종료 뒤 공용 target에서 같은 source의 fresh
+WASM 빌드를 시작했다. 성공하면 고정 package로 같은 집중 입력을 검증한다.
+Stage 69의 전체 55개 원본 TSV는 별도 source로 계속하며 최종 source의
+시각 통과 증거로 사용하지 않는다. 전체 관계형 회귀 전환·최종 검증·PR은 남아 있다.
