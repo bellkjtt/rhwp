@@ -285,12 +285,14 @@ mod tests {
     }
 
     #[test]
-    fn system_family_membership_uses_exact_family_name() {
+    fn system_family_membership_matches_skia_family_lookup() {
         let mut system_families = SystemFontFamilies::new();
         system_families.insert("AppleGothic".to_string());
 
         assert!(has_system_family(&system_families, "AppleGothic"));
-        assert!(!has_system_family(&system_families, "applegothic"));
+        assert!(has_system_family(&system_families, "applegothic"));
+        assert!(has_system_family(&system_families, "APPLEGOTHIC"));
+        assert!(!has_system_family(&system_families, "AppleGothic Extra"));
         assert!(!has_system_family(&system_families, "Missing Family"));
     }
 }
