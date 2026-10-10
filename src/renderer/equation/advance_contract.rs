@@ -9,7 +9,10 @@ pub(super) fn has_source_advances(node: &EqNode) -> bool {
         EqNode::Text(text) => !text.is_empty() && text.bytes().all(|ch| ch.is_ascii_alphabetic()),
         EqNode::Number(text) => !text.is_empty() && text.bytes().all(|ch| ch.is_ascii_digit()),
         EqNode::Symbol(text) | EqNode::MathSymbol(text) => {
-            matches!(text.as_str(), "(" | ")" | "'" | "′" | "+" | "=" | "×" | "∙" | "⋅")
+            matches!(
+                text.as_str(),
+                "(" | ")" | "'" | "′" | "+" | "=" | "×" | "∙" | "⋅"
+            )
         }
         EqNode::Row(items) => items.iter().all(has_source_advances),
         EqNode::FontStyle {
