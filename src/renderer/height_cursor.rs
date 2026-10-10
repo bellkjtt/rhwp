@@ -519,15 +519,26 @@ impl HeightCursor {
                 && crate::renderer::para_has_no_stored_line_segs(prev_para)
             {
                 if let Some(seg) = para.line_segs.first() {
-                    // 앞 본문은 새 줄 수를 소비했다. 이 빈 줄의 저장 좌표를 현재
-                    // 흐름에 연결해 뒤 저장 줄도 같은 상대 원점에서 이어지게 한다.
+                    // 앞 본문은 새 줄 수를 소비했다. 저장 vpos는 빈 줄 상자의
+                    // 시작이며, 호출자가 이 뒤에 소비하는 문단 앞 간격도 포함한다.
+                    // 간격 적용 전의 y에 연결하면 뒤 저장 줄이 그 간격만큼 되감긴다.
+                    let spacing_before = crate::renderer::hwp3_variant_flow_spacing_before(
+                        styles
+                            .para_styles
+                            .get(para.para_shape_id as usize)
+                            .map_or(0.0, |style| style.spacing_before),
+                        self.skip_spacing_before_prededuct,
+                    );
                     let anchor = if self.vpos_page_base.is_some() {
                         self.col_anchor_y
                     } else {
                         self.col_area_y
                     };
-                    let base =
-                        seg.vertical_pos - ((y_offset - anchor) / self.dpi * 7200.0).round() as i32;
+                    let base = seg.vertical_pos
+                        - crate::renderer::px_to_hwpunit(
+                            y_offset + spacing_before - anchor,
+                            self.dpi,
+                        );
                     if self.vpos_page_base.is_some() {
                         self.vpos_page_base = Some(base);
                     } else {
