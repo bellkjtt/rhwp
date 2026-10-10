@@ -85,6 +85,56 @@ Print의 Tf/Tz를 직접 읽었다. 문자·숫자·중괄호 사선은 글자
 사용한다. 기존 match의 필드 추가는 assertion을 그대로 유지한다.
 현재 후보 소스의 빌드와 출력 확인은 아직 미완료다.
 
+## 후보 소스의 실행 결과
+
+검증 소스는 `cd1b2b029979e16573f533c017ddaec0f34447cc`다.
+Native `cargo build --locked --profile release-test --target-dir
+/home/tsjang/rhwp/target/pr-review --bin rhwp`는 exit 0,
+433.23초다. 바이너리 SHA-256은
+`485da26dbdca12a0d094d77abc3170bf06ad433a181b8ea470cdc051a5b32696`이며
+완료 뒤 검토 출력에 고정했다. fmt check와 Native Clippy도 exit 0이다.
+fresh WASM과 나머지 필수 Rust 게이트는 아직 완료하지 않았다.
+
+Native의 독립 NOT 경계 입력 여덟 개가 모두 같은 Print PDF와
+비교되어 gate를 통과했다. 페이지별 값은 다음과 같다.
+
+| 입력 | 2px 이웃 관용 내용 실루엣 일치율 |
+| --- | ---: |
+| 글자 크기별 원본 HWPX | 99.52933% |
+| 글자 크기별 한컴 저장 HWP | 99.50151% |
+| 인자 소비 원본 HWPX | 99.29469% |
+| 인자 소비 한컴 저장 HWP | 99.66142% |
+| 부정 기호 원본 HWPX | 99.98512% |
+| 부정 기호 원본 HWPX v2 | 99.97387% |
+| 부정 기호 한컴 저장 HWP | 99.90938% |
+| 부정 기호 한컴 저장 HWP v2 | 99.84032% |
+
+증거는 ignored
+`output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/`
+아래 `not-glyph-frame-focused-native/queue.json`과 각 문서의
+review·overlay·render tree다. 새 확대 그림
+`stage83-not-glyph-frame-selected-detail-review.png`는 12/18pt의
+문자·넓은 W·중괄호·등호를 같은 물리 영역에서 대조한다.
+overlay의 도구 제목 높이는 잘라낼 때만 제외하며 본문을 이동하거나
+정렬하지 않는다. 이 진단용 crop 좌표를 정식 회귀 검사에 사용하지 않는다.
+낮은 해상도에서 높이·기울기 개선을 확인했고, 고해상도 확대와
+fresh WASM 및 실제 CanvasKit 화면의 대조는 계속 진행한다.
+
+Studio `tsc --noEmit --pretty false`가 exit 0이고 기존
+`canvaskit-document-preflight.test.ts`와 `canvaskit-font-plan.test.ts`는
+10개 PASS, 실패·skip 0개다. 별도 ignored 진단
+`diagnose-canvaskit-not.mjs`는 수정 전후의 실제 renderer 메서드를
+실행하되 `drawLine`과 paint를 대역으로 관측했다. 수정 전 수평선,
+수정 후 전달한 사선·굵기 보존, 기하 누락 시 SVG 대체 반환을
+확인했다. `stage83-canvaskit-not-contract.json`에 PASS를 기록했다.
+이는 실제 CanvasKit/WASM 화면 캡처나 새 정식 회귀 테스트가 아니다.
+
+새 정식 회귀는 아직 추가하지 않았다. 기존 golden helper의 변경은
+새 Decoration 필드를 허용하는 `..` match뿐이며 assertion과
+기대값을 유지했다. 전체 원본 55개·853쪽의 Native TSV 산출을
+같은 고정 바이너리로 시작했다. 관련 px 검사의 관계형 전환,
+전체 fresh WASM TSV, 전체 회귀와 최종 PR 검증은 남아 있다.
+
 Stage 82 집중 검증 중 ENOSPC가 발생했다. 실제 프로세스가
 모두 종료된 상태를 확인했고 완료된 Native 10문서와 WASM
 7문서의 결과를 보존했다. 새 source의 검증 완료로 승격하지
