@@ -60,3 +60,40 @@ fallback의 logical em 공유를 입증한다. 사설 font 곡선은 추출하�
 이 추가 8식을 포함한 실제 Native 대조는 총 13문서/14쪽/208식으로 확장한다.
 전체 55원본/853쪽 검증 범위를 대신하지 않는다. 새 확대·fresh WASM·전체 검증과
 관계형 회귀 변경·PR 절차는 미완료다.
+
+## Native 최종 진단과 대문자 확대
+
+Native 빌드는 종료 코드 0, 399.38초다. 고정 바이너리 SHA-256은
+`a938d18e195c2fa87e84c073df86814819887e33b50fafbce585243464c2d82d`이다.
+`stage99-independent-skia/receipt.json`의 13문서/14쪽/208식은 전부 직접 Skia 기준
+90% 이상이다. 이 결과는 전체 Native SVG/fresh WASM gate를 대신하지 않는다.
+
+| 대조 | 최소 일치율 |
+| --- | ---: |
+| grammar | 99.82786% |
+| marker | 97.35812% |
+| bigop | 94.55754% |
+| uppercase | 100.00000% |
+| v2 | 97.98097% |
+| v3 | 100.00000% |
+| owner | 99.55601% |
+| brace | 100.00000% |
+| spacing | 95.91837% |
+| prefix | 99.26430% |
+| atoms | 99.25976% |
+| mixed | 100.00000% |
+| advance | 99.82508% |
+
+`uppercase/uppercase-subsup-detail-review.png`의 동일 bbox/fontSize 확대에서
+22pt `X_1^2`는 89.29504% → 100%, `rm X_1^2`는 91.29213% → 100%로 개선됐다.
+위첨자 원점이 본체에 붙던 간격 차이가 해소됐고 두 슬롯의 소속·앞뒤 순서는 유지된다.
+공개 표시 glyph의 윤곽/래스터 차이는 남으며, 2px 보조값 100%를 완전한 픽셀 동일로
+보고하지 않는다. `stage99-native-layout-json/uppercase-001.json`에서 실제 배치 원점을
+같은 라이브러리의 Paint JSON으로 확인했다. 별도 Cargo target을 만들지 않았다.
+
+같은 source `3d89e1f45`의 전체 55원본/853쪽 Native TSV 산출과 fresh WASM 빌드를
+시작했다. 각각 `stage99-whole-native/queue.json`과
+`stage99-brace-fresh-wasm-provenance.json`에 실제 PID/소스·입력·명령을 기록한다.
+공용 target은 `/home/tsjang/rhwp/target/pr-review`다. 실행 종료 후 이 작업의 중간 SVG만
+해시 원장을 남겨 정리하며 입력·PDF·PNG·TSV·로그·고정 산출물을 보존한다.
+전체 TSV 완료·대표 원본 확대·관계형 회귀 전환·필수 전체 검증·PR 절차는 미완료다.
