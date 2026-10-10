@@ -18,10 +18,14 @@ fn is_boundary(node: &EqNode) -> bool {
 
 impl EqLayout {
     pub(super) fn layout_cases_rows(&self, rows: &[EqNode], fs: f64) -> Vec<LayoutBox> {
+        let nested = Self {
+            eqalign_in_cases: true,
+            ..*self
+        };
         // 이 묶음의 직접적인 행 경계만 맞춘다. 중첩 EQALIGN 등의 경계는
         // 자식 배치가 소비하며 바깥 CASES의 열에 섞지 않는다.
         if !rows.iter().any(|row| items(row).iter().any(is_boundary)) {
-            return rows.iter().map(|row| self.layout_node(row, fs)).collect();
+            return rows.iter().map(|row| nested.layout_node(row, fs)).collect();
         }
 
         let mut cells: Vec<Vec<LayoutBox>> = rows
@@ -29,7 +33,7 @@ impl EqLayout {
             .map(|row| {
                 items(row)
                     .split(is_boundary)
-                    .map(|column| self.layout_row(column, fs))
+                    .map(|column| nested.layout_row(column, fs))
                     .collect()
             })
             .collect();

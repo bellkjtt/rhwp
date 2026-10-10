@@ -6895,7 +6895,9 @@ fn parse_equation(
 
     let mut buf = Vec::new();
     loop {
-        match reader.read_event_into(&mut buf) {
+        let event = reader.read_event_into(&mut buf);
+        let self_closing = matches!(&event, Ok(Event::Empty(_)));
+        match event {
             Ok(Event::Start(ref ce)) | Ok(Event::Empty(ref ce)) => {
                 let cname = ce.name();
                 let local = local_name(cname.as_ref());
@@ -6910,10 +6912,10 @@ fn parse_equation(
                         );
                     }
                     b"script" => {
-                        in_script = true;
+                        in_script = !self_closing;
                     }
                     // 수식 설명 (#1392) — 미적재 시 roundtrip 에서 소실
-                    b"shapeComment" => {
+                    b"shapeComment" if !self_closing => {
                         common.description = read_dutmal_text(reader, b"shapeComment")?;
                     }
                     _ => {}

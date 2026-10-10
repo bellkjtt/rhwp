@@ -121,6 +121,11 @@ impl EqLayout {
 
         let mut y = 0.0;
         for b in &mut row_boxes {
+            // 명시적 빈 행은 표시 글자 없이도 한 글자 줄을 점유한다.
+            if b.height == 0.0 {
+                b.height = fs;
+                b.baseline = fs * 0.8;
+            }
             b.x = fs * 0.3; // 왼쪽 중괄호 여백
             b.y = y;
             y += b.height + row_gap;
@@ -176,7 +181,18 @@ impl EqLayout {
     }
 
     pub(super) fn layout_eqalign(&self, rows: &[(EqNode, EqNode)], fs: f64) -> LayoutBox {
-        let row_gap = fs * MATRIX_ROW_GAP;
+        // 독립 Print의 정렬 행 피치는 1.1em이다. CASES 안에서는
+        // 바깥 행이 leading을 소유하므로 중첩 행 사이에 중복 예약하지 않는다.
+        let row_gap = fs
+            * if self.hancom_math_face {
+                if self.eqalign_in_cases {
+                    0.0
+                } else {
+                    0.1
+                }
+            } else {
+                MATRIX_ROW_GAP
+            };
         let align_gap = fs * 0.15; // & 기준 좌우 사이 간격
 
         // 각 행의 왼쪽/오른쪽 레이아웃 계산
@@ -193,14 +209,23 @@ impl EqLayout {
 
         let mut y = 0.0;
         let mut total_w = 0.0f64;
+        let mut first_baseline = None;
         for (left, right) in &mut laid_rows {
             // 왼쪽: 오른쪽 정렬 (& 기준으로 맞춤)
             left.x = max_left_w - left.width;
             // 오른쪽: & 기준 바로 뒤
-            right.x = max_left_w + align_gap;
+            let has_right = !matches!(right.kind, LayoutKind::Empty);
+            right.x = max_left_w + if has_right { align_gap } else { 0.0 };
 
-            let row_h = left.height.max(right.height);
-            let row_bl = left.baseline.max(right.baseline);
+            let row_h = (left.baseline.max(right.baseline)
+                + (left.height - left.baseline).max(right.height - right.baseline))
+            .max(fs);
+            let row_bl = if left.height == 0.0 && right.height == 0.0 {
+                fs * 0.8
+            } else {
+                left.baseline.max(right.baseline)
+            };
+            first_baseline.get_or_insert(row_bl);
             // 베이스라인 정렬
             left.y = y + (row_bl - left.baseline);
             right.y = y + (row_bl - right.baseline);
@@ -214,9 +239,17 @@ impl EqLayout {
             font_size: fs,
             x: 0.0,
             y: 0.0,
-            width: total_w,
+            width: if total_w == 0.0 && self.hancom_math_face {
+                fs * 0.5
+            } else {
+                total_w
+            },
             height: total_h,
-            baseline: total_h / 2.0,
+            baseline: if self.hancom_math_face {
+                first_baseline.unwrap_or(fs * 0.8)
+            } else {
+                total_h / 2.0
+            },
             kind: LayoutKind::EqAlign { rows: laid_rows },
         }
     }

@@ -46,6 +46,8 @@ pub struct EqLayout {
     variable_italic: bool,
     variable_bold: bool,
     source_variable_glyphs: bool,
+    /// CASES가 중첩 정렬 묶음의 바깥 행 간격을 소유한다.
+    eqalign_in_cases: bool,
 }
 
 /// 비율 상수
@@ -123,6 +125,7 @@ impl EqLayout {
             variable_italic: true,
             variable_bold: false,
             source_variable_glyphs: true,
+            eqalign_in_cases: false,
         }
     }
 
@@ -145,6 +148,7 @@ impl EqLayout {
             variable_italic: true,
             variable_bold: false,
             source_variable_glyphs: true,
+            eqalign_in_cases: false,
         }
     }
 
