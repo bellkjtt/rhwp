@@ -66,3 +66,55 @@ PDF 전체 853쪽을 재확인했다. 렌더링 일치나 Print 출처를 재검
 
 Native 빌드와 새 11종 전체 Print 대조는 실행 중이다. 새 대표 PNG의 확대 판독과
 전체 Native/fresh WASM, 회귀 관계형 전환·필수 전체 검증·PR 절차는 아직 미완료다.
+
+## Native 빌드와 12종 일괄 대조
+
+Native 빌드는 종료 코드 0, 428.12초다. 고정 바이너리 SHA-256은
+`a096e9518a71ce500b8d7eb78a7eff30671bb9ea4d05acc50a71f1276c2b0998`이다.
+대조 스크립트의 입력 디렉터리 복사 오류로 첫 실행이 렌더 전에 실패했다. 원 receipt를
+`stage98-independent-skia/first-input-path-failure.json`에 보존하고 실제 Stage97 입력으로
+고친 뒤 재실행했다. source나 빌드의 실패로 세지 않는다.
+
+`stage98-independent-skia/receipt.json`은 12문서/13쪽/200식의 실행 종료를 기록한다.
+각 문서의 최소 직접 Skia 점수는 다음과 같다. 전체 Native SVG/fresh WASM gate는 아니다.
+
+| 대조 | 최소 일치율 |
+| --- | ---: |
+| grammar | 99.82786% |
+| marker | 97.35812% |
+| bigop | 94.56327% |
+| uppercase | 95.78246% |
+| v2 | 97.93503% |
+| v3 | 97.95841% |
+| owner | 99.56214% |
+| brace | 99.26976% |
+| spacing | 95.43265% |
+| prefix | 99.26430% |
+| atoms | 99.25976% |
+| mixed | 100.00000% |
+
+개행 대조는 46.04651% → 99.82786%, marker는 72.03024% → 97.35812%로 개선됐다.
+`grammar/review/review_002.png`에서 y의 다음 줄 소속과 왼쪽 정렬을,
+`marker/review/review_001.png`에서 부모 두 슬롯과 반복 첨자의 소속을 직접 확인했다.
+
+## 90% 통과 후 추가로 확인한 대문자 간격 차이
+
+대문자 반례 16식은 정상 저장 `6781510a-2d3a-4681-b160-b2c597f42d27`,
+Print `c9f8b4c5-0b90-454d-98a2-f53e494bfde2`로 성공했다. 실제 한컴 11.0.0.9136,
+engine 2020·method 0·one-up이다. 분석용 HWPX는 로컬 export이며 MCP HWPX가 아니다.
+
+`uppercase/uppercase-subsup-detail-review.png`는 실제 수식 bbox·fontSize로 선택한
+동일 영역 확대다. 옆 행이 섞이지 않도록 세로 여백을 fontSize의 0.08배로 설정했다.
+22pt `X_1^2`는 확대 89.29504%, `rm X_1^2`는 91.29213%다. 전쪽 95.78246%가
+이 차이를 면제하지 않는다. 초기 확대의 큰 여백에는 옆 행이 들어가 더 낮은 점수가
+나왔으며, 일반 페이지용 overlay의 범례를 좁은 crop에 넣으면 긴 세로 이미지가 돼
+같은 overlay_color의 내용부만 별도 확대했다. 정식 회귀 selector가 아니다.
+
+SubSup의 위첨자 x는 단일 Sup와 달리 대문자 여백을 소비하지 않는다. 동시에
+22pt 이탤릭 X의 전진은 현재 1650HU이고 독립 Print의 아래첨자 시작은 약 1725HU다.
+해당 논리 크기는 기존 전진 표에 없어 nominal em fallback을 사용한다. 이미 확인한
+한컴 logical em 2250HU의 glyph advance 격자로 공유하면 X는 1725HU가 된다.
+이 두 공통 소비 경로를 후속 묶음에서 보정한다.
+
+이번 source의 fresh WASM 및 전체 55원본 대조·관계형 전환은 아직 실행하지 않았다.
+미세 간격 차이를 먼저 보정하며 전체 목표와 기존 검사 보존 범위를 유지한다.
