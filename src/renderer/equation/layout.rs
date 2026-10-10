@@ -309,6 +309,12 @@ impl EqLayout {
         ) {
             return layout;
         }
+        // 퍼센트가 Text 토큰으로 들어와도 수학 기호와 같은 전진·표시를 소비한다.
+        if self.hancom_math_face && text == "%" {
+            if let Some(result) = source_font_symbol::layout(text, fs, self.dpi) {
+                return result;
+            }
+        }
         if self.hancom_math_face && !self.variable_bold {
             if let Some(result) = source_font_text::layout(text, fs, self.dpi, self.variable_italic)
             {

@@ -67,6 +67,15 @@ fn bar_sup_radical_body(value: &LayoutBox, fs: f64) -> Option<bool> {
     }
 }
 
+/// Row는 CASES·PILE의 세로 묶음에도 쓰인다. 실제 자식 기준선이 같은
+/// 가로 줄만 글꼴 프레임으로 합친다. 세로 행의 y를 버리면 저장 높이가 줄어든다.
+fn horizontal_row(value: &LayoutBox, items: &[LayoutBox]) -> bool {
+    let roundoff = f64::EPSILON * value.height.abs().max(1.0) * 8.0;
+    items
+        .iter()
+        .all(|item| (item.y + item.baseline - value.baseline).abs() <= roundoff)
+}
+
 fn font_line(value: &LayoutBox, fs: f64) -> bool {
     if (value.height - fs).abs() > f64::EPSILON * fs * 4.0 {
         return false;
@@ -79,7 +88,9 @@ fn font_line(value: &LayoutBox, fs: f64) -> bool {
         | LayoutKind::FontGlyph { .. }
         | LayoutKind::Function(_)
         | LayoutKind::Space(_) => true,
-        LayoutKind::Row(items) => items.iter().all(|item| font_line(item, fs)),
+        LayoutKind::Row(items) => {
+            horizontal_row(value, items) && items.iter().all(|item| font_line(item, fs))
+        }
         LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => font_line(body, fs),
         _ => false,
     }
@@ -232,7 +243,7 @@ fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
             Some((height, height * percent / 100.0))
         }
         LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => frame(body, fs, dpi),
-        LayoutKind::Row(items) => {
+        LayoutKind::Row(items) if horizontal_row(value, items) => {
             let mut ascent = 0.0_f64;
             let mut descent = 0.0_f64;
             for item in items {

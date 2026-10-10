@@ -21,15 +21,33 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
         "∓" => (1024, 0.14),
         // slash는 이항 연산자 여백이 없는 수학 구분자다.
         "/" => (512, 0.0),
+        // 수학 PUA U+E042는 853/1024다. 본문 ASCII %의 938/1024와 구분한다.
+        "%" => (853, 0.0),
         _ => return None,
     };
+    // 독립 800/1200/1600HU의 단독·분수·중첩 표현식에서 같은 논리 em
+    // 격자를 소비한다. 명목 크기를 직접 쓰면 ×·−의 전진폭이 한 격자 어긋난다.
+    let advance_size = super::source_roman_advance::em_advance(fs, dpi).unwrap_or(fs);
     Some((
-        super::source_font_text::logical_advance(advance, fs, dpi),
+        super::source_font_text::logical_advance(advance, advance_size, dpi),
         fs * padding,
     ))
 }
 
 pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
+    if text == "%" {
+        let (width, _) = operator_metrics(text, fs, dpi)?;
+        return Some(LayoutBox {
+            font_size: fs,
+            x: 0.0,
+            y: 0.0,
+            width,
+            height: fs,
+            baseline: fs * 0.8,
+            // 공개 표시 글꼴의 정체 기호를 유지하고 논리 전진을 공유한다.
+            kind: LayoutKind::Symbol(text.to_string()),
+        });
+    }
     if matches!(text, "±" | "∓") {
         let (width, _) = operator_metrics(text, fs, dpi)?;
         return Some(LayoutBox {
