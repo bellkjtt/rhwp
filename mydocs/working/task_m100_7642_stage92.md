@@ -172,3 +172,22 @@ Print 드라이버의 좌표 스케일·격자 잔차와 가로 폭 차이를 �
 RHWP의 compat는2022로 실행했다. MCP engine2020과 RHWP compat 값은 다른 계약이다.
 초기 잘못된 compat2020 호출은 CLI 사용법 오류(exit2)였고 렌더를 실행하지 않았다.
 정상 재실행은 미달 TSV를 보존하고 gate 때문에exit1로 끝났다.
+
+
+## 대조군 51쪽 완료
+
+같은 source dfb의 `stage92-cell-shape-controls-skia/receipt.json`도 terminal complete다.
+5개 원본의 전체51쪽을 직접 재출력했고 독립 PDF와 전체 쪽수가 모두 같다.
+
+| 대조군 | 전체 쪽 | 최저값 | 90% 미만 쪽 |
+| --- | ---: | ---: | --- |
+| samples/21_언어_기출_편집가능본.hwp | 15 | 93.82475% | 없음 |
+| samples/exam_eng.hwp | 8 | 95.34003% | 없음 |
+| samples/exam_kor.hwp | 20 | 90.65208% | 없음 |
+| samples/exam_science.hwp | 4 | 93.82529% | 없음 |
+| samples/exam_social.hwp | 4 | 97.34725% | 없음 |
+
+현재 단계의 원본191쪽+대조군51쪽 직접 Skia 비교는 모두 종료됐다. 미달 수학 원본을
+포함한55원본/853쪽의 canonical Native/fresh WASM 최종 제출 검증과 확대 판독,
+관련 회귀 전체의 관계형 전환·전체 nextest·workspace/all-target lint는 미완료다.
+추가 코드 보정 뒤 이전 증적을 새 source의 통과로 재사용하지 않는다.
