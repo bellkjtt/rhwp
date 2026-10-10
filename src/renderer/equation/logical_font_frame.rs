@@ -40,6 +40,7 @@ fn bar_font_line(value: &LayoutBox, fs: f64) -> bool {
         LayoutKind::Decoration {
             kind: DecoKind::Bar,
             body,
+            ..
         } => font_line(body, fs),
         LayoutKind::FontStyle { body, .. } => bar_font_line(body, fs),
         LayoutKind::Row(items) if items.len() == 1 => bar_font_line(&items[0], fs),
@@ -119,6 +120,7 @@ pub(super) fn dyad_font_line(value: &LayoutBox, fs: f64) -> bool {
             LayoutKind::Decoration {
                 kind: DecoKind::Dyad,
                 body,
+                ..
             } if font_line(body, fs) => Some(true),
             LayoutKind::FontStyle { body, .. } => contains_dyad(body, fs),
             LayoutKind::Row(items) => items
@@ -204,6 +206,7 @@ fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
         LayoutKind::Decoration {
             kind: DecoKind::Bar,
             body,
+            ..
         } if font_line(body, fs) => Some(if contains_prime(body) {
             metrics.prime_bar
         } else {

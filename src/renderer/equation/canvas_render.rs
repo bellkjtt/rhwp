@@ -377,10 +377,16 @@ fn render_box(
                 }
             }
         }
-        LayoutKind::Decoration { kind, body } => {
+        LayoutKind::Decoration {
+            kind,
+            body,
+            negation,
+        } => {
             render_box(ctx, body, x, y, color, fs, italic, bold);
             if *kind == DecoKind::StrikeThrough {
-                let g = super::negation_geometry::geometry(body);
+                let g = negation
+                    .clone()
+                    .unwrap_or_else(|| super::negation_geometry::geometry(body));
                 ctx.set_stroke_style_str(color);
                 ctx.set_line_width(g.thickness);
                 ctx.begin_path();

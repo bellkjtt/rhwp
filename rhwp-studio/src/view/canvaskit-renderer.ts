@@ -4460,6 +4460,19 @@ export class CanvasKitLayerRenderer {
             : true);
       }
       case 'decoration':
+        if (layout.kind.decoration === 'strikeThrough') {
+          const geometry = layout.kind.negationGeometry;
+          if (!geometry || !Array.isArray(geometry.start) || geometry.start.length !== 2
+            || !Array.isArray(geometry.end) || geometry.end.length !== 2
+            || ![...geometry.start, ...geometry.end, geometry.thickness].every(Number.isFinite)
+            || geometry.thickness <= 0) return false;
+          return child(layout.kind.body) && this.drawEquationLine(
+            canvas,
+            x + geometry.start[0], y + geometry.start[1],
+            x + geometry.end[0], y + geometry.end[1],
+            color, geometry.thickness, true,
+          );
+        }
         if (layout.kind.decoration === 'box') {
           const strokeWidth = fontSize * 0.03;
           return child(layout.kind.body)
@@ -4646,9 +4659,10 @@ export class CanvasKitLayerRenderer {
     y2: number,
     color: string,
     width: number,
+    measuredWidth = false,
   ): boolean {
     if (![x1, y1, x2, y2, width].every(Number.isFinite)) return false;
-    const paint = this.makeStrokePaint(color, Math.max(0.5, width));
+    const paint = this.makeStrokePaint(color, measuredWidth ? width : Math.max(0.5, width));
     try {
       canvas.drawLine(x1, y1, x2, y2, paint);
       return true;
@@ -4704,7 +4718,6 @@ export class CanvasKitLayerRenderer {
           && this.drawEquationLine(canvas, centerX, y, centerX + halfWidth * 0.6, y + fontSize * 0.15, color, strokeWidth);
       case 'bar':
       case 'overline':
-      case 'strikeThrough':
         return this.drawEquationLine(canvas, centerX - halfWidth, y + fontSize * 0.05, centerX + halfWidth, y + fontSize * 0.05, color, strokeWidth);
       case 'underline':
       case 'under':

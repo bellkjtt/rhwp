@@ -3197,13 +3197,22 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
             write_equation_layout_box(buf, body);
             buf.push('}');
         }
-        LayoutKind::Decoration { kind, body } => {
+        LayoutKind::Decoration {
+            kind,
+            body,
+            negation,
+        } => {
             let _ = write!(
                 buf,
                 "{{\"type\":\"decoration\",\"decoration\":{},\"body\":",
                 json_escape(equation_decoration(*kind))
             );
             write_equation_layout_box(buf, body);
+            if let Some(g) = negation {
+                let _ = write!(buf,
+                    ",\"negationGeometry\":{{\"start\":[{:.6},{:.6}],\"end\":[{:.6},{:.6}],\"thickness\":{:.6}}}",
+                    g.start.0, g.start.1, g.end.0, g.end.1, g.thickness);
+            }
             buf.push('}');
         }
         LayoutKind::FontStyle { style, body } => {

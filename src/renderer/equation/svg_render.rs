@@ -448,10 +448,16 @@ fn render_box(
                 }
             }
         }
-        LayoutKind::Decoration { kind, body } => {
+        LayoutKind::Decoration {
+            kind,
+            body,
+            negation,
+        } => {
             render_box(svg, body, x, y, color, fs, italic, bold);
             if *kind == DecoKind::StrikeThrough {
-                let g = super::negation_geometry::geometry(body);
+                let g = negation
+                    .clone()
+                    .unwrap_or_else(|| super::negation_geometry::geometry(body));
                 svg.push_str(&format!(
                     "<line x1=\"{:.2}\" y1=\"{:.2}\" x2=\"{:.2}\" y2=\"{:.2}\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
                     x + g.start.0, y + g.start.1, x + g.end.0, y + g.end.1, color, g.thickness,

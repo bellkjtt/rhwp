@@ -127,6 +127,9 @@ pub enum LayoutKind {
     Decoration {
         kind: super::symbols::DecoKind,
         body: Box<LayoutBox>,
+        /// 레이아웃에서 발행한 부정 기하. backend가 글자 종류나 DPI를 재추측하지 않는다.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        negation: Option<super::NegationGeometry>,
     },
     /// 글꼴 스타일
     FontStyle {

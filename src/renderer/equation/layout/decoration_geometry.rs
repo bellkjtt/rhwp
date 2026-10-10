@@ -13,6 +13,11 @@ impl EqLayout {
         // 부정 빗금은 위쪽 악센트가 아니다. 독립 Print의 저장 프레임은
         // 본체와 같은 높이·기준선을 가지며 표시는 그 위에 겹친다.
         if kind == super::super::symbols::DecoKind::StrikeThrough {
+            let negation = if self.hancom_math_face {
+                super::super::negation_geometry::source_geometry(&b, self.dpi)
+            } else {
+                super::super::negation_geometry::geometry(&b)
+            };
             return LayoutBox {
                 font_size: fs,
                 x: 0.0,
@@ -23,6 +28,7 @@ impl EqLayout {
                 kind: LayoutKind::Decoration {
                     kind,
                     body: Box::new(b),
+                    negation: Some(negation),
                 },
             };
         }
@@ -43,6 +49,7 @@ impl EqLayout {
                 kind: LayoutKind::Decoration {
                     kind,
                     body: Box::new(body_box),
+                    negation: None,
                 },
             };
         }
@@ -61,6 +68,7 @@ impl EqLayout {
             kind: LayoutKind::Decoration {
                 kind,
                 body: Box::new(body_box),
+                negation: None,
             },
         }
     }

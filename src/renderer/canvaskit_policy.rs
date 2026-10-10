@@ -2061,7 +2061,7 @@ fn canvaskit_equation_layout_is_supported(layout: &LayoutBox) -> bool {
                     && (right.is_empty() || text_supported(right))
                     && child(body, remaining_nodes)
             }
-            LayoutKind::Decoration { kind, body } => {
+            LayoutKind::Decoration { kind, body, .. } => {
                 matches!(
                     kind,
                     DecoKind::Box

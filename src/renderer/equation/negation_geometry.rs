@@ -6,10 +6,74 @@
 
 use super::layout::{LayoutBox, LayoutKind};
 
-pub(crate) struct NegationGeometry {
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct NegationGeometry {
     pub start: (f64, f64),
     pub end: (f64, f64),
     pub thickness: f64,
+}
+
+/// 독립 Print의 600dpi 글꼴 원점 격자. 반환값은 현재 출력 DPI의 논리 길이다.
+pub(super) fn math_origin_shift(fs: f64, dpi: f64) -> f64 {
+    (fs * 600.0 / dpi * 0.05).round() * dpi / 600.0
+}
+
+fn ordinary_glyph(body: &LayoutBox) -> bool {
+    match &body.kind {
+        LayoutKind::Text(text) | LayoutKind::Number(text) => {
+            text.chars().count() == 1 && !super::text_has_cjk(text)
+        }
+        LayoutKind::FontGlyph { text, .. } => matches!(text.as_str(), "{" | "}"),
+        LayoutKind::FontStyle { body, .. } => ordinary_glyph(body),
+        LayoutKind::Row(children) if children.len() == 1 => ordinary_glyph(&children[0]),
+        _ => false,
+    }
+}
+
+pub(super) fn source_geometry(body: &LayoutBox, dpi: f64) -> NegationGeometry {
+    // 다른 관계 기호·복합 인자·본문 대체 face는 기존 기하를 보존한다.
+    // 문자·숫자·보통 중괄호는 전진의 1.2배, 등호는 전진 전체를 소비한다.
+    let ordinary = ordinary_glyph(body);
+    let equality = matches!(&body.kind, LayoutKind::Symbol(text) if text == "=");
+    if !ordinary && !equality {
+        return geometry(body);
+    }
+    let fs = body.font_size;
+    let natural_advance = (fs * 600.0 / dpi * 0.5).round();
+    if natural_advance <= 0.0 {
+        // 인쇄 글꼴 전진을 측정할 수 없는 극소 크기는 기존 표시 경로를 유지한다.
+        return geometry(body);
+    }
+    let width_scale = if ordinary { 1.2 } else { 1.0 };
+    let horizontal_scale = (body.width * 600.0 / dpi * width_scale).round() / natural_advance;
+    let dx = 396.0_f64;
+    let dy = 1029.0_f64;
+    let length = dx.hypot(dy);
+    let half_stroke = 22.0;
+    let start = (
+        57.0 + half_stroke * dy / length,
+        206.0 - half_stroke * dx / length,
+    );
+    let end = (
+        453.0 - half_stroke * dy / length,
+        -823.0 + half_stroke * dx / length,
+    );
+    let base_dx = end.0 - start.0;
+    let base_dy = end.1 - start.1;
+    let origin_y = body.y + body.baseline - math_origin_shift(fs, dpi);
+    NegationGeometry {
+        start: (
+            body.x + fs * horizontal_scale * start.0 / 1024.0,
+            origin_y + fs * start.1 / 1024.0,
+        ),
+        end: (
+            body.x + fs * horizontal_scale * end.0 / 1024.0,
+            origin_y + fs * end.1 / 1024.0,
+        ),
+        // 선분의 수직 굵기도 인쇄 글리프의 가로 변환을 함께 소비한다.
+        thickness: fs * 44.0 / 1024.0 * horizontal_scale * base_dx.hypot(base_dy)
+            / (base_dx * horizontal_scale).hypot(base_dy),
+    }
 }
 
 pub(crate) fn geometry(body: &LayoutBox) -> NegationGeometry {

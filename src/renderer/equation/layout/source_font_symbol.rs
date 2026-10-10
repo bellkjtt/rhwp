@@ -47,7 +47,12 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
             kind: LayoutKind::FontGlyph {
                 text: text.to_string(),
                 font_family: "HYhwpEQ, Latin Modern Math, STIX Two Math, serif",
-                outline: None,
+                outline: Some(super::super::brace_outline::commands(
+                    fs,
+                    dpi,
+                    fs * 0.8,
+                    text == "}",
+                )),
             },
         });
     }

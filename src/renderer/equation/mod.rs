@@ -10,6 +10,7 @@
 mod advance_contract;
 pub mod ast;
 mod box_types;
+mod brace_outline;
 mod brace_recovery;
 #[cfg(target_arch = "wasm32")]
 pub mod canvas_render;
@@ -23,6 +24,7 @@ pub(crate) mod multiplication_outline;
 pub(crate) mod negation_geometry;
 mod not_equal_geometry;
 pub use integral_outline::Command as GlyphOutlineCommand;
+pub use negation_geometry::NegationGeometry;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
 mod logical_font_frame;
@@ -174,6 +176,7 @@ fn simple_box_height(value: &layout::LayoutBox, fs: f64) -> Option<f64> {
         layout::LayoutKind::Decoration {
             kind: symbols::DecoKind::Box,
             body,
+            ..
         } if (body.height - fs).abs() <= f64::EPSILON * fs * 4.0 => Some(value.height),
         layout::LayoutKind::Row(items) => items
             .iter()
