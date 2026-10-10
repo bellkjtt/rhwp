@@ -8287,8 +8287,11 @@ impl LayoutEngine {
                 prev_item_content_bottom_y,
                 hcursor.prev_item_flow_line_bottom_y,
             );
-            let complete_note_boundary = hcursor
-                .prev_layout_para
+            // 저장 좌표의 되감김은 vpos 연결만 끊는다. 실제 방출한 앞 항목이
+            // 완성 미주의 마지막 줄을 소유하는지는 별도로 보존한다.
+            let complete_note_boundary = col_content.items[..item_ordinal]
+                .last()
+                .and_then(page_item_para_index)
                 .zip(current_endnote_source.as_ref())
                 .is_some_and(|(previous_index, current_source)| {
                     paragraphs.get(previous_index).is_some_and(|previous| {
