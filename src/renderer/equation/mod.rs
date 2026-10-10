@@ -96,6 +96,13 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
                 )
             })
             .flatten();
+        // 한글 포함 여부는 저장 프레임의 무효 증거가 아니다. 독립 글꼴 줄
+        // 계약이 없는 복합 수식은 한컴이 유지한 폭·높이·기준선을 소비한다.
+        // 같은 CASES도 저장 프레임 유지와 크기를 비운 재생성의 예약 영역이
+        // 다르며, Print의 글자 크기는 같다. 자연 상자로 재발행하면 이월이 변한다.
+        if font_frame.is_none() && equation.common.width > 0 && equation.common.height > 0 {
+            return stored_flow_metrics_hwp(equation);
+        }
         let (height, baseline) = font_frame.unwrap_or((intrinsic.height, intrinsic.baseline));
         (
             super::px_to_hwpunit(intrinsic.width, super::DEFAULT_DPI).max(1) as u32,
@@ -105,12 +112,16 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
     } else if let Some(metrics) = normalized_simple_math_metrics(equation) {
         metrics
     } else {
-        (
-            equation.common.width,
-            equation.common.height,
-            (equation.common.height as i32).saturating_mul(i32::from(equation.baseline)) / 100,
-        )
+        stored_flow_metrics_hwp(equation)
     }
+}
+
+fn stored_flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u32, u32, i32) {
+    (
+        equation.common.width,
+        equation.common.height,
+        (equation.common.height as i32).saturating_mul(i32::from(equation.baseline)) / 100,
+    )
 }
 
 /// 글자 줄·단일 위첨자·윗줄 및 기존 BOX의 논리 프레임 계약.

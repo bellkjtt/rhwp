@@ -7,6 +7,7 @@ use std::ops::Range;
 
 mod picture_rows;
 pub(crate) use picture_rows::supports_picture_rows;
+mod separator_spaces;
 mod stored_host;
 pub(crate) use stored_host::{plan_stored_body_wide_host, plan_stored_empty_square_host};
 
@@ -334,30 +335,7 @@ pub(crate) fn plan(
     let word_ranges = super::composer::text_word_ranges(para, styles);
     let mut words = word_ranges.iter().peekable();
     let mut word_metrics = std::collections::BTreeMap::new();
-    let mut separator_spaces = std::collections::BTreeSet::new();
-    let mut followed_by_flow = false;
-    for atom in atoms.iter().rev() {
-        match atom {
-            Atom::Box(InlineFlowBox {
-                content: InlineFlowContent::Text { range, .. },
-                ..
-            }) if !range.is_empty() && chars[range.clone()].iter().all(|ch| *ch == ' ') => {
-                if followed_by_flow {
-                    separator_spaces.insert(range.start);
-                }
-            }
-            Atom::Box(InlineFlowBox {
-                content:
-                    InlineFlowContent::Text { .. }
-                    | InlineFlowContent::Table { .. }
-                    | InlineFlowContent::Picture { .. },
-                ..
-            }) => followed_by_flow = true,
-            // A floating anchor owns its authored physical row. Spaces before
-            // it cannot be consumed as separators before the next flow box.
-            _ => followed_by_flow = false,
-        }
-    }
+    let (separator_spaces, object_separator_spaces) = separator_spaces::classify(&atoms, &chars);
     let mut index = 0;
     while index < atoms.len() {
         let Atom::Box(first) = &atoms[index] else {
@@ -483,6 +461,25 @@ pub(crate) fn plan(
                     })
                 {
                     item.width = 0.0;
+                    // 개체 앞의 넘친 공백은 앞 줄에서 소비하고 그 줄을 끝낸다.
+                    // 이후 작성된 공백은 다음 물리 줄에 남아 개체의 전진량과
+                    // 함께 fit한다. 모두 폭 0으로 흡수하면 표 소유 줄을 잃는다.
+                    if matches!(&item.content, InlineFlowContent::Text { range, .. }
+                        if object_separator_spaces.contains(&range.start))
+                    {
+                        row.push(item);
+                        finish_row(
+                            &mut result,
+                            &mut row,
+                            &horizontal,
+                            &exclusions,
+                            style,
+                            frame.dpi,
+                            Some(&chars),
+                        )?;
+                        row_metrics = RowMetrics::default();
+                        continue;
+                    }
                 }
                 let lookahead = match &item.content {
                     InlineFlowContent::Text { range, .. } => word_metrics

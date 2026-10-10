@@ -12213,7 +12213,34 @@ impl LayoutEngine {
                                 })
                         })
                     });
-                let leading = if (line0_has_real_text && !computed_own_line) || stored_own_line {
+                // 저장 줄이 소유한 실제 공백은 첫 줄 본문의 존재와 무관하다.
+                // 필러 축과 구분해 같은 줄의 전진량과 표 바깥 여백을 함께 소비한다.
+                let stored_whitespace_prefix = !crate::renderer::para_has_no_stored_line_segs(para)
+                    && composed.get(para_index).is_some_and(|comp| {
+                        let position =
+                            crate::renderer::composer::find_render_inline_control_positions(para)
+                                .get(control_index)
+                                .copied();
+                        position.is_some_and(|position| {
+                            comp.lines
+                                .iter()
+                                .rfind(|line| line.char_start <= position)
+                                .is_some_and(|line| {
+                                    line.char_start < position
+                                        && para
+                                            .text
+                                            .chars()
+                                            .skip(line.char_start)
+                                            .take(position - line.char_start)
+                                            .all(|ch| ch == ' ')
+                                })
+                        })
+                    });
+                let leading = if (line0_has_real_text
+                    && !computed_own_line
+                    && !stored_whitespace_prefix)
+                    || stored_own_line
+                {
                     0.0
                 } else {
                     composed
@@ -12270,7 +12297,7 @@ impl LayoutEngine {
                 // 이중 가산이 된다 (복학원서 접수증 오라클 실측: 한컴 ※ 81.7 vs
                 // rhwp leading 포함 86.9 — leading 축 자체의 잔차가 미해결이므로
                 // 그 케이스는 종전 위치를 유지한다).
-                let (om_l, om_r) = if leading > note_advance && !computed_own_line {
+                let (om_l, om_r) = if leading > note_advance && !computed_own_line && !stored_whitespace_prefix {
                     (0.0, 0.0)
                 } else {
                     (
