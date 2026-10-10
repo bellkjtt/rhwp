@@ -519,6 +519,26 @@ pub(crate) fn tac_host_trailing_spacing_at_boundary(
     }
 }
 
+/// 뒤 본문을 재조판하면 그 본문의 저장 원점이 표 뒤 간격을 복원할 수 없다.
+/// 마지막 권위 있는 표 소유 줄의 간격을 실제 흐름에 전량 남긴다.
+pub(crate) fn tac_successor_uses_reflow_spacing(
+    para: &Paragraph,
+    next_para: Option<&Paragraph>,
+    seg: &LineSeg,
+    profile: crate::model::provenance::LayoutCompatibilityProfile,
+) -> bool {
+    profile.hwp5_stored_pagination_layout()
+        && !profile.session_edited()
+        && !para.stored_text_partition_is_dirty()
+        && seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+        && para.line_segs.last().is_some_and(|last| std::ptr::eq(last, seg))
+        && next_para.is_some_and(|next| {
+            next.controls.is_empty()
+                && !next.stored_text_partition_is_dirty()
+                && crate::renderer::para_has_no_stored_line_segs(next)
+        })
+}
+
 /// 실제 표 소유 줄의 저장 끝에 앞 문단 뒤 간격과 다음 문단 앞 간격을 더한 값이
 /// 다음 저장 줄의 시작과 맞닿으면
 /// 배치 원점에는 후행 간격 전량을 적용한다. 분할 예산의 표 점유는 별도로 센다.
@@ -531,6 +551,9 @@ pub(crate) fn tac_next_line_full_spacing(
     profile: crate::model::provenance::LayoutCompatibilityProfile,
     dpi: f64,
 ) -> bool {
+    if tac_successor_uses_reflow_spacing(para, next_para, seg, profile) {
+        return true;
+    }
     let next_spacing_before_hu = (next_spacing_before_px / hwpunit_to_px(1, dpi)).round() as i32;
     let current_spacing_after_hu =
         (current_spacing_after_px / hwpunit_to_px(1, dpi)).round() as i32;

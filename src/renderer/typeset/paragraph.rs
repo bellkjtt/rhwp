@@ -99,7 +99,7 @@ pub(super) fn place_split_paragraph(
     paragraphs: &[Paragraph],
     styles: &ResolvedStyleSet,
     line_count: usize,
-    base_available: f64,
+    base_available_after_safety: f64,
     layout_drift_safety_px: f64,
     forced_page_break_line: Option<usize>,
     native_hwp5_existing_footnote_reset_line: Option<usize>,
@@ -122,14 +122,14 @@ pub(super) fn place_split_paragraph(
                     && st.deferred_hwpx_note_body
                     && st.current_footnote_height > 0.0)
             {
-                (st.available_height() - st.current_height).max(0.0)
+                (st.available_height() - layout_drift_safety_px - st.current_height).max(0.0)
             } else {
                 let fn_margin = if st.current_footnote_height > 0.0 {
                     st.footnote_safety_margin
                 } else {
                     0.0
                 };
-                (base_available
+                (base_available_after_safety
                     - st.current_footnote_height
                     - fn_margin
                     - st.current_height
@@ -137,7 +137,7 @@ pub(super) fn place_split_paragraph(
                     .max(0.0)
             }
         } else {
-            base_available
+            base_available_after_safety
         };
 
         let sp_b = if cursor_line == 0 {
@@ -145,8 +145,9 @@ pub(super) fn place_split_paragraph(
         } else {
             0.0
         };
-        // Task #332 Stage 4b: partial split 의 줄 단위 fit 검사에도 layout drift 마진 적용
-        let avail_for_lines = (page_avail - sp_b - layout_drift_safety_px).max(0.0);
+        // 호출자가 고정한 기준 예산에는 안전 여백이 이미 한 번 반영됐다.
+        // 같은 여백을 다시 빼면 실제로 들어가는 마지막 본문 줄이 먼저 이월된다.
+        let avail_for_lines = (page_avail - sp_b).max(0.0);
 
         // A continuation opens a new column whose source origin is selected
         // from its first item, just as paint selects the PartialParagraph slot.
