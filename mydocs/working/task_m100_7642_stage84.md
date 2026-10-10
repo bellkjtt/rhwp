@@ -85,3 +85,26 @@ Native/fresh WASM TSV 산출을 계속한다. 전체 관련 회귀의
 상기 증거는 ignored
 `output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/`
 아래의 `stage84-*` 로그·PNG·receipt와 `not-glyph-frame-*` 원장이다.
+
+### 공식 본문 face 공급과 인쇄 안내선
+
+같은 한컴 저장 HWP·Print PDF에 공식 함초롬돋움을 공급한
+CanvasKit의 300dpi 일치율은 93.93565%다. 글꼴 미공급 대조와
+환경이 다르므로 이를 코드 보정만의 개선율로 보고하지 않는다.
+수식의 표시 face·자연 전진은 SVG 경로와 대조했고 `W`의
+독립 Print 변환 차이는 아직 남는다.
+
+실제 PNG에서 편집용 여백 안내선도 검출했다. `renderPage`의
+tree replay 뒤 `pageInfo`가 있으면 이 선을 무조건 덧그리므로
+print profile을 소비하지 못했다. screen에서는 보존하고
+print에서 제외하도록 소비 조건을 보정했다. 이 후속 변경의
+타입·계약 검사와 실제 인쇄 캡처를 다시 실행한다. 위 93.93565%
+결과는 이 안내선 보정 전 frontend `38f571c67`의 결과다.
+
+후속 보정의 tsc와 renderer 계약 검사는 모두 exit 0이다.
+공식 본문 face를 다시 공급한 실제 CanvasKit 캡처도 대체·실패·
+미지원 연산 0개다. 첫 캡처 경로를 재사용해 보정 전 PNG가
+덮어써졌으므로 이전 수치만 `prior-guide-comparison.json`으로
+구분해 보존한다. 이를 수정 전후 이미지 증거로 사용하지 않는다.
+현재 PNG는 안내선 보정 후 출력이며 새 점수와 확대 판독은
+해당 현재 파일로 다시 산출한다.

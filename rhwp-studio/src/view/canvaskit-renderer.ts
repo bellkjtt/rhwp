@@ -1004,7 +1004,7 @@ export class CanvasKitLayerRenderer {
       for (const replayPlane of CANVASKIT_REPLAY_PLANES) {
         this.renderNode(canvas, tree.root, tree.profile ?? 'screen', replayPlane, null);
       }
-      if (pageInfo) {
+      if (pageInfo && tree.profile !== 'print') {
         const paint = this.makeStrokePaint('#c0c0c0', 0.3);
         const left = pageInfo.marginLeft;
         const top = pageInfo.marginHeader + pageInfo.marginTop;
