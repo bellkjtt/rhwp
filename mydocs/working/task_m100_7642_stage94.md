@@ -98,3 +98,21 @@ Native 빌드는 `empty-row-native-provenance.json`의 고정 source로 실행 �
 Stage93 전체 Native/fresh WASM 작업은 고정 이전 바이너리·패키지로 계속 실행한다.
 새 수식 source의 검증으로 재사용하지 않으며 변경 전 대조 자료로 구분한다.
 최종 source의 필수 전체 TSV·확대 판독·정식 회귀·전체 lint와 nextest는 남아 있다.
+
+
+## 분수 반례로 간격 조건 재검토
+
+추가한 11pt/22pt 분수 대조 8개도 변환 전후 수식 개수·스크립트·BaseUnit을 확인했다.
+`stage94-eqalign-owner-counterexamples/hancom-normalized-equation-properties.json`에서
+분자의 끝 빈 행이 있으면 분수 높이가 각각 1100HU/2200HU 증가한다.
+같은 분수를 CASES에 넣어도 같은 증가량이다. 그러므로 위 첫 후보의 CASES 전용
+소유 조건은 너무 좁다. 부모가 없는 독립 정렬 묶음에만 0.1em leading을 예약하고
+분수·조건식 등 실제 부모가 있으면 그 부모가 바깥 간격을 소유하게 바로잡는다.
+글꼴·색상·단일 행 포장은 내용 소속을 바꾸지 않는다. 독립 EQALIGN의 자식으로
+다시 중첩한 정렬 묶음에도 자체 leading을 중복 전달하지 않는다.
+
+첫 후보 Native 빌드는 소유 Cargo/rustc의 PID와 start ticks를 확인해 종료했다.
+193.24초, exit -15이며 성공 binary나 시각 결과가 없다.
+`stage94-invalid-owner-candidate-build-stop.json`에 종료 이유와 소유 근거를 보존했다.
+관측 시간 만료로 재시작한 것이 아니며 새 독립 반례가 잘못된 조건을 드러냈다.
+첫 후보의 lint 통과는 교정한 source의 lint 근거가 아니므로 새 경로에 재실행한다.

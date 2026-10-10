@@ -4,6 +4,17 @@ use super::{
     EqLayout, EqNode, LayoutBox, LayoutKind, MatrixStyle, PileAlign, MATRIX_COL_GAP, MATRIX_ROW_GAP,
 };
 
+// 글꼴·색상과 단일 행의 포장은 내용 소속을 바꾸지 않는다. 분수·조건식·
+// 첨자 등의 실제 부모가 있으면 그 구조가 바깥 leading을 소유한다.
+pub(super) fn is_standalone_eqalign(node: &EqNode) -> bool {
+    match node {
+        EqNode::EqAlign { .. } => true,
+        EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => is_standalone_eqalign(body),
+        EqNode::Row(items) if items.len() == 1 => is_standalone_eqalign(&items[0]),
+        _ => false,
+    }
+}
+
 impl EqLayout {
     pub(super) fn layout_matrix(
         &self,
@@ -181,14 +192,14 @@ impl EqLayout {
     }
 
     pub(super) fn layout_eqalign(&self, rows: &[(EqNode, EqNode)], fs: f64) -> LayoutBox {
-        // 독립 Print의 정렬 행 피치는 1.1em이다. CASES 안에서는
-        // 바깥 행이 leading을 소유하므로 중첩 행 사이에 중복 예약하지 않는다.
+        // 독립 정렬 묶음의 Print 피치는 1.1em이다. 분수·CASES 등 실제
+        // 부모가 있으면 바깥 leading을 그 부모가 소유하므로 중복 예약하지 않는다.
         let row_gap = fs
             * if self.hancom_math_face {
-                if self.eqalign_in_cases {
-                    0.0
-                } else {
+                if self.standalone_eqalign {
                     0.1
+                } else {
+                    0.0
                 }
             } else {
                 MATRIX_ROW_GAP
@@ -196,9 +207,13 @@ impl EqLayout {
         let align_gap = fs * 0.15; // & 기준 좌우 사이 간격
 
         // 각 행의 왼쪽/오른쪽 레이아웃 계산
+        let nested = Self {
+            standalone_eqalign: false,
+            ..*self
+        };
         let mut laid_rows: Vec<(LayoutBox, LayoutBox)> = rows
             .iter()
-            .map(|(l, r)| (self.layout_node(l, fs), self.layout_node(r, fs)))
+            .map(|(l, r)| (nested.layout_node(l, fs), nested.layout_node(r, fs)))
             .collect();
 
         // 왼쪽 최대 폭 (& 정렬 기준)
