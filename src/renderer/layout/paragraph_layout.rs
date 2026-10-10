@@ -4687,6 +4687,13 @@ impl LayoutEngine {
                             0.0
                         },
                     });
+            // 저장 줄을 재사용하지 않는 것과 실제 문단 앞 간격을 생략하는 것은
+            // 다르다. 일반 재조판 본문은 측정이 예약한 같은 간격을 소비한다.
+            let flow_spacing = crate::renderer::reflow_spacing::plain_text_spacing(
+                para,
+                styles.para_styles.get(comp_ref.para_style_id as usize),
+                start_line,
+            );
             return self.layout_composed_paragraph_in_frame(
                 tree,
                 col_node,
@@ -4708,7 +4715,7 @@ impl LayoutEngine {
                 bin_data_content,
                 wrap_anchor,
                 false,
-                vertical_spacing,
+                vertical_spacing.or(flow_spacing),
                 None,
             );
         }

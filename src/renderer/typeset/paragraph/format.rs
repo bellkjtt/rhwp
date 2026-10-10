@@ -43,8 +43,13 @@ pub(in crate::renderer::typeset) fn format_paragraph_for_flow(
     // Reflow has no saved vertical ladder which could restore omitted spacing.
     // Reserve the same paragraph before-space consumed by the composed paint
     // path; otherwise the next object's shared origin rewinds into prior text.
-    let spacing_before = para_style.map(|s| s.spacing_before).unwrap_or(0.0);
-    let spacing_after = para_style.map(|s| s.spacing_after).unwrap_or(0.0);
+    let flow_spacing = crate::renderer::reflow_spacing::plain_text_spacing(para, para_style, 0);
+    let spacing_before = flow_spacing
+        .map(|s| s.before)
+        .unwrap_or_else(|| para_style.map_or(0.0, |s| s.spacing_before));
+    let spacing_after = flow_spacing
+        .map(|s| s.after)
+        .unwrap_or_else(|| para_style.map_or(0.0, |s| s.spacing_after));
     // [Task #874 Case 3] `<...>` 단독 paragraph 의 paragraph-level extra spacing 제거.
     // 이전 #866 Stage 2 는 paragraph 위·아래 각 +20px (총 +40px) 을 paragraph 자체 height
     // 에 포함시켰으나, typeset 의 zone 전환 패딩(solo_zone_pad +16px enter +16px leave)
