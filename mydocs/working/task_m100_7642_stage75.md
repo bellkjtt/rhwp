@@ -65,3 +65,24 @@ fit·높이·paint를 계산한다. 본문 단어 앞 구분 공백의 기존 �
 
 현재 구현은 작성 완료, 빌드와 Native/fresh WASM 검증 전이다.
 관련 기대값·baseline·회귀 검사는 변경하지 않았다.
+
+## 정상 반례에서 검출한 수식 회귀
+
+`1d5261f0ecc5436698c96022b0a40de74da4aeab` Native 빌드는 exit 0이다.
+동일한 paired CASES 입력·독립 Print의 전체 1쪽은 변경 전
+98.16677%에서 변경 후 48.55112%로 내려갔다. 같은 영역의 직접
+비교에서 첨자의 기준선과 뒤 문단 원점이 달라졌다. gate는
+`re_review_required`이며 이 수식 구현은 수용하지 않는다.
+
+저장 geometry와 LineSeg의 2385HU 보존만으로 Print의 실제 흐름 예약이
+같다고 해석한 위 구현 근거는 잘못됐다. 저장값이 양수라는 조건은
+유효성 증거가 아니며 일반 수식 크기 수용 조건을 완화할 수 없다.
+복합 CJK 프레임의 무조건 수용 가정을 제거하고 기존 수식 메트릭
+경로로 복원한다. 특정 문서 조건으로 이 정상 반례를 제외하지 않는다.
+원본 10월 HWPX의 미달 원인은 독립 출력·실제 소비 경로에서 다시
+분리한다. 표 공백 수정의 결과는 별도로 검증하며 수식 실패로
+통과 여부를 대신하지 않는다. 기대값·baseline은 변경하지 않는다.
+
+증적은 `stage75-paired-geometry-findings.json`과
+`stage75-cases-paired-before-native/`,
+`stored-frame-space-flow-focused-native/cases-paired-probe/`에 보존했다.
