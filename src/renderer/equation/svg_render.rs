@@ -546,6 +546,15 @@ fn draw_stretch_bracket(
     color: &str,
     fs: f64,
 ) {
+    if matches!(bracket, "{" | "}") {
+        let commands = super::brace_stretch::commands(x, y, w, h, fs, bracket == "}");
+        svg.push_str(&format!(
+            "<path d=\"{}\" fill=\"{}\"/>\n",
+            super::multiplication_outline::path_data(&commands),
+            color
+        ));
+        return;
+    }
     let mid_x = x + w / 2.0;
     let stroke_w = if matches!(bracket, "(" | ")") {
         (fs * 0.042).max(0.48)
@@ -590,38 +599,6 @@ fn draw_stretch_bracket(
                 mid_x - w * 0.2, y,
                 mid_x + w * 0.2, y,
                 mid_x + w * 0.2, y + h,
-                mid_x - w * 0.2, y + h,
-                color, stroke_w,
-            ));
-        }
-        "{" => {
-            let qh = h / 4.0;
-            svg.push_str(&format!(
-                "<path d=\"M{:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
-                mid_x + w * 0.2, y,
-                mid_x - w * 0.1, y,
-                mid_x - w * 0.1, y + qh,
-                mid_x - w * 0.1, y + qh * 2.0,
-                mid_x - w * 0.3, y + qh * 2.0,
-                mid_x - w * 0.1, y + qh * 2.0,
-                mid_x - w * 0.1, y + qh * 3.0,
-                mid_x - w * 0.1, y + h,
-                mid_x + w * 0.2, y + h,
-                color, stroke_w,
-            ));
-        }
-        "}" => {
-            let qh = h / 4.0;
-            svg.push_str(&format!(
-                "<path d=\"M{:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2} Q{:.2},{:.2} {:.2},{:.2}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{:.2}\"/>\n",
-                mid_x - w * 0.2, y,
-                mid_x + w * 0.1, y,
-                mid_x + w * 0.1, y + qh,
-                mid_x + w * 0.1, y + qh * 2.0,
-                mid_x + w * 0.3, y + qh * 2.0,
-                mid_x + w * 0.1, y + qh * 2.0,
-                mid_x + w * 0.1, y + qh * 3.0,
-                mid_x + w * 0.1, y + h,
                 mid_x - w * 0.2, y + h,
                 color, stroke_w,
             ));

@@ -128,6 +128,12 @@ impl EqLayout {
             } else {
                 MATRIX_ROW_GAP
             };
+        let brace_width = if self.hancom_math_face {
+            super::source_font_text::logical_advance(512, fs, self.dpi)
+        } else {
+            // 이전 두 0.3em 예약의 실제 본체 원점·전체 폭을 보존한다.
+            fs * 0.6
+        };
         let mut row_boxes = self.layout_cases_rows(rows, fs);
 
         let mut y = 0.0;
@@ -137,7 +143,7 @@ impl EqLayout {
                 b.height = fs;
                 b.baseline = fs * 0.8;
             }
-            b.x = fs * 0.3; // 왼쪽 중괄호 여백
+            b.x = 0.0; // 중괄호 슬롯은 아래 body 원점에서 한 번 소비한다.
             b.y = y;
             y += b.height + row_gap;
         }
@@ -164,7 +170,7 @@ impl EqLayout {
         let inner = LayoutBox {
             font_size: fs,
             // 외곽 폭에 예약한 왼쪽 중괄호 폭을 실제 자식 원점에서도 소비한다.
-            x: fs * 0.3,
+            x: brace_width,
             y: 0.0,
             width: full_w,
             height: total_h,
@@ -176,13 +182,13 @@ impl EqLayout {
             font_size: fs,
             x: 0.0,
             y: 0.0,
-            width: full_w + fs * 0.3,
+            width: full_w + brace_width,
             height: total_h,
             baseline,
             kind: LayoutKind::Paren {
                 left: "{".to_string(),
                 right: String::new(),
-                left_width: fs * 0.3,
+                left_width: brace_width,
                 right_width: 0.0,
                 delimiter_height: total_h,
                 glyph_delimiters: false,
@@ -232,13 +238,18 @@ impl EqLayout {
             let has_right = !matches!(right.kind, LayoutKind::Empty);
             right.x = max_left_w + if has_right { align_gap } else { 0.0 };
 
-            let row_h = (left.baseline.max(right.baseline)
-                + (left.height - left.baseline).max(right.height - right.baseline))
-            .max(fs);
-            let row_bl = if left.height == 0.0 && right.height == 0.0 {
-                fs * 0.8
+            let (left_h, left_bl) = self.matrix_cell_frame(left, fs);
+            let (right_h, right_bl) = self.matrix_cell_frame(right, fs);
+            let empty = left_h == 0.0 && right_h == 0.0;
+            let row_bl = if empty {
+                fs * if self.hancom_math_face { 0.86 } else { 0.8 }
             } else {
-                left.baseline.max(right.baseline)
+                left_bl.max(right_bl)
+            };
+            let row_h = if empty {
+                fs
+            } else {
+                row_bl + (left_h - left_bl).max(right_h - right_bl)
             };
             first_baseline.get_or_insert(row_bl);
             // 베이스라인 정렬

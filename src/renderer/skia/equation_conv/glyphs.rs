@@ -132,6 +132,12 @@ pub(super) fn draw_stretch_bracket(
     color: Color,
     fs: f64,
 ) {
+    if matches!(bracket, "{" | "}") {
+        let commands =
+            crate::renderer::equation::brace_stretch::commands(x, y, w, h, fs, bracket == "}");
+        super::super::equation_glyph::draw_outline(canvas, &commands, 0.0, 0.0, color, None);
+        return;
+    }
     let mid_x = x + w / 2.0;
     let paint = stroke_paint(color, fs * 0.04);
 
@@ -168,50 +174,6 @@ pub(super) fn draw_stretch_bracket(
             path.line_to(((mid_x + w * 0.2) as f32, y as f32));
             path.line_to(((mid_x + w * 0.2) as f32, (y + h) as f32));
             path.line_to(((mid_x - w * 0.2) as f32, (y + h) as f32));
-            canvas.draw_path(&path.detach(), &paint);
-        }
-        "{" => {
-            let qh = h / 4.0;
-            let mut path = PathBuilder::new();
-            path.move_to(((mid_x + w * 0.2) as f32, y as f32));
-            path.quad_to(
-                ((mid_x - w * 0.1) as f32, y as f32),
-                ((mid_x - w * 0.1) as f32, (y + qh) as f32),
-            );
-            path.quad_to(
-                ((mid_x - w * 0.1) as f32, (y + qh * 2.0) as f32),
-                ((mid_x - w * 0.3) as f32, (y + qh * 2.0) as f32),
-            );
-            path.quad_to(
-                ((mid_x - w * 0.1) as f32, (y + qh * 2.0) as f32),
-                ((mid_x - w * 0.1) as f32, (y + qh * 3.0) as f32),
-            );
-            path.quad_to(
-                ((mid_x - w * 0.1) as f32, (y + h) as f32),
-                ((mid_x + w * 0.2) as f32, (y + h) as f32),
-            );
-            canvas.draw_path(&path.detach(), &paint);
-        }
-        "}" => {
-            let qh = h / 4.0;
-            let mut path = PathBuilder::new();
-            path.move_to(((mid_x - w * 0.2) as f32, y as f32));
-            path.quad_to(
-                ((mid_x + w * 0.1) as f32, y as f32),
-                ((mid_x + w * 0.1) as f32, (y + qh) as f32),
-            );
-            path.quad_to(
-                ((mid_x + w * 0.1) as f32, (y + qh * 2.0) as f32),
-                ((mid_x + w * 0.3) as f32, (y + qh * 2.0) as f32),
-            );
-            path.quad_to(
-                ((mid_x + w * 0.1) as f32, (y + qh * 2.0) as f32),
-                ((mid_x + w * 0.1) as f32, (y + qh * 3.0) as f32),
-            );
-            path.quad_to(
-                ((mid_x + w * 0.1) as f32, (y + h) as f32),
-                ((mid_x - w * 0.2) as f32, (y + h) as f32),
-            );
             canvas.draw_path(&path.detach(), &paint);
         }
         "|" => {

@@ -268,3 +268,10 @@ pub(super) fn metrics(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
 pub(super) fn metrics_at_dpi(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
     frame(value, fs, dpi)
 }
+
+/// 일반 줄의 검증된 프레임. 별도 prime 프레임을 일반 줄로 추정하지 않는다.
+pub(super) fn unprimed_line_metrics(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    (font_line(value, fs) && !contains_prime(value))
+        .then(|| super::font_frame_metrics::line_at_dpi(fs, dpi))
+        .flatten()
+}

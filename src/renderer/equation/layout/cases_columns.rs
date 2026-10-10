@@ -21,7 +21,10 @@ impl EqLayout {
         // 이 묶음의 직접적인 행 경계만 맞춘다. 중첩 EQALIGN 등의 경계는
         // 자식 배치가 소비하며 바깥 CASES의 열에 섞지 않는다.
         if !rows.iter().any(|row| items(row).iter().any(is_boundary)) {
-            return rows.iter().map(|row| self.layout_node(row, fs)).collect();
+            return rows
+                .iter()
+                .map(|row| self.matrix_row_box(self.layout_node(row, fs), fs))
+                .collect();
         }
 
         let mut cells: Vec<Vec<LayoutBox>> = rows
@@ -58,10 +61,17 @@ impl EqLayout {
         cells
             .iter_mut()
             .map(|row| {
-                let ascent = row.iter().map(|cell| cell.baseline).fold(0.0_f64, f64::max);
-                let descent = row
+                let frames: Vec<_> = row
                     .iter()
-                    .map(|cell| cell.height - cell.baseline)
+                    .map(|cell| self.matrix_cell_frame(cell, fs))
+                    .collect();
+                let ascent = frames
+                    .iter()
+                    .map(|(_, baseline)| *baseline)
+                    .fold(0.0_f64, f64::max);
+                let descent = frames
+                    .iter()
+                    .map(|(height, baseline)| height - baseline)
                     .fold(0.0_f64, f64::max);
                 let mut width = 0.0_f64;
                 for (column, cell) in row.iter_mut().enumerate() {

@@ -472,6 +472,21 @@ fn draw_stretch_bracket(
     color: &str,
     fs: f64,
 ) {
+    if matches!(bracket, "{" | "}") {
+        use super::GlyphOutlineCommand as Command;
+        ctx.set_fill_style_str(color);
+        ctx.begin_path();
+        for command in super::brace_stretch::commands(x, y, w, h, fs, bracket == "}") {
+            match command {
+                Command::Move((a, b)) => ctx.move_to(a, b),
+                Command::Line((a, b)) => ctx.line_to(a, b),
+                Command::Cubic([(a, b), (c, d), (e, f)]) => ctx.bezier_curve_to(a, b, c, d, e, f),
+                Command::Close => ctx.close_path(),
+            }
+        }
+        ctx.fill();
+        return;
+    }
     let mid_x = x + w / 2.0;
     let stroke_w = if matches!(bracket, "(" | ")") {
         (fs * 0.042).max(0.48)
@@ -526,26 +541,6 @@ fn draw_stretch_bracket(
             ctx.line_to(mid_x + w * 0.2, y);
             ctx.line_to(mid_x + w * 0.2, y + h);
             ctx.line_to(mid_x - w * 0.2, y + h);
-            ctx.stroke();
-        }
-        "{" => {
-            let qh = h / 4.0;
-            ctx.begin_path();
-            ctx.move_to(mid_x + w * 0.2, y);
-            ctx.quadratic_curve_to(mid_x - w * 0.1, y, mid_x - w * 0.1, y + qh);
-            ctx.quadratic_curve_to(mid_x - w * 0.1, y + qh * 2.0, mid_x - w * 0.3, y + qh * 2.0);
-            ctx.quadratic_curve_to(mid_x - w * 0.1, y + qh * 2.0, mid_x - w * 0.1, y + qh * 3.0);
-            ctx.quadratic_curve_to(mid_x - w * 0.1, y + h, mid_x + w * 0.2, y + h);
-            ctx.stroke();
-        }
-        "}" => {
-            let qh = h / 4.0;
-            ctx.begin_path();
-            ctx.move_to(mid_x - w * 0.2, y);
-            ctx.quadratic_curve_to(mid_x + w * 0.1, y, mid_x + w * 0.1, y + qh);
-            ctx.quadratic_curve_to(mid_x + w * 0.1, y + qh * 2.0, mid_x + w * 0.3, y + qh * 2.0);
-            ctx.quadratic_curve_to(mid_x + w * 0.1, y + qh * 2.0, mid_x + w * 0.1, y + qh * 3.0);
-            ctx.quadratic_curve_to(mid_x + w * 0.1, y + h, mid_x - w * 0.2, y + h);
             ctx.stroke();
         }
         "|" => {

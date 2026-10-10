@@ -12,6 +12,7 @@ pub mod ast;
 mod box_types;
 mod brace_outline;
 mod brace_recovery;
+pub(crate) mod brace_stretch;
 #[cfg(target_arch = "wasm32")]
 pub mod canvas_render;
 pub(crate) mod dispatch;
