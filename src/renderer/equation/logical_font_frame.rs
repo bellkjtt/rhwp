@@ -36,16 +36,32 @@ fn bar_sup_metrics(fs: f64, radical: bool, dpi: f64) -> Option<(f64, f64)> {
 }
 
 fn bar_font_line(value: &LayoutBox, fs: f64) -> bool {
+    accent_font_line(value, fs, DecoKind::Bar)
+}
+
+fn accent_font_line(value: &LayoutBox, fs: f64, accent: DecoKind) -> bool {
     match &value.kind {
-        LayoutKind::Decoration {
-            kind: DecoKind::Bar,
-            body,
-            ..
-        } => font_line(body, fs),
-        LayoutKind::FontStyle { body, .. } => bar_font_line(body, fs),
-        LayoutKind::Row(items) if items.len() == 1 => bar_font_line(&items[0], fs),
+        LayoutKind::Decoration { kind, body, .. } if *kind == accent => font_line(body, fs),
+        LayoutKind::FontStyle { body, .. } => accent_font_line(body, fs, accent),
+        LayoutKind::Row(items) if items.len() == 1 => accent_font_line(&items[0], fs, accent),
         _ => false,
     }
+}
+
+/// 독립 한컴 정상 저장의 벡터 바깥 위첨자 프레임.
+/// 32개 본체 대조군의 9/11/16/22pt에서 확인했다. 다른 장식·중첩 본체는 수용하지 않는다.
+fn vector_sup_metrics(fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    // job b599ad0e-cb8d-449d-92d5-bf289839d52d, Print d69615b4-ca03-449f-8288-82d7196787e2.
+    const FRAMES: [[u32; 3]; 4] = [
+        [900, 1230, 90],
+        [1100, 1538, 89],
+        [1600, 2228, 90],
+        [2200, 3023, 90],
+    ];
+    let unit = super::font_frame_metrics::base_unit_at_dpi(fs, dpi);
+    let row = FRAMES.iter().find(|row| row[0] == unit)?;
+    let height = crate::renderer::hwpunit_to_px(row[1] as i32, dpi);
+    Some((height, height * f64::from(row[2]) / 100.0))
 }
 
 /// 일반 글자와 윗줄의 단일 위첨자로 구성한 피근호식만 수용한다.
@@ -143,7 +159,12 @@ pub(super) fn superscript_shift(
     fs: f64,
     dpi: f64,
 ) -> Option<f64> {
-    if !font_line(base, fs)
+    // 벡터는 본체 글자의 기준선을 바꾸지 않는다. 장식 높이를 일반 MATH
+    // shift로 대신하지 않고 같은 크기의 글줄·첨자 기준선 거리를 소비한다.
+    let vector_base = accent_font_line(base, fs, DecoKind::Vec)
+        && !contains_prime(base)
+        && vector_sup_metrics(fs, dpi).is_some();
+    if !(font_line(base, fs) || vector_base)
         || !font_line(sup, sup.font_size)
         || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
         || (super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200
@@ -186,7 +207,9 @@ pub(super) fn contains_prime(value: &LayoutBox) -> bool {
             s.chars().any(|ch| matches!(ch, '′' | '″' | '‴'))
         }
         LayoutKind::Row(items) => items.iter().any(contains_prime),
-        LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => contains_prime(body),
+        LayoutKind::FontStyle { body, .. }
+        | LayoutKind::Paren { body, .. }
+        | LayoutKind::Decoration { body, .. } => contains_prime(body),
         _ => false,
     }
 }
@@ -248,6 +271,15 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
     if roman && font_line(value, fs) && !contains_prime(value) {
         if let Some(frame) = super::font_frame_metrics::roman_at_dpi(fs, dpi, false) {
             return Some(frame);
+        }
+    }
+    if let LayoutKind::Superscript { base, sup } = &value.kind {
+        if accent_font_line(base, fs, DecoKind::Vec)
+            && !contains_prime(base)
+            && font_line(sup, sup.font_size)
+            && (sup.font_size - fs * 0.68).abs() <= f64::EPSILON * fs * 4.0
+        {
+            return vector_sup_metrics(fs, dpi);
         }
     }
     if let LayoutKind::Subscript { base, sub } = &value.kind {
