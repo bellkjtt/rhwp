@@ -64,3 +64,28 @@ ignored `stage89-original-diagnostics/all24-dump-receipt.json`, `all24-pages.jso
 `all24-flow.log`와 `stage89-table-source-ladders.json`에 수정 전 입력·명령·해시·
 실행 결과를 보존한다. 위 원인을 구현하기 전 확인했으며 수정 후 출력은
 아직 미검증이다.
+
+## 구현과 선행 검증
+
+source `b770b1d2e01ddc3570771c313f9e952a8df4e97a`에서 일반 inline 본문의
+실제 Whole/Partial 수용 조회가 저장 되감김에도 호출되도록 연결했다. 같은
+단과 항목 수가 유지되면 `can_stay`와 `Overflow` 모두 실제 이월 판정에서
+소비한다. 최종 split candidate도 그 공통 결과를 사용한다. 후속 선행 방출이나
+단 전환으로 문맥이 달라진 경우에는 기존 조회를 재사용하지 않는다.
+
+fmt, Native Clippy, WASM Clippy, Skia check가 순차로 모두 exit 0이다.
+`stage90-endnote-prefix-occupancy-type-checks.json`에 명령·실행 source·파일
+해시·실제 종료 코드를 보존했다. workspace 전체 lint와 전체 nextest는
+이 결과에 포함하지 않는다.
+
+현재 같은 source의 Native 실행 파일을 고정 `target/pr-review`에서 빌드한다.
+`stage90-native-validation-pipeline.json`의 소유 프로세스와 실제 Cargo PID를
+확인했다. 성공하면 네 실패 원본의 전체 쪽을 한 번씩 Skia 출력해 독립
+Print와 비교하고 대표 PNG를 생성한다. all-24의 실제 문단 소유·앞부분·이어받기도
+`dump-pages`로 기록한다. 새 후보의 시각 결과는 아직 미검증이다.
+
+선택 37개 입력·97쪽과 전체 55개 원본·853쪽의 Native/fresh WASM 드라이버를
+준비했다. 전체 드라이버는 아직 실행하지 않았다. 이전 source의 중복 WASM·
+선택 Native 검증은 소유를 확인하고 종료했으며 기존 queue 스냅샷과 산출물을
+`stage90-superseded-processes.json`에 연결했다. 해당 결과를 현재 source의
+통과로 보고하지 않는다. Cargo 작업이나 공유 산출물은 중단·삭제하지 않았다.
