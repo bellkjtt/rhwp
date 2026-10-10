@@ -657,12 +657,10 @@ impl EqLayout {
             fs * 0.333
         };
 
-        let (left_w, right_w) = source_stretch.unwrap_or_else(|| {
-            (
-                if left.is_empty() { 0.0 } else { paren_w },
-                if right.is_empty() { 0.0 } else { paren_w },
-            )
-        });
+        let (left_w, right_w) = source_stretch.unwrap_or((
+            if left.is_empty() { 0.0 } else { paren_w },
+            if right.is_empty() { 0.0 } else { paren_w },
+        ));
 
         let mut body_box = b;
         body_box.x = left_w + pad;
