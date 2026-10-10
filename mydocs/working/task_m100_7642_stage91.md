@@ -75,7 +75,7 @@ lib check가 모두 exit 0으로 종료했다. 전체 workspace/all-target Clipp
 PID/start tick·SIGTERM·종료 후 프로세스 부재를 기록한다.
 현재 source c6의 새 원본 비교로 대체하며 공유 Cargo cache는 보존했다.
 
-추가 9개 회귀 파일의 12개 함수를 직접 읽고
+추가 14개 회귀 파일의 24개 함수를 직접 읽고
 `stage91-additional-regression-contract-classification.json`으로 분류했다.
 #6632의 그림 폭/y 선택과 #6681의 SVG 좌표 대역/baseline은 관계형으로
 바꿔야 한다. #6495의 OVERFLOW 건수 상한·마지막 쪽 존재 검사는 내용 소유·
@@ -83,3 +83,76 @@ PID/start tick·SIGTERM·종료 후 프로세스 부재를 기록한다.
 내용/공백 메트릭 계약, #6323/6334의 바탕쪽 소유/중복 검사는 고정 px와
 구분했다. 원본 실패를 return/continue로 통과시키는 경로도 검토 대상으로 기록했다.
 이는 정식 검사 변경이나 91파일 전수 검토 완료 기록이 아니다.
+
+## 빌드 종료와 실제 원본 비교
+
+Native 빌드는 exit 0, 406.677초로 종료했다. binary SHA-256은
+`72250c2d1e4283467ac3b1c656113c6e535ee23f3466e0457a34589227426031`다.
+`paper-frame-native-provenance.json`은 source c6과 빌드 전후 해시 일치를 기록한다.
+
+같은 binary로 실패 원본 191쪽과 대조군 51쪽, 총 242쪽의 직접 Skia 비교를
+완료했다. 실패 원본 9개 중 7개와 대조군 5개는 각각 전쪽 90% 이상이다.
+수학 시험지 두 개는 여전히 미달이다. 이는 Native SVG/fresh WASM 전체
+55개 원본/853쪽의 최종 통과를 뜻하지 않는다.
+
+### 이전 미달 원본 9개
+
+| 입력 | 전쪽 비교 | 최저 일치율 | 90% 미만 쪽 |
+|---|---:|---:|---|
+| `samples/3-11월_실전_통합_2024-구분선위0미주사이7구분선아래20.hwp` | 21쪽 | 96.42088% | 없음 |
+| `samples/3-11월_실전_통합_2024-구분선위0미주사이20구분선아래2.hwp` | 22쪽 | 95.61623% | 없음 |
+| `samples/3-11월_실전_통합_2024-구분선위0미주사이7구분선아래20.hwpx` | 21쪽 | 96.42080% | 없음 |
+| `samples/3-11월_실전_통합_2024-구분선위0미주사이20구분선아래2.hwpx` | 22쪽 | 95.61623% | 없음 |
+| `samples/3-11월_실전_통합_2024-구분선위20미주사이7구분선아래2.hwp` | 21쪽 | 96.42088% | 없음 |
+| `samples/3-11월_실전_통합_2024-구분선위20미주사이7구분선아래2.hwpx` | 21쪽 | 96.42080% | 없음 |
+| `samples/exam_math.hwp` | 20쪽 | 78.69607% | 1, 2, 9, 13, 17, 18 |
+| `samples/exam_math_no.hwp` | 20쪽 | 77.76098% | 1, 9, 13, 15, 16, 17, 18 |
+| `samples/3-09월_교육_통합_2024-구분선아래20구분선위20.hwpx` | 23쪽 | 90.53366% | 없음 |
+
+### 셀 도형 대조군 5개
+
+| 입력 | 전쪽 비교 | 최저 일치율 | 90% 미만 쪽 |
+|---|---:|---:|---|
+| `samples/21_언어_기출_편집가능본.hwp` | 15쪽 | 94.44037% | 없음 |
+| `samples/exam_eng.hwp` | 8쪽 | 91.13983% | 없음 |
+| `samples/exam_kor.hwp` | 20쪽 | 91.57678% | 없음 |
+| `samples/exam_science.hwp` | 4쪽 | 93.59650% | 없음 |
+| `samples/exam_social.hwp` | 4쪽 | 95.99778% | 없음 |
+
+### 한 줄 미주의 소유와 이어받기 확인
+
+all-21 HWPX의 19·20·21쪽은 이전 60.80087/30.54841/41.58859%에서
+98.31866/97.86713/97.21069%로 개선됐다.
+`stage91-next-diagnostic/all21-pages.json`에서 원본 소유
+`section0/para340/control0/notePara15`가 19쪽 왼쪽 단의 fullParagraph로
+한 번 남는 것을 확인했다. 자매 HWP와 독립 Print의 해당 줄 소속과 일치한다.
+확인할 수 없는 소유를 픽셀 대역으로 추정하지 않았다.
+새 `stage91-original-skia/all-21/review/review_020.png`을 직접 읽고 사용자에게 표시했다.
+수식의 미세 차이까지 전부 해소했다는 판정은 아니다.
+
+### 수학 시험지의 남은 글꼴 차이
+
+새 `stage91-math-page17/review/review_017.png`을 직접 읽고 사용자에게 표시했다.
+용지 기준 쪽 번호 위치는 개선됐지만 제목의 획·모양과 일부 기호 차이가 남는다.
+단일 쪽 PNG의 CLI 파일명이 번호 없는 `exam_math.png`였으므로 이미 성공한
+출력을 `--page 16`에 맞춰 `_017`로 정규화하고 비교만 재실행했다.
+파일명·pair 선택 오류는 출력 회귀나 점수 통과로 기록하지 않았다.
+
+별도 canonical Native SVG 17쪽 Sweep도 실행했다. 전체 쪽수는 양쪽 모두 20쪽,
+관련 17쪽 일치율은 78.96865%, `re_review_required`다.
+`stage91-math-font-native-svg/math-font/silhouette.tsv`와 summary에 보존했다.
+따라서 Skia 한 경로만의 차이로 간주하거나 기대값을 고쳐 통과시키지 않는다.
+
+원본 파싱 속성의 큰 제목은 `신명 신그래픽`, bold=true, 4100HU, ratio92다.
+작은 머리글은 `신명 디나루`, bold=false, 2100HU, ratio85다. 원본·PDF를
+바꾸지 않고 다음 글꼴 공급 분석의 근거로 유지한다.
+실제 SVG 내장 font metadata는 `stage91-math-font-supply-inspection.json`으로
+확인했다. 표시 family `굴림`의 실제 face는 Gulim Regular(weight400),
+`돋움`의 실제 face는 Noto Sans KR ExtraLight(weight400)다.
+CSS 이름·시스템 설치 유무만으로 한컴 HFT의 실제 glyph와 같은 출력을
+사용한다고 판정하지 않는다. 소스 font substitution과 bold 적용·실제 glyph
+공급을 다음에 함께 대조한다. 설치된 Linux Gulim/HYGulim을 확인했으며,
+Windows font 목록의 SSH 조회는 exit255여서 검증 성공으로 기록하지 않는다.
+
+정식 회귀 추가/기대값 변경, fresh WASM 전쪽 TSV, 전체 회귀·필수 게이트,
+새 PR 생성·CI·통합은 아직 완료되지 않았다. 전체 원본/회귀 범위를 유지한다.
