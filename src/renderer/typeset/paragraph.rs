@@ -88,6 +88,14 @@ fn stored_overlay_guide_advance(
     .then_some(fmt.total_height)
 }
 
+/// 진입 fit에서 소비한 여백과 쪽 전환 뒤의 기본 여백을 구분한다.
+/// 저장 앵커나 한 번만 적용하는 면제를 다음 쪽까지 이어받지 않는다.
+#[derive(Clone, Copy)]
+pub(super) struct SplitSafety {
+    pub entry: f64,
+    pub continuation: f64,
+}
+
 /// 진입 fit 판단 뒤의 줄 분할을 조정한다. 쪽 전환 후 후보를 다시 계산하며,
 /// 전체 문단 재시도와 조각 배치 후 이월을 구분한다. 진입 시 고정한 기준 예산은 유지한다.
 #[allow(clippy::too_many_arguments)]
@@ -99,8 +107,8 @@ pub(super) fn place_split_paragraph(
     paragraphs: &[Paragraph],
     styles: &ResolvedStyleSet,
     line_count: usize,
-    base_available_after_safety: f64,
-    layout_drift_safety_px: f64,
+    base_available: f64,
+    safety: SplitSafety,
     forced_page_break_line: Option<usize>,
     native_hwp5_existing_footnote_reset_line: Option<usize>,
     current_page_vpos_base: Option<i32>,
@@ -112,6 +120,11 @@ pub(super) fn place_split_paragraph(
     let mut cursor_line = st.take_prefilled_line_prefix(para_idx);
     let mut on_entry_page = true;
     while cursor_line < line_count {
+        let reserve = if on_entry_page {
+            safety.entry
+        } else {
+            safety.continuation
+        };
         let page_avail = if cursor_line == 0 || on_entry_page {
             // 저장 HWPX의 실제 FootnoteArea 경계를 진입 fit과 공유한다.
             // 여기서 별도 각주 높이와 40px 여백을 다시 빼면 물리적으로
@@ -122,14 +135,15 @@ pub(super) fn place_split_paragraph(
                     && st.deferred_hwpx_note_body
                     && st.current_footnote_height > 0.0)
             {
-                (st.available_height() - layout_drift_safety_px - st.current_height).max(0.0)
+                (st.available_height() - reserve - st.current_height).max(0.0)
             } else {
                 let fn_margin = if st.current_footnote_height > 0.0 {
                     st.footnote_safety_margin
                 } else {
                     0.0
                 };
-                (base_available_after_safety
+                (base_available
+                    - reserve
                     - st.current_footnote_height
                     - fn_margin
                     - st.current_height
@@ -137,7 +151,7 @@ pub(super) fn place_split_paragraph(
                     .max(0.0)
             }
         } else {
-            base_available_after_safety
+            (base_available - reserve).max(0.0)
         };
 
         let sp_b = if cursor_line == 0 {
@@ -145,8 +159,7 @@ pub(super) fn place_split_paragraph(
         } else {
             0.0
         };
-        // 호출자가 고정한 기준 예산에는 안전 여백이 이미 한 번 반영됐다.
-        // 같은 여백을 다시 빼면 실제로 들어가는 마지막 본문 줄이 먼저 이월된다.
+        // 진입 fit의 실제 여백 또는 이월 뒤 기본 여백은 위 예산에서 한 번만 뺀다.
         let avail_for_lines = (page_avail - sp_b).max(0.0);
 
         // A continuation opens a new column whose source origin is selected
@@ -168,6 +181,13 @@ pub(super) fn place_split_paragraph(
                         .map(|line| line.vertical_pos)
                 })
         };
+        if std::env::var("RHWP_DIAG_SPLIT_BUDGET").is_ok() {
+            eprintln!(
+                "DIAG_SPLIT_BUDGET pi={para_idx} page={} line={cursor_line} entry={on_entry_page} reserve={reserve} available={avail_for_lines} current={}",
+                st.pages.len(), st.current_height,
+            );
+        }
+
         let scan::LineScanResult {
             end_line,
             cumulative,
@@ -592,7 +612,7 @@ pub(super) fn place_after_failed_fit(
     body_bottom_vpos: Option<i32>,
     available: f64,
     require_full_advance: bool,
-    layout_drift_safety_px: f64,
+    mut safety: SplitSafety,
     stored_vpos_rewind_break: bool,
     stored_vpos_rewind_overflow_break: bool,
     forced_page_break_line: Option<usize>,
@@ -661,8 +681,7 @@ pub(super) fn place_after_failed_fit(
         return;
     }
 
-    // Task #332 Stage 4a: partial split 시에도 동일 마진 적용
-    let base_available = (st.base_available_height() - layout_drift_safety_px).max(0.0);
+    let base_available = st.base_available_height();
 
     let entry_fit = split_entry::inspect_entry(
         para,
@@ -689,6 +708,7 @@ pub(super) fn place_after_failed_fit(
         dpi,
     ) {
         st.advance_column_or_new_page();
+        safety.entry = safety.continuation;
     }
 
     place_split_paragraph(
@@ -700,7 +720,7 @@ pub(super) fn place_after_failed_fit(
         styles,
         line_count,
         base_available,
-        layout_drift_safety_px,
+        safety,
         forced_page_break_line,
         native_hwp5_existing_footnote_reset_line,
         current_page_vpos_base,
@@ -714,6 +734,7 @@ pub(super) fn place_after_failed_fit(
 pub(super) struct FitBudget {
     pub strict_after_empty_host_float: bool,
     pub layout_drift_safety_px: f64,
+    pub split_safety: SplitSafety,
     pub prev_is_partial_table: bool,
     pub available: f64,
 }
@@ -785,6 +806,10 @@ pub(super) fn prepare_fit_budget(
     FitBudget {
         strict_after_empty_host_float,
         layout_drift_safety_px,
+        split_safety: SplitSafety {
+            entry: safety,
+            continuation: layout_drift_safety_px,
+        },
         prev_is_partial_table,
         available,
     }

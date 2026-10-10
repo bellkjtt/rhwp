@@ -9,6 +9,7 @@ use super::symbols::FontStyleKind;
 mod big_op_geometry;
 mod cases_columns;
 mod decoration_geometry;
+mod delimiter_advance;
 mod fraction_geometry;
 mod glyph_advances;
 mod integral_placement;
@@ -625,19 +626,21 @@ impl EqLayout {
 
     fn layout_paren(&self, left: &str, right: &str, body: &EqNode, fs: f64) -> LayoutBox {
         let b = self.layout_node(body, fs);
-        let delimiter_height = if self.hancom_math_face {
-            super::logical_font_frame::metrics_at_dpi(&b, fs, self.dpi)
-                .map_or(b.height, |(height, _)| height)
-        } else {
-            b.height
-        };
+        let logical_frame = self
+            .hancom_math_face
+            .then(|| super::logical_font_frame::metrics_at_dpi(&b, fs, self.dpi))
+            .flatten();
+        let delimiter_height = logical_frame.map_or(b.height, |(height, _)| height);
         let glyph_delimiters = delimiter_height <= fs * 1.2;
+        let source_stretch = (!glyph_delimiters && logical_frame.is_some())
+            .then(|| delimiter_advance::source_stretch(left, right, fs, self.dpi))
+            .flatten();
         let use_stretch_round = !glyph_delimiters && matches!((left, right), ("(", ")"));
         let source_round = self.hancom_math_face
             && !use_stretch_round
             && matches!(left, "" | "(" | ")")
             && matches!(right, "" | "(" | ")");
-        let pad = if source_round {
+        let pad = if source_round || source_stretch.is_some() {
             0.0
         } else if use_stretch_round {
             fs * 0.03
@@ -654,8 +657,12 @@ impl EqLayout {
             fs * 0.333
         };
 
-        let left_w = if left.is_empty() { 0.0 } else { paren_w };
-        let right_w = if right.is_empty() { 0.0 } else { paren_w };
+        let (left_w, right_w) = source_stretch.unwrap_or_else(|| {
+            (
+                if left.is_empty() { 0.0 } else { paren_w },
+                if right.is_empty() { 0.0 } else { paren_w },
+            )
+        });
 
         let mut body_box = b;
         body_box.x = left_w + pad;

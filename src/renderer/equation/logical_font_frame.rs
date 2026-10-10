@@ -231,7 +231,7 @@ fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
             let percent = ((metrics.fraction.1 + extra_numer) / height * 100.0).round();
             Some((height, height * percent / 100.0))
         }
-        LayoutKind::FontStyle { body, .. } => frame(body, fs, dpi),
+        LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => frame(body, fs, dpi),
         LayoutKind::Row(items) => {
             let mut ascent = 0.0_f64;
             let mut descent = 0.0_f64;
