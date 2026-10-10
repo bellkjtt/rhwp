@@ -5560,6 +5560,12 @@ impl LayoutEngine {
     ) {
         if row_heights.is_empty()
             || crate::renderer::float_placement::reflow_table_uses_row_height_constraints(table)
+            || (!self.profile.get().session_edited()
+                && crate::renderer::table_row_frame::stored_rows_own_body(
+                    table,
+                    row_heights,
+                    self.dpi,
+                ))
         {
             return;
         }

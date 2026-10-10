@@ -8307,7 +8307,7 @@ impl LayoutEngine {
                 });
             // 같은 단의 완성 미주 경계는 실제 점유 끝과 문서 간격을 소비한다.
             // 단에 들어가지 않는 제목은 pagination의 fit 경로가 처리해야 한다.
-            let owned_endnote_origin = complete_note_boundary
+            let owned_paragraph_origin = complete_note_boundary
                 .then(|| {
                     let occupied = prev_item_occupied_end_y?;
                     let origin = super::endnote_spacing::origin_after_gap(
@@ -8325,7 +8325,34 @@ impl LayoutEngine {
                         .then_some(origin)
                 })
                 .flatten();
-            hcursor.owned_endnote_origin = owned_endnote_origin;
+            let stored_table_successor_origin = item_ordinal
+                .checked_sub(1)
+                .and_then(|previous| col_content.items.get(previous))
+                .and_then(|previous| {
+                    let PageItem::Table {
+                        para_index: owner,
+                        control_index,
+                    } = previous
+                    else {
+                        return None;
+                    };
+                    let starts_paragraph = matches!(
+                        item,
+                        PageItem::FullParagraph { .. }
+                            | PageItem::PartialParagraph { start_line: 0, .. }
+                    );
+                    (starts_paragraph && owner.checked_add(1) == Some(item_para))
+                        .then(|| {
+                            col_content
+                                .paragraph_float_placements
+                                .get(&(*owner, *control_index))?
+                                .stored_successor_line_origin
+                                .map(|origin| col_area.y + origin)
+                        })
+                        .flatten()
+                });
+            hcursor.owned_paragraph_origin =
+                owned_paragraph_origin.or(stored_table_successor_origin);
             // [#4613 · #4599 밴드-플로우] 전방 스냅 기각 판정용 — vpos_adjust 이전의 순차 흐름 위치.
             let y_before_vpos_adjust = y_offset;
             // [#4639 · #4599 ⑧] TAC-직후 보정 스킵의 예외 — 직전 TAC host 문단이 비-TAC
@@ -8542,7 +8569,7 @@ impl LayoutEngine {
             let compact_single_equation_tail_gap_profile = self.endnote_between_notes_hu.get() > 0
                 && self.endnote_between_notes_hu.get() <= ENDNOTE_BETWEEN_NOTES_BASE_FLOW_HU;
             if compact_single_equation_tail_gap_profile
-                && owned_endnote_origin.is_none()
+                && owned_paragraph_origin.is_none()
                 && current_is_endnote_question_title
                 && col_content.endnote_flow
                 && !endnote_title_direct_bottom_fit
@@ -8583,7 +8610,7 @@ impl LayoutEngine {
             // 이므로 제외 — flow_advance 만으로는 양자 시그니처가 동일(둘 다 ≈gap)해 구분 불가,
             // saved-vpos 점프량(원본 단/쪽 경계 신호)으로 구분한다.
             if current_is_endnote_question_title
-                && owned_endnote_origin.is_none()
+                && owned_paragraph_origin.is_none()
                 && col_content.endnote_flow
                 && !compacted_equation_tail_title_gap
                 && !endnote_title_direct_bottom_fit
@@ -8629,7 +8656,7 @@ impl LayoutEngine {
                 }
             }
             if current_is_endnote_question_title
-                && owned_endnote_origin.is_none()
+                && owned_paragraph_origin.is_none()
                 && col_content.endnote_flow
                 && !endnote_title_direct_bottom_fit
                 && !endnote_title_bottom_fit_applied

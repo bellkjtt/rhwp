@@ -120,6 +120,19 @@ impl TypesetEngine {
                     st.available_height(),
                 );
             }
+            let normalized_frame = (!st.profile.session_edited())
+                .then(|| {
+                    crate::renderer::table_row_frame::normalized_empty_control_frame(
+                        paragraph,
+                        paint_paragraphs.get(para_index + 1)?,
+                        table,
+                        &formatted_table.row_heights,
+                        origin,
+                        self.dpi,
+                    )
+                })
+                .flatten();
+            let owning_column = (st.pages.len(), st.current_column);
             self.typeset_block_table(
                 st,
                 para_index,
@@ -137,6 +150,20 @@ impl TypesetEngine {
                 &paint_paragraphs,
                 &paint_composed,
             );
+            // 분할·이월은 기존 표 경로가 소유한다. 현재 단에 통째 방출된 표만
+            // 같은 본체·바깥 여백·후속 줄 프레임을 실제 paint에도 전달한다.
+            if owning_column == (st.pages.len(), st.current_column)
+                && st.current_items.last().is_some_and(|item| {
+                    matches!(item, crate::renderer::pagination::PageItem::Table {
+                        para_index: owner,
+                        control_index: control,
+                    } if *owner == para_index && *control == control_index)
+                })
+            {
+                if let Some(frame) = normalized_frame {
+                    st.record_paragraph_float_placement((para_index, control_index), frame);
+                }
+            }
         }
         true
     }

@@ -188,9 +188,9 @@ pub(crate) struct HeightCursor {
     pub prev_item_content_bottom_y: Option<f64>,
     /// 직전 실제 흐름 줄 상자의 끝. 빈 줄도 포함하며 trailing 간격은 제외한다.
     pub prev_item_flow_line_bottom_y: Option<f64>,
-    /// 같은 단에서 앞 미주의 마지막 줄과 다음 미주의 첫 줄이 소유한 실제 원점.
-    /// 호출자가 내용·줄 상자 끝과 문서 gap으로 만들며 저장 사다리보다 우선한다.
-    pub(crate) owned_endnote_origin: Option<f64>,
+    /// 같은 단의 실제 점유·간격 또는 확정 개체 프레임이 소유한 후속 문단 원점.
+    /// 측정과 배치의 공통 결과이며 낡은 저장 사다리보다 우선한다.
+    pub(crate) owned_paragraph_origin: Option<f64>,
     /// 직전 `vpos_adjust`에서 새 미주 제목 gap을 저장 end_y보다 위로 compact했는지.
     pub(crate) last_compacted_endnote_title_gap: bool,
     /// [#5699 H1] 저장 사다리가 자리차지 표 밴드를 계상하지 않은 문서에서, 흐름이
@@ -274,7 +274,7 @@ impl HeightCursor {
             endnote_between_notes_hu: 0,
             prev_item_content_bottom_y: None,
             prev_item_flow_line_bottom_y: None,
-            owned_endnote_origin: None,
+            owned_paragraph_origin: None,
             last_compacted_endnote_title_gap: false,
             min_flow_floor: f64::MIN,
             trimmed_prev_spacing_before_px: 0.0,
@@ -310,8 +310,8 @@ impl HeightCursor {
         styles: &ResolvedStyleSet,
     ) -> f64 {
         self.last_compacted_endnote_title_gap = false;
-        if let Some(origin) = self.owned_endnote_origin.take() {
-            // 측정과 배치가 확인한 완성 미주 경계에는 임의 완충을 추가하지 않는다.
+        if let Some(origin) = self.owned_paragraph_origin.take() {
+            // 측정과 배치가 확인한 점유 경계에는 임의 완충을 추가하지 않는다.
             // 뒤 문단도 이 실제 원점을 이어받도록 현재 저장 기준을 함께 연결한다.
             if let Some(first) = paragraphs.get(item_para).and_then(|p| p.line_segs.first()) {
                 let spacing_before = paragraphs

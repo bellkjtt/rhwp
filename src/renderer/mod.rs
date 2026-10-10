@@ -32,6 +32,7 @@ pub mod form_appearance;
 pub(crate) mod form_caption;
 pub(crate) mod reflow_spacing;
 pub(crate) mod stored_picture_metrics;
+pub(crate) mod table_row_frame;
 pub(crate) mod gradient_geometry;
 pub(crate) mod hancom_pua;
 pub mod height_cursor;
