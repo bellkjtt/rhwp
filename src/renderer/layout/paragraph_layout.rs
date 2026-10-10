@@ -7656,6 +7656,17 @@ impl LayoutEngine {
             let next_is_row_fragment = para.is_some_and(|p| {
                 crate::renderer::height_measurer::stored_seg_is_row_fragment(p, line_idx + 1)
             });
+            // 미주 끝의 후행 간격은 저장 줄 원점 사용 여부와 무관하다.
+            // 같은 미주의 다음 줄·문단이 소유할 때만 줄간격을 소비한다.
+            let trailing_line_spacing = if cell_ctx.is_none()
+                && self.endnote_para_source_for(para_index).is_some()
+                && line_idx + 1 >= end
+                && !self.endnote_para_has_same_endnote_successor(para_index)
+            {
+                0.0
+            } else {
+                render_line_spacing_px
+            };
             if endnote_line_vpos_base.is_some() {
                 // 미주 끝의 줄 점유는 다음 미주 앞 간격과 별개다. fit 재생도
                 // 실제 paint가 소비한 마지막 줄 상자를 사용한다.
@@ -7667,18 +7678,7 @@ impl LayoutEngine {
                 let line_bottom = if skip_advance_empty_line {
                     y
                 } else {
-                    // [Task #1236] 다줄 미주 문단의 마지막 줄: 다음 문단이 **같은 미주**
-                    // 연속이면 trailing 줄간격을 포함해 풀이 줄간격을 균일하게 한다
-                    // (간헐적 좁아짐 해소). 미주 마지막 문단(=문제 경계)이면 0 유지해
-                    // between-notes margin 과 중복 가산되지 않게 한다.
-                    let trailing = if line_idx + 1 < end
-                        || self.endnote_para_has_same_endnote_successor(para_index)
-                    {
-                        render_line_spacing_px
-                    } else {
-                        0.0
-                    };
-                    y + render_line_flow_height + trailing + tac_picture_label_extra
+                    y + render_line_flow_height + trailing_line_spacing + tac_picture_label_extra
                 };
                 let next_y = endnote_line_vpos_y_end
                     .map(|prev| prev.max(line_bottom))
@@ -7708,7 +7708,7 @@ impl LayoutEngine {
                 last_line_box_bottom = Some(y + render_line_flow_height);
             } else {
                 last_line_box_bottom = Some(y + render_line_flow_height);
-                y += render_line_flow_height + render_line_spacing_px + tac_picture_label_extra;
+                y += render_line_flow_height + trailing_line_spacing + tac_picture_label_extra;
             }
             if !unused_frame_lane && !skip_advance_empty_line && !next_is_row_fragment {
                 let bottom = if is_cell_last_line && cell_ctx.is_some() {
