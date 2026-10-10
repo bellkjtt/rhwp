@@ -972,6 +972,18 @@ impl HeightCursor {
                 .map(|ps| ps.spacing_before)
                 .unwrap_or(0.0)
         };
+        // 이전 축의 기준보다 작은 저장 좌표는 그 기준으로 외삽하지 않는다.
+        // 이미 소비한 흐름과 현재 앞 간격에서 새 첫 줄 원점을 확정한다.
+        // 미주의 의도된 되감김과 편집/개체 경로는 이 일반 본문 계약과 다르다.
+        if !self.allow_vpos_rewind && !self.session_edited {
+            if let Some(current) = paragraphs.get(item_para) {
+                if let Some(first) = saved_boundary::restart_below_origin(prev_para, current, base)
+                {
+                    self.seed_stored_flow_origin(first, y_offset + curr_sb);
+                    return y_offset;
+                }
+            }
+        }
         // 단일 셀 그림 프레임의 호스트 vpos는 앞 글줄 끝에서 정확히
         // 문단 앞 간격만큼 전진한 값으로 저장될 수 있다. 여기에는 표 높이가 없다.
         // 앞 글줄 끝을 기준으로 잡고 간격을 다시 빼면 첫 조각이

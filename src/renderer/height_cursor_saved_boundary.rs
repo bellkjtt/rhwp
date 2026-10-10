@@ -24,3 +24,28 @@ pub(super) fn continuous(previous: &Paragraph, current: &Paragraph) -> bool {
                 .saturating_add(last.line_height)
                 .saturating_add(last.line_spacing)
 }
+/// 이전 저장 축보다 아래에서 새로 시작한 일반 본문의 권위 있는 첫 줄.
+/// 축 안의 되감김과 편집/합성 정보는 새 원점의 근거로 사용하지 않는다.
+pub(super) fn restart_below_origin(
+    previous: &Paragraph,
+    current: &Paragraph,
+    base: i32,
+) -> Option<i32> {
+    let valid = |para: &Paragraph| {
+        !para.stored_text_partition_is_dirty()
+            && para.controls.is_empty()
+            && !para.line_segs.is_empty()
+            && para.line_segs.iter().all(|line| {
+                line.vertical_pos >= 0 && line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+            })
+            && para
+                .line_segs
+                .windows(2)
+                .all(|pair| pair[1].vertical_pos >= pair[0].vertical_pos)
+    };
+    if !valid(previous) || !valid(current) {
+        return None;
+    }
+    let first = current.line_segs.first()?.vertical_pos;
+    (first < base && previous.line_segs.last()?.vertical_pos >= base).then_some(first)
+}
