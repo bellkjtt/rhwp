@@ -130,3 +130,25 @@ Stage93 전체 Native/fresh WASM 작업은 고정 이전 바이너리·패키지
 정식 회귀 기대값은 여전히 바꾸지 않았다. 새 source 검증은
 `stage94-empty-row-v2-type-checks.json`, `empty-row-v2-native-provenance.json`,
 `stage94-v2-validation-controller.json`에 별도로 보존한다.
+
+
+## 공간 확보와 검사 보존 대조
+
+`stage94-retired-svg-cleanup.json`에 종료된 이전 작업의 SVG 249개,
+10.61GiB를 경로·SHA-256·크기와 함께 기록하고 제거했다. 기록된 이전 PID의
+부재와 `/proc`의 열린 파일도 확인했다. PDF·PNG·TSV·로그·JSON·재현용
+바이너리/패키지, 현재 source의 실행 중 산출물과 공용 Cargo target은 보존했다.
+정리 직후 저장소 파일시스템의 여유는 30GB다.
+
+고정 base `79abd9e49675f4286eaed38197f7e837afb744e7`와 91개 요청 경로의
+검사 함수명을 대조했다. `stage94-regression-name-membership-audit.json`의
+#1139 검사 9개는 기존 관계형 자식 파일에 소속된다. #1308의 두 문단 경계
+검사는 함수 이름이 바뀌었으며 실제 body와 HWP/HWPX 원본을 대조해 보존을
+확인했다. HML 수식 범위의 12개는 사용자가 별도 이관하도록 지시한 제외 범위다.
+그 외 이름 누락은 없다. 이름 소속 대조를 동작 통과나 전체 관계형 전환 증거로
+보고하지 않는다. #1139 본체에 남은 고정 px 선택자·assertion은 아직 전환 전이다.
+
+`node scripts/rust-unit-test-tiers.mjs --check --base-ref
+79abd9e49675f4286eaed38197f7e837afb744e7`는 exit 0이다.
+4198 tests / 298 modules이며 로그는 `stage94-unit-test-tiers.log`에 있다.
+이 정책 통과는 Native/fresh WASM 시각 검증이나 전체 nextest를 대신하지 않는다.
