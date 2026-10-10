@@ -70,6 +70,7 @@ import {
 import { imageCropSelectionIsEmpty } from './image-crop-scale.ts';
 import { magnificationFiltering } from './image-sampling.ts';
 import { drawEquationTextWithFonts } from './canvaskit/equation-text-replay.ts';
+import { drawEquationGlyphOutline } from './canvaskit/equation-glyph-outline.ts';
 import {
   boundedCanvasKitSourceImageKey,
   canvasKitImageCacheKey,
@@ -4325,7 +4326,9 @@ export class CanvasKitLayerRenderer {
       // 명시 face의 SFNT 조달 전에는 SVG fallback에서 같은 글꼴로 표시한다.
       case 'fontGlyph':
         return layout.kind.outlineGeometry
-          ? this.drawEquationIntegral(canvas, layout.kind.outlineGeometry, x, y, color)
+          ? drawEquationGlyphOutline(this.canvasKit, canvas, layout.kind.outlineGeometry, x, y, color,
+            fillColor => this.makeFillPaint(fillColor),
+            (strokeColor, width) => this.makeStrokePaint(strokeColor, width))
           : false;
       case 'function':
         return this.drawEquationText(

@@ -24,12 +24,13 @@ mod source_font_symbol;
 mod source_font_text;
 mod source_italic_advance;
 mod source_roman_advance;
+mod source_variable_style;
 mod symbol_advances;
 mod symbol_spacing;
 mod variable_style;
 pub(crate) use variable_style::is_styled_variable;
 
-pub use super::box_types::{LayoutBox, LayoutKind};
+pub use super::box_types::{FontGlyphPaint, LayoutBox, LayoutKind};
 
 /// 수식 레이아웃 계산기
 #[derive(Clone, Copy)]
@@ -44,6 +45,7 @@ pub struct EqLayout {
     math_digit_advance: Option<u16>,
     variable_italic: bool,
     variable_bold: bool,
+    source_variable_glyphs: bool,
 }
 
 /// 비율 상수
@@ -120,6 +122,7 @@ impl EqLayout {
             math_digit_advance: None,
             variable_italic: true,
             variable_bold: false,
+            source_variable_glyphs: true,
         }
     }
 
@@ -141,6 +144,7 @@ impl EqLayout {
             .then_some(512),
             variable_italic: true,
             variable_bold: false,
+            source_variable_glyphs: true,
         }
     }
 
@@ -315,9 +319,15 @@ impl EqLayout {
                 return result;
             }
         }
-        if self.hancom_math_face && !self.variable_bold {
-            if let Some(result) = source_font_text::layout(text, fs, self.dpi, self.variable_italic)
-            {
+        if self.hancom_math_face {
+            if let Some(result) = source_font_text::layout(
+                text,
+                fs,
+                self.dpi,
+                self.variable_italic,
+                self.variable_bold,
+                self.source_variable_glyphs,
+            ) {
                 return result;
             }
         }
@@ -549,7 +559,14 @@ impl EqLayout {
 
     fn layout_function(&self, name: &str, fs: f64) -> LayoutBox {
         if self.hancom_math_face && !self.variable_bold {
-            if let Some(body) = source_font_text::layout(name, fs, self.dpi, false) {
+            if let Some(body) = source_font_text::layout(
+                name,
+                fs,
+                self.dpi,
+                false,
+                false,
+                self.source_variable_glyphs,
+            ) {
                 return LayoutBox {
                     font_size: fs,
                     x: 0.0,

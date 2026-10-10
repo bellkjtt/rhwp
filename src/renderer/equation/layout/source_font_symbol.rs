@@ -47,6 +47,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
             kind: LayoutKind::FontGlyph {
                 text: text.to_string(),
                 font_family: "HYhwpEQ, Latin Modern Math, STIX Two Math, serif",
+                paint: None,
                 outline: Some(super::super::brace_outline::commands(
                     fs,
                     dpi,
@@ -82,6 +83,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
                 text: text.to_string(),
                 // 측정에 쓴 face를 표시에도 사용한다. 설치되지 않은 환경은 공개 face로 대체한다.
                 font_family: "HYhwpEQ, Latin Modern Math, STIX Two Math, serif",
+                paint: None,
                 outline: None,
             },
         });
@@ -99,6 +101,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
             kind: LayoutKind::FontGlyph {
                 text: text.to_string(),
                 font_family: "Latin Modern Math, STIX Two Math, serif",
+                paint: None,
                 outline: Some(if text == "×" {
                     super::super::multiplication_outline::commands(fs, width, baseline)
                 } else {
@@ -120,6 +123,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
         kind: LayoutKind::FontGlyph {
             text: "′".to_string(),
             font_family: "Haansoft Batang, 한컴바탕, Batang, 바탕, serif",
+            paint: None,
             outline: None,
         },
     })
@@ -141,6 +145,7 @@ pub(super) fn layout_operator_outline(text: &str, fs: f64, dpi: f64) -> Option<L
         kind: LayoutKind::FontGlyph {
             text: display.to_string(),
             font_family: "Latin Modern Math, STIX Two Math, serif",
+            paint: None,
             outline: Some(commands),
         },
     })

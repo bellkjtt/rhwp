@@ -3013,6 +3013,7 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
             text,
             font_family,
             outline,
+            paint,
         } => {
             let _ = write!(
                 buf,
@@ -3022,10 +3023,12 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
             );
             if let Some(commands) = outline {
                 let path = crate::renderer::equation::multiplication_outline::path_data(commands);
+                let stroke_width = paint.map_or(0.0, |p| p.stroke_width);
+                let scale_x = paint.map_or(1.0, |p| p.scale_x);
                 let _ = write!(
                     buf,
-                    ",\"outlineGeometry\":{{\"pathData\":{},\"strokeWidth\":0}}",
-                    json_escape(&path)
+                    ",\"outlineGeometry\":{{\"pathData\":{},\"strokeWidth\":{stroke_width:.6},\"scaleX\":{scale_x:.8},\"fillAndStroke\":true}}",
+                    json_escape(&path),
                 );
             }
             buf.push('}');

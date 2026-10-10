@@ -2,6 +2,13 @@
 
 use super::ast::MatrixStyle;
 
+/// 측정 단계에서 선택한 글리프의 합성 굵기와 장평.
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub struct FontGlyphPaint {
+    pub stroke_width: f64,
+    pub scale_x: f64,
+}
+
 /// 수식 레이아웃 박스
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct LayoutBox {
@@ -42,6 +49,9 @@ pub enum LayoutKind {
         font_family: &'static str,
         /// 표시 글꼴의 차이를 배치 단계에서 해소한 공통 공개 윤곽.
         outline: Option<Vec<super::GlyphOutlineCommand>>,
+        /// 일반 윤곽의 fill+stroke 계약. 없는 경우 기존 채우기 경로다.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        paint: Option<FontGlyphPaint>,
     },
     /// 함수 이름 (로만체)
     Function(String),

@@ -119,7 +119,7 @@ OFL 1.1 전문과 Reserved Font Name을 명시한다. 이 네 WOFF2는 공식 `H
 |--------|--------|---------|------|------|
 | RHWPOldHangul-Regular.woff2 | RHWP Old Hangul subset | SIL OFL 1.1 (`SourceHanSerifK-OFL.txt`) | Adobe / Google | 옛한글 자모·합자 fallback |
 | LatinModernMath-Regular.woff2 | Latin Modern Math | GUST Font License | GUST / TeX ecosystem | 수식 fallback |
-| LatinModernMath-UppercaseOutline-subset.otf | RHWP LMM Uppercase Outline | GUST Font License | 위 Latin Modern Math의 A~Z 정체 윤곽 파생 subset | 공통 수식 대문자 윤곽 파싱; [manifest](MANIFEST-RHWP-LMM-UppercaseOutline.txt) 참조 |
+| LatinModernMath-VariableOutline-subset.otf | RHWP LMM Variable Outline | GUST Font License | 위 Latin Modern Math의 A~Z/a~z 정체와 a~z 이탤릭 윤곽 파생 subset | 공통 수식 변수 윤곽 파싱; [manifest](MANIFEST-RHWP-LMM-VariableOutline.txt) 참조 |
 
 | NotoSansMath-Regular.woff2 | Noto Sans Math Regular | SIL OFL 1.1 (`NotoSansMath-OFL.txt`) | Google / Ubuntu fonts-noto-core | 선택 가능한 수식 대체 글꼴 |
 

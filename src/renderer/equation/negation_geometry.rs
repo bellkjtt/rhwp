@@ -26,9 +26,8 @@ fn ordinary_glyph(body: &LayoutBox) -> bool {
         LayoutKind::FontGlyph { text, .. } => {
             matches!(text.as_str(), "{" | "}")
                 || (text.chars().count() == 1
-                    && text
-                        .chars()
-                        .all(|ch| matches!(ch, '\u{1D434}'..='\u{1D44D}')))
+                    && (text.chars().all(|ch| ch.is_ascii_alphabetic())
+                        || super::layout::is_styled_variable(text)))
         }
         LayoutKind::FontStyle { body, .. } => ordinary_glyph(body),
         LayoutKind::Row(children) if children.len() == 1 => ordinary_glyph(&children[0]),

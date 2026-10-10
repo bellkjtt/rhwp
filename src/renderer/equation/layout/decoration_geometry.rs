@@ -92,6 +92,11 @@ impl EqLayout {
         let mut styled = Self {
             variable_italic,
             variable_bold,
+            source_variable_glyphs: match style {
+                FontStyleKind::Roman => true,
+                FontStyleKind::Italic | FontStyleKind::Bold => self.source_variable_glyphs,
+                _ => false,
+            },
             ..*self
         };
         match style {

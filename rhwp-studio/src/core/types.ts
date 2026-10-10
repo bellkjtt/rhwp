@@ -1459,6 +1459,11 @@ export interface LayerIntegralGeometry {
   strokeWidth: number;
 }
 
+export interface LayerFontGlyphGeometry extends LayerIntegralGeometry {
+  scaleX?: number;
+  fillAndStroke?: boolean;
+}
+
 export interface LayerNegationGeometry {
   start: [number, number];
   end: [number, number];
@@ -1471,7 +1476,7 @@ export type LayerEquationLayoutKind =
   | { type: 'text'; text: string }
   | { type: 'number'; text: string }
   | { type: 'symbol'; text: string }
-  | { type: 'fontGlyph'; text: string; fontFamily: string; outlineGeometry?: LayerIntegralGeometry }
+  | { type: 'fontGlyph'; text: string; fontFamily: string; outlineGeometry?: LayerFontGlyphGeometry }
   | { type: 'mathSymbol'; text: string; integralGeometry?: LayerIntegralGeometry }
   | { type: 'function'; name: string }
   | { type: 'fraction'; numer: LayerEquationLayoutBox; denom: LayerEquationLayoutBox; axisHeight: number }

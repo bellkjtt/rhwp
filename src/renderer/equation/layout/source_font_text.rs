@@ -35,10 +35,26 @@ pub(super) fn logical_advance(units: u16, fs: f64, dpi: f64) -> f64 {
     advance_hwp * dpi / 7200.0
 }
 
-pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<LayoutBox> {
-    if text.is_empty() || !text.bytes().all(|ch| ch.is_ascii_alphabetic()) {
+pub(super) fn layout(
+    text: &str,
+    fs: f64,
+    dpi: f64,
+    italic: bool,
+    bold: bool,
+    outline_contract: bool,
+) -> Option<LayoutBox> {
+    if text.is_empty()
+        || !text.bytes().all(|ch| ch.is_ascii_alphabetic())
+        || (bold && !outline_contract)
+    {
         return None;
     }
+    // 확인하지 않은 굵은 face 크기는 기존 경로로 남기고 추정 메트릭을 발행하지 않는다.
+    let paint = if bold {
+        Some(super::source_variable_style::bold_paint(fs, dpi)?)
+    } else {
+        None
+    };
     let mut x = 0.0;
     let mut children = Vec::with_capacity(text.len());
     for ch in text.bytes() {
@@ -57,16 +73,24 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<Layo
                     .flatten()
             })
         }
-        .unwrap_or_else(|| logical_advance(advances[usize::from(ch - first)], fs, dpi));
-        let display = variable_style::display_text(&char::from(ch).to_string(), italic, false);
-        let outline = italic
-            .then(|| super::super::uppercase_outline::commands(char::from(ch), fs, dpi, fs * 0.8))
+        .unwrap_or_else(|| logical_advance(advances[usize::from(ch - first)], fs, dpi))
+            + if bold {
+                super::source_variable_style::bold_extra_advance(dpi)
+            } else {
+                0.0
+            };
+        let display = variable_style::display_text(&char::from(ch).to_string(), italic, bold);
+        let outline = outline_contract
+            .then(|| {
+                super::super::variable_outline::commands(char::from(ch), fs, dpi, fs * 0.8, italic)
+            })
             .flatten();
         let kind = if let Some(outline) = outline {
             LayoutKind::FontGlyph {
                 text: display,
                 font_family: "Latin Modern Math, STIX Two Math, serif",
                 outline: Some(outline),
+                paint,
             }
         } else {
             LayoutKind::Text(display)

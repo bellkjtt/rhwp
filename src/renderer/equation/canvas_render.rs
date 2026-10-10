@@ -121,22 +121,36 @@ fn render_box(
             text,
             font_family,
             outline,
+            paint,
         } => {
             if let Some(commands) = outline {
+                ctx.save();
+                let _ = ctx.translate(x, y);
+                if let Some(p) = paint {
+                    let _ = ctx.scale(p.scale_x, 1.0);
+                }
                 ctx.set_fill_style_str(color);
                 ctx.begin_path();
                 for command in commands {
                     use super::GlyphOutlineCommand as Command;
                     match *command {
-                        Command::Move((a, b)) => ctx.move_to(x + a, y + b),
-                        Command::Line((a, b)) => ctx.line_to(x + a, y + b),
+                        Command::Move((a, b)) => ctx.move_to(a, b),
+                        Command::Line((a, b)) => ctx.line_to(a, b),
                         Command::Cubic([(a, b), (c, d), (e, f)]) => {
-                            ctx.bezier_curve_to(x + a, y + b, x + c, y + d, x + e, y + f)
+                            ctx.bezier_curve_to(a, b, c, d, e, f)
                         }
                         Command::Close => ctx.close_path(),
                     }
                 }
                 ctx.fill();
+                if let Some(p) = paint {
+                    ctx.set_stroke_style_str(color);
+                    ctx.set_line_width(p.stroke_width);
+                    ctx.set_line_join("miter");
+                    ctx.set_miter_limit(10.0);
+                    ctx.stroke();
+                }
+                ctx.restore();
                 return;
             }
             ctx.set_font(&format!("{fs:.1}px {font_family}"));

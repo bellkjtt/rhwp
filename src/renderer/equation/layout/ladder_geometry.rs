@@ -112,6 +112,7 @@ impl EqLayout {
                         kind: LayoutKind::FontGlyph {
                             text: "⋯".into(),
                             font_family: "HYhwpEQ, Latin Modern Math, STIX Two Math, serif",
+                            paint: None,
                             outline: None,
                         },
                     });
@@ -153,6 +154,7 @@ impl EqLayout {
             kind: LayoutKind::FontGlyph {
                 text: String::new(),
                 font_family: "serif",
+                paint: None,
                 outline: Some(outlines),
             },
         });

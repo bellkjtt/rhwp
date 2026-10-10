@@ -376,11 +376,11 @@ B. Jackowski, P. Strzelczyk, P. Pianowski를 보존하고, 해당 윤곽 데이�
 GUST Font License를 유지한다. rhwp는 글꼴 파일을 개명·수정하는 대신 이 윤곽의
 좌표를 공통 수식 ink 영역으로 변환한다. 한컴 사설 글꼴의 윤곽은 포함하지 않는다.
 
-`assets/fonts/LatinModernMath-UppercaseOutline-subset.otf`는 같은 공개 원본의
-정체 A~Z 윤곽만 포함한 5,236 byte 파생 OpenType CFF 글꼴이다. 원본 저작권·
+`assets/fonts/LatinModernMath-VariableOutline-subset.otf`는 같은 공개 원본의
+정체 A~Z/a~z와 이탤릭 a~z 윤곽을 포함한 13,488 byte 파생 OpenType CFF 글꼴이다. 원본 저작권·
 라이선스를 보존하고 family·full·PostScript 및 CFF 이름을 변경했다.
-[파생 manifest](assets/fonts/MANIFEST-RHWP-LMM-UppercaseOutline.txt)에 원본·
-파생 SHA와 변경 범위를 기록한다. `src/renderer/equation/uppercase_outline.rs`는
+[파생 manifest](assets/fonts/MANIFEST-RHWP-LMM-VariableOutline.txt)에 원본·
+파생 SHA와 변경 범위를 기록한다. `src/renderer/equation/variable_outline.rs`는
 이 공개 윤곽을 파싱하며, 사설 글꼴에서는 em 프레임의 메트릭만 소비한다.
 
 ---

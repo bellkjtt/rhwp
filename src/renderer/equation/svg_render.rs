@@ -132,10 +132,16 @@ fn render_box(
             text,
             font_family,
             outline,
+            paint,
         } => {
             if let Some(commands) = outline {
+                let scale_x = paint.map_or(1.0, |p| p.scale_x);
+                let stroke = paint.map_or_else(String::new, |p| format!(
+                    " stroke=\"{color}\" stroke-width=\"{:.6}\" stroke-linejoin=\"miter\" stroke-miterlimit=\"10\"",
+                    p.stroke_width,
+                ));
                 svg.push_str(&format!(
-                    "<path d=\"{}\" transform=\"translate({x:.4},{y:.4})\" fill=\"{color}\"/>\n",
+                    "<path d=\"{}\" transform=\"translate({x:.4},{y:.4}) scale({scale_x:.8},1)\" fill=\"{color}\"{stroke}/>\n",
                     super::multiplication_outline::path_data(commands),
                 ));
                 return;

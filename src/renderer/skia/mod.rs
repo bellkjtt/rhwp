@@ -5,6 +5,7 @@
 mod cache;
 mod diagnostics;
 mod equation_conv;
+mod equation_glyph;
 mod fill;
 mod fill_shader;
 mod font_catalog;
