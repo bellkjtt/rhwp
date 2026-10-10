@@ -58,3 +58,28 @@ Native/fresh WASM 90% 이상 및 확대 판독 전에 정식 회귀를 추가하
 `cargo fmt --all`과 `git diff --check`는 통과했다. 코드 source를 동결한 뒤
 선행 타입 검사와 Native 빌드·원본 직접 비교를 순차 실행한다. 다른 필수
 회귀·fresh WASM·전쪽 TSV는 아직 미검증이며 정식 테스트 기대값은 바꾸지 않았다.
+
+## 선행 검사와 다음 검증의 실행 상태
+
+source `c6ccb1cb64452d444c154a69545bbc90804e395c`에서 fmt check,
+Native Clippy `-D warnings`, WASM lib Clippy `-D warnings`, native-skia
+lib check가 모두 exit 0으로 종료했다. 전체 workspace/all-target Clippy,
+전체 회귀와 fresh WASM은 아직 통과 판정하지 않았다.
+`stage91-paper-frame-type-checks.json`에 명령·소스 해시·종료 상태를 기록했다.
+현재 고정 `target/pr-review`로 Native 빌드를 진행하며 성공 뒤 같은 동결 binary로
+이전 미달 9개 원본 전체 쪽을 직접 비교한다.
+
+이전 source960의 집중 검증은 끝난 23개 결과를 스냅샷으로 보존하고
+소유 프로세스 2개를 확인해 의도적으로 종료했다. 관측 timeout을 실패로
+해석해 재시작한 것이 아니다. `stage91-superseded-old-focus-processes.json`은
+PID/start tick·SIGTERM·종료 후 프로세스 부재를 기록한다.
+현재 source c6의 새 원본 비교로 대체하며 공유 Cargo cache는 보존했다.
+
+추가 9개 회귀 파일의 12개 함수를 직접 읽고
+`stage91-additional-regression-contract-classification.json`으로 분류했다.
+#6632의 그림 폭/y 선택과 #6681의 SVG 좌표 대역/baseline은 관계형으로
+바꿔야 한다. #6495의 OVERFLOW 건수 상한·마지막 쪽 존재 검사는 내용 소유·
+포함·전체 쪽수 보존을 입증하지 못한다. #6186의 저장 속성 왕복, #6646의
+내용/공백 메트릭 계약, #6323/6334의 바탕쪽 소유/중복 검사는 고정 px와
+구분했다. 원본 실패를 return/continue로 통과시키는 경로도 검토 대상으로 기록했다.
+이는 정식 검사 변경이나 91파일 전수 검토 완료 기록이 아니다.
