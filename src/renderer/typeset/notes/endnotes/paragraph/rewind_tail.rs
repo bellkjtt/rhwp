@@ -50,7 +50,6 @@ pub(super) struct RewindTailResult {
     pub(super) large_between_tail_render_overflows: bool,
     pub(super) kept_successor_overflows: bool,
     pub(super) no_separator_tail_table_starts_next_column: bool,
-    pub(super) no_separator_last_column_tail_before_rewind_starts_next_page: bool,
     pub(super) no_separator_tail_after_picture_starts_next_page: bool,
     pub(super) later_endnote_vpos_rewinds_after_current: bool,
     pub(super) large_between_title_tail_render_overflows: bool,
@@ -165,21 +164,6 @@ impl TypesetEngine {
                 large_separator_block,
                 local_vpos_rewind,
                 this_first_offset,
-            );
-        let no_separator_last_column_tail_before_rewind_starts_next_page = self
-            .judge_no_separator_last_column_tail_before_rewind_starts_next_page(
-                &fmt,
-                st,
-                en_para,
-                en_ctrl,
-                this_first_offset,
-                endnote_start,
-                available,
-                ep_idx,
-                has_visible_endnote_separator,
-                local_vpos_rewind,
-                internal_vpos_rewind,
-                large_separator_block,
             );
         let no_separator_tail_after_picture_starts_next_page = self
             .judge_no_separator_tail_after_picture_starts_next_page(
@@ -350,7 +334,6 @@ impl TypesetEngine {
             large_between_tail_render_overflows,
             kept_successor_overflows,
             no_separator_tail_table_starts_next_column,
-            no_separator_last_column_tail_before_rewind_starts_next_page,
             no_separator_tail_after_picture_starts_next_page,
             later_endnote_vpos_rewinds_after_current,
             large_between_title_tail_render_overflows,

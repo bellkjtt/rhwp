@@ -1149,7 +1149,6 @@ impl TypesetEngine {
                 large_between_tail_render_overflows,
                 kept_successor_overflows,
                 no_separator_tail_table_starts_next_column,
-                no_separator_last_column_tail_before_rewind_starts_next_page,
                 no_separator_tail_after_picture_starts_next_page,
                 later_endnote_vpos_rewinds_after_current,
                 large_between_title_tail_render_overflows,

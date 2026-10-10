@@ -520,51 +520,6 @@ impl TypesetEngine {
                 .unwrap_or(false)
     }
 
-    /// [Task #2079] P6 판정: rewind 직전 마지막 단 tail 이 다음 쪽에서 시작해야 하는지.
-    #[allow(clippy::too_many_arguments)]
-    pub(in crate::renderer::typeset) fn judge_no_separator_last_column_tail_before_rewind_starts_next_page(
-        &self,
-        fmt: &FormattedParagraph,
-        st: &TypesetState,
-        en_para: &Paragraph,
-        en_ctrl: &crate::model::footnote::Endnote,
-        this_first_offset: Option<i32>,
-        endnote_start: i32,
-        available: f64,
-        ep_idx: usize,
-        has_visible_endnote_separator: bool,
-        local_vpos_rewind: bool,
-        internal_vpos_rewind: bool,
-        large_separator_block: bool,
-    ) -> bool {
-        large_separator_block
-            && !has_visible_endnote_separator
-            && ep_idx > 0
-            && st.col_count > 1
-            && st.current_column + 1 >= st.col_count
-            && st.current_height > available * 0.90
-            && !st.current_items.is_empty()
-            && !local_vpos_rewind
-            && !internal_vpos_rewind
-            && fmt.line_heights.len() == 1
-            && para_has_visible_text_or_equation(en_para)
-            && !para_has_non_tac_picture_or_shape(en_para)
-            && st.current_height + fmt.line_advance(0)
-                <= available + ENDNOTE_COLUMN_BOTTOM_BLEED_TOLERANCE_PX + 8.0
-            && en_ctrl.paragraphs.get(ep_idx + 1).is_some_and(|next_para| {
-                matches!(
-                    (
-                        this_first_offset,
-                        next_para
-                            .line_segs
-                            .first()
-                            .map(|s| s.vertical_pos + endnote_start),
-                    ),
-                    (Some(cur), Some(next)) if next < cur
-                )
-            })
-    }
-
     /// [Task #2079] P6 판정: 그림 뒤 텍스트 tail 이 다음 쪽에서 시작해야 하는지 (구분자 없음 프로파일).
     #[allow(clippy::too_many_arguments)]
     pub(in crate::renderer::typeset) fn judge_no_separator_tail_after_picture_starts_next_page(
