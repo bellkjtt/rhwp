@@ -219,7 +219,13 @@ pub(super) fn collect_system_families(font_mgr: &FontMgr) -> SystemFontFamilies 
 }
 
 pub(super) fn has_system_family(system_families: &SystemFontFamilies, family: &str) -> bool {
+    // Skia의 실제 family 조회는 ASCII 대소문자를 구분하지 않는다.
+    // 설치 이름 HyhwpEQ를 요청 HYhwpEQ의 사전 필터에서 제외하면
+    // 측정 face 대신 대체 글꼴로 표시하게 된다. 없는 이름은 계속 제외한다.
     system_families.contains(family)
+        || system_families
+            .iter()
+            .any(|installed| installed.eq_ignore_ascii_case(family))
 }
 
 pub(super) fn match_system_family_style(
