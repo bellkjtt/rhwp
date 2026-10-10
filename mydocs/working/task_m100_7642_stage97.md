@@ -107,3 +107,43 @@ curly의 공통 논리 슬롯과 화살표 전진을 이 구문 보정과 함께
 종료된 프로세스가 없고 파일이 열려 있지 않음을 확인한 뒤 중간 SVG 111개,
 8.41GiB만 해시 원장을 남겨 정리했다. 원본·PDF·PNG·TSV와 공용 target은 보존했다.
 근거는 `stage97-retired-before-controllers.json`, `stage97-retired-before-svg-cleanup.json`이다.
+
+
+## 보정 후 종료 결과와 남은 경로
+
+Native 빌드는 exit 0, 511.50초다. source `b97e38052`와 바이너리 해시는
+`stage97-brace-native-provenance.json`에 보존했다. 새로운 진단 11종/12쪽을 재출력했다.
+
+| 진단 | 최저 직접 Skia 일치율 |
+| --- | ---: |
+| v2 | 97.93503% |
+| v3 | 97.95841% |
+| owner | 99.56214% |
+| brace | 99.26976% |
+| spacing | 95.43265% |
+| prefix | 99.26430% |
+| atoms | 99.25976% |
+| mixed | 100.00000% |
+| grammar | 46.04651% |
+| bigop | 94.56327% |
+| marker | 72.03024% |
+
+혼합 첨자는 100%, 합·적분은 94.56327%로 개선됐다. grammar 2쪽과 marker는 미달이다.
+두 실패 review PNG를 직접 열고 같은 Native 라이브러리를 링크한 ignored 진단으로
+Paint JSON의 실제 LayoutBox를 읽었다. 새 Cargo target을 만들지 않았으며 font/image bytes는
+생략했다. 근거는 `stage97-native-layout-diagnostic-provenance.json`과
+`stage97-native-layout-json/{grammar-002,marker-001}.json`이다.
+
+일반 변수 이름도 tokenizer에서 Command로 읽히며, 단일 인자 파싱이 명령 fallback의
+`try_parse_scripts`를 호출한다. 이 지점에서 `x_a^2`의 ^2를 a에 붙여 span의 반대 슬롯
+경계를 먼저 소비한다. 원자 명령의 tail 결합을 span 소비와 분리해야 한다.
+일반 Row의 Newline은 가로 원점 누적에 남아 `x^2#y`의 y가 같은 줄에 붙는다.
+또한 `layout_subsup`는 독립 한컴 기준선 helper를 소비하지 않아 위첨자가 본체와 겹친다.
+세 실제 경로를 함께 보정하며 값·golden 변경으로 미달을 숨기지 않는다.
+
+### curly 폭 분석의 정정
+
+앞서 22pt 명목 fs의 curly 슬롯이 1050HU라고 적은 계산은 잘못됐다.
+`source_font_text::logical_advance`는 75HU 단위로 반올림하므로 이전 코드도
+1125HU다. 새 공통 helper는 확인된 11/22pt에서 같은 폭이며 슬롯 폭 결함 판정을 철회한다.
+spacing 점수가 동일한 실제 실행 결과와도 일치한다. 공통 공급 refactor의 시각 개선을 주장하지 않는다.
