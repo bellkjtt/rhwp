@@ -235,12 +235,15 @@ const off = editor.onFieldChanged((event) => {
 off();
 ```
 
-### editor.getPageSvg(page?)
+### editor.getPageSvg(page?, options?)
 
-특정 페이지를 SVG 문자열로 렌더링합니다.
+특정 페이지를 SVG 문자열로 렌더링합니다. `options.profile` 을 생략하면 편집 화면과 같은 렌더입니다.
+인쇄·PDF 용으로는 `{ profile: 'print' }` 를 넘기세요 — 빈 누름틀 안내문처럼 편집 화면에서만 보이는
+요소(#3375)가 빠집니다.
 
 ```javascript
-const svg = await editor.getPageSvg(0); // 첫 페이지
+const svg = await editor.getPageSvg(0);                          // 첫 페이지(화면)
+const printSvg = await editor.getPageSvg(0, { profile: 'print' }); // 인쇄용
 ```
 
 ### editor.getRendererDiagnostics(page?)
