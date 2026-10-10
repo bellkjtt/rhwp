@@ -100,17 +100,22 @@ pub(super) fn commands(
     let head_height = em * 265.0 / 1024.0;
     let right_tip = body.x + body.width + em * 0.075;
     let left_tip = body.x - em * 0.10;
-    // 공개 MATH 부품의 connector 길이로 shaft와 화살촉의 접합을 정한다.
-    let connector = if kind == DecoKind::Vec {
-        169.0 / 507.0
+    // 공개 화살촉의 직선 stem 끝까지 shaft를 겹친다. 화살촉 bbox를 맞춘
+    // 세로 배율은 stem도 가늘게 하므로 최소 connector까지만 겹치면
+    // 접합 뒤에 더 가는 선이 남는다. 공통 shaft의 굵기를 이 끝까지 보존한다.
+    let right_stem_end = if kind == DecoKind::Vec {
+        408.0 / 507.0
     } else {
-        166.0 / 499.0
+        400.0 / 499.0
     };
-    let tip_to_joint = head_width * (1.0 - connector);
+    let tip_to_stem = head_width * (1.0 - right_stem_end);
     let (start, end) = match kind {
         DecoKind::Bar => (body.x, body.x + body.width),
-        DecoKind::Vec => (body.x - em * 0.025, right_tip - tip_to_joint),
-        DecoKind::Dyad => (left_tip + tip_to_joint, right_tip - tip_to_joint),
+        DecoKind::Vec => (body.x - em * 0.025, right_tip - tip_to_stem),
+        DecoKind::Dyad => (
+            left_tip + head_width * 99.0 / 499.0,
+            right_tip - tip_to_stem,
+        ),
         _ => unreachable!(),
     };
     let mut result = vec![

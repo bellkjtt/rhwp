@@ -12,6 +12,37 @@ use super::metrics::FormattedParagraph;
 use crate::model::{paragraph::Paragraph, provenance::LayoutCompatibilityProfile};
 use crate::renderer::{hwpunit_to_px, pagination::PageItem};
 
+/// 수식이 참여한 실제 한 줄의 점유가 독립 저장 줄 프레임 안에 남는지 확인한다.
+/// 크기가 증가한 개체·재조판 다줄을 낡은 저장 경계로 수용하지 않는다.
+fn inline_equations_match_saved_line(
+    para: &Paragraph,
+    fmt: &FormattedParagraph,
+    current_height: f64,
+    body_height: f64,
+    dpi: f64,
+) -> bool {
+    use crate::model::control::Control;
+    if para.controls.is_empty()
+        || !para.controls.iter().all(|control| {
+            matches!(control, Control::Equation(equation) if equation.common.treat_as_char)
+        })
+    {
+        return false;
+    }
+    let [height] = fmt.line_heights.as_slice() else {
+        return false;
+    };
+    let Some(saved) = para.line_segs.first() else {
+        return false;
+    };
+    let saved_height = hwpunit_to_px(saved.line_height.max(saved.text_height), dpi);
+    let roundoff = f64::EPSILON * saved_height.abs().max(1.0) * 8.0;
+    *height > 0.0
+        && saved_height > 0.0
+        && *height <= saved_height + roundoff
+        && current_height + (fmt.height_for_fit - fmt.spacing_after).max(0.0) <= body_height
+}
+
 pub(in crate::renderer::typeset) struct WholeFitPage<'a> {
     pub profile: LayoutCompatibilityProfile,
     pub omit_fresh_recalc_doc: bool,
@@ -78,7 +109,14 @@ pub(super) fn inspect(
         // page-last 증거가 있으면 신뢰 — 개체는 하단 여백 스필(한컴 정합).
         && (para.controls.is_empty()
             || para_controls_only_topbottom_floats(para)
-            || para_controls_only_tac_topbottom_objects(para))
+            || para_controls_only_tac_topbottom_objects(para)
+            || inline_equations_match_saved_line(
+                para,
+                fmt,
+                page.current_height,
+                available_height(),
+                dpi,
+            ))
         && !page.current_items.is_empty()
         // [Task #1749] 저장 flow 가 이 줄을 페이지 마지막으로 인코딩한 경우에만
         // bounds 신뢰 — 누적좌표 문서의 쪽 경계 overfill 차단.
