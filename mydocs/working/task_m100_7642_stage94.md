@@ -76,3 +76,25 @@ HFT EQALIGN의 묶음 기준선은 첫 행에 연결한다. 오른쪽 칸이 없
 자기닫힘 `script`는 뒤 텍스트를 스크립트로 삼지 않고, 자기닫힘 `shapeComment`는
 하위 텍스트 읽기에 진입하지 않는다. 내용 있는 설명은 기존대로 읽는다.
 아직 이 후보의 lint·빌드·시각 결과는 미검증이다. 정식 회귀 추가·변경은 없다.
+
+
+## 독립 대조와 lint 완료
+
+v2의 HWP 저장 job은 `3c8d98a1-2eb0-4270-8456-887b875d1468`, Print job은
+`c9b16008-e3eb-4a3c-8341-f91032822458`이다. v3의 저장 job은
+`c306701e-571f-4d7e-9701-26d5a8f84462`, Print job은
+`d72b6f6e-8757-4a82-afb0-8debb30fccf3`이다. 28개 모두 입력의 스크립트·BaseUnit과
+한컴 저장본의 값이 대응한다. 독립 관측과 행 공간의 관계를
+`stage94-independent-empty-row-contracts.json`에 연결했다.
+
+검증 source는 `d666c0a2e7298f5d62f6ca5e33d7623937ed1c2e`이다.
+`stage94-empty-row-type-checks.json`의 포맷 22.52초, Native Clippy 94.65초,
+WASM Clippy 68.38초, Skia lib check 42.36초는 각각 exit 0이다.
+Native 빌드는 `empty-row-native-provenance.json`의 고정 source로 실행 중이다.
+완료 후 독립 28개 진단과 수학 두 원본의 전체 쪽 Skia 직접 비교를 순서대로 실행한다.
+`stage94-validation-controller.json`에 실제 단계·PID·exit code를 기록한다.
+현재 빌드 성공·시각 통과·정식 관계형 회귀 완료를 선언하지 않는다.
+
+Stage93 전체 Native/fresh WASM 작업은 고정 이전 바이너리·패키지로 계속 실행한다.
+새 수식 source의 검증으로 재사용하지 않으며 변경 전 대조 자료로 구분한다.
+최종 source의 필수 전체 TSV·확대 판독·정식 회귀·전체 lint와 nextest는 남아 있다.
