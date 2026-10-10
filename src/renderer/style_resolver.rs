@@ -391,6 +391,7 @@ fn resolve_single_char_style(cs: &CharShape, doc_info: &DocInfo, dpi: f64) -> Re
         font_space_em,
         font_size,
         font_sizes,
+        font_positions: cs.char_offsets.to_vec(),
         bold: cs.bold,
         italic: cs.italic,
         text_color: cs.text_color,

@@ -865,6 +865,8 @@ pub(crate) fn resolved_to_text_style(
             hft_fullwidth_dot: cs.hft_fullwidth_dot_for_lang(lang_index),
             font_size: cs.font_size_for_lang(lang_index),
             resolved_font_size: true,
+            font_position: (cs.font_position_for_lang(lang_index) != 0)
+                .then(|| cs.font_position_for_lang(lang_index)),
             color: cs.text_color,
             bold: cs.bold,
             italic: cs.italic,

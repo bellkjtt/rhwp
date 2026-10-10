@@ -65,6 +65,8 @@ pub struct ResolvedCharStyle {
     pub font_size: f64,
     /// 언어별 상대 크기를 적용한 글리프 크기(px). 기본 줄 크기와 구분한다.
     pub font_sizes: Vec<f64>,
+    /// 언어별 글자 위치. 글꼴 크기에 대한 부호 있는 백분율이며 줄 원점과 구분한다.
+    pub font_positions: Vec<i8>,
     /// 진하게
     pub bold: bool,
     /// 기울임
@@ -133,6 +135,7 @@ impl Default for ResolvedCharStyle {
             font_space_em: None,
             font_size: 12.0,
             font_sizes: Vec::new(),
+            font_positions: Vec::new(),
             bold: false,
             italic: false,
             text_color: 0,
@@ -257,6 +260,14 @@ impl ResolvedCharStyle {
             .get(lang_index)
             .copied()
             .unwrap_or(self.font_size)
+    }
+
+    pub fn font_position_for_lang(&self, lang_index: usize) -> i8 {
+        self.font_positions
+            .get(lang_index)
+            .or_else(|| self.font_positions.first())
+            .copied()
+            .unwrap_or_default()
     }
 
     /// 지정 언어 카테고리의 자간(px)을 반환한다.

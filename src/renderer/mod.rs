@@ -300,6 +300,9 @@ pub struct TextStyle {
     /// 원본 글자 스타일에서 크기를 해소했는지. 명시적인 0과 미지정을 구별한다.
     #[serde(skip_serializing)]
     pub resolved_font_size: bool,
+    /// 원본 언어 슬롯의 글자 위치(%). 0은 기존 직렬화와 같이 생략한다.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub font_position: Option<i8>,
     /// 글자 색상
     pub color: ColorRef,
     /// 진하게
@@ -496,6 +499,10 @@ impl TextStyle {
     ///
     /// HY신명조의 그리기 기준선은 한컴 PDF와 비교한 글꼴 메트릭 차이를 반영한다.
     pub fn script_draw_metrics(&self, base_font_size: f64, baseline_y: f64) -> (f64, f64) {
+        // 줄 기준선과 글리프 위치는 별도 속성이다. 양수는 아래 방향이며
+        // 원본 글꼴 크기의 비율로 이동한다. 모든 paint backend가 같은 값을 쓴다.
+        let baseline_y =
+            baseline_y + base_font_size * f64::from(self.font_position.unwrap_or_default()) / 100.0;
         // exam_kor 한컴 PDF 17쪽 T5와 동일 글자 79개의 가로 원점을 맞춰 대조하면
         // SVG의 HY신명조 기준선이 1.43~1.56px 낮다(글꼴 크기 약 15px).
         // 줄 상자와 전진폭은 유지하고 표시 기준선만 글꼴 크기의 0.1em 올린다.
@@ -637,6 +644,7 @@ impl Default for TextStyle {
             fixed_glyph_advances: false,
             source_font_is_hft: false,
             resolved_font_size: false,
+            font_position: None,
             color: 0,
             bold: false,
             italic: false,
