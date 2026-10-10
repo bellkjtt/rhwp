@@ -135,6 +135,24 @@ Studio `tsc --noEmit --pretty false`가 exit 0이고 기존
 같은 고정 바이너리로 시작했다. 관련 px 검사의 관계형 전환,
 전체 fresh WASM TSV, 전체 회귀와 최종 PR 검증은 남아 있다.
 
+### 300dpi 확대 판독의 잔여 차이
+
+동일 원본·Print PDF를 300dpi로 rasterize한 진단은 94.57865%다.
+2px 관용의 물리 크기가 96dpi와 다르므로 두 점수를 직접적인
+개선율로 비교하지 않는다. 새 그림은
+`stage83-not-glyph-frame-300dpi-selected-detail-review.png`이며
+문단 라벨과 수식 노드로 선택한 동일 영역을 확대했다.
+
+중괄호 높이와 NOT 사선의 큰 차이는 가까워졌지만 `W`의
+글자 모양·기울기가 다르다. 해당 SVG는 Latin Modern Math의
+U+1D44A를 표시하고 Print는 HYhwpEQ의 U+E016을 표시한다.
+각 잉크 범위는 UPM 1000에서 (55,-22,1048,683), UPM 1024에서
+(19,-20,1033,702)다. 논리 전진과 실제 표시 face의 모양을 구분해야
+하며 같은 사선만으로 수식 전체를 완료 판정할 수 없다.
+관측값은 ignored `stage83-micro-findings.json`에 보존했다.
+이 차이의 보정과 직접 판독은 아직 미완료다. 점수 통과로
+면제하거나 새 회귀 기대값으로 고정하지 않는다.
+
 Stage 82 집중 검증 중 ENOSPC가 발생했다. 실제 프로세스가
 모두 종료된 상태를 확인했고 완료된 Native 10문서와 WASM
 7문서의 결과를 보존했다. 새 source의 검증 완료로 승격하지
