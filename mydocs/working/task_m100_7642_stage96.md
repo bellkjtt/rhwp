@@ -35,3 +35,30 @@ one-up 출력 모드를 비공개 인증 정보 없이 ignored output에 보존�
 소비를 함께 확인한다. 큰 중괄호를 짧게 보이게 하기 위한 clamp나 임의 고정 px 보정은 하지 않는다.
 관련 진단과 원본을 한 번의 빌드 후 재출력하며 새로운 확대 review PNG를 직접 연다.
 최종 Native/fresh WASM 전체 TSV·확대 판독 후 관계형 회귀 변경과 전체 필수 검증을 진행한다.
+
+## 독립 출력과 초기 관측
+
+12개 수식의 변환 전후 개수·스크립트·BaseUnit을 실제 확인했다.
+한컴 정상 저장 job은 `61a34d38-349b-4aab-8959-abac7c846ae8`,
+그 저장본의 Print job은 `dbd11b09-791e-49a5-8e88-6cb61c26d0ed`다.
+실제 한컴은 `11.0.0.9136`, engine 2020, method 0,
+`hancom2020_pdf_driver_one_up`이며 PDF는 한 쪽이다.
+`stage96-brace-spacing-probe/conversion-pipeline.json`에 입력/출력 해시와 경로를 보존한다.
+MCP에서 HWP를 정상 저장하고 PDF를 인쇄했다. 분석용 HWPX는 같은 HWP를
+RHWP로 읽어 내보낸 로컬 진단이며 MCP의 HWPX 산출로 보고하지 않는다.
+
+일반 행의 독립 프레임 1125HU/2175HU와 다음 높이가 대응한다.
+
+| BaseUnit | CASES 3행 | CASES 4행 | LEFT/RIGHT 3행 | LEFT/RIGHT 4행 |
+| ---: | ---: | ---: | ---: | ---: |
+| 1100 | 3705HU | 4995HU | 3375HU | 4500HU |
+| 2200 | 7185HU | 9690HU | 6525HU | 8700HU |
+
+CASES의 높이는 일반 행 프레임의 합에 행 경계마다 `0.15 × BaseUnit`을 더하면
+네 값 모두 정확히 일치한다. 현재 152/1024 leading과 저장 메트릭의 작은 차이도
+이 근거로 설명할 수 있다. LEFT/RIGHT는 행 프레임의 합이며 CASES의 leading을 소비하지 않는다.
+
+독립 조건식의 폭은 11pt에서 `<` 4507HU·`GEQ` 4657HU, 22pt에서 각각
+9615HU·9990HU다. 원본 복합 조건식과 비교해 괄호·공백·관계 기호의 전진을 추적한다.
+`stage96-before-skia/receipt.json`의 현재 코드 대조는 85.36585%로 미달이다.
+새 기준과 원인 조사를 확보했으며 구현·시각 보정·정식 회귀 완료는 아니다.
