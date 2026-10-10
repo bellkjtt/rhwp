@@ -6,7 +6,7 @@ use super::{is_integral_symbol, EqLayout, EqNode, LayoutBox, LayoutKind};
 const SUPERSCRIPT_SHIFT_UP: f64 = 0.363;
 const SUPERSCRIPT_BOTTOM_MIN: f64 = 0.108;
 
-/// 한컴의 Latin 대문자 뒤 단일 위첨자는 정체/이탤릭 모두 0.15em을 예약한다.
+/// 한컴의 Latin 대문자 뒤 위첨자는 정체/이탤릭 모두 0.15em을 예약한다.
 /// 명시 공백 또는 닫는 구분자 뒤에는 이 문자 전진을 중복 추가하지 않는다.
 fn ends_with_uppercase_letter(node: &EqNode) -> bool {
     match node {
@@ -21,6 +21,14 @@ fn ends_with_uppercase_letter(node: &EqNode) -> bool {
 }
 
 impl EqLayout {
+    fn script_uppercase_gap(&self, base: &EqNode, fs: f64) -> f64 {
+        if self.hancom_math_face && ends_with_uppercase_letter(base) {
+            fs * 0.15
+        } else {
+            0.0
+        }
+    }
+
     fn script_superscript_shift(&self, base: &LayoutBox, sup: &LayoutBox, fs: f64) -> f64 {
         self.hancom_math_face
             .then(|| super::super::logical_font_frame::superscript_shift(base, sup, fs, self.dpi))
@@ -51,11 +59,7 @@ impl EqLayout {
         }
         let mut base_box = self.layout_node(base, fs);
         let mut sup_box = self.layout_node(sup, self.script_font_size(fs));
-        let letter_gap = if self.hancom_math_face && ends_with_uppercase_letter(base) {
-            fs * 0.15
-        } else {
-            0.0
-        };
+        let letter_gap = self.script_uppercase_gap(base, fs);
 
         // 위첨자의 깊이를 포함해 본체 기준선 위에 하단 여유를 확보한다.
         // 키 큰 본체는 원래 기준선을 유지하므로 위첨자를 맞추려고 본체를 올리지 않는다.
@@ -132,6 +136,7 @@ impl EqLayout {
 
         let shift = self.script_superscript_shift(&b, &sp, fs);
         let sup_y = b.baseline - shift - sp.baseline;
+        let letter_gap = self.script_uppercase_gap(base, fs);
         let (sub_y, sub_height) = self.script_subscript_geometry(&b, &sb, fs);
         let base_y = (-sup_y).max(-sub_y).max(0.0);
 
@@ -140,7 +145,7 @@ impl EqLayout {
         base_box.y = base_y;
 
         let mut sup_box = sp;
-        sup_box.x = base_box.width;
+        sup_box.x = base_box.width + letter_gap;
         sup_box.y = base_y + sup_y;
 
         let mut sub_box = sb;
@@ -151,8 +156,7 @@ impl EqLayout {
             .max(sup_box.y + sup_box.height)
             .max(sub_box.y + sub_box.height);
 
-        let script_w = sup_box.width.max(sub_box.width);
-        let total_w = base_box.width + script_w;
+        let total_w = (sup_box.x + sup_box.width).max(sub_box.x + sub_box.width);
 
         LayoutBox {
             font_size: fs,

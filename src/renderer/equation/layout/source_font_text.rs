@@ -73,12 +73,15 @@ pub(super) fn layout(
                     .flatten()
             })
         }
-        .unwrap_or_else(|| logical_advance(advances[usize::from(ch - first)], fs, dpi))
-            + if bold {
-                super::source_variable_style::bold_extra_advance(dpi)
-            } else {
-                0.0
-            };
+        .unwrap_or_else(|| {
+            // 미측정 크기도 글자·기호가 공유하는 한컴 논리 em 격자로 전진한다.
+            let em = super::source_roman_advance::em_advance(fs, dpi).unwrap_or(fs);
+            logical_advance(advances[usize::from(ch - first)], em, dpi)
+        }) + if bold {
+            super::source_variable_style::bold_extra_advance(dpi)
+        } else {
+            0.0
+        };
         let display = variable_style::display_text(&char::from(ch).to_string(), italic, bold);
         let outline = outline_contract
             .then(|| {

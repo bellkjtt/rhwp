@@ -28,3 +28,13 @@ SVG·Canvas·Skia·Paint JSON이 같은 LayoutBox를 소비한다. 아래첨자 
 동일 12종/13쪽 Print를 재출력해 전체 점수와 대문자/기존 marker 확대를 확인한다.
 새 Native/fresh WASM 전체 TSV·원본 확대 판독 뒤 관계형 회귀를 변경한다.
 전체 필수 검증·새 PR·CI·머지 후속 처리까지의 목표는 미완료 상태로 유지한다.
+
+## 구현 반영
+
+Sup와 SubSup의 위첨자 x가 공통 `script_uppercase_gap`을 소비한다. SubSup의
+아래첨자 x는 본체 전진 뒤에 두고 전체 폭은 두 첨자의 실제 점유 끝으로 계산한다.
+측정 표에서 얻은 ASCII 전진은 우선하며 표에 없는 크기만 기존 `em_advance`의
+logical em을 사용해 hmtx를 반올림한다. 독립 Print의 22pt X 전진과 연결된다.
+
+fmt 실행은 종료 코드 0이다. 새 구현의 lint·빌드·12종 시각 대조와 전체 검증은
+아직 미실행이다. 정식 회귀 추가·기대값 변경은 하지 않았다.
