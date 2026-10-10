@@ -43,3 +43,26 @@ Sup/Sub/SubSup의 위 이동량·아래 원점과 논리 점유를 두 helper로
 실제 위·아래 자식 원점과 점유 끝을 반영하고 적분의 별도 경로는 유지한다. fmt 실행은
 종료 코드 0이다. 새 source의 lint·빌드·시각 검증은 아직 미실행이며, 정식 회귀 추가나
 기대값 변경은 하지 않았다.
+
+## 초기 검증 결과
+
+구현 SHA는 `31b0f37c32ee7846f66bb9d53ccb039482948b46`다.
+`stage98-brace-type-checks.json`의 fmt·Native Clippy·WASM Clippy·Skia lib check는
+모두 종료 코드 0이다. workspace 전체 lint나 전체 회귀 통과를 의미하지 않는다.
+
+`stage98-parser-ownership/receipt.json`은 기존/현재 source를 해시 고정한 parser 진단이다.
+`x_a^2`, `x^2a_n`, `x_a^2-b`의 기존 중첩 소속이 부모 x의 두 슬롯으로 교정됐다.
+명시 중괄호·반복 위첨자·기존 아래 슬롯이 있는 합·근호·구분자 등 9개 대조군의
+AST는 유지됐다. 처음 진단 컴파일에서 legacy 정규화 모듈 누락으로 실패했으며 이를
+포함한 재실행은 양쪽 모두 종료 코드 0이다. 이 준비 실패는 결함 재현으로 세지 않는다.
+
+`stage98-whole-input-catalog-audit.json`에서 55개 원본/독립 PDF의 실재·해시와
+PDF 전체 853쪽을 재확인했다. 렌더링 일치나 Print 출처를 재검증한 결과는 아니다.
+`stage98-regression-geometry-audit.json`은 요청 경로에 대응하는 92개 현재 파일을
+조사한 정적 후보다. 37개 파일, 128개 test block에서 고정 geometry 검토 후보가
+검출됐다. 원 #1139 파일의 43개 후보가 포함되며 이동한 관계형 파일은 이 패턴에
+검출되지 않았다. 같은 파일의 비요청 검사가 포함될 수 있으므로 이 수치를 완료율이나
+전체 관계형 여부로 해석하지 않는다. 실제 body와 독립 출력 대조가 남아 있다.
+
+Native 빌드와 새 11종 전체 Print 대조는 실행 중이다. 새 대표 PNG의 확대 판독과
+전체 Native/fresh WASM, 회귀 관계형 전환·필수 전체 검증·PR 절차는 아직 미완료다.
