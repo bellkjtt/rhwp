@@ -44,3 +44,17 @@ paired CASES와 후속 본문 대조, 기존 CASES 32개 전체 두 쪽, 분수�
 첫 소유 차이가 개선됐는지도 별도로 확인한다. 입력/출력 SHA와 명령은
 ignored output에 기록한다. 전체 원본 TSV와 직접 판독 후 관계형 회귀를
 변경하며, 아직 fixture·golden·기존 기대값을 변경하지 않는다.
+
+## Native 후속 본문 대조 결과
+
+source `2ee336fde3f372d5f9dc9f7cb5425feb2fbea3a4`의 Native 빌드,
+fmt check와 Native Clippy는 exit 0이다. 후속 본문을 붙인 4개 산식의
+독립 Print 1쪽 대조는 92.77681%에서 98.72170%로 개선됐다.
+저장 geometry 유지/재생성 쌍은 수식 뒤 같은 본문 시작을 사용하며,
+글리프 원점·행 높이를 움직이지 않고 실제 점유 끝의 폭만 공유했다.
+확대 before / after / Print도 같은 원문 영역에서 새로 산출해 판독했다.
+
+이 source의 paired 대조는 98.16677%다. 종단 수식의 별도 줄 소유를
+함께 보정하는 Stage 78로 이어가면서 나머지 반복 집중 검증은 의도적으로
+종료했다. 완료 기록과 이미지는 보존했으며, 해당 Native 부분 결과를
+최신 head 전체 또는 fresh WASM 통과로 간주하지 않는다.
