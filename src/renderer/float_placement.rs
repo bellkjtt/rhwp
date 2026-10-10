@@ -46,6 +46,35 @@ use super::layout::picture_flow_frame_size_hu;
 use super::layout_frame::{FrameExclusion, FrameExclusionPolicy, LayoutFrame};
 use super::page_layout::LayoutRect;
 
+/// Top-aligned page-relative Square tables occupying most of the body leave
+/// no usable side lane in a multi-column layout. Reserve their top band using
+/// the same geometry as paint; off-body tables and explicit overlaps are excluded.
+pub(crate) fn is_body_wide_square_table(
+    control: &Control,
+    body_area: &LayoutRect,
+    dpi: f64,
+) -> bool {
+    let Control::Table(table) = control else {
+        return false;
+    };
+    let common = &table.common;
+    if common.treat_as_char
+        || common.allow_overlap
+        || common.text_wrap != TextWrap::Square
+        || !matches!(common.vert_rel_to, VertRelTo::Page | VertRelTo::Paper)
+        || common.vert_align != VertAlign::Top
+        || common.horz_rel_to != HorzRelTo::Page
+        || body_area.width <= 0.0
+    {
+        return false;
+    }
+    let width = hwpunit_to_px(signed_hwpunit(common.width), dpi);
+    let context = FloatPlacementContext::new(*body_area).with_body_area(*body_area);
+    let (left, right) = horizontal_range(common, width, context, dpi);
+    let overlap = right.min(body_area.x + body_area.width) - left.max(body_area.x);
+    overlap >= body_area.width * 0.8
+}
+
 /// Required box for saved text in a cell. The declaration already owns its
 /// padding when the saved line box fills it; otherwise actual text plus active
 /// padding must fit, independently of the number of rows in the table.
