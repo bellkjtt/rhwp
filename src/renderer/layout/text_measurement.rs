@@ -1756,6 +1756,8 @@ fn char_width_decision_with_hft_tracking<'a>(
     // 표시용 TTF의 bold 메트릭이나 배분 자간과 구분하고 원본 자간을 함께 소비한다.
     let font_tracking = if include_hft_bold_tracking
         && style.bold
+        && !c.is_whitespace()
+        && !c.is_control()
         && metric
             .as_ref()
             .is_some_and(|found| font_metrics_data::is_legacy_hft_metric_face(found.metric.name))

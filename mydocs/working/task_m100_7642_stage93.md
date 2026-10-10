@@ -88,3 +88,26 @@ source의 세부 조건과 새 branch는 글꼴 프로그램과 설치 family로
 문서 번호·본문 문자열·페이지 좌표 조건을 넣지 않았다.
 
 아직 새 source의 lint·빌드·시각 결과는 미검증이다. 정식 회귀 추가/변경은 없다.
+
+
+## 공백 계약의 추가 확인과 후보 수정
+
+같은22행의 실제 visible glyph 원점을 원본 문자열의 공백 수와 대조했다.
+굵기 간격을 공백에도 더한 해석은 정체 대비 차이가 행 끝까지 누적돼,
+자간0에서 디나루3.16pt·신그래픽6.29pt의 원점 오차가 생긴다. 공백을 제외하면
+각각0.48pt·0.63pt로 줄어 Print 드라이버 격자 잔차 수준에 가까워진다.
+이 숫자는 진단 관측이며 회귀의 허용치가 아니다. 전체 결과는 ignored
+`stage92-char-style-probe/independent-bold-space-comparison.json`에 있다.
+
+첫 후보 source `d33e3102a8293444cf3f750b29ef16255027d717`은 포맷·Native/WASM Clippy·
+Skia check가 모두0이지만 이 공백 계약을 놓쳤다. 해당 후보의 실행 중 빌드만
+소유 PID/start ticks를 확인해 종료했다. Native build는198.41초, exit-15이며
+성공 binary나 시각 통과 증거가 아니다. 실행 종료와 Cargo/Rust process 부재를
+확인한 뒤 공백·제어 문자를 굵기 전진에서 제외했다. 후보 단계에서 발견한
+잘못된 가정을 바로잡은 것이며 원본을 변경하거나 시각 임계값을 완화하지 않았다.
+
+첫 후보의 lint driver를 복사하면서 로그 파일 이름이 Stage92를 가리켜 기존
+Stage92 lint stdout 로그를 덮어쓴 잘못도 확인했다. d33의 실제 stdout은
+`stage93-d33-<검사>.log`로 별도 보존했다. 이전 Stage92의 실행 receipt와 source
+해시·exit code는 유지돼 있지만 해당 stdout은 이전 source 증거로 재사용하지 않는다.
+새 v2 driver는 receipt·로그·빌드 provenance·PNG 경로를 모두 구분한다.
