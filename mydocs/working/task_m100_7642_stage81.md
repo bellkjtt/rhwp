@@ -63,4 +63,31 @@ Stage 80의 fresh WASM 빌드 종료·exit 0과 package 고정을 확인한 뒤
 
 소스 보정과 같은 단계 문서를 함께 커밋한다. 원본/저장본 Native/fresh
 WASM 재대조·확대 판독을 수행하고, 검증 범위가 90% 이상일 때만
-정식 검사 변경과 fixture 커밋에 연결한다. 후보 구현 후 출력 검증은 미완료다.
+정식 검사 변경과 fixture 커밋에 연결한다.
+
+## Native 실행 결과와 확대 판독
+
+source `1839e1a57ec86ee00e98cea16aade180939e13a7`의 Native 빌드,
+fmt 검사와 Native Clippy는 exit 0이다. 같은 source의 집중 대조에서
+저장 전 HWPX v1/v2는 각각 96.33628% / 99.97388%, 정상 저장 HWP
+v1/v2는 99.08506% / 99.83405%다. 앞서 보정한 미주 대조군
+all-18의 9–11쪽 최저값은 97.66761%, all-16의 20–22쪽은
+96.74046%다. 여섯 입력·열 쪽의 자동 gate가 통과했으며 전체
+55개 원본·853쪽의 최종 검증 완료를 뜻하지 않는다.
+
+Native 큐·명령·입력/PDF 해시·페이지별 결과는 ignored
+`output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/`
+아래 `missing-equation-cache-focused-native/queue.json`에 있다.
+전체 원본 55개의 수식 56,468개를 순회한 별도 입력 조사에서는
+폭 또는 높이가 0인 수식이 없었다. 이 조사는 새 누락 캐시 분기의
+적용 범위를 확인한 결과이며 시각 무회귀 증거로 대신하지 않는다.
+
+같은 source의 `stage81-bare-not-operand-detail-review.png` 확대
+판독에서는 `not {xy}`가 여전히 다르다. RHWP는 `xy` 위에 사선을
+겹치고, 독립 Print는 `xy` 앞에 별도 기호를 놓는다. PDF의 글리프
+원점도 앞 기호와 뒤 `xy`가 분리됨을 보여 준다. 페이지 점수가
+90% 이상이어도 이 모양·내용 차이는 미충족이다. 새 fixture와
+회귀 기대값은 아직 추가하지 않는다. 다음 단계에서 문자·관계
+기호·그룹을 함께 한컴 저장/Print로 대조해 문법과 표시 규칙을
+확인한다. fresh WASM 빌드와 집중 대조는 별도 실행 중이며,
+현재 Native 결과를 fresh WASM 완료로 보고하지 않는다.
