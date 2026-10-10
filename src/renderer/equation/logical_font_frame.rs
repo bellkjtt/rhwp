@@ -232,7 +232,16 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
                     return Some(frame);
                 }
             }
-            return super::font_frame_metrics::accent_at_dpi(fs, dpi, prime);
+            let (accent_height, accent_baseline) =
+                super::font_frame_metrics::accent_at_dpi(fs, dpi, prime)?;
+            // 장식 안의 정체 명령은 본체 줄 높이를 먼저 바꾼다. 외부 정체 명령의
+            // 장식 프레임을 그 자리에 대신 쓰지 않는다. 독립 16/22pt의 내부/외부
+            // 정체 입력은 각각 1915/1902HU, 2635/2622HU로 서로 다르다.
+            let base_line_height = super::font_frame_metrics::line_at_dpi(fs, dpi)?.0;
+            let body_line_height = frame_with_style(body, fs, dpi, roman)
+                .map_or(base_line_height, |(height, _)| height);
+            let height = accent_height + body_line_height - base_line_height;
+            return Some((height, height * accent_baseline / accent_height));
         }
         _ => {}
     }

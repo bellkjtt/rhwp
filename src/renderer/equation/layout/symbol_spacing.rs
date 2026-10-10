@@ -29,6 +29,15 @@ fn opening_delimiter(node: &EqNode) -> bool {
 fn reserves_operator_gap(node: &EqNode) -> bool {
     match node {
         EqNode::Fraction { .. } | EqNode::Sqrt { .. } => true,
+        // 독립 Print의 벡터 합·괄호식은 장식 점유 뒤 앞 연산자 여백을 다시 더하지 않는다.
+        // 장식 본체의 좌우 여유와 연산자 뒤 여백은 각각 별도로 보존한다.
+        EqNode::Decoration {
+            kind:
+                super::super::symbols::DecoKind::Bar
+                | super::super::symbols::DecoKind::Vec
+                | super::super::symbols::DecoKind::Dyad,
+            ..
+        } => true,
         EqNode::Paren { right, .. } => !right.is_empty(),
         EqNode::FontStyle { body, .. } => reserves_operator_gap(body),
         EqNode::Row(items) => items.last().is_some_and(reserves_operator_gap),
