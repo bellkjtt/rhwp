@@ -72,4 +72,17 @@ filled outline을 만들며 SVG·Canvas·Skia가 같은 명령을 그린다.
 MathVariants·GlyphAssembly·GlyphPartRecord 계약을 대조한다. 규약은 단일 배치 알고리즘을
 정하지 않으므로 이 구현의 실제 한컴 일치는 독립 Print와 재출력으로 별도 검증한다.
 
-현재 후보는 아직 lint·빌드·시각 검증 전이다. 정식 회귀 추가·변경은 없다.
+구현은 `c21430a25`로 고정했다. 정식 회귀 추가·변경은 없다.
+
+### 공개 데이터와 초기 검사
+
+`stage95-public-brace-data-check.json`에서 원본 WOFF2의 RecordingPen 결과와
+Rust 윤곽 12개가 동일함을 확인했다. 3001 font unit의 마지막 variant 다음과
+3666/5122 unit의 extender 증가 경계를 포함한 7개 높이에서 연결부 겹침이
+원본 MATH의 최소값·양쪽 연결 가능 길이를 만족했다. 공개 데이터 추출·연결 조건의
+진단이며 한컴 Print 일치나 정식 렌더링 회귀를 대신하지 않는다.
+
+`stage95-brace-type-checks.json`의 포맷 검사와 Native Clippy는 exit 0이다.
+WASM Clippy·Skia 검사·Native 빌드·44개 독립 수식과 수학 원본 40쪽 대조는
+별도 controller의 최종 상태로 판정한다. 실행 중인 단계를 통과로 기록하지 않는다.
+라이선스 고지는 `611e1f7fe`에서 생성 데이터의 variant·조립 부품까지 추가했다.
