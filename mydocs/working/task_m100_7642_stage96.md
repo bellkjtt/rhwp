@@ -110,3 +110,40 @@ Print job은 각각 `d36105af-df31-4077-90c2-83f9a4ff69f2`,
 connector 최대 overlap을 초과하므로 0개부터 필요한 개수를 선택하도록 보정했다.
 독립 Print 3/4행 높이 8건과 공개 MATH 연결 범위를 대조했으며 모두 유효한 overlap이다.
 근거는 `stage96-public-brace-connector-check.json`이다. 새 source에서 검사·빌드를 다시 실행한다.
+
+
+## 보정 source의 실행 결과
+
+검증 source는 `3c2c3b7eb827df31a315be7fb2aef699993a6703`다. 포맷·Native Clippy·WASM Clippy·
+Skia lib 타입 검사는 모두 exit 0이며 Native release-test/Skia 빌드도 exit 0이다.
+바이너리 SHA-256은 `7048c4b779840ceff71dea7191be82d9249d85c19fb244bfe501162abf68396a`다.
+`stage96-brace-type-checks.json`, `stage96-brace-native-provenance.json`,
+`stage96-independent-skia/receipt.json`에 명령·해시·실행 결과를 보존했다.
+
+| 독립 진단 | 직접 Skia 일치율 | 전체 쪽수 |
+| --- | ---: | ---: |
+| v2 | 97.93503% | 1 |
+| v3 | 97.95841% | 1 |
+| owner | 99.56214% | 1 |
+| brace | 99.26976% | 1 |
+| spacing | 95.43265% | 1 |
+| prefix | 99.26362% | 1 |
+| atoms | 99.25976% | 1 |
+| mixed | 93.32864% | 1 |
+
+8종 모두 직접 Skia 수치 gate를 통과했다. v2는 79.62361% → 97.93503%,
+중괄호·조건식 spacing은 85.36585% → 95.43265%다. Native SVG/fresh WASM TSV와
+전체 55개 원본의 최종 검증, workspace all-target lint·전체 회귀는 아직 완료되지 않았다.
+
+v2·spacing·mixed의 새 review PNG를 직접 열었다. mixed의 전체 점수는 93.32864%지만
+공백 없는 `x^-2`에서 2가 본문에 남고 `x^2-a`에서 뒤 식이 본문에 남는다.
+같은 입력의 독립 Print는 각각 `-2`, `2-a`를 첨자에 표시한다. 이는 점수 통과로
+면제하지 않는 구문 소속 차이다. `mixed/unbraced-script-detail.png`는 실제 렌더 트리의
+수식 bbox를 이용한 확대 판독이며 회귀 테스트의 고정 영역 선택자가 아니다.
+공백·명시 중괄호·관계 기호 경계의 독립 Print를 먼저 추가 대조한 뒤 구문을 보정한다.
+
+spacing의 22pt curly 슬롯도 독립 저장 폭과 대조했다. CASES 3행은 x 1275HU를 포함해
+2400HU, LEFT/RIGHT 3행은 3525HU다. 따라서 curly 한 쪽의 예약은 1125HU이며
+명목 fs 대신 측정한 논리 em 2250HU의 1/2를 소비해야 한다. 같은 단위 계약으로 공통
+slot helper를 보정한다. 화살표의 11/22pt 독립 전진은 1050/2250HU로 논리 em과 같다.
+이 두 전진 및 첨자 경계는 다음 묶음에서 함께 보정하며 전체 완료·정식 회귀 추가로 판정하지 않는다.
