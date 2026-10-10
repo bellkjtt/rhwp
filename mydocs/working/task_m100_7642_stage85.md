@@ -79,7 +79,15 @@ FontGlyph를 모두 같은 AST 연산자의 전진·여백으로 처리하며,
   같은 입력·물리 영역의 수정 전/후/Print/overlay를 연결한다.
 - 루트 WASM wrapper는 exit 0으로 완료했고 고정 package의 JS/WASM과
   Studio public 파일 SHA가 일치한다. source별 Native/fresh WASM 집중 검증은
-  계속 진행 중이다. package 준비만으로 실제 Studio 출력 통과를 선언하지 않는다.
+  계속 진행 중이다. 실제 Studio CanvasKit software surface로 정상 저장 HWP를
+  300dpi Print 프로필로 출력하고 공식 HCRDotum을 공급한 결과도
+  94.58213% → 95.61075%다. 렌더 오류·글꼴 로드 실패·등록되지 않은 fallback은
+  없고, 4개 중괄호와 4개 등호가 공통 윤곽으로 재생된다.
+  `stage85-canvaskit-operator-frame/receipt.json`과 `comparison.json`이
+  source·WASM·frontend·입력·실제 PNG의 출처를 고정한다.
+  `stage85-canvaskit-operator-selected-detail-review.png`는 같은 저장본의
+  이전 실제 CanvasKit 출력/현재 출력/Print/overlay다. 대문자 W의 차이는 남아
+  있으며 이 한 쪽 통과를 원본 전체나 다른 backend의 통과로 확대하지 않는다.
 - 변경 전 source `cd1b2b029`의 전체 원본 검증에서 9월 2024 HWPX
   `samples/3-09월_교육_통합_2024-구분선아래20구분선위20.hwpx`의 21쪽은
   89.39422%다. 같은 입력·독립 Print를 이번 source로 재출력한 결과도
