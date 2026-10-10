@@ -31,6 +31,7 @@ pub(crate) mod radical_outline;
 pub mod svg_render;
 pub mod symbols;
 pub mod tokenizer;
+mod uncached_flow_metrics;
 
 /// 한글 수식은 수학 글꼴의 누락 글리프 대신 본문 명조 계열을 사용한다.
 pub(crate) const CJK_EQUATION_FONT_FAMILY: &str = "Haansoft Batang, 한컴바탕, Batang, 바탕, serif";
@@ -79,6 +80,9 @@ pub fn intrinsic_size_hwp(script: &str, font_size: u32) -> (u32, u32) {
 /// 일반 수식의 저장 프레임과 보호된 크기는 유지한다. 독립 한컴 출력에서
 /// 확인한 글자 줄·윗줄·단일 위첨자·BOX의 낡은 캐시만 논리 상자로 재발행한다.
 pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u32, u32, i32) {
+    if let Some(metrics) = uncached_flow_metrics::metrics(equation) {
+        return metrics;
+    }
     if !equation.common.size_protect
         && equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
         && equation
@@ -278,7 +282,7 @@ pub(crate) fn inline_baseline_px(
     dpi: f64,
 ) -> f64 {
     let (_, height, baseline) = flow_metrics_hwp(equation);
-    if height > 0 && equation.baseline > 0 && equation.baseline <= 100 {
+    if height > 0 && baseline > 0 && baseline <= height as i32 {
         super::hwpunit_to_px(baseline, dpi)
     } else {
         intrinsic.baseline
