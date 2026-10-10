@@ -348,12 +348,16 @@ fn render_box(
             right_width,
             delimiter_height,
             glyph_delimiters,
+            left_outline,
+            right_outline,
             body,
         } => {
             // 텍스트 높이 파렌(`(`, `)`)은 폰트 글리프로 렌더, 그 외는 path. (Task #283)
             let use_glyph = *glyph_delimiters;
             if !left.is_empty() {
-                if use_glyph && (left == "(" || left == ")") {
+                if let Some(commands) = left_outline {
+                    draw_delimiter_outline(ctx, commands, x, y, color);
+                } else if use_glyph && (left == "(" || left == ")") {
                     set_font(ctx, fs, false, false);
                     ctx.set_fill_style_str(color);
                     let _ = ctx.fill_text(left, x, y + lb.baseline);
@@ -373,7 +377,9 @@ fn render_box(
             render_box(ctx, body, x, y, color, fs, italic, bold);
             if !right.is_empty() {
                 let right_x = x + lb.width - right_width;
-                if use_glyph && (right == "(" || right == ")") {
+                if let Some(commands) = right_outline {
+                    draw_delimiter_outline(ctx, commands, right_x, y, color);
+                } else if use_glyph && (right == "(" || right == ")") {
                     set_font(ctx, fs, false, false);
                     ctx.set_fill_style_str(color);
                     let _ = ctx.fill_text(right, right_x, y + lb.baseline);
@@ -462,6 +468,30 @@ fn draw_integral(ctx: &CanvasRenderingContext2d, x: f64, y: f64, fs: f64, color:
 }
 
 /// 늘림 괄호 렌더링
+fn draw_delimiter_outline(
+    ctx: &CanvasRenderingContext2d,
+    commands: &[super::GlyphOutlineCommand],
+    x: f64,
+    y: f64,
+    color: &str,
+) {
+    use super::GlyphOutlineCommand as Command;
+    ctx.set_fill_style_str(color);
+    ctx.begin_path();
+    for command in commands {
+        match *command {
+            Command::Move((a, b)) => ctx.move_to(x + a, y + b),
+            Command::Line((a, b)) => ctx.line_to(x + a, y + b),
+            Command::Cubic([(a, b), (c, d), (e, f)]) => {
+                ctx.bezier_curve_to(x + a, y + b, x + c, y + d, x + e, y + f)
+            }
+            Command::Close => ctx.close_path(),
+        }
+    }
+    ctx.fill();
+}
+
+#[allow(clippy::too_many_arguments)]
 fn draw_stretch_bracket(
     ctx: &CanvasRenderingContext2d,
     bracket: &str,

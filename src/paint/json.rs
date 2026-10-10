@@ -1,5 +1,8 @@
 use std::{collections::HashMap, fmt::Write as _};
 
+#[path = "equation_paren_json.rs"]
+mod equation_paren_json;
+
 use crate::document_core::helpers::{
     color_ref_to_css, json_escape as raw_json_escape, write_json_base64,
 };
@@ -2959,7 +2962,7 @@ fn write_equation_layout_box(buf: &mut String, layout: &LayoutBox) {
         "{{\"x\":{:.6},\"y\":{:.6},\"width\":{:.6},\"height\":{:.6},\"baseline\":{:.6},\"fontSize\":{:.6},\"kind\":",
         layout.x, layout.y, layout.width, layout.height, layout.baseline, layout.font_size,
     );
-    write_equation_layout_kind(buf, &layout.kind, layout.font_size);
+    write_equation_layout_kind(buf, layout);
     buf.push('}');
 }
 
@@ -2973,7 +2976,12 @@ fn write_integral_geometry(buf: &mut String, fs: f64) {
     );
 }
 
-fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f64) {
+fn write_equation_layout_kind(buf: &mut String, layout: &LayoutBox) {
+    let kind = &layout.kind;
+    let font_size = layout.font_size;
+    if equation_paren_json::write_kind(buf, layout) {
+        return;
+    }
     match kind {
         LayoutKind::HancomGlyphs(run) => {
             let _ = write!(
@@ -3186,6 +3194,7 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind, font_size: f6
             delimiter_height,
             glyph_delimiters,
             body,
+            ..
         } => {
             let _ = write!(
                 buf,

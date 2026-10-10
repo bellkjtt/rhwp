@@ -60,6 +60,10 @@ const ADVANCES: [[u8; 54]; 11] = [
 
 pub(super) fn measured(text: &str, fs: f64, dpi: f64) -> Option<f64> {
     let size = super::super::font_frame_metrics::base_unit_at_dpi(fs, dpi);
+    // 독립 22pt ∠·GEQ·LEQ의 논리 em. 미측정 정체 문자 전진은 발행하지 않는다.
+    if text == "∠" && size == 2200 {
+        return Some(crate::renderer::hwpunit_to_px(2250, dpi));
+    }
     let logical_size = (size.checked_add(75)? / 150) * 2;
     let row = ADVANCES
         .iter()

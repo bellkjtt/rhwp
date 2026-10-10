@@ -131,6 +131,11 @@ pub enum LayoutKind {
         right_width: f64,
         delimiter_height: f64,
         glyph_delimiters: bool,
+        /// 조판이 발행한 구분자 상대 윤곽. 논리 점유·글자 크기와 ink를 분리한다.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        left_outline: Option<Vec<super::GlyphOutlineCommand>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        right_outline: Option<Vec<super::GlyphOutlineCommand>>,
         body: Box<LayoutBox>,
     },
     /// 장식

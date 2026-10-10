@@ -120,11 +120,10 @@ impl EqLayout {
     }
 
     pub(super) fn layout_cases(&self, rows: &[EqNode], fs: f64) -> LayoutBox {
-        // HYhwpEQ의 논리 줄간격: hhea/OS2 lineGap 152 / UPM 1024.
-        // 일반 cases 글자 줄의 독립 Print 기준선 간격도 이 leading과 일치한다.
+        // 독립 11/22pt의 2·3·4행 정상 저장/Print: 일반 행 프레임 합 + 경계마다 0.15em.
         let row_gap = fs
             * if self.hancom_math_face {
-                152.0 / 1024.0
+                0.15
             } else {
                 MATRIX_ROW_GAP
             };
@@ -192,6 +191,15 @@ impl EqLayout {
                 right_width: 0.0,
                 delimiter_height: total_h,
                 glyph_delimiters: false,
+                left_outline: self.delimiter_outline(
+                    "{",
+                    brace_width,
+                    total_h,
+                    baseline,
+                    fs,
+                    false,
+                ),
+                right_outline: None,
                 body: Box::new(inner),
             },
         }

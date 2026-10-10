@@ -6,7 +6,6 @@ impl EqLayout {
             return (cell.height, cell.baseline);
         }
         super::super::logical_font_frame::metrics_at_dpi(cell, fs, self.dpi)
-            .or_else(|| super::super::logical_font_frame::unprimed_line_metrics(cell, fs, self.dpi))
             .unwrap_or((cell.height, cell.baseline))
     }
     pub(super) fn matrix_row_box(&self, mut child: LayoutBox, fs: f64) -> LayoutBox {

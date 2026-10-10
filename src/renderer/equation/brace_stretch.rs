@@ -37,6 +37,44 @@ pub(crate) fn commands(
     fs: f64,
     right: bool,
 ) -> Vec<Command> {
+    commands_at_frame(x, y, width, height, fs, right, height)
+}
+
+/// 조립 부품의 글줄 프레임과 실제 잉크 끝을 구분한다.
+/// 원 face의 cap 위끝 606·tail 아래끝 12 / UPM 1024와 독립 줄 프레임을 소비한다.
+/// 한/두 행의 일반 glyph와 지원하지 않는 font frame은 기존 전체 높이를 보존한다.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn source_commands(
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    fs: f64,
+    dpi: f64,
+    right: bool,
+) -> Vec<Command> {
+    let assembly = height * 1000.0 / fs > data::VARIANTS.last().expect("공개 variant").0;
+    if let Some((line_height, _)) = assembly
+        .then(|| super::font_frame_metrics::line_at_dpi(fs, dpi))
+        .flatten()
+    {
+        let ink_height = height - line_height + fs * (606.0 - 12.0) / 1024.0;
+        let inset = (height - ink_height) / 2.0;
+        return commands_at_frame(x, y + inset, width, ink_height, fs, right, height);
+    }
+    commands(x, y, width, height, fs, right)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn commands_at_frame(
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    fs: f64,
+    right: bool,
+    selection_height: f64,
+) -> Vec<Command> {
     if fs <= 0.0 || width <= 0.0 || height <= 0.0 {
         return Vec::new();
     }
@@ -46,7 +84,8 @@ pub(crate) fn commands(
         x + if right { width - offset } else { offset }
     };
     let mut out = Vec::new();
-    if let Some((_, glyph)) = data::VARIANTS.iter().find(|(size, _)| *size >= target) {
+    let selection = selection_height * 1000.0 / fs;
+    if let Some((_, glyph)) = data::VARIANTS.iter().find(|(size, _)| *size >= selection) {
         project(&mut out, *glyph, |(gx, gy)| {
             (
                 map_x(gx, glyph.advance),

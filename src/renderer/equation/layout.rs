@@ -10,6 +10,7 @@ mod big_op_geometry;
 mod cases_columns;
 mod decoration_geometry;
 mod delimiter_advance;
+mod delimiter_outline;
 mod fraction_geometry;
 mod glyph_advances;
 mod integral_placement;
@@ -181,7 +182,14 @@ impl EqLayout {
             standalone_eqalign: matrix_geometry::is_standalone_eqalign(node),
             ..*self
         };
-        root.layout_node(node, self.font_size)
+        let result = root.layout_node(node, self.font_size);
+        // 독립 글꼴 프레임을 측정과 표시의 공통 루트에 보존한다.
+        // 자식의 기준선 상대 원점은 유지하며 빈 수식을 글줄로 바꾸지 않는다.
+        if self.hancom_math_face && result.height > 0.0 {
+            root.matrix_row_box(result, self.font_size)
+        } else {
+            result
+        }
     }
 
     fn layout_node(&self, node: &EqNode, fs: f64) -> LayoutBox {

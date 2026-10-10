@@ -28,5 +28,10 @@ pub(super) fn measured(fs: f64, dpi: f64, index: usize) -> Option<f64> {
 }
 
 pub(super) fn paren(fs: f64, dpi: f64) -> f64 {
+    // 독립 22pt LEFT(x)의 3075HU에서 x 1275HU를 뺀 두 슬롯이다.
+    // MCP 정상 저장·Print job: 2a652b98-863c-4397-97a0-d19ea108ad1e.
+    if super::super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200 {
+        return crate::renderer::hwpunit_to_px(900, dpi);
+    }
     measured(fs, dpi, 1).unwrap_or_else(|| super::source_font_text::logical_advance(398, fs, dpi))
 }

@@ -406,13 +406,18 @@ fn render_box(
             right_width,
             delimiter_height,
             glyph_delimiters,
+            left_outline,
+            right_outline,
             body,
         } => {
             // 텍스트 높이 파렌(`(`, `)`)은 폰트 글리프로 렌더, 그 외는 path. (Task #283)
             let use_glyph = *glyph_delimiters;
             // 왼쪽 괄호
             if !left.is_empty() {
-                if use_glyph && (left == "(" || left == ")") {
+                if let Some(commands) = left_outline {
+                    let path = super::multiplication_outline::path_data(commands);
+                    svg.push_str(&format!("<path d=\"{path}\" transform=\"translate({x:.4},{y:.4})\" fill=\"{color}\"/>\n"));
+                } else if use_glyph && (left == "(" || left == ")") {
                     svg.push_str(&format!(
                         "<text x=\"{:.2}\" y=\"{:.2}\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>\n",
                         x, y + lb.baseline, fs, color, EQ_FONT_FAMILY, escape_xml(left),
@@ -435,7 +440,10 @@ fn render_box(
             // 오른쪽 괄호
             if !right.is_empty() {
                 let right_x = x + lb.width - right_width;
-                if use_glyph && (right == "(" || right == ")") {
+                if let Some(commands) = right_outline {
+                    let path = super::multiplication_outline::path_data(commands);
+                    svg.push_str(&format!("<path d=\"{path}\" transform=\"translate({right_x:.4},{y:.4})\" fill=\"{color}\"/>\n"));
+                } else if use_glyph && (right == "(" || right == ")") {
                     svg.push_str(&format!(
                         "<text x=\"{:.2}\" y=\"{:.2}\" font-size=\"{:.2}\" fill=\"{}\"{}>{}</text>\n",
                         right_x, y + lb.baseline, fs, color, EQ_FONT_FAMILY, escape_xml(right),

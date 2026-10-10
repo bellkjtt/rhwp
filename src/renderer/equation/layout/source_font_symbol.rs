@@ -14,6 +14,7 @@ pub(super) fn operator_metrics(text: &str, fs: f64, dpi: f64) -> Option<(f64, f6
         // NOT 내부에서 대체 표시 글꼴의 폭과 연산자 여백을 함께 더하면
         // 다음 피연산자가 선언 프레임 밖으로 밀린다.
         "<" | ">" => (864, 0.21),
+        "≤" | "≥" => (1024, 0.21),
         "≠" => (1024, 0.15),
         "×" => (831, 0.14),
         // 독립 6/9/12/18pt Print와 설치 HYhwpEQ의 UPM 1024 전진폭.
@@ -133,7 +134,8 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
 pub(super) fn layout_operator_outline(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
     let display = if text == "-" { "−" } else { text };
     let baseline = fs * 0.8;
-    let commands = super::super::operator_outline::commands(display, fs, dpi, baseline)?;
+    let commands = super::super::operator_outline::commands(display, fs, dpi, baseline)
+        .or_else(|| super::super::relation_outline::commands(display, fs, dpi, baseline))?;
     let (width, _) = operator_metrics(display, fs, dpi)?;
     Some(LayoutBox {
         font_size: fs,

@@ -112,6 +112,18 @@ pub(super) fn line_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     Some((height, height * 0.86))
 }
 
+/// 단일 위첨자의 독립 프레임. 22pt는 별도 정상 저장/Print 24건에서 확인했다.
+pub(super) fn superscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    if let Some(metrics) = for_size_at_dpi(fs, dpi) {
+        return Some(metrics.sup);
+    }
+    if base_unit_at_dpi(fs, dpi) != 2200 {
+        return None;
+    }
+    let height = crate::renderer::hwpunit_to_px(2588, dpi);
+    Some((height, height * 0.88))
+}
+
 /// 일반 글줄 본체와 첨자의 논리 프레임. 문서 좌표나 수식별 예외가 아니다.
 /// 한컴 2020 정상화 job 57289556-fcb9-4edd-96df-f60e9d26ac53에서
 /// a_{n}/x_{m} 두 표현식의 같은 크기 높이·기준선이 모두 일치했다.

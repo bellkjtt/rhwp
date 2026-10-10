@@ -354,10 +354,14 @@ impl Tokenizer {
             return Some(Token::new(TokenType::Symbol, s, start));
         }
 
-        // -> (화살표 축약)
-        if ch == '-' && next == '>' {
+        // 붙은 ASCII 화살표 축약. `<`-`의 명시적 공백은 이 축약이 아니다.
+        if matches!((ch, next), ('-', '>') | ('<', '-')) {
             self.pos += 2;
-            return Some(Token::new(TokenType::Symbol, "->", start));
+            return Some(Token::new(
+                TokenType::Symbol,
+                [ch, next].iter().collect::<String>(),
+                start,
+            ));
         }
 
         // 2문자 기호

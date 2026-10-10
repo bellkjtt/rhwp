@@ -70,14 +70,14 @@ fn bar_sup_radical_body(value: &LayoutBox, fs: f64) -> Option<bool> {
 
 /// Row는 CASES·PILE의 세로 묶음에도 쓰인다. 실제 자식 기준선이 같은
 /// 가로 줄만 글꼴 프레임으로 합친다. 세로 행의 y를 버리면 저장 높이가 줄어든다.
-fn horizontal_row(value: &LayoutBox, items: &[LayoutBox]) -> bool {
+pub(super) fn horizontal_row(value: &LayoutBox, items: &[LayoutBox]) -> bool {
     let roundoff = f64::EPSILON * value.height.abs().max(1.0) * 8.0;
     items
         .iter()
         .all(|item| (item.y + item.baseline - value.baseline).abs() <= roundoff)
 }
 
-fn font_line(value: &LayoutBox, fs: f64) -> bool {
+pub(super) fn font_line(value: &LayoutBox, fs: f64) -> bool {
     if (value.height - fs).abs() > f64::EPSILON * fs * 4.0 {
         return false;
     }
@@ -146,11 +146,14 @@ pub(super) fn superscript_shift(
     if !font_line(base, fs)
         || !font_line(sup, sup.font_size)
         || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
+        || (super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200
+            && (contains_prime(base) || contains_prime(sup)))
     {
         return None;
     }
-    let metrics = super::font_frame_metrics::for_size_at_dpi(fs, dpi)?;
-    let shift = metrics.sup.0 - metrics.line.0 + metrics.line.1 * (1.0 - sup.font_size / fs);
+    let (sup_height, _) = super::font_frame_metrics::superscript_at_dpi(fs, dpi)?;
+    let (line_height, line_baseline) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+    let shift = sup_height - line_height + line_baseline * (1.0 - sup.font_size / fs);
     Some(shift)
 }
 
@@ -175,7 +178,7 @@ pub(super) fn subscript_geometry(
     Some((base.baseline + baseline_drop - sub.baseline, height))
 }
 
-fn contains_prime(value: &LayoutBox) -> bool {
+pub(super) fn contains_prime(value: &LayoutBox) -> bool {
     match &value.kind {
         LayoutKind::Symbol(s)
         | LayoutKind::MathSymbol(s)
@@ -193,6 +196,9 @@ fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
         if subscript_geometry(base, sub, fs, dpi).is_some() {
             return super::font_frame_metrics::subscript_at_dpi(fs, dpi);
         }
+    }
+    if super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200 {
+        return super::font_frame_22::frame(value, fs, dpi);
     }
     let metrics = super::font_frame_metrics::for_size_at_dpi(fs, dpi)?;
     if font_line(value, fs) {
@@ -267,11 +273,4 @@ pub(super) fn metrics(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
 
 pub(super) fn metrics_at_dpi(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
     frame(value, fs, dpi)
-}
-
-/// 일반 줄의 검증된 프레임. 별도 prime 프레임을 일반 줄로 추정하지 않는다.
-pub(super) fn unprimed_line_metrics(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
-    (font_line(value, fs) && !contains_prime(value))
-        .then(|| super::font_frame_metrics::line_at_dpi(fs, dpi))
-        .flatten()
 }

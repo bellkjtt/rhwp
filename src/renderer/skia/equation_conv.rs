@@ -518,11 +518,15 @@ fn render_box(
             right_width,
             delimiter_height,
             glyph_delimiters,
+            left_outline,
+            right_outline,
             body,
         } => {
             let use_glyph = *glyph_delimiters;
             if !left.is_empty() {
-                if use_glyph && (left == "(" || left == ")") {
+                if let Some(commands) = left_outline {
+                    super::equation_glyph::draw_outline(canvas, commands, x, y, color, None);
+                } else if use_glyph && (left == "(" || left == ")") {
                     draw_text(
                         canvas,
                         fonts,
@@ -552,7 +556,9 @@ fn render_box(
             render_box(canvas, fonts, body, x, y, color, fs, italic, bold);
             if !right.is_empty() {
                 let right_x = x + lb.width - right_width;
-                if use_glyph && (right == "(" || right == ")") {
+                if let Some(commands) = right_outline {
+                    super::equation_glyph::draw_outline(canvas, commands, right_x, y, color, None);
+                } else if use_glyph && (right == "(" || right == ")") {
                     draw_text(
                         canvas,
                         fonts,

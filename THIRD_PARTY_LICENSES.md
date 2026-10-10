@@ -370,6 +370,7 @@ SIL OFL 1.1을 유지한다. 원본 경로·SHA-256·변환 방법은 [폰트 �
 `src/renderer/equation/radical_outline.rs`,
 `src/renderer/equation/brace_outline.rs`,
 `src/renderer/equation/brace_stretch_data.rs`,
+`src/renderer/equation/relation_outline.rs`,
 `src/renderer/equation/operator_outline.rs`의 윤곽 상수는 동봉된 Latin Modern Math
 1.959의 `integral`·`multiply`·`radical`·`braceleft`·`plus`·`minus`·`equal` glyph에서
 추출한 공개 윤곽이다. `brace_stretch_data.rs`는 중괄호의 MATH 크기별 variant와
@@ -378,6 +379,11 @@ SIL OFL 1.1을 유지한다. 원본 경로·SHA-256·변환 방법은 [폰트 �
 B. Jackowski, P. Strzelczyk, P. Pianowski를 보존하고, 해당 윤곽 데이터는
 GUST Font License를 유지한다. rhwp는 글꼴 파일을 개명·수정하는 대신 이 윤곽의
 좌표를 공통 수식 ink 영역으로 변환한다. 한컴 사설 글꼴의 윤곽은 포함하지 않는다.
+
+`relation_outline.rs`는 같은 공개 원본의 `less`·`greater`·`lessequal`·`greaterequal`·
+`parenleft`·`parenright` glyph를 추출한 관계 기호와 둥근 괄호 윤곽이다.
+저작권·GUST Font License를 그대로 유지한다. 사설 face에서 소비하는 bbox는
+메트릭이며 사설 윤곽 데이터가 아니다.
 
 `assets/fonts/LatinModernMath-VariableOutline-subset.otf`는 같은 공개 원본의
 정체 A~Z/a~z와 이탤릭 a~z 윤곽을 포함한 13,488 byte 파생 OpenType CFF 글꼴이다. 원본 저작권·

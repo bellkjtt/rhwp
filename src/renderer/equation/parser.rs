@@ -243,9 +243,9 @@ impl EqParser {
             }
             TokenType::Symbol => {
                 self.pos += 1;
-                // -> 는 →로 변환
-                if val == "->" {
-                    EqNode::MathSymbol("→".to_string())
+                // 한컴의 붙은 ASCII 화살표 축약을 의미 기호로 보존한다.
+                if matches!(val.as_str(), "->" | "<-") {
+                    EqNode::MathSymbol(if val == "->" { "→" } else { "←" }.to_string())
                 } else if !val.is_ascii() && super::symbols::is_binary_symbol(&val) {
                     // 새 기호 토큰도 기존 Text/명령 경로의 첨자 결합을 유지한다.
                     self.try_parse_scripts(EqNode::MathSymbol(val))

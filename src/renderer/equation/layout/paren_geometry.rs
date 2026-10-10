@@ -73,6 +73,22 @@ impl EqLayout {
                 right_width: right_w,
                 delimiter_height,
                 glyph_delimiters,
+                left_outline: self.delimiter_outline(
+                    left,
+                    left_w,
+                    delimiter_height,
+                    body_box.baseline,
+                    fs,
+                    glyph_delimiters,
+                ),
+                right_outline: self.delimiter_outline(
+                    right,
+                    right_w,
+                    delimiter_height,
+                    body_box.baseline,
+                    fs,
+                    glyph_delimiters,
+                ),
                 body: Box::new(body_box),
             },
         }

@@ -6,7 +6,15 @@ use super::{estimate_text_width, source_font_symbol, EqLayout, EqNode, LayoutBox
 fn operator(node: &EqNode) -> bool {
     matches!(node, EqNode::Symbol(s) | EqNode::MathSymbol(s)
         if super::super::hancom_glyphs::is_operator(s) || super::super::symbols::is_binary_symbol(s)
-            || matches!(s.as_str(), "=" | "≠" | "<" | ">"))
+            || matches!(s.as_str(), "=" | "≠" | "<" | ">" | "≤" | "≥"))
+}
+
+/// 명시적인 공백은 자동 연산자 간격을 지우는 인접 경계가 아니다.
+/// 한컴 Print의 `x<`-2`와 `x=-2`는 이 경계에서 서로 다른 전진을 갖는다.
+fn explicit_gap(nodes: &[EqNode], left: usize, right: usize) -> bool {
+    nodes[left + 1..right]
+        .iter()
+        .any(|node| matches!(node, EqNode::Space(_)))
 }
 
 fn opening_delimiter(node: &EqNode) -> bool {
@@ -112,7 +120,8 @@ impl EqLayout {
                 };
                 let padding = source_metrics.map_or(fs * 0.15, |(_, padding)| padding);
                 let left = if position == 0
-                    || operator(&nodes[significant[position - 1]])
+                    || (operator(&nodes[significant[position - 1]])
+                        && !explicit_gap(nodes, significant[position - 1], significant[position]))
                     || opening_delimiter(&nodes[significant[position - 1]])
                     || (source_metrics.is_some()
                         && reserves_operator_gap(&nodes[significant[position - 1]]))
@@ -128,7 +137,8 @@ impl EqLayout {
                     }
                 };
                 let right = if position + 1 == significant.len()
-                    || operator(&nodes[significant[position + 1]])
+                    || (operator(&nodes[significant[position + 1]])
+                        && !explicit_gap(nodes, significant[position], significant[position + 1]))
                 {
                     0.0
                 } else {
