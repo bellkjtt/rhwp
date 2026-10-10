@@ -3213,6 +3213,7 @@ fn write_equation_layout_kind(buf: &mut String, layout: &LayoutBox) {
             kind,
             body,
             negation,
+            outline,
         } => {
             let _ = write!(
                 buf,
@@ -3220,6 +3221,12 @@ fn write_equation_layout_kind(buf: &mut String, layout: &LayoutBox) {
                 json_escape(equation_decoration(*kind))
             );
             write_equation_layout_box(buf, body);
+            if let Some(commands) = outline {
+                let path = crate::renderer::equation::multiplication_outline::path_data(commands);
+                let _ = write!(buf,
+                    ",\"outlineGeometry\":{{\"pathData\":{},\"strokeWidth\":0,\"scaleX\":1,\"fillAndStroke\":false}}",
+                    json_escape(&path));
+            }
             if let Some(g) = negation {
                 let _ = write!(buf,
                     ",\"negationGeometry\":{{\"start\":[{:.6},{:.6}],\"end\":[{:.6},{:.6}],\"thickness\":{:.6}}}",

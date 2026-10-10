@@ -338,6 +338,7 @@ fn assert_relation_space(marker: &str, expected_symbol: &str) {
             LayoutKind::Decoration {
                 kind: DecoKind::Dyad,
                 body,
+                ..
             } => {
                 arrows.push((x + body.x, body.width));
                 collect(body, x, arrows, relations);

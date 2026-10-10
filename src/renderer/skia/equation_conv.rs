@@ -590,6 +590,7 @@ fn render_box(
             kind,
             body,
             negation,
+            outline,
         } => {
             render_box(
                 canvas,
@@ -602,7 +603,9 @@ fn render_box(
                 italic,
                 bold,
             );
-            if *kind == DecoKind::StrikeThrough {
+            if let Some(commands) = outline {
+                super::equation_glyph::draw_outline(canvas, commands, x, y, color, None);
+            } else if *kind == DecoKind::StrikeThrough {
                 let g = negation.clone().unwrap_or_else(|| {
                     crate::renderer::equation::negation_geometry::geometry(body)
                 });

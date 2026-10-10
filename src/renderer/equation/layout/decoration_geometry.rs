@@ -29,6 +29,7 @@ impl EqLayout {
                     kind,
                     body: Box::new(b),
                     negation: Some(negation),
+                    outline: None,
                 },
             };
         }
@@ -50,6 +51,7 @@ impl EqLayout {
                     kind,
                     body: Box::new(body_box),
                     negation: None,
+                    outline: None,
                 },
             };
         }
@@ -71,6 +73,10 @@ impl EqLayout {
             0.0
         };
         body_box.x = side_padding;
+        let outline = self
+            .hancom_math_face
+            .then(|| super::super::accent_outline::commands(kind, &body_box, fs, self.dpi))
+            .flatten();
 
         LayoutBox {
             font_size: fs,
@@ -83,6 +89,7 @@ impl EqLayout {
                 kind,
                 body: Box::new(body_box),
                 negation: None,
+                outline,
             },
         }
     }

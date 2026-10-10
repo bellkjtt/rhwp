@@ -401,9 +401,12 @@ fn render_box(
             kind,
             body,
             negation,
+            outline,
         } => {
             render_box(ctx, body, x, y, color, fs, italic, bold);
-            if *kind == DecoKind::StrikeThrough {
+            if let Some(commands) = outline {
+                draw_delimiter_outline(ctx, commands, x, y, color);
+            } else if *kind == DecoKind::StrikeThrough {
                 let g = negation
                     .clone()
                     .unwrap_or_else(|| super::negation_geometry::geometry(body));

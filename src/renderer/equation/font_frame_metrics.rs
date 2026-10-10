@@ -150,3 +150,36 @@ pub(super) fn subscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     let height = crate::renderer::hwpunit_to_px(row[1] as i32, dpi);
     Some((height, height * f64::from(row[2]) / 100.0))
 }
+
+/// 같은 크기의 보통 글자 위 BAR/VEC/DYAD는 같은 예약 프레임을 쓴다.
+/// 독립 9/11/16/22pt 정상 저장·Print에서 세 장식을 대조했다.
+pub(super) fn accent_at_dpi(fs: f64, dpi: f64, prime: bool) -> Option<(f64, f64)> {
+    if let Some(metrics) = for_size_at_dpi(fs, dpi) {
+        return Some(if prime {
+            metrics.prime_bar
+        } else {
+            metrics.bar
+        });
+    }
+    if prime || base_unit_at_dpi(fs, dpi) != 2200 {
+        return None;
+    }
+    let height = crate::renderer::hwpunit_to_px(2610, dpi);
+    Some((height, height * 0.88))
+}
+
+/// 정체 글자 프로그램의 독립 줄·장식 프레임. 화면 좌표가 아닌 BaseUnit 축이다.
+/// job e6a974e8-b515-406c-ad4a-c3344be878f5의 정상 저장과 Print를 함께 대조했다.
+pub(super) fn roman_at_dpi(fs: f64, dpi: f64, accent: bool) -> Option<(f64, f64)> {
+    const FRAMES: [[u32; 5]; 4] = [
+        [900, 900, 86, 1080, 88],
+        [1100, 1125, 85, 1350, 87],
+        [1600, 1600, 86, 1902, 88],
+        [2200, 2200, 86, 2622, 88],
+    ];
+    let hu = base_unit_at_dpi(fs, dpi);
+    let row = FRAMES.iter().find(|row| row[0] == hu)?;
+    let index = if accent { 3 } else { 1 };
+    let height = crate::renderer::hwpunit_to_px(row[index] as i32, dpi);
+    Some((height, height * f64::from(row[index + 1]) / 100.0))
+}

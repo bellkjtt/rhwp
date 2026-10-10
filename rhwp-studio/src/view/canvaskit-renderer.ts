@@ -4464,6 +4464,12 @@ export class CanvasKitLayerRenderer {
             : true);
       }
       case 'decoration':
+        if (layout.kind.outlineGeometry) {
+          return child(layout.kind.body)
+            && drawEquationGlyphOutline(this.canvasKit, canvas, layout.kind.outlineGeometry, x, y, color,
+              fillColor => this.makeFillPaint(fillColor),
+              (strokeColor, width) => this.makeStrokePaint(strokeColor, width));
+        }
         if (layout.kind.decoration === 'strikeThrough') {
           const geometry = layout.kind.negationGeometry;
           if (!geometry || !Array.isArray(geometry.start) || geometry.start.length !== 2

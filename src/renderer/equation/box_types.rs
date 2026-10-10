@@ -145,6 +145,9 @@ pub enum LayoutKind {
         /// 레이아웃에서 발행한 부정 기하. backend가 글자 종류나 DPI를 재추측하지 않는다.
         #[serde(skip_serializing_if = "Option::is_none")]
         negation: Option<super::NegationGeometry>,
+        /// 배치에서 발행한 공개 장식 윤곽. 없는 장식은 기존 표시 경로를 쓴다.
+        #[serde(skip_serializing_if = "Option::is_none")]
+        outline: Option<Vec<super::GlyphOutlineCommand>>,
     },
     /// 글꼴 스타일
     FontStyle {

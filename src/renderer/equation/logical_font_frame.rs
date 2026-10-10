@@ -192,6 +192,55 @@ pub(super) fn contains_prime(value: &LayoutBox) -> bool {
 }
 
 fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    frame_with_style(value, fs, dpi, false)
+}
+
+fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option<(f64, f64)> {
+    use super::symbols::FontStyleKind;
+    match &value.kind {
+        LayoutKind::FontStyle {
+            style: FontStyleKind::Roman,
+            body,
+        } => {
+            return frame_with_style(body, fs, dpi, true);
+        }
+        LayoutKind::FontStyle {
+            style: FontStyleKind::Italic,
+            body,
+        } => {
+            return frame_with_style(body, fs, dpi, false);
+        }
+        LayoutKind::Paren { body, .. } => return frame_with_style(body, fs, dpi, roman),
+        LayoutKind::Row(items) if !items.is_empty() && horizontal_row(value, items) => {
+            let mut ascent = 0.0_f64;
+            let mut descent = 0.0_f64;
+            for item in items {
+                let (height, baseline) = frame_with_style(item, fs, dpi, roman)?;
+                ascent = ascent.max(baseline);
+                descent = descent.max(height - baseline);
+            }
+            return Some((ascent + descent, ascent));
+        }
+        LayoutKind::Decoration {
+            kind: DecoKind::Bar | DecoKind::Vec | DecoKind::Dyad,
+            body,
+            ..
+        } if font_line(body, fs) => {
+            let prime = contains_prime(body);
+            if roman && !prime {
+                if let Some(frame) = super::font_frame_metrics::roman_at_dpi(fs, dpi, true) {
+                    return Some(frame);
+                }
+            }
+            return super::font_frame_metrics::accent_at_dpi(fs, dpi, prime);
+        }
+        _ => {}
+    }
+    if roman && font_line(value, fs) && !contains_prime(value) {
+        if let Some(frame) = super::font_frame_metrics::roman_at_dpi(fs, dpi, false) {
+            return Some(frame);
+        }
+    }
     if let LayoutKind::Subscript { base, sub } = &value.kind {
         if subscript_geometry(base, sub, fs, dpi).is_some() {
             return super::font_frame_metrics::subscript_at_dpi(fs, dpi);

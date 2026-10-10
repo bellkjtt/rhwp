@@ -466,9 +466,15 @@ fn render_box(
             kind,
             body,
             negation,
+            outline,
         } => {
             render_box(svg, body, x, y, color, fs, italic, bold);
-            if *kind == DecoKind::StrikeThrough {
+            if let Some(commands) = outline {
+                svg.push_str(&format!(
+                    "<path d=\"{}\" transform=\"translate({x:.4},{y:.4})\" fill=\"{color}\"/>\n",
+                    super::multiplication_outline::path_data(commands),
+                ));
+            } else if *kind == DecoKind::StrikeThrough {
                 let g = negation
                     .clone()
                     .unwrap_or_else(|| super::negation_geometry::geometry(body));

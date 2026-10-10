@@ -385,6 +385,10 @@ GUST Font License를 유지한다. rhwp는 글꼴 파일을 개명·수정하는
 저작권·GUST Font License를 그대로 유지한다. 사설 face에서 소비하는 bbox는
 메트릭이며 사설 윤곽 데이터가 아니다.
 
+`src/renderer/equation/accent_outline.rs`의 화살촉은 같은 공개 원본의 MATH 조립
+부품 `arrowright.rt`, `arrowboth.lft`, `arrowboth.rt`에서 파생했다. 원 저작권과
+GUST Font License를 유지하며 사설 글꼴의 윤곽·바이트는 포함하지 않는다.
+
 `assets/fonts/LatinModernMath-VariableOutline-subset.otf`는 같은 공개 원본의
 정체 A~Z/a~z와 이탤릭 a~z 윤곽을 포함한 13,488 byte 파생 OpenType CFF 글꼴이다. 원본 저작권·
 라이선스를 보존하고 family·full·PostScript 및 CFF 이름을 변경했다.

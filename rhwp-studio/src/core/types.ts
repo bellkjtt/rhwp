@@ -1491,7 +1491,7 @@ export type LayerEquationLayoutKind =
   | { type: 'rel'; arrow: LayerEquationLayoutBox; over: LayerEquationLayoutBox; under?: LayerEquationLayoutBox }
   | { type: 'eqAlign'; rows: Array<{ left: LayerEquationLayoutBox; right: LayerEquationLayoutBox }> }
   | { type: 'paren'; left: string; right: string; leftWidth?: number; rightWidth?: number; delimiterHeight?: number; glyphDelimiters?: boolean; body: LayerEquationLayoutBox }
-  | { type: 'decoration'; decoration: LayerEquationDecoration; body: LayerEquationLayoutBox; negationGeometry?: LayerNegationGeometry }
+  | { type: 'decoration'; decoration: LayerEquationDecoration; body: LayerEquationLayoutBox; negationGeometry?: LayerNegationGeometry; outlineGeometry?: LayerFontGlyphGeometry }
   | { type: 'fontStyle'; fontStyle: LayerEquationFontStyle; body: LayerEquationLayoutBox }
   | { type: 'space'; width: number }
   | { type: 'newline' }

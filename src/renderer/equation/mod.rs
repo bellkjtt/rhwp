@@ -7,6 +7,7 @@
 //! 소비한다. 동작은 바꾸지 않는다. 모듈 지도는 `README.md`, 매뉴얼은
 //! `mydocs/manual/equation_module.md`.
 
+mod accent_outline;
 mod advance_contract;
 pub mod ast;
 mod box_types;
