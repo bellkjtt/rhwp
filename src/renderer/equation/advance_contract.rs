@@ -17,7 +17,7 @@ pub(super) fn has_source_advances(node: &EqNode) -> bool {
             body,
         }
         | EqNode::Color { body, .. } => has_source_advances(body),
-        EqNode::Space(SpaceKind::Thin) | EqNode::Empty => true,
+        EqNode::Space(SpaceKind::Normal | SpaceKind::Thin) | EqNode::Empty => true,
         _ => false,
     }
 }

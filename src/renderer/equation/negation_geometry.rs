@@ -23,7 +23,13 @@ fn ordinary_glyph(body: &LayoutBox) -> bool {
         LayoutKind::Text(text) | LayoutKind::Number(text) => {
             text.chars().count() == 1 && !super::text_has_cjk(text)
         }
-        LayoutKind::FontGlyph { text, .. } => matches!(text.as_str(), "{" | "}"),
+        LayoutKind::FontGlyph { text, .. } => {
+            matches!(text.as_str(), "{" | "}")
+                || (text.chars().count() == 1
+                    && text
+                        .chars()
+                        .all(|ch| matches!(ch, '\u{1D434}'..='\u{1D44D}')))
+        }
         LayoutKind::FontStyle { body, .. } => ordinary_glyph(body),
         LayoutKind::Row(children) if children.len() == 1 => ordinary_glyph(&children[0]),
         _ => false,

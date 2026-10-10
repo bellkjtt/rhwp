@@ -58,6 +58,19 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<Layo
             })
         }
         .unwrap_or_else(|| logical_advance(advances[usize::from(ch - first)], fs, dpi));
+        let display = variable_style::display_text(&char::from(ch).to_string(), italic, false);
+        let outline = italic
+            .then(|| super::super::uppercase_outline::commands(char::from(ch), fs, dpi, fs * 0.8))
+            .flatten();
+        let kind = if let Some(outline) = outline {
+            LayoutKind::FontGlyph {
+                text: display,
+                font_family: "Latin Modern Math, STIX Two Math, serif".to_owned(),
+                outline: Some(outline),
+            }
+        } else {
+            LayoutKind::Text(display)
+        };
         children.push(LayoutBox {
             font_size: fs,
             x,
@@ -65,11 +78,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64, italic: bool) -> Option<Layo
             width,
             height: fs,
             baseline: fs * 0.8,
-            kind: LayoutKind::Text(variable_style::display_text(
-                &char::from(ch).to_string(),
-                italic,
-                false,
-            )),
+            kind,
         });
         x += width;
     }

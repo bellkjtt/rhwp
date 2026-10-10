@@ -68,3 +68,9 @@ provenance·실행 로그·각 쪽 overlay 지표·render tree·review PNG다.
 전체 페이지 수치 통과나 fresh WASM 통과로 확대하지 않는다.
 이전 source의 전체 원본 결과와 현재 source를 구분하며 전체 TSV와 관계형
 회귀 변경·최종 게이트는 계속 검증 중이다.
+
+전용 검증 controller의 exec session은 exit 143으로 종료됐고 controller와
+Native 집중 검증 PID가 모두 사라진 것을 확인했다. 완료한 13개 입력의
+증거는 보존했으며 이 전용 실행의 fresh WASM은 시작되지 않았다.
+Stage 87의 대문자 표시 보정과 이번 미주 경계를 함께 포함한 후보에서
+Native/fresh WASM을 검증한다. 종료 원인을 출력 공백이나 완료로 추정하지 않는다.

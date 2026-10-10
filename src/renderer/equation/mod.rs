@@ -35,6 +35,7 @@ pub mod svg_render;
 pub mod symbols;
 pub mod tokenizer;
 mod uncached_flow_metrics;
+mod uppercase_outline;
 
 /// 한글 수식은 수학 글꼴의 누락 글리프 대신 본문 명조 계열을 사용한다.
 pub(crate) const CJK_EQUATION_FONT_FAMILY: &str = "Haansoft Batang, 한컴바탕, Batang, 바탕, serif";
