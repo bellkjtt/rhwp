@@ -34,7 +34,8 @@ pub(super) fn source_geometry(body: &LayoutBox, dpi: f64) -> NegationGeometry {
     // 다른 관계 기호·복합 인자·본문 대체 face는 기존 기하를 보존한다.
     // 문자·숫자·보통 중괄호는 전진의 1.2배, 등호는 전진 전체를 소비한다.
     let ordinary = ordinary_glyph(body);
-    let equality = matches!(&body.kind, LayoutKind::Symbol(text) if text == "=");
+    let equality = matches!(&body.kind,
+        LayoutKind::Symbol(text) | LayoutKind::FontGlyph { text, .. } if text == "=");
     if !ordinary && !equality {
         return geometry(body);
     }

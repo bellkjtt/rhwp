@@ -396,6 +396,13 @@ impl EqLayout {
             return layout;
         }
         if self.hancom_math_face {
+            if !self.variable_bold {
+                if let Some(result) =
+                    source_font_symbol::layout_operator_outline(text, fs, self.dpi)
+                {
+                    return result;
+                }
+            }
             if let Some(result) = source_font_symbol::layout(text, fs, self.dpi) {
                 return result;
             }

@@ -124,3 +124,24 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
         },
     })
 }
+
+/// 보통 굵기 수학 연산자의 논리 전진과 실제 잉크 원점을 함께 전달한다.
+pub(super) fn layout_operator_outline(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
+    let display = if text == "-" { "−" } else { text };
+    let baseline = fs * 0.8;
+    let commands = super::super::operator_outline::commands(display, fs, dpi, baseline)?;
+    let (width, _) = operator_metrics(display, fs, dpi)?;
+    Some(LayoutBox {
+        font_size: fs,
+        x: 0.0,
+        y: 0.0,
+        width,
+        height: fs,
+        baseline,
+        kind: LayoutKind::FontGlyph {
+            text: display.to_string(),
+            font_family: "Latin Modern Math, STIX Two Math, serif",
+            outline: Some(commands),
+        },
+    })
+}

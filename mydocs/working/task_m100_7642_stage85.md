@@ -30,8 +30,8 @@ Stage 61의 MCP 정상 저장·Print 기록을 따른다.
 `layout/source_font_symbol`이 같은 공통 FontGlyph 윤곽을 발행하고
 SVG·Canvas·Native Skia·paint JSON·CanvasKit이 기존 윤곽 표시
 경로로 소비한다. NOT는 등호 본체가 FontGlyph여도 같은 전진과
-사선 기하를 사용한다. 한컴 수학 face가 아닌 경로는 기존 표시를
-보존한다. 같은 개체 소속과 다음 내용의 원점을 대조한다.
+사선 기하를 사용한다. 한컴 수학 face가 아닌 경로와 굵은 기호는 기존 표시를
+보존한다. 보통 굵기의 독립 Print 메트릭을 굵은 기호에 적용하지 않는다. 같은 개체 소속과 다음 내용의 원점을 대조한다.
 
 ## 검증 범위
 
@@ -46,3 +46,20 @@ package로 변경 전 증거를 보존하고 새 source의 통과로 승격하�
 대문자 `W`의 독립 Print shear 0.333과 실제 face 공급의 잔여
 차이는 아직 미완료다. 이번 연산자 표시 보정으로 해결했다고
 판정하지 않는다. 관련 회귀의 관계형 전환과 최종 게이트도 남아 있다.
+
+## 후보 구현
+
+공개 `plus`·`minus`·`equal`의 윤곽과 출처를
+`operator_outline.rs`에 보존했다. 실제 수학 잉크 범위·기준선·
+인쇄 원점은 같은 글자 크기와 출력 DPI로 계산한다.
+`source_font_symbol::layout_operator_outline`이 논리 상자의
+폭·높이·기준선을 유지한 채 FontGlyph 표시 결과를 발행한다.
+굵은 기호와 다른 face는 이 보통 굵기 메트릭을 사용하지 않는다.
+
+뒤 소비도 대조했다. `layout/symbol_spacing.rs`는 Symbol과
+FontGlyph를 모두 같은 AST 연산자의 전진·여백으로 처리하며,
+`logical_font_frame.rs`의 font_line·prime 판별도 FontGlyph를
+지원한다. NOT의 등호 판별은 FontGlyph를 함께 인식하도록
+바꿨다. 실제 사선 기하의 계산·논리 크기를 변경하지 않는다.
+현재 후보는 아직 빌드·시각 확인 전이며 기대값·baseline과
+정식 실물 회귀는 변경하지 않았다.

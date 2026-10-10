@@ -23,6 +23,7 @@ pub(crate) mod integral_outline;
 pub(crate) mod multiplication_outline;
 pub(crate) mod negation_geometry;
 mod not_equal_geometry;
+mod operator_outline;
 pub use integral_outline::Command as GlyphOutlineCommand;
 pub use negation_geometry::NegationGeometry;
 pub mod layout;
