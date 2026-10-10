@@ -95,3 +95,15 @@ curly의 공통 논리 슬롯과 화살표 전진을 이 구문 보정과 함께
 
 이 미달은 신규 독립 구문 진단이며 기존 55개 원본의 점수로 바꾸어 보고하지 않는다.
 새 보정 source의 재출력과 확대 판독 후 필요하면 같은 묶음의 원인을 추가 보정한다.
+
+
+## 초기 검사와 이전 실행 정리
+
+`b97e38052a8f27f2b1c6ef62859e520c1e89fd47`의 포맷·Native Clippy·WASM Clippy·Skia lib 타입 검사는 모두 exit 0이다.
+현재 Native 빌드와 새 출력 대조는 진행 중이며 전체 workspace lint/전체 회귀 통과가 아니다.
+
+현재 source와 다른 `0e178d78`의 두 TSV controller를 실제 PID·자식 프로세스까지 확인해 종료했다.
+완료된 Native 23개/WASM 8개 문서의 PNG·TSV·JSON은 변경 전 증거로 보존한다.
+종료된 프로세스가 없고 파일이 열려 있지 않음을 확인한 뒤 중간 SVG 111개,
+8.41GiB만 해시 원장을 남겨 정리했다. 원본·PDF·PNG·TSV와 공용 target은 보존했다.
+근거는 `stage97-retired-before-controllers.json`, `stage97-retired-before-svg-cleanup.json`이다.
