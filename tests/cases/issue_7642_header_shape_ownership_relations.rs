@@ -93,7 +93,7 @@ fn issue7642_paper_relative_rectangle_keeps_header_origin_and_precedes_body() {
     let mut bodies = Vec::new();
     collect(
         &tree.root,
-        |n| matches!(n.node_type, RenderNodeType::Body),
+        |n| matches!(n.node_type, RenderNodeType::Body { .. }),
         &mut bodies,
     );
     assert_eq!(bodies.len(), 1);
