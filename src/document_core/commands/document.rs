@@ -871,7 +871,14 @@ impl DocumentCore {
 
                 for (pi, para) in section.paragraphs.iter_mut().enumerate() {
                     let was_reflowed = reflowed_paras.contains(&pi);
-                    let text_only_controls = has_only_text_controls(para);
+                    let text_only_controls = has_only_text_controls(para)
+                        || stored_body_frames::inline_graphics_fit_saved_text_line(
+                            para,
+                            styles
+                                .para_styles
+                                .get(para.para_shape_id as usize)
+                                .map_or(0, |style| style.vertical_alignment),
+                        );
                     // 개체 높이가 저장 줄 전체에 들어 있으면 높이와 후속 간격의
                     // 소유를 구분한다. 간격 보존이 개체 높이를 다시 더하지 않는다.
                     let saved_object_line =
