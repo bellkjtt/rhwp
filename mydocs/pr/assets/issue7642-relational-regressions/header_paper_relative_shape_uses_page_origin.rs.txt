@@ -22,4 +22,3 @@ fn header_paper_relative_shape_uses_page_origin() {
     assert!((bbox.x - hwpunit_to_px(1_500, DEFAULT_DPI)).abs() < 0.01);
     assert!((bbox.y - hwpunit_to_px(2_250, DEFAULT_DPI)).abs() < 0.01);
 }
-

@@ -93,4 +93,3 @@ fn table_text_page_0() {
         }
     }
 }
-
