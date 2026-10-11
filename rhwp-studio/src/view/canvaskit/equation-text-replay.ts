@@ -5,6 +5,7 @@ interface EquationTextFonts {
   typefaces: readonly (Typeface | null)[];
   maxTextLength: number;
   makeFillPaint: (color: string) => Paint;
+  onTypefaceSelected?: (typeface: Typeface) => void;
 }
 
 /** 논리 예약 폭과 글리프의 자연 표시 폭을 구분해 SVG와 같은 정렬을 한다. */
@@ -33,6 +34,7 @@ export function drawEquationTextWithFonts(
       const glyphIds = candidate.getGlyphIDs(text, Array.from(text).length);
       if (glyphIds && glyphIds.length > 0 && glyphIds.every(id => id !== 0)) {
         font = candidate;
+        fonts.onTypefaceSelected?.(typeface);
         break;
       }
       candidate.delete();

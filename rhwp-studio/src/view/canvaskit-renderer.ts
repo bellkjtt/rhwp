@@ -70,6 +70,7 @@ import {
 import { imageCropSelectionIsEmpty } from './image-crop-scale.ts';
 import { magnificationFiltering } from './image-sampling.ts';
 import { drawEquationTextWithFonts } from './canvaskit/equation-text-replay.ts';
+import { drawDeclaredEquationFontGlyph } from './canvaskit/equation-font-glyph.ts';
 import { drawEquationGlyphOutline } from './canvaskit/equation-glyph-outline.ts';
 import {
   boundedCanvasKitSourceImageKey,
@@ -304,7 +305,7 @@ export interface CanvasKitFontSubstitutionDiagnostic {
   opId?: string;
   requestedFamily: string;
   resolvedFamily: string;
-  source: 'unregisteredDefault' | 'missingGlyphDefault' | 'missingGlyphSymbol' | 'oldHangul';
+  source: 'unregisteredDefault' | 'missingGlyphDefault' | 'missingGlyphSymbol' | 'oldHangul' | 'equationDeclaredFallback';
   kind: 'unregisteredFallback' | 'glyphCoverageFallback';
 }
 
@@ -487,6 +488,7 @@ export class CanvasKitLayerRenderer {
     private readonly webgpuDevice: GPUDevice | null = null,
     private readonly webgpuInitFailure: string | null = null,
     private readonly mathFallbackTypeface: Typeface | null = null,
+    private readonly mathFallbackFamily: string | null = null,
   ) {
     this.glyphRunFonts = new CanvasKitGlyphRunFontCache(canvasKit);
     this.paragraphFonts = new CanvasKitParagraphFonts(canvasKit);
@@ -574,6 +576,7 @@ export class CanvasKitLayerRenderer {
       console.warn('[CanvasKitLayerRenderer] 기호 폴백 폰트 로딩 실패:', error);
     }
     let mathFallbackTypeface: Typeface | null = null;
+    let mathFallbackFamily: string | null = null;
     try {
       const response = await fetch(options.mathFallbackFontUrl ?? 'fonts/LatinModernMath-Regular.woff2');
       if (response.ok) {
@@ -582,6 +585,10 @@ export class CanvasKitLayerRenderer {
         });
         mathFallbackTypeface = canvasKit.Typeface.MakeFreeTypeFaceFromData(bytes)
           ?? canvasKit.Typeface.MakeTypefaceFromData(bytes);
+        const manager = canvasKit.FontMgr.FromData(bytes.slice(0));
+        try {
+          mathFallbackFamily = manager && manager.countFamilies() > 0 ? manager.getFamilyName(0) : null;
+        } finally { manager?.delete(); }
       }
     } catch (error) {
       console.warn('[CanvasKitLayerRenderer] 수학 기호 폴백 폰트 로딩 실패:', error);
@@ -637,6 +644,7 @@ export class CanvasKitLayerRenderer {
       webgpuDevice,
       webgpuInitFailure,
       mathFallbackTypeface,
+      mathFallbackFamily,
     );
     for (const source of paragraphFontSources) renderer.paragraphFonts.remember(source.face, source.bytes);
     return renderer;
@@ -4323,13 +4331,23 @@ export class CanvasKitLayerRenderer {
           layout.kind.type === 'text' || layout.kind.type === 'number' ? '함초롬바탕' : 'Latin Modern Math',
         );
       }
-      // 명시 face의 SFNT 조달 전에는 SVG fallback에서 같은 글꼴로 표시한다.
       case 'fontGlyph':
         return layout.kind.outlineGeometry
           ? drawEquationGlyphOutline(this.canvasKit, canvas, layout.kind.outlineGeometry, x, y, color,
             fillColor => this.makeFillPaint(fillColor),
             (strokeColor, width) => this.makeStrokePaint(strokeColor, width))
-          : false;
+          : drawDeclaredEquationFontGlyph({
+            canvasKit: this.canvasKit,
+            maxTextLength: CanvasKitLayerRenderer.MAX_EQUATION_TEXT_LENGTH,
+            lookupTypeface: family => this.findPreparedTypeface(family)?.typeface
+              ?? (this.mathFallbackFamily && normalizedFontFamily(family) === normalizedFontFamily(this.mathFallbackFamily)
+                ? this.mathFallbackTypeface : null),
+            makeFillPaint: fillColor => this.makeFillPaint(fillColor),
+            onFallback: (requestedFamily, resolvedFamily) => this.recordFontSubstitution({
+              requestedFamily, resolvedFamily, source: 'equationDeclaredFallback', kind: 'glyphCoverageFallback',
+            }),
+          }, canvas, layout.kind.text, layout.kind.fontFamily, x, y + layout.baseline,
+          fontSize, color, layout.width);
       case 'function':
         return this.drawEquationText(
           canvas,
