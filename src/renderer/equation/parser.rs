@@ -2586,7 +2586,7 @@ mod latex_compat_tests {
         );
     }
 
-    /// 회귀: 산술 `a_n+1` 의 하한은 `n` 하나 (관계연산자 아님 → 미병합).
+    /// 독립 한컴 Print에서 중괄호 없는 n+1은 함께 아래첨자이며 중괄호로 범위를 닫는다.
     #[test]
     fn task1304_arithmetic_subscript_not_merged() {
         let ast = parse("a_n+1");
@@ -2598,11 +2598,23 @@ mod latex_compat_tests {
             }
         }
         let sub = first_subscript_sub(&ast).expect("Subscript");
-        assert!(
-            matches!(sub, EqNode::Text(t) if t == "n"),
-            "a_n+1 의 하한은 n 하나여야 함: {:?}",
-            sub
-        );
+        let EqNode::Row(items) = sub else {
+            panic!("중괄호 없는 아래첨자 n+1의 내용 순서: {sub:?}");
+        };
+        assert_eq!(items.len(), 3, "아래첨자의 누락·중복 금지");
+        assert!(matches!(&items[0], EqNode::Text(text) if text == "n"));
+        assert!(matches!(&items[1], EqNode::Symbol(text) if text == "+"));
+        assert!(matches!(&items[2], EqNode::Number(text) if text == "1"));
+
+        let braced = parse("a_{n}+1");
+        assert!(matches!(first_subscript_sub(&braced), Some(EqNode::Text(text)) if text == "n"));
+        let EqNode::Row(outer) = braced else {
+            panic!("중괄호 뒤 +1은 아래첨자 바깥 본문에 남아야 함");
+        };
+        assert_eq!(outer.len(), 3, "아래첨자 뒤 본문의 소유와 순서");
+        assert!(matches!(&outer[0], EqNode::Subscript { .. }));
+        assert!(matches!(&outer[1], EqNode::Symbol(text) if text == "+"));
+        assert!(matches!(&outer[2], EqNode::Number(text) if text == "1"));
     }
 
     // ── #1305: 괄호 그룹 뒤 위첨자 ─────────────────────────────────────

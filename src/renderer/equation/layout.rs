@@ -863,8 +863,8 @@ mod tests {
 
     #[test]
     fn test_superscript_tall_base_no_overshoot() {
-        // [#1300] 키 큰 base(괄호 분수 등)의 위첨자가 baseline 위로 과하게 치솟아
-        // 윗줄을 침범하던 문제. base 밀어내기(base_y)는 sup 높이를 넘지 않아야 한다.
+        // 독립 한컴 Print의 짧은 본체와 분수 모두 첨자 기준선은 본체보다 높다.
+        // 본체 상단보다 첨자가 높으면 안 된다는 옛 조건은 정상 위첨자까지 거절한다.
         fn find_sup(lb: &LayoutBox) -> Option<(&LayoutBox, &LayoutBox)> {
             match &lb.kind {
                 LayoutKind::Superscript { base, sup } => Some((base, sup)),
@@ -872,36 +872,31 @@ mod tests {
                 _ => None,
             }
         }
-        // 위첨자 상단이 base 상단보다 위로 치솟지 않아야 한다(상단 정렬). 즉 sup.y >= base.y.
-        // (이전 버그: 키 큰 base 를 아래로 밀어 sup.y=0 < base.y 가 되어 위첨자가 base 상단 위로 떠올랐다.)
-        const MARGIN: f64 = 0.01;
-
-        // 키 큰 base: 괄호로 감싼 분수 — 상단 정렬(base_y≈0) 확인
-        let tall = parse_and_layout("LEFT ( {1} over {6} RIGHT )^4", 12.0);
-        let (b_tall, s_tall) = find_sup(&tall).expect("tall superscript");
-        assert!(
-            s_tall.y >= b_tall.y - MARGIN,
-            "tall: sup.y ({}) must not rise above base.y ({})",
-            s_tall.y,
-            b_tall.y
-        );
-        // 합성 baseline 이 base 자연 baseline 과 일치(이중 가산 없음)
-        assert!(
-            (tall.baseline - (b_tall.y + b_tall.baseline)).abs() < MARGIN,
-            "tall: box baseline ({}) should equal base baseline ({})",
-            tall.baseline,
-            b_tall.y + b_tall.baseline
-        );
-
-        // 짧은 base: x^4 도 동일 불변(상단 정렬) — 위첨자가 base 상단 위로 안 떠오름
-        let short = parse_and_layout("x^4", 12.0);
-        let (b_short, s_short) = find_sup(&short).expect("short superscript");
-        assert!(
-            s_short.y >= b_short.y - MARGIN,
-            "short: sup.y ({}) must not rise above base.y ({})",
-            s_short.y,
-            b_short.y
-        );
+        for script in ["LEFT ( {1} over {6} RIGHT )^4", "x^4"] {
+            let layout = parse_and_layout(script, 12.0);
+            let (base, sup) = find_sup(&layout).expect("본체와 위첨자 소유");
+            let base_baseline = base.y + base.baseline;
+            let sup_baseline = sup.y + sup.baseline;
+            assert!(
+                sup_baseline < base_baseline,
+                "위첨자 기준선은 본체보다 높아야 함: {script}"
+            );
+            assert!(
+                sup.x >= base.x + base.width,
+                "위첨자는 본체 뒤에 배치되어야 함"
+            );
+            let relative_error = (layout.baseline - base_baseline).abs() / layout.height;
+            assert!(
+                relative_error < 1e-9,
+                "합성 기준선은 본체 기준선을 한 번만 소비해야 함"
+            );
+            assert!(
+                base.y >= 0.0 && sup.y >= 0.0,
+                "자식 상단은 합성 프레임 안에 있어야 함"
+            );
+            assert!(base.y + base.height <= layout.height, "본체 점유 영역 보존");
+            assert!(sup.y + sup.height <= layout.height, "위첨자 점유 영역 보존");
+        }
     }
 
     #[test]

@@ -794,6 +794,17 @@ mod tests {
         render_equation_svg(&layout, "#000000", 20.0)
     }
 
+    /// 분리된 글리프도 실제 SVG 텍스트 노드의 순서로 검사한다.
+    fn rendered_text(svg: &str) -> String {
+        let wrapped = format!("<svg>{svg}</svg>");
+        let document = roxmltree::Document::parse(&wrapped).expect("유효한 수식 SVG");
+        document
+            .descendants()
+            .filter(|node| node.has_tag_name("text"))
+            .filter_map(|node| node.text())
+            .collect()
+    }
+
     #[test]
     fn escape_xml_drops_xml_invalid_control_chars() {
         // #3382: 수식 SVG 는 본문 SVG(renderer/svg.rs)와 달리 XML 1.0 문자 필터가 없어,
@@ -819,7 +830,11 @@ mod tests {
     fn test_simple_text_svg() {
         let svg = render_eq("abc");
         assert!(svg.contains("<text"));
-        assert!(svg.contains("abc"));
+        assert_eq!(
+            rendered_text(&svg),
+            "𝑎𝑏𝑐",
+            "변수 내용·순서·이탤릭 글리프 보존"
+        );
     }
 
     #[test]
@@ -886,8 +901,8 @@ mod tests {
         );
         assert!(svg.contains(">cos<"), "cos 함수가 렌더링되어야 함: {}", svg);
         assert!(
-            svg.contains(">π<"),
-            "pi 명령은 문자 π로 렌더링되어야 함: {}",
+            rendered_text(&svg).contains('𝜋'),
+            "pi 명령의 이탤릭 수학 글리프가 보존되어야 함: {}",
             svg
         );
         assert!(
@@ -922,13 +937,9 @@ mod tests {
 
     #[test]
     fn test_default_text_is_italic() {
-        // hwpeq 기본: 라틴 변수는 italic
+        // 독립 한컴 Print의 기본 변수는 이탤릭이다. Unicode 수학 글리프도 같은 의미다.
         let svg = render_eq("K");
-        assert!(
-            svg.contains("font-style=\"italic\""),
-            "기본 변수는 italic: {}",
-            svg
-        );
+        assert!(rendered_text(&svg) == "𝐾", "기본 변수는 italic: {}", svg);
     }
 
     #[test]
@@ -967,10 +978,9 @@ mod tests {
 
     #[test]
     fn test_it_keeps_italic() {
-        // it K (이탤릭 명시): italic 적용
+        // 명시 이탤릭은 CSS 속성 유무 대신 실제 이탤릭 수학 글리프를 검사한다.
         let svg = render_eq("it K");
-        assert!(svg.contains("font-style=\"italic\""));
-        assert!(svg.contains(">K<"));
+        assert_eq!(rendered_text(&svg), "𝐾");
     }
 
     #[test]
