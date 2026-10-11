@@ -3,6 +3,23 @@
 use crate::model::control::Control;
 use crate::model::paragraph::{LineSeg, Paragraph};
 
+/// 저장 줄이 없는 텍스트 문단을 건너뛰어 앞 저장 프레임의 점유 끝을 잇는다.
+/// 개체나 편집 줄처럼 전진량을 설명할 수 없는 항목을 만나면 추측하지 않는다.
+pub(super) fn preceding_saved_span(
+    spans: &[Option<(i32, i32)>],
+    reflowed_text_advances: &[Option<i32>],
+    index: usize,
+) -> Option<(i32, i32)> {
+    let mut intervening = 0_i32;
+    for previous in (0..index).rev() {
+        if let Some((first, end)) = spans[previous] {
+            return Some((first, end.saturating_add(intervening)));
+        }
+        intervening = intervening.saturating_add(reflowed_text_advances[previous]?);
+    }
+    None
+}
+
 /// 한 개의 고정 크기 도형/그림이 저장 줄 전체를 점유한 경우다.
 /// 표·수식·캡션은 재조판으로 높이가 달라질 수 있으므로 이 계약에 넣지 않는다.
 pub(super) fn owns_saved_object_line(para: &Paragraph) -> bool {

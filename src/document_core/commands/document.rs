@@ -799,14 +799,38 @@ impl DocumentCore {
                         ))
                     })
                     .collect();
-                // 필드와 책갈피는 저장 텍스트 줄의 범위·위치 표지다. 이 표지가
-                // 있다는 이유로 줄 상자나 앞뒤 원본 간격의 소유를 끊지 않는다.
-                // 표·그림·각주 등 물리 배치에 참여하는 컨트롤이 섞이면 별도 경로다.
-                let has_only_text_controls = |para: &Paragraph| {
-                    para.controls
-                        .iter()
-                        .all(|control| matches!(control, Control::Field(_) | Control::Bookmark(_)))
-                };
+                // 번호·책갈피 등의 표지와 비자리차지 부동 개체는 호스트의
+                // 저장 글줄을 없애지 않는다. 폭·높이 소유는 기존 공통 분류를 따른다.
+                // 자리차지 개체나 중첩 흐름은 이 텍스트 줄 앵커에 넣지 않는다.
+                let has_only_text_controls =
+                    |para: &Paragraph| crate::renderer::empty_host_controls_are_flow_neutral(para);
+                // 합성 텍스트 줄의 전진에는 문단 앞뒤 간격도 한 번씩 포함된다.
+                // 물리 개체의 별도 높이는 이 텍스트 브리지로 추측하지 않는다.
+                let reflowed_text_advances: Vec<Option<i32>> = section
+                    .paragraphs
+                    .iter()
+                    .enumerate()
+                    .map(|(i, para)| {
+                        if !reflowed_paras.contains(&i)
+                            || !para
+                                .controls
+                                .iter()
+                                .all(crate::renderer::composer::control_is_width_neutral_marker)
+                        {
+                            return None;
+                        }
+                        let style = styles.para_styles.get(para.para_shape_id as usize);
+                        let outer = style.map_or(0, |style| {
+                            ((style.spacing_before + style.spacing_after) * 7200.0 / dpi).round()
+                                as i32
+                        });
+                        Some(para.line_segs.iter().fold(outer, |advance, line| {
+                            advance
+                                .saturating_add(line.line_height)
+                                .saturating_add(line.line_spacing)
+                        }))
+                    })
+                    .collect();
                 // 재구성 전에 실제 글줄 끝과 다음 줄 전진 끝을 함께 고정한다.
                 let orig_plain_tail: Vec<Option<(i32, i32)>> = section
                     .paragraphs
@@ -966,7 +990,11 @@ impl DocumentCore {
                         && orig_span[pi].is_some()
                         && first_source.is_some_and(|first| {
                             stored_body_frames::saved_positive_frame_reset(
-                                pi.checked_sub(1).and_then(|prev| orig_span[prev]),
+                                stored_body_frames::preceding_saved_span(
+                                    &orig_span,
+                                    &reflowed_text_advances,
+                                    pi,
+                                ),
                                 first,
                                 body_height_hu,
                             )
@@ -1115,6 +1143,16 @@ impl DocumentCore {
                             line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
                                 == 0
                         });
+                    if reflowed_text_advances[pi].is_some() {
+                        running_vpos = running_vpos.saturating_add(
+                            styles
+                                .para_styles
+                                .get(para.para_shape_id as usize)
+                                .map_or(0, |style| {
+                                    (style.spacing_before * 7200.0 / dpi).round() as i32
+                                }),
+                        );
+                    }
                     // 문단의 첫 LINE_SEG vpos를 running_vpos로 갱신
                     if let Some(first_seg) = para.line_segs.first_mut() {
                         first_seg.vertical_pos = running_vpos;
@@ -1231,6 +1269,16 @@ impl DocumentCore {
                         }
                     }
                     running_vpos = inner_vpos;
+                    if reflowed_text_advances[pi].is_some() {
+                        running_vpos = running_vpos.saturating_add(
+                            styles
+                                .para_styles
+                                .get(para.para_shape_id as usize)
+                                .map_or(0, |style| {
+                                    (style.spacing_after * 7200.0 / dpi).round() as i32
+                                }),
+                        );
+                    }
                     if let Some((_, original_end)) =
                         orig_span[pi].filter(|_| text_only_controls || saved_object_line)
                     {

@@ -5052,18 +5052,14 @@ fn stored_empty_flow_line(para: &Paragraph) -> Option<&crate::model::paragraph::
         .then_some(line)
 }
 
-/// A flow-neutral table does not erase its host's own stored line. The next
-/// independently stored line must close the nominal line box and trailing band;
-/// object height and the page-limit flag are not evidence for that ownership.
+/// 비자리차지 부동 개체나 표지는 호스트의 저장 글줄을 지우지 않는다.
+/// 다음 독립 저장 줄이 줄 상자와 후행 간격을 정확히 닫아야 한다.
+/// 개체 높이나 쪽 제한 속성은 호스트 줄의 소유 근거가 아니다.
 pub(crate) fn stored_overlay_host_flow_line<'a>(
     para: &'a Paragraph,
     successor: Option<&Paragraph>,
 ) -> Option<&'a crate::model::paragraph::LineSeg> {
-    if para.controls.is_empty()
-        || !para.controls.iter().all(
-            |control| matches!(control, Control::Table(table) if nested_table_is_overlay(table)),
-        )
-    {
+    if para.controls.is_empty() || !crate::renderer::empty_host_controls_are_flow_neutral(para) {
         return None;
     }
     let line = stored_empty_flow_line(para)?;
