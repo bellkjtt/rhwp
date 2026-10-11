@@ -4610,7 +4610,7 @@ impl DocumentCore {
         let hwp3_origin_flow_spacing_before = uses_hwp3_origin_flow_spacing_before(&self.document);
         let measurer = HeightMeasurer::new(self.dpi)
             .with_hwp3_variant(profile.hwp3_layout())
-            .with_legacy_hwp3_stored_geometry(profile.legacy_hwp3_stored_geometry())
+            .with_stored_geometry_policy(profile.stored_geometry_policy())
             .with_native_hwp5(profile.native_hwp5_layout())
             .with_hwpx_stored_layout(profile.hwpx_stored_layout())
             .with_session_edited(profile.session_edited())
@@ -4973,7 +4973,7 @@ impl DocumentCore {
         let profile = self.effective_layout_profile();
         let measurer = HeightMeasurer::new(self.dpi)
             .with_hwp3_variant(profile.hwp3_layout())
-            .with_legacy_hwp3_stored_geometry(profile.legacy_hwp3_stored_geometry())
+            .with_stored_geometry_policy(profile.stored_geometry_policy())
             .with_native_hwp5(profile.native_hwp5_layout())
             .with_hwpx_stored_layout(profile.hwpx_stored_layout())
             .with_session_edited(profile.session_edited())

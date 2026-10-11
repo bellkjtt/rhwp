@@ -5629,7 +5629,7 @@ impl LayoutEngine {
                     cell_inner_width_px,
                     styles,
                     self.dpi,
-                    self.profile.get().legacy_hwp3_stored_geometry(),
+                    self.profile.get().stored_geometry_policy(),
                     self.profile.get().native_hwp5_layout(),
                     &self.single_line_overflow_cache,
                     |nested| self.nested_table_body_height(nested, styles),
@@ -9959,7 +9959,7 @@ impl LayoutEngine {
                             inner_width,
                             styles,
                             self.dpi,
-                            self.profile.get().legacy_hwp3_stored_geometry(),
+                            self.profile.get().stored_geometry_policy(),
                             self.profile.get().native_hwp5_layout(),
                             &self.single_line_overflow_cache,
                             |nested| self.nested_table_body_height(nested, styles),
@@ -9974,7 +9974,7 @@ impl LayoutEngine {
                             ),
                             styles,
                             self.dpi,
-                            self.profile.get().legacy_hwp3_stored_geometry(),
+                            self.profile.get().stored_geometry_policy(),
                         );
                     }
                 }
@@ -10656,7 +10656,7 @@ impl LayoutEngine {
     ) -> f64 {
         let measurer = super::super::height_measurer::HeightMeasurer::new(self.dpi)
             .with_hwp3_variant(self.profile.get().hwp3_layout())
-            .with_legacy_hwp3_stored_geometry(self.profile.get().legacy_hwp3_stored_geometry())
+            .with_stored_geometry_policy(self.profile.get().stored_geometry_policy())
             .with_native_hwp5(self.profile.get().hwp5_stored_pagination_layout())
             .with_hwpx_stored_layout(self.profile.get().hwpx_stored_layout())
             .with_render_normalization(self.render_normalization_overlay());
@@ -12103,7 +12103,7 @@ impl LayoutEngine {
                         inner_width,
                         styles,
                         self.dpi,
-                        self.profile.get().legacy_hwp3_stored_geometry(),
+                        self.profile.get().stored_geometry_policy(),
                         self.profile.get().native_hwp5_layout(),
                         &self.single_line_overflow_cache,
                         |nested| self.nested_table_body_height(nested, styles),
@@ -12118,7 +12118,7 @@ impl LayoutEngine {
                         ),
                         styles,
                         self.dpi,
-                        self.profile.get().legacy_hwp3_stored_geometry(),
+                        self.profile.get().stored_geometry_policy(),
                     );
                 }
                 // [#2279 axis A] 종전에는 comp.lines 빈 문단을 통째 skip 해 (a) 2단계
@@ -12285,7 +12285,7 @@ impl LayoutEngine {
                                 inner_width,
                                 styles,
                                 self.dpi,
-                                self.profile.get().legacy_hwp3_stored_geometry(),
+                                self.profile.get().stored_geometry_policy(),
                                 self.profile.get().native_hwp5_layout(),
                                 &self.single_line_overflow_cache,
                                 |nested| self.nested_table_body_height(nested, styles),
@@ -12300,7 +12300,7 @@ impl LayoutEngine {
                                 ),
                                 styles,
                                 self.dpi,
-                                self.profile.get().legacy_hwp3_stored_geometry(),
+                                self.profile.get().stored_geometry_policy(),
                             );
                         }
                         let nctl = para.controls.len();
@@ -13147,7 +13147,7 @@ impl LayoutEngine {
                 inner_width,
                 styles,
                 self.dpi,
-                self.profile.get().legacy_hwp3_stored_geometry(),
+                self.profile.get().stored_geometry_policy(),
                 self.profile.get().native_hwp5_layout(),
                 &self.single_line_overflow_cache,
                 |nested| self.nested_table_body_height(nested, styles),
@@ -13159,7 +13159,7 @@ impl LayoutEngine {
                 crate::renderer::composer::ParagraphBox::content_width_px(inner_width, self.dpi),
                 styles,
                 self.dpi,
-                self.profile.get().legacy_hwp3_stored_geometry(),
+                self.profile.get().stored_geometry_policy(),
             );
         }
         comp

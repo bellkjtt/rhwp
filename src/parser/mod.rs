@@ -637,6 +637,7 @@ fn fixup_line_segs_for_variant(paragraphs: &mut [crate::model::paragraph::Paragr
 }
 
 fn apply_hwp3_origin_fixup(doc: &mut Document, summary_hwp3_era: bool) {
+    let external_realign = doc.layout_profile().hwp3_external_realign();
     // [#1880 v2] rhwp HWPX→HWP 변환본(is_hwpx_variant, #1886 마커)은 한컴
     // HWP3→HWP5 변환본이 아니다 — 결정론 마커가 비율 휴리스틱에 우선한다.
     // 미게이트 시 저-스타일 대형 문서(2959953)가 비율에 걸려 margin_bottom
@@ -672,12 +673,16 @@ fn apply_hwp3_origin_fixup(doc: &mut Document, summary_hwp3_era: bool) {
         doc.provenance.hwp3_lineage = true;
         for section in doc.sections.iter_mut() {
             let pd = &mut section.section_def.page_def;
-            if pd.pagination_bottom_tolerance == 0 {
+            if !external_realign && pd.pagination_bottom_tolerance == 0 {
                 pd.pagination_bottom_tolerance = 1600.min(pd.margin_bottom);
             }
         }
     }
 
+    // 출처는 보존하되 외부 문서의 재정렬 요청에 이전 마지막 줄 허용치를 덧씌우지 않는다.
+    if external_realign {
+        return;
+    }
     let total_paragraphs: usize = doc.sections.iter().map(|s| s.paragraphs.len()).sum();
     if total_paragraphs <= 50 {
         return;

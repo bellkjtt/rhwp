@@ -3846,6 +3846,8 @@ impl LayoutEngine {
         let mut current_y = y;
         let mut table_idx = 0;
         let mut max_table_bottom = y; // 표의 최대 하단 y (표 높이를 줄 높이로 사용하기 위함)
+        let mut max_table_outer_bottom = y;
+        let realign_stored_row = self.profile.get().hwp3_external_realign();
         let mut wrapped_below_table = false; // 텍스트가 표 아래로 줄바꿈되었는지
                                              // [Task #518] 다음 break 인덱스 (line_break_char_indices 안에서)
         let mut next_break: usize = 0;
@@ -4134,7 +4136,11 @@ impl LayoutEngine {
                                 // 첫 번째 줄바꿈 시 표 아래로 이동
                                 // HWP: 표 너비로 인한 텍스트 오버플로우에는 줄간격 미적용
                                 // (텍스트만의 오버플로우에는 줄간격 적용)
-                                current_y = max_table_bottom;
+                                current_y = if realign_stored_row {
+                                    max_table_outer_bottom
+                                } else {
+                                    max_table_bottom
+                                };
                                 wrapped_below_table = true;
                             } else {
                                 current_y += line_step;
@@ -4332,9 +4338,14 @@ impl LayoutEngine {
                 if table_bottom > max_table_bottom {
                     max_table_bottom = table_bottom;
                 }
+                max_table_outer_bottom = max_table_outer_bottom.max(table_bottom + om_bottom);
 
                 if table_wrapped {
-                    current_y = table_bottom;
+                    current_y = if realign_stored_row {
+                        table_bottom + om_bottom
+                    } else {
+                        table_bottom
+                    };
                     inline_x = line_start_x;
                     wrapped_below_table = true;
                 } else {
@@ -4390,6 +4401,7 @@ impl LayoutEngine {
             if table_bottom > max_table_bottom {
                 max_table_bottom = table_bottom;
             }
+            max_table_outer_bottom = max_table_outer_bottom.max(table_bottom + om_bottom);
 
             inline_x += tw + om_left + om_right;
             table_idx += 1;
@@ -4415,7 +4427,16 @@ impl LayoutEngine {
                 seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
             })
             && max_table_bottom <= y + line_height + 0.5;
-        let flow_bottom = if stored_single_line_owns_tables {
+        // 재정렬된 줄은 실제 개체 바깥여백을 포함한 점유 뒤에 줄간격을 잇는다.
+        // 작은 원본 줄높이와 표의 보이는 바닥만 비교하면 바깥여백·줄간격이 빠진다.
+        let recomputed_line_box_bottom = max_table_outer_bottom.max(if wrapped_below_table {
+            current_y + text_line_height
+        } else {
+            current_y + line_height
+        });
+        let flow_bottom = if realign_stored_row {
+            recomputed_line_box_bottom + line_spacing + spacing_after
+        } else if stored_single_line_owns_tables {
             text_bottom.max(y + line_height + line_spacing) + spacing_after
         } else {
             // 표와 텍스트 중 더 큰 하단을 사용한다.
@@ -4429,11 +4450,15 @@ impl LayoutEngine {
         InlineTableParagraphGeometry {
             flow_bottom,
             content_bottom: max_table_bottom.max(current_y + text_line_height),
-            line_box_bottom: max_table_bottom.max(if wrapped_below_table {
-                current_y + text_line_height
+            line_box_bottom: if realign_stored_row {
+                recomputed_line_box_bottom
             } else {
-                current_y + line_height
-            }),
+                max_table_bottom.max(if wrapped_below_table {
+                    current_y + text_line_height
+                } else {
+                    current_y + line_height
+                })
+            },
         }
     }
 
@@ -4503,7 +4528,7 @@ impl LayoutEngine {
                 inner,
                 styles,
                 self.dpi,
-                self.profile.get().legacy_hwp3_stored_geometry(),
+                self.profile.get().stored_geometry_policy(),
                 crate::renderer::composer::StoredRowMissPolicy::Reflow,
                 &self.body_float_carve_evidence.borrow(),
                 known_square_band,
@@ -4627,7 +4652,7 @@ impl LayoutEngine {
                         column_inner_width,
                         styles,
                         self.dpi,
-                        self.profile.get().legacy_hwp3_stored_geometry(),
+                        self.profile.get().stored_geometry_policy(),
                         crate::renderer::composer::StoredRowMissPolicy::Reflow,
                         &self.body_float_carve_evidence.borrow(),
                         wrap_anchor.is_some(),

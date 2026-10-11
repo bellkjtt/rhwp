@@ -13640,8 +13640,10 @@ impl LayoutEngine {
                             // hwp3_layout)도 같은 스텝을 밟아야 render-diff 왕복
                             // 등식이 성립한다(hwp3-sample p7 14.9px OVER 실측).
                             // 자기일관 변환본(1892 계열)은 발산 0 이라 무동작.
-                            if (self.profile.get().hwp3_native_layout()
-                                || self.profile.get().hwp3_layout())
+                            // 외부 재정렬의 저장 원점은 실제 표 줄을 소유하지 않는다.
+                            if !self.profile.get().hwp3_external_realign()
+                                && (self.profile.get().hwp3_native_layout()
+                                    || self.profile.get().hwp3_layout())
                                 && hwpunit_to_px(seg.line_height, self.dpi) < table_visual_height
                             {
                                 if let Some((np, ns)) = paragraphs

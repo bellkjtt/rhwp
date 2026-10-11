@@ -584,8 +584,7 @@ impl DocumentCore {
                         paragraph_box,
                         &self.styles,
                         self.dpi,
-                        self.effective_layout_profile()
-                            .legacy_hwp3_stored_geometry(),
+                        self.effective_layout_profile().stored_geometry_policy(),
                         miss_policy,
                     );
                     let reason = match disposition {

@@ -108,7 +108,7 @@ pub(in crate::renderer::typeset) fn format_paragraph_for_flow(
         let authored_line_segs = para.line_segs.iter().all(|seg| {
             seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
         });
-        let vpos_metric = if para.controls.is_empty() && authored_line_segs {
+        let vpos_metric = if recomposed.is_none() && para.controls.is_empty() && authored_line_segs {
             para.line_segs
                 .first()
                 .zip(para.line_segs.last())
@@ -258,7 +258,7 @@ fn recompose_for_flow(
                     inner,
                     styles,
                     ctx.dpi(),
-                    ctx.profile().legacy_hwp3_stored_geometry(),
+                    ctx.profile().stored_geometry_policy(),
                     crate::renderer::composer::StoredRowMissPolicy::Reflow,
                     &ctx.float_carve_evidence(),
                     known_square_band,

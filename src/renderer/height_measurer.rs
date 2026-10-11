@@ -1540,7 +1540,7 @@ pub struct HeightMeasurer {
     dpi: f64,
     section_column_spacing_hu: std::cell::Cell<Option<i32>>,
     is_hwp3_variant: bool,
-    legacy_hwp3_stored_geometry: bool,
+    stored_geometry_policy: crate::model::provenance::StoredGeometryPolicy,
     is_native_hwp5: bool,
     hwpx_stored_layout: bool,
     session_edited: bool,
@@ -1644,7 +1644,7 @@ impl HeightMeasurer {
             dpi,
             section_column_spacing_hu: std::cell::Cell::new(None),
             is_hwp3_variant: false,
-            legacy_hwp3_stored_geometry: false,
+            stored_geometry_policy: Default::default(),
             is_native_hwp5: false,
             hwpx_stored_layout: false,
             session_edited: false,
@@ -1673,7 +1673,16 @@ impl HeightMeasurer {
     }
 
     pub fn with_legacy_hwp3_stored_geometry(mut self, enabled: bool) -> Self {
-        self.legacy_hwp3_stored_geometry = enabled;
+        self.stored_geometry_policy = enabled.into();
+        self
+    }
+
+    /// 측정과 배치가 같은 저장 기하 수용 정책을 소비한다.
+    pub fn with_stored_geometry_policy(
+        mut self,
+        policy: crate::model::provenance::StoredGeometryPolicy,
+    ) -> Self {
+        self.stored_geometry_policy = policy;
         self
     }
 
@@ -1971,7 +1980,7 @@ impl HeightMeasurer {
                         inner,
                         styles,
                         self.dpi,
-                        self.legacy_hwp3_stored_geometry,
+                        self.stored_geometry_policy,
                         crate::renderer::composer::StoredRowMissPolicy::Reflow,
                         &self.float_carve_evidence,
                     )
@@ -3055,7 +3064,7 @@ impl HeightMeasurer {
                                 cell_inner_width,
                                 styles,
                                 self.dpi,
-                                self.legacy_hwp3_stored_geometry,
+                                self.stored_geometry_policy,
                                 self.is_native_hwp5,
                                 &self.single_line_overflow_cache,
                                 |nested| {
@@ -3884,7 +3893,7 @@ impl HeightMeasurer {
                                 cell_inner_width,
                                 styles,
                                 self.dpi,
-                                self.legacy_hwp3_stored_geometry,
+                                self.stored_geometry_policy,
                                 self.is_native_hwp5,
                                 &self.single_line_overflow_cache,
                                 |nested| {
@@ -4098,7 +4107,7 @@ impl HeightMeasurer {
                                 cell_inner_width,
                                 styles,
                                 self.dpi,
-                                self.legacy_hwp3_stored_geometry,
+                                self.stored_geometry_policy,
                                 self.is_native_hwp5,
                                 &self.single_line_overflow_cache,
                                 |nested| {

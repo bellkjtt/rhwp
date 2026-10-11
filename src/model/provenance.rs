@@ -45,6 +45,22 @@ pub struct SourceProvenance {
     pub hft_ascii_halfwidth_witnessed: bool,
 }
 
+/// 저장 줄의 출처 원점과 재정렬 요청을 분리해 측정·배치에 전달한다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct StoredGeometryPolicy {
+    pub(crate) preserve_hwp3_origins: bool,
+    pub(crate) requires_realign: bool,
+}
+
+impl From<bool> for StoredGeometryPolicy {
+    fn from(preserve_hwp3_origins: bool) -> Self {
+        Self {
+            preserve_hwp3_origins,
+            requires_realign: false,
+        }
+    }
+}
+
 /// 레이아웃 호환 정책 질의 표면.
 ///
 /// 질의 이름은 "무엇을 켜는가"를 말하고, 값 계산은
@@ -134,6 +150,13 @@ impl LayoutCompatibilityProfile {
     /// the DocInfo-derived style aggregate.
     pub fn legacy_hwp3_stored_geometry(&self) -> bool {
         (self.hwp3_native_layout || self.hwp3_layout) && !self.hwp3_external_realign
+    }
+
+    pub fn stored_geometry_policy(&self) -> StoredGeometryPolicy {
+        StoredGeometryPolicy {
+            preserve_hwp3_origins: self.legacy_hwp3_stored_geometry(),
+            requires_realign: self.hwp3_external_realign,
+        }
     }
 
     /// 원본 헤더가 외부 생성 문서의 재정렬을 요청했다. 저장 폭·배치 캐시의

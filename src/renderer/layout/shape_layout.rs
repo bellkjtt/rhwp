@@ -3336,7 +3336,7 @@ impl LayoutEngine {
                     inner_width,
                     styles,
                     self.dpi,
-                    self.profile.get().legacy_hwp3_stored_geometry(),
+                    self.profile.get().stored_geometry_policy(),
                     crate::renderer::composer::StoredRowMissPolicy::Reflow,
                     &[],
                 )

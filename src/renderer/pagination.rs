@@ -1496,7 +1496,7 @@ pub struct PaginationOpts {
 struct PaginationSourceContext {
     source_uses_inline_field_reset: bool,
     hwp3_converted_missing_lineseg: bool,
-    legacy_hwp3_stored_geometry: bool,
+    stored_geometry_policy: crate::model::provenance::StoredGeometryPolicy,
 }
 
 impl PaginationSourceContext {
@@ -1507,7 +1507,7 @@ impl PaginationSourceContext {
             source_uses_inline_field_reset: profile.hwpx_stored_layout()
                 || hwp3_converted_missing_lineseg,
             hwp3_converted_missing_lineseg,
-            legacy_hwp3_stored_geometry: profile.legacy_hwp3_stored_geometry(),
+            stored_geometry_policy: profile.stored_geometry_policy(),
         }
     }
 
@@ -1515,7 +1515,7 @@ impl PaginationSourceContext {
         Self {
             source_uses_inline_field_reset: is_hwp3_variant,
             hwp3_converted_missing_lineseg: is_hwp3_variant,
-            legacy_hwp3_stored_geometry: is_hwp3_variant,
+            stored_geometry_policy: is_hwp3_variant.into(),
         }
     }
 }

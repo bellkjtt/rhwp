@@ -1263,7 +1263,7 @@ impl LayoutEngine {
         let table = Self::footnote_block_table(para, selected)?;
         let measurer = crate::renderer::height_measurer::HeightMeasurer::new(self.dpi)
             .with_hwp3_variant(self.profile.get().hwp3_layout())
-            .with_legacy_hwp3_stored_geometry(self.profile.get().legacy_hwp3_stored_geometry())
+            .with_stored_geometry_policy(self.profile.get().stored_geometry_policy())
             .with_native_hwp5(self.profile.get().hwp5_stored_pagination_layout())
             .with_hwpx_stored_layout(self.profile.get().hwpx_stored_layout())
             .with_session_edited(self.profile.get().session_edited())

@@ -465,7 +465,7 @@ pub(crate) fn recompose_horizontal_cell_lines_for_width(
     cell_inner_width_px: f64,
     styles: &ResolvedStyleSet,
     dpi: f64,
-    legacy_hwp3_stored_geometry: bool,
+    stored_geometry_policy: impl Into<crate::model::provenance::StoredGeometryPolicy>,
     repair_stored_overflow: bool,
     overflow_cache: &SingleLineOverflowCache,
 ) {
@@ -480,7 +480,7 @@ pub(crate) fn recompose_horizontal_cell_lines_for_width(
         ),
         styles,
         dpi,
-        legacy_hwp3_stored_geometry,
+        stored_geometry_policy,
     );
     if repair_stored_overflow {
         recompose_stored_single_line_if_overflowing_cached(
@@ -754,7 +754,7 @@ pub(crate) fn recompose_stored_lines_in_frame(
     inner_width_px: f64,
     styles: &ResolvedStyleSet,
     dpi: f64,
-    legacy_hwp3_stored_geometry: bool,
+    stored_geometry_policy: impl Into<crate::model::provenance::StoredGeometryPolicy>,
     miss_policy: line_breaking::StoredRowMissPolicy,
     // [#6175] 같은 세로 band의 용지/쪽 기준 어울림 개체 증거(HWPUNIT) — 저장 행이
     // 남긴 결손 폭과 위치를 함께 설명할 때만 재래핑하지 않는다. 측정·페인트가 같은
@@ -768,7 +768,7 @@ pub(crate) fn recompose_stored_lines_in_frame(
         inner_width_px,
         styles,
         dpi,
-        legacy_hwp3_stored_geometry,
+        stored_geometry_policy,
         miss_policy,
         float_carve_evidence,
         false,

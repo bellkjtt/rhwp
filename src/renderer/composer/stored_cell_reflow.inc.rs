@@ -14,7 +14,7 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
     inner_width_px: f64,
     styles: &ResolvedStyleSet,
     dpi: f64,
-    legacy_hwp3_stored_geometry: bool,
+    stored_geometry_policy: impl Into<crate::model::provenance::StoredGeometryPolicy>,
     miss_policy: line_breaking::StoredRowMissPolicy,
     // [#6175] 용지/쪽 기준 float 증거는 uniform ladder의 결손 폭과 세로 band를
     // 함께 설명할 때만 저장 기하를 유지한다.
@@ -22,6 +22,7 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
     known_square_band: bool,
     hwpx_stored_layout: bool,
 ) -> Option<ComposedParagraph> {
+    let stored_geometry_policy = stored_geometry_policy.into();
     // A degenerate box, or controls with their own layout owner, means there is
     // no frame to build. The composition stands as it is — there is no second
     // owner to hand it to.
@@ -79,7 +80,11 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
     }
 
     // 저장 원점 복원은 측정·배치와 읽기 전용 증거 프로브가 같은 상자를 사용한다.
-    let paragraph_box = paragraph_box.for_stored_body_rows(para);
+    let paragraph_box = if stored_geometry_policy.requires_realign {
+        paragraph_box
+    } else {
+        paragraph_box.for_stored_body_rows(para)
+    };
     let mut frame = paragraph_box.frame(
         para.line_segs
             .first()
@@ -118,7 +123,8 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
                 .is_some_and(|rows| rows.len() < para.line_segs.len())
         };
     // 합성·편집 줄은 현재 필드 토큰으로 다시 채우고 저장 줄은 기존 계약을 따른다.
-    let stale = (!para.layout_field_values.is_empty()
+    let stale = stored_geometry_policy.requires_realign
+        || (!para.layout_field_values.is_empty()
         && (para.stored_text_partition_dirty
             || crate::renderer::para_has_no_stored_line_segs(para)))
         || rejoinable_word_tail
@@ -129,7 +135,7 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
         &mut frame,
         styles,
         dpi,
-        legacy_hwp3_stored_geometry,
+        stored_geometry_policy.preserve_hwp3_origins,
         miss_policy,
         stale,
         float_carve_evidence,
@@ -216,9 +222,10 @@ pub(crate) fn probe_stored_row_disposition(
     paragraph_box: ParagraphBox,
     styles: &ResolvedStyleSet,
     dpi: f64,
-    legacy_hwp3_stored_geometry: bool,
+    stored_geometry_policy: impl Into<crate::model::provenance::StoredGeometryPolicy>,
     miss_policy: line_breaking::StoredRowMissPolicy,
 ) -> StoredRowProbeDisposition {
+    let stored_geometry_policy = stored_geometry_policy.into();
     let has_authoritative_rows = !para.line_segs.is_empty()
         && !para
             .line_segs
@@ -233,9 +240,14 @@ pub(crate) fn probe_stored_row_disposition(
 
     let composed = compose_paragraph_in_context(para, styles);
     let inner_width_px = paragraph_box.width_px(dpi);
-    let stale = stored_rows_are_stale(&composed, para, inner_width_px, styles);
+    let stale = stored_geometry_policy.requires_realign
+        || stored_rows_are_stale(&composed, para, inner_width_px, styles);
     // 저장 원점 복원은 측정·배치와 읽기 전용 증거 프로브가 같은 상자를 사용한다.
-    let paragraph_box = paragraph_box.for_stored_body_rows(para);
+    let paragraph_box = if stored_geometry_policy.requires_realign {
+        paragraph_box
+    } else {
+        paragraph_box.for_stored_body_rows(para)
+    };
     let mut frame = paragraph_box.frame(
         para.line_segs
             .first()
@@ -247,7 +259,7 @@ pub(crate) fn probe_stored_row_disposition(
         &mut frame,
         styles,
         dpi,
-        legacy_hwp3_stored_geometry,
+        stored_geometry_policy.preserve_hwp3_origins,
         miss_policy,
         stale,
         // 증거 프로브는 단 문맥을 갖지 않는다 — 개체 증거 없이 판정한다.
@@ -437,8 +449,9 @@ pub fn recompose_cell_lines_in_frame(
     cell_box: ParagraphBox,
     styles: &ResolvedStyleSet,
     dpi: f64,
-    legacy_hwp3_stored_geometry: bool,
+    stored_geometry_policy: impl Into<crate::model::provenance::StoredGeometryPolicy>,
 ) {
+    let stored_geometry_policy = stored_geometry_policy.into();
     let has_synthetic_line_segs = !para.line_segs.is_empty()
         && para
             .line_segs
@@ -470,7 +483,7 @@ pub fn recompose_cell_lines_in_frame(
             inner_width_px,
             styles,
             dpi,
-            legacy_hwp3_stored_geometry,
+            stored_geometry_policy,
             line_breaking::StoredRowMissPolicy::UnmodelledUnlessStale,
             // 셀 줄의 어울림 배제는 #5818 셀 계약이 따로 소유한다.
             &[],
@@ -487,7 +500,7 @@ pub fn recompose_cell_lines_in_frame(
             inner_width_px,
             styles,
             dpi,
-            legacy_hwp3_stored_geometry,
+            stored_geometry_policy,
             line_breaking::StoredRowMissPolicy::Reflow,
             &[],
         )
