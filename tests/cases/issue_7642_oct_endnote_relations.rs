@@ -138,7 +138,7 @@ fn note_lines<'a>(
     result
 }
 #[test]
-fn issue_1189_2022_oct_page17_endnote_drag_selection_covers_equation_tail_lines() {
+fn issue7642_2022_oct_page17_endnote_drag_selection_covers_equation_tail_lines() {
     let d = document();
     let t = d.build_page_render_tree(16).expect("17쪽");
     let rs: Value =
@@ -159,7 +159,7 @@ fn issue_1189_2022_oct_page17_endnote_drag_selection_covers_equation_tail_lines(
     }
 }
 #[test]
-fn issue_1261_2022_oct_page5_question28_choices_stay_below_condition_box() {
+fn issue7642_2022_oct_page5_question28_choices_stay_below_condition_box() {
     let d = document();
     let t = d.build_page_render_tree(4).expect("5쪽");
     let boxes:Vec<_>=nodes(&t.root).into_iter().filter(|(n,_)|matches!(&n.node_type,RenderNodeType::Rectangle(r) if r.para_index==Some(306)&&r.control_index==Some(0))).collect();
@@ -169,7 +169,7 @@ fn issue_1261_2022_oct_page5_question28_choices_stay_below_condition_box() {
     before(boxes[0].0, choice);
 }
 #[test]
-fn issue_1189_2022_oct_page11_endnote_question_gaps_match_pdf() {
+fn issue7642_2022_oct_page11_endnote_question_gaps_match_pdf() {
     let d = document();
     let t = d.build_page_render_tree(10).expect("11쪽");
     for (previous, next) in [(18, 19), (19, 20)] {
@@ -190,7 +190,7 @@ fn issue_1189_2022_oct_page11_endnote_question_gaps_match_pdf() {
     }
 }
 #[test]
-fn issue_1274_2022_oct_page11_question20_equation_tail_keeps_pdf_bleed() {
+fn issue7642_2022_oct_page11_question20_equation_tail_keeps_pdf_bleed() {
     let d = document();
     let t = d.build_page_render_tree(10).expect("11쪽");
     let ls = note_lines(&d, &t.root, 20);
@@ -207,7 +207,7 @@ fn issue_1274_2022_oct_page11_question20_equation_tail_keeps_pdf_bleed() {
     );
 }
 #[test]
-fn issue_1284_2022_oct_page11_question20_formula_does_not_overlap_next_text() {
+fn issue7642_2022_oct_page11_question20_formula_does_not_overlap_next_text() {
     let d = document();
     let t = d.build_page_render_tree(10).expect("11쪽");
     let (eq, col) = equation(&t.root, 584);
@@ -216,7 +216,7 @@ fn issue_1284_2022_oct_page11_question20_formula_does_not_overlap_next_text() {
     before(eq, next);
 }
 #[test]
-fn issue_1284_2022_oct_page15_question28_formula_does_not_overlap_case_label() {
+fn issue7642_2022_oct_page15_question28_formula_does_not_overlap_case_label() {
     let d = document();
     let t = d.build_page_render_tree(14).expect("15쪽");
     let (eq, col) = equation(&t.root, 816);
@@ -250,7 +250,7 @@ fn issue_1284_2022_oct_page15_question28_formula_does_not_overlap_case_label() {
     before(eq, next);
 }
 #[test]
-fn issue_1284_2022_oct_page14_question25_tail_matches_pdf_frame() {
+fn issue7642_2022_oct_page14_question25_tail_matches_pdf_frame() {
     let d = document();
     let t = d.build_page_render_tree(13).expect("14쪽");
     let (head, col) = title(&t.root, 25);
@@ -265,7 +265,7 @@ fn issue_1284_2022_oct_page14_question25_tail_matches_pdf_frame() {
     }
 }
 #[test]
-fn issue_1284_2022_oct_page17_question29_tail_matches_pdf_frame() {
+fn issue7642_2022_oct_page17_question29_tail_matches_pdf_frame() {
     let d = document();
     let t = d.build_page_render_tree(16).expect("17쪽");
     let (q28, c28) = title(&t.root, 28);
@@ -283,7 +283,7 @@ fn issue_1284_2022_oct_page17_question29_tail_matches_pdf_frame() {
     }
 }
 #[test]
-fn issue_1274_2022_oct_page16_question30_title_tail_continues_next_column() {
+fn issue7642_2022_oct_page16_question30_title_tail_continues_next_column() {
     let d = document();
     let t = d.build_page_render_tree(15).expect("16쪽");
     let (head, col) = title(&t.root, 30);
