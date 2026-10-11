@@ -638,6 +638,7 @@ pub(crate) fn shrunk_cell_horizontal_padding(
     styles: &ResolvedStyleSet,
     preserve_cell_padding: bool,
     line_wrap_squeeze: bool,
+    stored_geometry_policy: crate::model::provenance::StoredGeometryPolicy,
     dpi: f64,
 ) -> (f64, f64) {
     // 하한선을 먼저 적용한다. `preserve_cell_padding`(aim=true) 은 "저장된 안 여백을
@@ -665,7 +666,7 @@ pub(crate) fn shrunk_cell_horizontal_padding(
     // 자연 폭 추정으로 다시 깎으면 오버 페인팅. 단일 줄 셀(좁은 수치 셀
     // 등에서 오버플로우 가능성 있음) 은 종전 휴리스틱으로 보호한다.
     let any_multiline_distributed = paragraphs.iter().any(|p| p.line_segs.len() >= 2);
-    if any_multiline_distributed {
+    if !stored_geometry_policy.requires_realign && any_multiline_distributed {
         return (pad_left, pad_right);
     }
 
@@ -748,11 +749,11 @@ pub(crate) fn shrunk_cell_horizontal_padding(
                 ),
                 styles,
                 dpi,
-                false,
+                stored_geometry_policy,
             );
-            // [#7418] 한/글 자신의 저장 줄(비합성 LINE_SEG)이 줄바꿈 결과보다 적으면, 한/글은
-            // 이 글을 그 줄 수에 담았다는 증거다 — 높이와 무관하게 깎아 그 줄 수를 따른다.
-            // 20099369 3쪽 `월별누계` 칸: 저장 1줄, rhwp 줄바꿈 2줄(말미 제외 39.8 ≤ 43.6).
+            // [#7418] 유효한 저장 줄(비합성 LINE_SEG)이 재구성보다 적으면 저장 줄 수를 따른다.
+            // 재정렬 요청은 저장 줄 구성이 무효하다는 뜻이므로 이 증거를 수용하지 않는다.
+            // 이때 여백 유지 여부는 같은 정책으로 재구성한 실제 줄 높이에서 판단한다.
             let stored_lines = para
                 .line_segs
                 .iter()
@@ -760,7 +761,10 @@ pub(crate) fn shrunk_cell_horizontal_padding(
                     seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
                 })
                 .count();
-            if stored_lines > 0 && comp.lines.len() > stored_lines {
+            if !stored_geometry_policy.requires_realign
+                && stored_lines > 0
+                && comp.lines.len() > stored_lines
+            {
                 stored_fits_fewer_lines = true;
             }
             for line in &comp.lines {
@@ -782,9 +786,8 @@ pub(crate) fn shrunk_cell_horizontal_padding(
                 "D_SHRINK cell_w={cell_w:.1} avail={available:.1} inner_h={inner_height_px:.15} wrapped_h={wrapped_height:.15} max_line_w={max_line_w:.1}"
             );
         }
-        // Adding line pitches and subtracting cell padding can round the same
-        // physical height to adjacent f64 values. That single representable
-        // step is arithmetic noise, not overflow that warrants shrinking pads.
+        // 줄 피치를 더하고 셀 여백을 빼면 같은 물리 높이가 인접한 f64 값으로 반올림될 수 있다.
+        // 표현 가능한 값 한 단계의 차이는 여백을 축소할 오버플로우가 아니라 연산 오차다.
         if wrapped_height <= inner_height_px.next_up() && !stored_fits_fewer_lines {
             return (pad_left, pad_right);
         }

@@ -5684,7 +5684,9 @@ impl LayoutEngine {
         &self,
         paragraphs: &[Paragraph],
     ) -> Option<crate::renderer::float_placement::StoredSingleColumnCellFlow> {
-        if !(self.profile.get().native_hwp5_layout() || self.profile.get().hwpx_stored_layout()) {
+        if self.profile.get().hwp3_external_realign()
+            || !(self.profile.get().native_hwp5_layout() || self.profile.get().hwpx_stored_layout())
+        {
             return None;
         }
         self.section_column_spacing_hu.get().and_then(|spacing| {
@@ -5874,6 +5876,7 @@ impl LayoutEngine {
         table: &crate::model::table::Table,
     ) -> Option<crate::renderer::float_placement::StoredInlineContentFrame> {
         if !(self.profile.get().native_hwp5_layout() || self.profile.get().hwpx_stored_layout())
+            || self.profile.get().hwp3_external_realign()
             || self.profile.get().session_edited()
             || self
                 .render_normalization
@@ -5893,6 +5896,7 @@ impl LayoutEngine {
     ) -> Option<crate::renderer::float_placement::StoredEmptyPictureCellFrame> {
         let profile = self.profile.get();
         if !(profile.hwp5_stored_pagination_layout() || profile.hwpx_stored_layout())
+            || profile.hwp3_external_realign()
             || profile.session_edited()
             || self
                 .render_normalization
@@ -6115,6 +6119,7 @@ impl LayoutEngine {
             styles,
             preserve_cell_padding,
             line_wrap_squeeze,
+            self.profile.get().stored_geometry_policy(),
             self.dpi,
         )
     }
@@ -10350,7 +10355,9 @@ impl LayoutEngine {
             // 같은 규약을 측정에도 적용한다.
             let stored_flow_has_para_anchors = single_column_flow.is_some()
                 || crate::renderer::cell_vpos_ladder_is_intact(&cell.paragraphs);
-            let stored_flow_shape_is_trusted = (depth > 0 || table.common.treat_as_char)
+            // 재정렬 요청의 저장 줄은 재구성한 셀 높이를 다시 축소할 근거가 아니다.
+            let stored_flow_shape_is_trusted = !self.profile.get().hwp3_external_realign()
+                && (depth > 0 || table.common.treat_as_char)
                 && stored_flow_extent > 0.0
                 && non_flow_object_extent <= stored_flow_extent + 0.5
                 // [#6896] TopAndBottom도 빈 anchor 한 줄만 저장된 경우에는

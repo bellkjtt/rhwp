@@ -1464,9 +1464,9 @@ fn parse_hwp3_object_dispatch(
                 use crate::model::style::BorderLineType;
                 // HWP3 선 종류: 0=투명, 1=실선, 2=굵은 실선, 3=점선, 4=2중 실선
                 let (line_type, width) = match line_val {
-                    1 => (BorderLineType::Solid, 0),  // 0.1mm
-                    2 => (BorderLineType::Solid, 6),  // 0.4mm (굵은 실선)
-                    3 => (BorderLineType::Dot, 0),    // 0.1mm
+                    1 => (BorderLineType::Solid, 1), // 한컴 정상 저장의 기본 얇은 선: 0.12mm
+                    2 => (BorderLineType::Solid, 6), // 0.4mm (굵은 실선)
+                    3 => (BorderLineType::Dot, 1),   // 기본 얇은 선과 같은 두께
                     4 => (BorderLineType::Double, 6), // 0.4mm (이중선 두께 확보)
                     _ => (BorderLineType::None, 0),
                 };
