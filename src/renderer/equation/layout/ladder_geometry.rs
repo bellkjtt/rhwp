@@ -44,24 +44,33 @@ impl EqLayout {
             })
             .collect();
         let main_columns = if short { 2 } else { columns };
-        let mut main_width = 0.0_f64;
+        let mut main_widths = vec![0.0_f64; main_columns];
         let mut remainder_widths = vec![0.0_f64; columns.saturating_sub(2)];
         for (ri, row) in cells.iter().enumerate() {
             let shift = usize::from(ri >= division_rows);
             for (ci, cell) in row.iter().enumerate() {
                 let column = ci + shift;
                 if column < main_columns {
-                    main_width = main_width.max(cell.width);
+                    main_widths[column] = main_widths[column].max(cell.width);
                 } else if let Some(width) = remainder_widths.get_mut(column - 2) {
                     *width = width.max(cell.width);
                 }
             }
         }
+        // 독립 한컴 저장·Print의 24개 글자/숫자 대조군은 각 열의 폭을 따로
+        // 정하고 제수 열에만 반 em을 더한다. 모든 열을 최대 셀 폭으로 만들면
+        // 한 자리 제수·긴 피제수의 원점이 어긋난다. 공백 유무는 폭을 바꾸지 않는다.
+        main_widths[0] += fs * 0.5;
         let gap = fs * 0.2;
+        let main_width = main_widths.iter().copied().fold(0.0_f64, f64::max);
         let slot = main_width + gap;
-        let mut starts: Vec<f64> = (0..main_columns).map(|ci| ci as f64 * slot).collect();
-        let mut widths = vec![main_width; main_columns];
-        let mut width = main_columns as f64 * slot;
+        let mut starts = Vec::with_capacity(columns);
+        let mut width = 0.0;
+        for &column_width in &main_widths {
+            starts.push(width);
+            width += column_width + gap;
+        }
+        let mut widths = main_widths;
         if short {
             for remainder_width in &remainder_widths {
                 // 값 칸 다음에 점 칸, 그 뒤에 나머지 칸을 둔다.
@@ -119,8 +128,8 @@ impl EqLayout {
                 }
             }
             if ri < division_rows {
-                let left = slot - fs * 0.25;
-                let right = main_columns as f64 * slot - fs * 0.25;
+                let left = starts[1] - fs * 0.25;
+                let right = starts[main_columns - 1] + widths[main_columns - 1] + gap - fs * 0.25;
                 let bottom = y + height + fs * 0.05;
                 let thickness = fs * 0.06;
                 rectangle(

@@ -13,6 +13,7 @@ pub mod johab;
 pub mod johab_map;
 pub mod ole;
 pub mod paragraph;
+mod picture_caption;
 pub mod records;
 pub mod special_char;
 use paragraph::{Hwp3LineInfo, Hwp3ParaInfo};
@@ -1918,6 +1919,7 @@ fn parse_hwp3_object_dispatch(
             crate::model::shape::Caption {
                 direction: caption_direction,
                 width: caption_width as _,
+                spacing: picture_caption::stored_gap(&info_buf, caption_direction),
                 paragraphs: caption_paras,
                 ..Default::default()
             }
