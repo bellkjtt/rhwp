@@ -3656,9 +3656,11 @@ mod picture_footnote;
 mod shape_layout;
 mod stored_shape_host;
 mod table_cell_content;
+mod table_host_flow;
 mod table_inline_picture_origin;
 pub(crate) mod table_layout;
 mod table_paragraph_cut;
+pub(crate) use table_host_flow::stored_unconsumed_rowbreak_host_advance_hu;
 mod table_partial;
 mod table_rows;
 mod terminal_tracking;
@@ -15559,6 +15561,24 @@ impl LayoutEngine {
             if !is_tac && repeat_fragment_outer_margin {
                 if let Some(Control::Table(table)) = para.controls.get(control_index) {
                     y_offset += hwpunit_to_px(table.outer_margin_bottom as i32, self.dpi);
+                }
+            }
+
+            // 저장 호스트 줄은 표 외곽이 아닌 마지막 조각 뒤의 흐름 공간이다.
+            // 분할 조판이 예약한 같은 전진량을 실제 다음 문단 원점에 소비한다.
+            if end_cut.is_empty() {
+                if let Some(Control::Table(table)) = para.controls.get(control_index) {
+                    if end_row >= table.row_count as usize {
+                        if let Some(advance) = stored_unconsumed_rowbreak_host_advance_hu(
+                            self.profile.get().hwp5_stored_pagination_layout(),
+                            para,
+                            table,
+                            paragraphs.get(para_index + 1),
+                            host_pre_emitted,
+                        ) {
+                            y_offset += hwpunit_to_px(advance, self.dpi);
+                        }
+                    }
                 }
             }
 
