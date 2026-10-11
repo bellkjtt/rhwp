@@ -3019,9 +3019,6 @@ impl HeightMeasurer {
                     cell_w_px, pad_left, pad_right, self.dpi,
                 );
 
-                // 실제 합계에 들어간 셀 마지막 줄간격만 선언 높이 수용에서 회수한다.
-                // 비-TAC 마지막 줄은 이미 제외되므로 아래에서 다시 빼지 않는다.
-                let mut included_cell_last_trailing_ls = 0.0;
                 // 셀 내 문단들의 실제 높이 합산
                 let mut frame_paragraphs = None;
                 let text_height: f64 = if cell.text_direction != 0 {
@@ -3288,34 +3285,10 @@ impl HeightMeasurer {
                                         };
                                         // 마지막 가시 줄 뒤에는 다음 줄이 없으므로 줄간격을
                                         // 붙이지 않는다. 명시적 공백 문단의 빈 줄 점유는 유지한다.
-                                        let include_trailing_ls = !is_cell_last_line
-                                            || (cell_para_count > 1
-                                                && table.common.treat_as_char
-                                                && matches!(table.page_break, TablePageBreak::RowBreak)
-                                                && !p.text.is_empty()
-                                                && p.controls.is_empty()
-                                                && p.text.trim().is_empty());
-                                        if include_trailing_ls {
-                                            let trailing =
-                                                hwpunit_to_px(line.line_spacing, self.dpi);
-                                            // [#6030] TAC 다문단 예외로 포함되는 셀 마지막
-                                            // 줄의 trailing 이 음수(압축 줄간격, 70% 등)면
-                                            // 0 으로 — 뒤에 줄이 없어 압축 대상이 없고,
-                                            // 한글은 마지막 글리프 박스를 lh 그대로 그려
-                                            // 행을 그만큼 키운다(2386771 심사서식 10곳
-                                            // descender 깎임). 양수 trailing 포함 회계
-                                            // (KTX TOC 핀)는 불변.
-                                            let trailing = if is_cell_last_line {
-                                                trailing.max(0.0)
-                                            } else {
-                                                trailing
-                                            };
-                                            if is_cell_last_line {
-                                                included_cell_last_trailing_ls = trailing;
-                                            }
-                                            h + trailing
-                                        } else {
+                                        if is_cell_last_line {
                                             h
+                                        } else {
+                                            h + hwpunit_to_px(line.line_spacing, self.dpi)
                                         }
                                     })
                                     .enumerate()
@@ -3852,31 +3825,6 @@ impl HeightMeasurer {
                 } else {
                     content_height + total_pad
                 };
-                // [Task #1763] 한컴 선언 셀높이 권위 — 저장 cell.height 는 trailing ls
-                // 미포함(825행 주석 원칙)인데, 다문단 셀 측정은 셀 마지막 줄 trailing ls
-                // 를 포함(#874/#1086 보존 조건)해 required 가 선언높이를 초과 확장할 수
-                // 있다(2501937 row0: 콘텐츠 10016HU + trailing 600HU + pad → 149.1px >
-                // 선언 142.2px, 한글은 선언 유지). 초과분이 전적으로 trailing ls 때문이면
-                // (trailing 제외 콘텐츠+pad 가 선언 안) 선언높이로 clamp — 콘텐츠가 진짜
-                // 초과하는 기존 보존 케이스(aift/KTX)는 조건 미충족으로 불변.
-                // RowBreak(행 단위 쪽나눔) 표는 TAC 여부와 무관하게 clamp 제외 —
-                // 분할 배치가 trailing 포함 측정에 정합 (rowbreak-problem-pages p11~13).
-                let cell_last_trailing_ls = if !has_nested_table_in_cell
-                    && !matches!(table.page_break, TablePageBreak::RowBreak)
-                {
-                    included_cell_last_trailing_ls
-                } else {
-                    0.0
-                };
-                let required_height = if cell_h_px > 0.0
-                    && required_height > cell_h_px
-                    && cell_last_trailing_ls > 0.0
-                    && content_height - cell_last_trailing_ls + total_pad <= cell_h_px
-                {
-                    cell_h_px
-                } else {
-                    required_height
-                };
                 // [#2146] 저장 LINE_SEG 이 전혀 없고 모든 문단이 1줄(폭 여유 포함)인
                 // 라벨 셀(사선 헤더 등)은 재합성 초과가 순수 줄높이 인플레이션 —
                 // 선언 셀높이 신뢰. (21761835 r0: 선언 3928HU=52.4px = 한글 실측,
@@ -3896,7 +3844,7 @@ impl HeightMeasurer {
                 } else {
                     required_height
                 };
-                // [#2097 진단] 셀별 선언/측정/trailing 분해 — 동작 불변.
+                // [#2097 진단] 셀별 선언·측정·여백 분해 — 동작 불변.
                 if std::env::var("RHWP_DIAG_ROWH").is_ok() && depth == 0 {
                     let all_stored = !cell.paragraphs.is_empty()
                         && cell
@@ -3904,7 +3852,7 @@ impl HeightMeasurer {
                             .iter()
                             .all(|p| !crate::renderer::para_has_no_stored_line_segs(p));
                     eprintln!(
-                        "DIAG_ROWH pi={} ci={} depth={} r={} c={} decl={:.1} req={:.1} content={:.1} pad={:.1} trail={:.1} stored={} nested={}",
+                        "DIAG_ROWH pi={} ci={} depth={} r={} c={} decl={:.1} req={:.1} content={:.1} pad={:.1} stored={} nested={}",
                         para_index,
                         control_index,
                         depth,
@@ -3914,7 +3862,6 @@ impl HeightMeasurer {
                         required_height,
                         content_height,
                         total_pad,
-                        cell_last_trailing_ls,
                         all_stored,
                         has_nested_table_in_cell,
                     );
@@ -4362,31 +4309,10 @@ impl HeightMeasurer {
                                         };
                                         // 마지막 가시 줄 뒤에는 다음 줄이 없으므로 줄간격을
                                         // 붙이지 않는다. 명시적 공백 문단의 빈 줄 점유는 유지한다.
-                                        let include_trailing_ls = !is_cell_last_line
-                                            || (cell_para_count > 1
-                                                && table.common.treat_as_char
-                                                && matches!(table.page_break, TablePageBreak::RowBreak)
-                                                && !p.text.is_empty()
-                                                && p.controls.is_empty()
-                                                && p.text.trim().is_empty());
-                                        if include_trailing_ls {
-                                            let trailing =
-                                                hwpunit_to_px(line.line_spacing, self.dpi);
-                                            // [#6030] TAC 다문단 예외로 포함되는 셀 마지막
-                                            // 줄의 trailing 이 음수(압축 줄간격, 70% 등)면
-                                            // 0 으로 — 뒤에 줄이 없어 압축 대상이 없고,
-                                            // 한글은 마지막 글리프 박스를 lh 그대로 그려
-                                            // 행을 그만큼 키운다(2386771 심사서식 10곳
-                                            // descender 깎임). 양수 trailing 포함 회계
-                                            // (KTX TOC 핀)는 불변.
-                                            let trailing = if is_cell_last_line {
-                                                trailing.max(0.0)
-                                            } else {
-                                                trailing
-                                            };
-                                            h + trailing
-                                        } else {
+                                        if is_cell_last_line {
                                             h
+                                        } else {
+                                            h + hwpunit_to_px(line.line_spacing, self.dpi)
                                         }
                                     })
                                     .enumerate()

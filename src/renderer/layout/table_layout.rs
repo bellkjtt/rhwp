@@ -15903,14 +15903,8 @@ impl LayoutEngine {
                         let h = corrected_h(line, li);
                         let ls = hwpunit_to_px(line.line_spacing, self.dpi);
                         let is_cell_last_line = is_last_para && li + 1 == line_count;
-                        // [#5923] 셀 마지막 줄 trailing 줄간격은 비-TAC 표에서
-                        // 문단 수와 무관하게 제외 — HeightMeasurer·렌더 행높이 회계
-                        // 일치. 다문단 셀만 포함하던 구규칙은 hwpctl_API_v2.4 75쪽
-                        // 유령 쪽(행마다 +2.7px)을 낳았다. TAC 표의 다문단 셀은
-                        // [Task #874/#1086] 보존 핀(KTX TOC 등)을 위해 기존 포함
-                        // 회계를 유지한다.
-                        let include_trailing_ls =
-                            !is_cell_last_line || (para_count > 1 && table.common.treat_as_char);
+                        // 셀 마지막 줄의 높이는 유지하고, 뒤에 줄이 없으면 줄간격은 제외한다.
+                        let include_trailing_ls = !is_cell_last_line;
                         let mut lh = if include_trailing_ls { h + ls } else { h };
                         if li == 0 {
                             lh += spacing_before;
@@ -16244,11 +16238,8 @@ impl LayoutEngine {
                             let h = corrected_h(line, li);
                             let ls = hwpunit_to_px(line.line_spacing, self.dpi);
                             let is_cell_last_line = is_last_para && li + 1 == line_count;
-                            // [#5923] trailing ls — 비-TAC 표는 문단 수 무관 마지막
-                            // 줄 제외 (HeightMeasurer 와 동일 회계). TAC 표의
-                            // 다문단 셀은 보존 핀(KTX TOC 등) 유지.
-                            let include_trailing_ls = !is_cell_last_line
-                                || (para_count > 1 && table.common.treat_as_char);
+                            // 셀 마지막 줄의 높이는 유지하고, 뒤에 줄이 없으면 줄간격은 제외한다.
+                            let include_trailing_ls = !is_cell_last_line;
                             let mut lh = if include_trailing_ls { h + ls } else { h };
                             if li == 0 {
                                 lh += spacing_before;
@@ -16364,11 +16355,8 @@ impl LayoutEngine {
                     let h = corrected_h(line, last_fragment);
                     let ls = hwpunit_to_px(line.line_spacing, self.dpi);
                     let is_cell_last_line = is_last_para && row_end == line_count;
-                    // [#5923] trailing ls — 비-TAC 표는 문단 수 무관 마지막 줄
-                    // 제외 (HeightMeasurer 와 동일 회계). TAC 표의 다문단 셀은
-                    // 보존 핀(KTX TOC 등) 유지.
-                    let include_trailing_ls =
-                        !is_cell_last_line || (para_count > 1 && table.common.treat_as_char);
+                    // 셀 마지막 줄의 높이는 유지하고, 뒤에 줄이 없으면 줄간격은 제외한다.
+                    let include_trailing_ls = !is_cell_last_line;
                     let mut lh = if collapse_stored_square_picture_source_line {
                         0.0
                     } else if include_trailing_ls {
