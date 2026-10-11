@@ -46,6 +46,7 @@ const CAPTION_CELL_SENTINEL: usize = 65534;
 
 mod inline_table_geometry;
 pub(crate) use inline_table_geometry::InlineTableParagraphGeometry;
+mod tab_frame;
 
 /// 저장 탭 확장 배열의 문단 전체 순번을 현재 줄 시작에서 복원한다.
 fn stored_tab_index_before_line(
@@ -1294,6 +1295,7 @@ struct RunEmitVars<'a> {
     extra_dash_sp: f64,
     extra_word_sp: f64,
     has_tabs: bool,
+    tab_origin_shift: f64,
     horizontal_shaping_initial_lane: bool,
     is_last_line_of_para: bool,
     line_height: f64,
@@ -7105,6 +7107,25 @@ impl LayoutEngine {
             // 선행 공백은 x좌표 오프셋으로 처리하여 SVG 뷰어의 폰트 메트릭과 무관하게 정렬
             let mut x = x_start;
 
+            // 기본/왼쪽 탭은 자연 줄 안에서 해소한 간격을 유지한 채 정렬한다.
+            // 단의 우단·가운데를 앵커로 쓰는 탭은 기존 단 기준 원점을 사용한다.
+            let tab_geometry = tab_frame::geometry_inline_tabs(
+                &composed.tab_extended,
+                stored_tab_index_before_line(composed, comp_line),
+                !self.profile.get().hwp3_external_realign(),
+            );
+            let tab_origin_shift = if has_tabs
+                && tab_frame::tab_frame_translates_with_line(
+                    alignment,
+                    auto_tab_right,
+                    &tab_stops,
+                    &tab_geometry,
+                ) {
+                x_start - (x_base + inline_offset + num_x_offset)
+            } else {
+                0.0
+            };
+
             // 개요 번호/글머리표: 첫 줄에서 별도 TextRunNode로 렌더링 (char_start: None)
             if line_idx == start_line && start_line == 0 {
                 if let (Some((num_text, head)), Some(geometry)) = (
@@ -7232,6 +7253,7 @@ impl LayoutEngine {
                     extra_dash_sp,
                     extra_word_sp,
                     has_tabs,
+                    tab_origin_shift,
                     horizontal_shaping_initial_lane,
                     is_last_line_of_para,
                     line_height,
@@ -7962,6 +7984,7 @@ impl LayoutEngine {
             extra_dash_sp,
             extra_word_sp,
             has_tabs,
+            tab_origin_shift,
             horizontal_shaping_initial_lane,
             is_last_line_of_para,
             line_height,
@@ -8089,12 +8112,11 @@ impl LayoutEngine {
             text_style.available_width = available_width;
             text_style.text_start_offset = effective_margin_left;
             // 저장 탭의 순번은 런과 글자 모양 경계를 넘어 이어진다.
-            text_style.inline_tabs = composed
-                .tab_extended
-                .iter()
-                .skip(inline_tab_cursor_render)
-                .copied()
-                .collect();
+            text_style.inline_tabs = tab_frame::geometry_inline_tabs(
+                &composed.tab_extended,
+                inline_tab_cursor_render,
+                !self.profile.get().hwp3_external_realign(),
+            );
             if pending_right_leader_digit_render {
                 if run.text.trim().is_empty() {
                     pending_right_leader_digit_render = true;
@@ -8247,7 +8269,7 @@ impl LayoutEngine {
                     }
                 } // end else (non-blank run)
             }
-            text_style.line_x_offset = x - col_area.x;
+            text_style.line_x_offset = x - col_area.x - tab_origin_shift;
             // 분모·수렴 측정과 같은 계획의 선행 공백 런만 자연 폭으로 방출한다.
             let body_field = body_field_runs.get(run_idx).copied().unwrap_or(false);
             let fixed_spacing = run_idx < natural_prefix_runs || body_field;
@@ -8878,7 +8900,7 @@ impl LayoutEngine {
                     if seg_start < tac_rel {
                         let seg_text: String = run_chars[seg_start..tac_rel].iter().collect();
                         let mut seg_style = text_style.clone();
-                        seg_style.line_x_offset = x - col_area.x;
+                        seg_style.line_x_offset = x - col_area.x - tab_origin_shift;
                         // [Issue #6179] 이 조각의 마지막 탭 뒤에 TAC 개체가 오면,
                         // 되밀기 폭에 그 개체 폭을 포함시킨다 (조각 경계로 잘려
                         // 측정 쪽에서는 보이지 않는다).
@@ -9410,7 +9432,7 @@ impl LayoutEngine {
                 let remaining: String = run_chars[seg_start..].iter().collect();
                 if !remaining.is_empty() {
                     let mut seg_style = text_style.clone();
-                    seg_style.line_x_offset = x - col_area.x;
+                    seg_style.line_x_offset = x - col_area.x - tab_origin_shift;
                     if has_tabs && remaining.contains('\t') {
                         let positions = compute_char_positions(&remaining, &seg_style);
                         seg_style.tab_leaders = extract_tab_leaders_with_extended(
@@ -9473,7 +9495,7 @@ impl LayoutEngine {
                 } else if is_last_run {
                     // 마지막 run이 tac로 끝나는 경우: 빈 TextRun으로 is_para_end 표시
                     let mut seg_style = text_style.clone();
-                    seg_style.line_x_offset = x - col_area.x;
+                    seg_style.line_x_offset = x - col_area.x - tab_origin_shift;
                     let sub_run_id = tree.next_id();
                     let sub_run_node = RenderNode::new(
                         sub_run_id,
@@ -10052,12 +10074,11 @@ impl LayoutEngine {
             ts.auto_tab_right = auto_tab_right;
             ts.available_width = available_width;
             ts.text_start_offset = effective_margin_left;
-            ts.inline_tabs = composed
-                .tab_extended
-                .iter()
-                .skip(inline_tab_cursor_est)
-                .copied()
-                .collect();
+            ts.inline_tabs = tab_frame::geometry_inline_tabs(
+                &composed.tab_extended,
+                inline_tab_cursor_est,
+                !self.profile.get().hwp3_external_realign(),
+            );
             if pending_right_leader_digit_est {
                 if run.text.trim().is_empty() {
                     pending_right_leader_digit_est = true;

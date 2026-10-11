@@ -56,6 +56,7 @@ pub struct LayoutCompatibilityProfile {
     hwp3_layout: bool,
     hwp3_native_layout: bool,
     hwp3_password_layout: bool,
+    hwp3_external_realign: bool,
     hwpx_stored_layout: bool,
     hwpx_container: bool,
     hwp5_origin_hwpx: bool,
@@ -81,6 +82,7 @@ impl LayoutCompatibilityProfile {
             hwp3_layout,
             hwp3_native_layout,
             hwp3_password_layout: false,
+            hwp3_external_realign: false,
             hwpx_stored_layout,
             hwpx_container,
             hwp5_origin_hwpx,
@@ -131,7 +133,18 @@ impl LayoutCompatibilityProfile {
     /// and HWP3-lineage conversion layouts, while keeping the decision out of
     /// the DocInfo-derived style aggregate.
     pub fn legacy_hwp3_stored_geometry(&self) -> bool {
-        self.hwp3_native_layout || self.hwp3_layout
+        (self.hwp3_native_layout || self.hwp3_layout) && !self.hwp3_external_realign
+    }
+
+    /// 원본 헤더가 외부 생성 문서의 재정렬을 요청했다. 저장 폭·배치 캐시의
+    /// 수용과 출처 포맷을 구분하며, 원본 글자·서식·점끌기는 보존한다.
+    pub fn hwp3_external_realign(&self) -> bool {
+        self.hwp3_external_realign
+    }
+
+    pub(crate) fn with_hwp3_external_realign(mut self, enabled: bool) -> Self {
+        self.hwp3_external_realign = enabled;
+        self
     }
 
     /// 원본 HWP3가 비밀번호로 복호화된 문서인지 여부.

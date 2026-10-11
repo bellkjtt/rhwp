@@ -271,6 +271,12 @@ pub fn serialize_hwpx_with_report(doc: &Document) -> Result<SerializedDocument, 
     if let Some(marker) = doc.hwpx_aux_entry(crate::model::document::HWP3_ORIGIN_HWPX_MARKER_PATH) {
         z.write_deflated(crate::model::document::HWP3_ORIGIN_HWPX_MARKER_PATH, marker)?;
     }
+    if doc.layout_profile().hwp3_external_realign() {
+        z.write_deflated(
+            crate::model::document::HWP3_EXTERNAL_REALIGN_HWPX_PATH,
+            b"1",
+        )?;
+    }
 
     // 참조 정합성 단언 (Stage 1+)
     ctx.assert_all_refs_resolved()?;

@@ -24,6 +24,10 @@ pub const HWP5_ORIGIN_HWPX_PARAGRAPH_AXIS: &[u8] = b"2:paragraph-utf16";
 /// 없으면 render-diff 왕복이 프로파일 차이만큼 갈라진다(hwp3-sample p7 14.9px).
 pub const HWP3_ORIGIN_HWPX_MARKER_PATH: &str = "META-INF/rhwp-hwp3-origin";
 
+/// 원본 HWP3의 외부 생성·재정렬 요청을 저장 왕복에서 보존한다.
+pub const HWP3_EXTERNAL_REALIGN_STREAM_PATH: &str = "/RhwpHwp3ExternalRealign";
+pub const HWP3_EXTERNAL_REALIGN_HWPX_PATH: &str = "META-INF/rhwp-hwp3-external-realign";
+
 /// [Issue #1770] HWPX-origin 마커 스트림 경로.
 ///
 /// rhwp 의 HWPX→HWP 변환은 LINE_SEG 를 verbatim 직렬화하므로 산출 HWP5 의 IR 은
@@ -409,6 +413,12 @@ impl Document {
             hwp5_container && !self.provenance.hwpx_lineage,
         )
         .with_hwp5_container(hwp5_container)
+        .with_hwp3_external_realign(
+            self.extra_streams
+                .iter()
+                .any(|(path, value)| path == HWP3_EXTERNAL_REALIGN_STREAM_PATH && value == b"1")
+                || self.hwpx_aux_entry(HWP3_EXTERNAL_REALIGN_HWPX_PATH) == Some(b"1"),
+        )
         .with_hwp3_password_layout(
             self.provenance.format == SourceFormat::Hwp3 && self.header.encrypted,
         )

@@ -4096,6 +4096,15 @@ fn parse_hwp3_inner(
     // 1. 문서 정보 파싱 (128 바이트)
     let doc_info = Hwp3DocInfo::read(&mut cursor)?;
 
+    // 공식 3.x 표 3의 offset 28, bit 0은 외부 생성 문서의 realign 요청이다.
+    // 원시 탭 폭은 보존하되 소비자가 오래된 배치 캐시와 구분할 수 있게 전달한다.
+    if doc_info.reserved1 & 1 != 0 {
+        doc.extra_streams.push((
+            crate::model::document::HWP3_EXTERNAL_REALIGN_STREAM_PATH.to_string(),
+            b"1".to_vec(),
+        ));
+    }
+
     if doc_info.encrypted != 0 {
         return Err(Hwp3Error::PasswordRequired);
     }
