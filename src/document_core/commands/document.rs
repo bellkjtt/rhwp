@@ -797,6 +797,14 @@ impl DocumentCore {
                         ))
                     })
                     .collect();
+                // 필드와 책갈피는 저장 텍스트 줄의 범위·위치 표지다. 이 표지가
+                // 있다는 이유로 줄 상자나 앞뒤 원본 간격의 소유를 끊지 않는다.
+                // 표·그림·각주 등 물리 배치에 참여하는 컨트롤이 섞이면 별도 경로다.
+                let has_only_text_controls = |para: &Paragraph| {
+                    para.controls
+                        .iter()
+                        .all(|control| matches!(control, Control::Field(_) | Control::Bookmark(_)))
+                };
                 // 재구성 전에 실제 글줄 끝과 다음 줄 전진 끝을 함께 고정한다.
                 let orig_plain_tail: Vec<Option<(i32, i32)>> = section
                     .paragraphs
@@ -813,7 +821,7 @@ impl DocumentCore {
                         {
                             return None;
                         }
-                        if !para.controls.is_empty() {
+                        if !has_only_text_controls(para) {
                             return source_table_frames
                                 .then(|| stored_table_tail::source_frame_tail(para))
                                 .flatten();
@@ -837,13 +845,7 @@ impl DocumentCore {
 
                 for (pi, para) in section.paragraphs.iter_mut().enumerate() {
                     let was_reflowed = reflowed_paras.contains(&pi);
-                    // 필드는 저장 글줄 안의 텍스트 범위를 표시할 뿐 별도 높이를
-                    // 차지하지 않는다. 필드가 있다는 이유로 저장 간격을 끊으면
-                    // 다음 문단의 빈 물리 공간이 사라진다.
-                    let text_only_controls = para
-                        .controls
-                        .iter()
-                        .all(|control| matches!(control, Control::Field(_)));
+                    let text_only_controls = has_only_text_controls(para);
                     // 저장 줄이 없는 글자취급 그림의 높이는 재구성 사다리가 이미
                     // 소비한다. 직전 저장 글줄의 앵커를 유지해야 그림 뒤 원본 줄의
                     // 저장 간격과 재구성된 그림 높이 중 큰 쪽을 사용할 수 있다.
@@ -927,7 +929,7 @@ impl DocumentCore {
                     // 누적 축·개체·합성/편집 줄의 0을 물리 경계로 추측하지 않는다.
                     let source_plain_reset = !was_reflowed
                         && !para.stored_text_partition_dirty
-                        && para.controls.is_empty()
+                        && text_only_controls
                         && orig_span[pi].is_some()
                         && orig_plain_tail[pi].is_some()
                         && first_source
@@ -1083,7 +1085,7 @@ impl DocumentCore {
                         .map(|line| line.vertical_pos)
                         .collect();
                     let preserve_source_frames = !was_reflowed
-                        && (para.controls.is_empty() || source_tac_frames[pi].is_some())
+                        && (text_only_controls || source_tac_frames[pi].is_some())
                         && !para.stored_text_partition_dirty
                         && para.line_segs.iter().all(|line| {
                             line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
