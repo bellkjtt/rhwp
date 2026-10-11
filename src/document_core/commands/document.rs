@@ -27,6 +27,8 @@ use std::collections::HashMap;
 
 mod stored_table_tail;
 mod tac_cache_repair;
+#[path = "stored_body_frames.rs"]
+mod stored_body_frames;
 
 /// HWP 내보내기 + 자기 재로드 검증 결과 (#178 Stage 6).
 ///
@@ -846,6 +848,10 @@ impl DocumentCore {
                 for (pi, para) in section.paragraphs.iter_mut().enumerate() {
                     let was_reflowed = reflowed_paras.contains(&pi);
                     let text_only_controls = has_only_text_controls(para);
+                    // 개체 높이가 저장 줄 전체에 들어 있으면 높이와 후속 간격의
+                    // 소유를 구분한다. 간격 보존이 개체 높이를 다시 더하지 않는다.
+                    let saved_object_line =
+                        !was_reflowed && stored_body_frames::owns_saved_object_line(para);
                     // 저장 줄이 없는 글자취급 그림의 높이는 재구성 사다리가 이미
                     // 소비한다. 직전 저장 글줄의 앵커를 유지해야 그림 뒤 원본 줄의
                     // 저장 간격과 재구성된 그림 높이 중 큰 쪽을 사용할 수 있다.
@@ -880,7 +886,11 @@ impl DocumentCore {
                                     && first <= body_height_hu
                                     && first == prev_end.saturating_add(before)
                             });
-                    if !text_only_controls && !inline_reflowed_picture && !inline_saved_table {
+                    if !text_only_controls
+                        && !saved_object_line
+                        && !inline_reflowed_picture
+                        && !inline_saved_table
+                    {
                         source_anchor_end = None;
                     }
                     let hosts_bottom_fixed_frame = para.controls.iter().any(|c| {
@@ -951,7 +961,21 @@ impl DocumentCore {
                                     ) > body_height_hu
                             });
                     let accumulated_vpos = running_vpos;
-                    if source_page_break || source_tac_reset || source_plain_reset {
+                    let source_positive_reset = !was_reflowed
+                        && !para.stored_text_partition_dirty
+                        && orig_span[pi].is_some()
+                        && first_source.is_some_and(|first| {
+                            stored_body_frames::saved_positive_frame_reset(
+                                pi.checked_sub(1).and_then(|prev| orig_span[prev]),
+                                first,
+                                body_height_hu,
+                            )
+                        });
+                    if source_page_break
+                        || source_tac_reset
+                        || source_plain_reset
+                        || source_positive_reset
+                    {
                         running_vpos = first_source.expect("저장 프레임 원점").vertical_pos;
                     } else if !was_reflowed
                         && hosts_bottom_fixed_frame
@@ -1207,7 +1231,9 @@ impl DocumentCore {
                         }
                     }
                     running_vpos = inner_vpos;
-                    if let Some((_, original_end)) = orig_span[pi].filter(|_| text_only_controls) {
+                    if let Some((_, original_end)) =
+                        orig_span[pi].filter(|_| text_only_controls || saved_object_line)
+                    {
                         source_anchor_end = Some((original_end, running_vpos));
                     } else if inline_saved_table {
                         // 표 높이는 다음 일반 글줄의 저장 간격으로 재가산하지 않는다.
