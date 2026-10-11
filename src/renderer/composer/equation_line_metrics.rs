@@ -94,7 +94,10 @@ fn refresh_rows(
                 _ => {}
             }
         }
-        if !supported || new_logical_height <= 0 {
+        // 수식이 없는 앞 텍스트 줄도 뒤 개체의 저장 예약 상자를 공유할 수 있다.
+        // 글자 메트릭을 합치기 전에 반환하면 아래의 실제 소유 검사가 실행되지 않는다.
+        // 현재 줄에 수식이 있되 그 메트릭이 유효하지 않은 경우는 계속 보류한다.
+        if !supported || (has_equation && new_logical_height <= 0) {
             continue;
         }
         // 실제 텍스트가 있는 줄은 텍스트의 어센트·하강부도 같은 합집합에 포함한다.
