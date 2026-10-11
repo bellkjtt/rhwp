@@ -3157,6 +3157,10 @@ pub(crate) fn vpos_corrected_end_y(
     const MAX_TABLE_HOST_FORWARD_PX: f64 = 100.0;
     let stale_table_host_vpos =
         curr_has_topbottom_para_table && end_y > y_offset + MAX_TABLE_HOST_FORWARD_PX;
+    // 저장 원점과 순차 줄 피치는 같은 물리 위치도 합산 순서에 따라 인접한
+    // f64로 표현한다. 절대/단 상대 좌표에서 앞 간격 수용이 달라지지 않도록
+    // 연산 규모에 따른 반올림 오차만 허용한다. 물리적인 후방 이동은 허용하지 않는다.
+    let forward_roundoff = f64::EPSILON * raw_end_y.abs().max(y_offset.abs()).max(1.0) * 8.0;
     // 앞 간격을 빼기 전의 실제 첫 줄이 순차 끝 이후라면, pre-spacing
     // 커서가 되감기는 것은 내용의 후방 배치가 아니다. 뒤 문단이 그 간격을
     // 다시 소비하므로 같은 좌표계의 첫 줄로 비교한다. 개체 호스트와 간격을
@@ -3170,7 +3174,7 @@ pub(crate) fn vpos_corrected_end_y(
         // 뒤 줄이 앞 글줄과 같은 위치에 놓인다. 실제로 간격을 소비하는
         // 문단 안쪽 원점에서만 첫 줄 기준의 전방 판정을 사용할 수 있다.
         && end_y > col_area_y
-        && raw_end_y >= y_offset;
+        && raw_end_y + forward_roundoff >= y_offset;
     let backward_ok = end_y >= y_offset - MAX_BACKWARD_PX
         || allow_large_backward
         || spacing_before_keeps_forward_line;

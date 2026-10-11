@@ -1499,7 +1499,8 @@ fn parse_hwp3_object_dispatch(
             let diag = cell_info[25] & 0x03;
             if diag != 0 {
                 border_fill.diagonal.diagonal_type = 1; // 실선 (BorderLineType::Solid = 1)
-                border_fill.diagonal.width = 0; // 0.1mm thickness
+                                                        // HWP3의 기본 대각선도 한컴 저장본과 Print에서 0.12mm다.
+                border_fill.diagonal.width = 1;
                 match diag {
                     1 => {
                         // 역슬래시 \
