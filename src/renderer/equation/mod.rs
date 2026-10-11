@@ -18,6 +18,7 @@ pub(crate) mod brace_stretch;
 pub mod canvas_render;
 pub(crate) mod dispatch;
 pub mod hancom_glyphs;
+mod dot_geometry;
 mod font_frame_22;
 mod font_frame_metrics;
 mod font_style_runs;

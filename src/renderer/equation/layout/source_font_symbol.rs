@@ -101,7 +101,7 @@ pub(super) fn layout(text: &str, fs: f64, dpi: f64) -> Option<LayoutBox> {
                 // 측정에 쓴 face를 표시에도 사용한다. 설치되지 않은 환경은 공개 face로 대체한다.
                 font_family: "HYhwpEQ, Latin Modern Math, STIX Two Math, serif",
                 paint: None,
-                outline: None,
+                outline: super::super::dot_geometry::commands(text, fs, dpi, fs * 0.8),
             },
         });
     }
