@@ -34,6 +34,7 @@ pub(crate) mod hwp3_caption_host;
 pub(crate) mod reflow_spacing;
 pub(crate) mod stored_frame_boundary;
 pub(crate) mod stored_picture_metrics;
+mod stroke_pattern;
 pub(crate) mod table_row_frame;
 pub(crate) mod gradient_geometry;
 pub(crate) mod hancom_pua;
@@ -999,6 +1000,13 @@ pub enum StrokeDash {
     Dot,
     DashDot,
     DashDotDot,
+    /// HWP5 도형의 파선. 반복 구간은 선 굵기에 비례한다.
+    HwpDash,
+    HwpDot,
+    HwpDashDot,
+    HwpDashDotDot,
+    HwpLongDash,
+    HwpCircle,
 }
 
 /// 선 렌더링 종류 (이중선/삼중선)

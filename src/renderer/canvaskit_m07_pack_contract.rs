@@ -31,6 +31,12 @@ fn parse_dash(name: &str) -> StrokeDash {
         "dot" => StrokeDash::Dot,
         "dashDot" => StrokeDash::DashDot,
         "dashDotDot" => StrokeDash::DashDotDot,
+        "hwpDash" => StrokeDash::HwpDash,
+        "hwpDot" => StrokeDash::HwpDot,
+        "hwpDashDot" => StrokeDash::HwpDashDot,
+        "hwpDashDotDot" => StrokeDash::HwpDashDotDot,
+        "hwpLongDash" => StrokeDash::HwpLongDash,
+        "hwpCircle" => StrokeDash::HwpCircle,
         other => panic!("unknown dash {other}"),
     }
 }

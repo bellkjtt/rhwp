@@ -3347,6 +3347,12 @@ fn stroke_dash_str(value: StrokeDash) -> &'static str {
         StrokeDash::Dot => "dot",
         StrokeDash::DashDot => "dashDot",
         StrokeDash::DashDotDot => "dashDotDot",
+        StrokeDash::HwpDash => "hwpDash",
+        StrokeDash::HwpDot => "hwpDot",
+        StrokeDash::HwpDashDot => "hwpDashDot",
+        StrokeDash::HwpDashDotDot => "hwpDashDotDot",
+        StrokeDash::HwpLongDash => "hwpLongDash",
+        StrokeDash::HwpCircle => "hwpCircle",
     }
 }
 

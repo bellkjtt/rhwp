@@ -21,10 +21,12 @@ use super::render_tree::{
 };
 use super::{
     boxed_pua_char_overlap_semantics, clamp_tab_leader_end_x, GradientFillInfo, LineStyle,
-    PathCommand, PatternFillInfo, Renderer, ShapeStyle, StrokeDash, TextStyle,
+    PathCommand, PatternFillInfo, Renderer, ShapeStyle, TextStyle,
 };
 use crate::paint::{PaintOp, TextDecorationKind};
 use std::fmt::Write as _;
+
+mod stroke_pattern;
 
 /// Hanyang-PUA 옛한글 코드포인트를 KS X 1026-1:2007 자모 시퀀스로 확장.
 /// PUA 가 없으면 원본 문자열 그대로 반환 (allocation 없음).
@@ -1540,13 +1542,7 @@ impl SvgRenderer {
                 color_to_svg(stroke),
                 style.stroke_width
             ));
-            match style.stroke_dash {
-                StrokeDash::Dash => attrs.push_str(" stroke-dasharray=\"6 3\""),
-                StrokeDash::Dot => attrs.push_str(" stroke-dasharray=\"2 2\""),
-                StrokeDash::DashDot => attrs.push_str(" stroke-dasharray=\"6 3 2 3\""),
-                StrokeDash::DashDotDot => attrs.push_str(" stroke-dasharray=\"6 3 2 3 2 3\""),
-                _ => {}
-            }
+            stroke_pattern::append_attrs(&mut attrs, style.stroke_dash, style.stroke_width);
         }
 
         if style.opacity < 1.0 {
@@ -1608,13 +1604,7 @@ impl SvgRenderer {
                 color_to_svg(stroke),
                 style.stroke_width
             ));
-            match style.stroke_dash {
-                StrokeDash::Dash => attrs.push_str(" stroke-dasharray=\"6 3\""),
-                StrokeDash::Dot => attrs.push_str(" stroke-dasharray=\"2 2\""),
-                StrokeDash::DashDot => attrs.push_str(" stroke-dasharray=\"6 3 2 3\""),
-                StrokeDash::DashDotDot => attrs.push_str(" stroke-dasharray=\"6 3 2 3 2 3\""),
-                _ => {}
-            }
+            stroke_pattern::append_attrs(&mut attrs, style.stroke_dash, style.stroke_width);
         }
 
         self.output.push_str(&format!("<path {}/>\n", attrs));
@@ -3770,13 +3760,7 @@ impl Renderer for SvgRenderer {
             "x1=\"{}\" y1=\"{}\" x2=\"{}\" y2=\"{}\" stroke=\"{}\" stroke-width=\"{}\"",
             lx1, ly1, lx2, ly2, color, width,
         );
-        match style.dash {
-            super::StrokeDash::Dash => attrs.push_str(" stroke-dasharray=\"6 3\""),
-            super::StrokeDash::Dot => attrs.push_str(" stroke-dasharray=\"2 2\""),
-            super::StrokeDash::DashDot => attrs.push_str(" stroke-dasharray=\"6 3 2 3\""),
-            super::StrokeDash::DashDotDot => attrs.push_str(" stroke-dasharray=\"6 3 2 3 2 3\""),
-            _ => {} // Solid
-        }
+        stroke_pattern::append_attrs(&mut attrs, style.dash, width);
         attrs.push_str(&marker_start_attr);
         attrs.push_str(&marker_end_attr);
         self.output.push_str(&format!("<line {}/>\n", attrs));

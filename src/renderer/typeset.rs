@@ -5892,6 +5892,7 @@ mod issue_3780_line_advance_oob {
     fn fp(lines: usize) -> FormattedParagraph {
         FormattedParagraph {
             stored_ladder_is_filler: false,
+            exact_reflow_text_box: false,
             tail_line_remaining_width: None,
             computed_host_lines: None,
             square_host_plan: None,

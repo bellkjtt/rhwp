@@ -5159,17 +5159,15 @@ export class CanvasKitLayerRenderer {
     paint: SkPaint,
     draw: () => void,
   ): void {
+    const patterns: Partial<Record<LayerStrokeDash, number[]>> = {
+      dash: [6, 3], dot: [2, 2], dashDot: [6, 3, 2, 3], dashDotDot: [6, 3, 2, 3, 2, 3],
+      hwpDash: [7.5, 4.5], hwpDot: [1.5, 2.25], hwpDashDot: [15, 4.5, 1.5, 4.5],
+      hwpDashDotDot: [15, 4.5, 1.5, 4.5, 1.5, 4.5], hwpLongDash: [15, 4.5], hwpCircle: [0, 2.25],
+    };
+    const scale = dash?.startsWith('hwp') ? paint.getStrokeWidth() : 1;
     const intervals = dash === undefined || dash === 'solid'
       ? null
-      : dash === 'dash'
-        ? [6, 3]
-        : dash === 'dot'
-          ? [2, 2]
-          : dash === 'dashDot'
-            ? [6, 3, 2, 3]
-            : dash === 'dashDotDot'
-              ? [6, 3, 2, 3, 2, 3]
-              : undefined;
+      : patterns[dash]?.map(value => value * scale);
     if (intervals === undefined) {
       this.unsupportedOps.add(`strokeDash:${String(dash)}`);
       return;
@@ -5184,11 +5182,14 @@ export class CanvasKitLayerRenderer {
       this.unsupportedOps.add('strokeDash:pathEffectUnavailable');
       return;
     }
+    const previousCap = paint.getStrokeCap();
     try {
+      if (dash === 'hwpCircle') paint.setStrokeCap(this.canvasKit.StrokeCap.Round);
       paint.setPathEffect(effect);
       draw();
       this.currentReplayFeatureCounts.dashedStrokes += 1;
     } finally {
+      paint.setStrokeCap(previousCap);
       effect.delete?.();
     }
   }

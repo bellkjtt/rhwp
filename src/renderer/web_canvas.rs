@@ -1273,6 +1273,7 @@ impl WebCanvasRenderer {
             self.ctx
                 .stroke_rect(bbox.x, bbox.y, bbox.width, bbox.height);
             let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+            self.ctx.set_line_cap("butt");
 
             // 중앙 아이콘: 작은 실선 박스 + 산/해 픽토그램 + 사선
             let icon = (bbox.width.min(bbox.height) * 0.4).clamp(14.0, 36.0);
@@ -1319,6 +1320,7 @@ impl WebCanvasRenderer {
         self.ctx
             .stroke_rect(bbox.x, bbox.y, bbox.width, bbox.height);
         let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+        self.ctx.set_line_cap("butt");
         let font_size = (bbox.width.min(bbox.height) * 0.06).clamp(12.0, 28.0);
         self.ctx.set_font(&format!("{:.1}px sans-serif", font_size));
         self.ctx.set_fill_style_str(&color_to_css(ph.stroke_color));
@@ -1512,39 +1514,15 @@ impl WebCanvasRenderer {
 
     /// 선 대시 패턴 설정
     fn set_line_dash(&self, dash: &StrokeDash) {
-        let pattern: js_sys::Array = match dash {
-            StrokeDash::Solid => js_sys::Array::new(),
-            StrokeDash::Dash => {
-                let arr = js_sys::Array::new();
-                arr.push(&JsValue::from_f64(6.0));
-                arr.push(&JsValue::from_f64(3.0));
-                arr
-            }
-            StrokeDash::Dot => {
-                let arr = js_sys::Array::new();
-                arr.push(&JsValue::from_f64(2.0));
-                arr.push(&JsValue::from_f64(2.0));
-                arr
-            }
-            StrokeDash::DashDot => {
-                let arr = js_sys::Array::new();
-                arr.push(&JsValue::from_f64(6.0));
-                arr.push(&JsValue::from_f64(3.0));
-                arr.push(&JsValue::from_f64(2.0));
-                arr.push(&JsValue::from_f64(3.0));
-                arr
-            }
-            StrokeDash::DashDotDot => {
-                let arr = js_sys::Array::new();
-                arr.push(&JsValue::from_f64(6.0));
-                arr.push(&JsValue::from_f64(3.0));
-                arr.push(&JsValue::from_f64(2.0));
-                arr.push(&JsValue::from_f64(3.0));
-                arr.push(&JsValue::from_f64(2.0));
-                arr.push(&JsValue::from_f64(3.0));
-                arr
-            }
-        };
+        let pattern = js_sys::Array::new();
+        for value in dash.intervals(self.ctx.line_width()) {
+            pattern.push(&JsValue::from_f64(value));
+        }
+        self.ctx.set_line_cap(if dash.uses_round_cap() {
+            "round"
+        } else {
+            "butt"
+        });
         let _ = self.ctx.set_line_dash(&pattern);
     }
 
@@ -1798,10 +1776,12 @@ impl WebCanvasRenderer {
             self.clear_shadow(style); // stroke 전에 그림자 해제
             if let Some(stroke) = style.stroke_color {
                 self.ctx.set_stroke_style_str(&color_to_css(stroke));
-                self.ctx.set_line_width(style.stroke_width.max(0.5));
+                self.ctx
+                    .set_line_width(style.stroke_dash.canvas_width(style.stroke_width));
                 self.set_line_dash(&style.stroke_dash);
                 self.ctx.stroke();
                 let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+                self.ctx.set_line_cap("butt");
             }
         } else {
             if let Some(grad) = gradient {
@@ -1823,10 +1803,12 @@ impl WebCanvasRenderer {
             self.clear_shadow(style); // stroke 전에 그림자 해제
             if let Some(stroke) = style.stroke_color {
                 self.ctx.set_stroke_style_str(&color_to_css(stroke));
-                self.ctx.set_line_width(style.stroke_width.max(0.5));
+                self.ctx
+                    .set_line_width(style.stroke_dash.canvas_width(style.stroke_width));
                 self.set_line_dash(&style.stroke_dash);
                 self.ctx.stroke_rect(x, y, w, h);
                 let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+                self.ctx.set_line_cap("butt");
             }
         }
 
@@ -1874,10 +1856,12 @@ impl WebCanvasRenderer {
 
         if let Some(stroke) = style.stroke_color {
             self.ctx.set_stroke_style_str(&color_to_css(stroke));
-            self.ctx.set_line_width(style.stroke_width.max(0.5));
+            self.ctx
+                .set_line_width(style.stroke_dash.canvas_width(style.stroke_width));
             self.set_line_dash(&style.stroke_dash);
             self.ctx.stroke();
             let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+            self.ctx.set_line_cap("butt");
         }
         self.clear_shadow(style);
     }
@@ -1995,10 +1979,12 @@ impl WebCanvasRenderer {
 
         if let Some(stroke) = style.stroke_color {
             self.ctx.set_stroke_style_str(&color_to_css(stroke));
-            self.ctx.set_line_width(style.stroke_width.max(0.5));
+            self.ctx
+                .set_line_width(style.stroke_dash.canvas_width(style.stroke_width));
             self.set_line_dash(&style.stroke_dash);
             self.ctx.stroke();
             let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+            self.ctx.set_line_cap("butt");
         }
 
         // 그림자 해제
@@ -2575,6 +2561,7 @@ impl Renderer for WebCanvasRenderer {
                 _ => draw_line(&self.ctx, ly, 0.5, &[1.0, 2.0]), // 폴백: 점선
             }
             let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+            self.ctx.set_line_cap("butt");
         }
     }
 
@@ -2592,7 +2579,7 @@ impl Renderer for WebCanvasRenderer {
 
     fn draw_line(&mut self, x1: f64, y1: f64, x2: f64, y2: f64, style: &LineStyle) {
         let color = color_to_css(style.color);
-        let width = style.width.max(0.5);
+        let width = style.dash.canvas_width(style.width);
         let (lx1, ly1, lx2, ly2) = (x1, y1, x2, y2);
         let dx = x2 - x1;
         let dy = y2 - y1;
@@ -2616,6 +2603,7 @@ impl Renderer for WebCanvasRenderer {
         }
 
         self.ctx.set_stroke_style_str(&color);
+        self.ctx.set_line_width(width);
         self.set_line_dash(&style.dash);
 
         // 이중선/삼중선: SVG draw_multi_line과 동일한 오프셋 비율 방식
@@ -2672,6 +2660,7 @@ impl Renderer for WebCanvasRenderer {
         }
 
         let _ = self.ctx.set_line_dash(&js_sys::Array::new());
+        self.ctx.set_line_cap("butt");
 
         // 그림자 해제
         if style.shadow.is_some() {

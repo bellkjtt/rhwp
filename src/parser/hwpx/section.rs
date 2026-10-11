@@ -4152,8 +4152,10 @@ fn parse_line_shape_attr(e: &quick_xml::events::BytesStart) -> ShapeBorderLine {
                     // bit 6 이 endCap(bit 6~9)에 겹쳐 써져 소실됐다(#1531).
                     "NONE" => 0,
                     "SOLID" => 1,
-                    "DASH" => 2,
-                    "DOT" => 3,
+                    // lineShape도 borderFill과 같은 HWP5 선 코드를 사용한다.
+                    // HWPX DASH는 짧은 점(code 3), DOT는 파선(code 2)이다.
+                    "DASH" => 3,
+                    "DOT" => 2,
                     "DASH_DOT" => 4,
                     "DASH_DOT_DOT" => 5,
                     "LONG_DASH" => 6,

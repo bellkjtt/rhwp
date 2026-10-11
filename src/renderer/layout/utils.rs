@@ -2,9 +2,7 @@
 
 use super::super::page_layout::LayoutRect;
 use super::super::render_tree::*;
-use super::super::{
-    format_number, ArrowStyle, LineStyle, NumberFormat as NumFmt, ShapeStyle, StrokeDash,
-};
+use super::super::{format_number, ArrowStyle, LineStyle, NumberFormat as NumFmt, ShapeStyle};
 use crate::model::bin_data::BinDataContent;
 use crate::model::image::Picture;
 use crate::model::style::{HeadType, Numbering};
@@ -393,24 +391,8 @@ pub(crate) fn drawing_to_shape_style(
         stroke_width = 0.5; // 최소 0.5px (0.12mm 한컴 기본값)
         stroke_color = Some(border.color);
     }
-    // [Task #877 Stage 4] 점선 (LineType=2~7) 의 가시성 보강.
-    // sample16 paragraph 393 본문 점선 외곽선 width=56 HU (0.747 px) 가
-    // 점선 dash gap 으로 시각 인식 어려움. 점선 종류만 최소 1.0 px 보강 (실선 width
-    // 는 SVG snapshot 회귀 방지로 영향 안 줌).
-    if (2..=7).contains(&shape_line_type) && stroke_width > 0.0 && stroke_width < 1.0 {
-        stroke_width = 1.0;
-    }
-
-    // stroke dash 매핑 (hwplib LineType 참조)
-    // 0=None, 1=Solid, 2=Dash, 3=Dot, 4=DashDot, 5=DashDotDot,
-    // 6=LongDash, 7=CircleDot, 8=Double, 9=ThinBold, 10=BoldThin, 11=ThinBoldThin
-    let stroke_dash = match shape_line_type {
-        2 | 6 => StrokeDash::Dash,
-        3 | 7 => StrokeDash::Dot,
-        4 => StrokeDash::DashDot,
-        5 => StrokeDash::DashDotDot,
-        _ => StrokeDash::Solid,
-    };
+    // 도형의 반복 구간은 선언 선 굵기에 비례하며, 임의 최소 픽셀 보강을 하지 않는다.
+    let stroke_dash = crate::renderer::line_style::hwp_shape_line_type(shape_line_type as u8).0;
 
     // 채우기 투명도: 한컴 호환 — alpha=0은 불투명, alpha=255은 완전 투명
     let opacity = if drawing.fill.alpha > 0 {
@@ -475,7 +457,7 @@ pub(crate) fn drawing_to_line_style(drawing: &crate::model::shape::DrawingObjAtt
     let shape_line_type = attr & 0x3F;
 
     let (dash, line_render_type) =
-        crate::renderer::line_style::hwp_line_type(shape_line_type as u8);
+        crate::renderer::line_style::hwp_shape_line_type(shape_line_type as u8);
 
     // 화살표 시작 모양: bit 10-15
     let start_arrow_val = (attr >> 10) & 0x3F;
@@ -505,7 +487,7 @@ pub(crate) fn drawing_to_line_style(drawing: &crate::model::shape::DrawingObjAtt
 
     LineStyle {
         color: border.color,
-        width: width.max(0.5),
+        width: if width > 0.0 { width } else { 0.5 },
         dash,
         line_type: line_render_type,
         start_arrow,
@@ -559,9 +541,7 @@ fn shape_border_width_to_px(width: i32) -> f64 {
         return 0.0;
     }
     // HWPUNIT → px: width * 96 / 7200
-    let px = width as f64 * 96.0 / 7200.0;
-    // 최소 0.5px 보장 (너무 얇으면 안 보임)
-    px.max(0.5).min(38.0)
+    width as f64 * 96.0 / 7200.0
 }
 
 /// LayoutRect → BoundingBox 변환
