@@ -37,6 +37,7 @@ mod logical_font_frame;
 pub mod parser;
 pub(crate) mod radical_outline;
 mod relation_outline;
+mod round_stretch;
 pub mod svg_render;
 pub mod symbols;
 pub mod tokenizer;
