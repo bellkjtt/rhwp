@@ -60,8 +60,19 @@ impl TypesetEngine {
             if let (Some(shape), Some(profile)) = (endnote_shape, endnote_flow_profile) {
                 let sep_height = profile.separator_height_px(self.dpi);
                 // 새 쪽 첫 미주는 본문과 나눌 경계가 없다. 같은 쪽 본문 뒤에만
-                // 구분선과 위/아래 여백을 예약한다(혼재 각주·미주 Print 대조).
-                if sep_height > 0.0 && !st.current_items.is_empty() {
+                // 구분선과 위/아래 여백을 예약한다. 높이가 0이어도 선은 표시한다.
+                if !st.current_items.is_empty() {
+                    if sep_height == 0.0 {
+                        let trailing = crate::renderer::note_separator::completed_body_tail_spacing_hu(
+                            &st.current_items,
+                            paragraphs,
+                        );
+                        st.reclaim_flow_by(hwpunit_to_px(trailing, self.dpi));
+                        vpos_offset = vpos_offset.saturating_sub(trailing);
+                        prev_en_bottom_vpos = prev_en_bottom_vpos.map(|v| v.saturating_sub(trailing));
+                        prev_en_content_bottom_vpos =
+                            prev_en_content_bottom_vpos.map(|v| v.saturating_sub(trailing));
+                    }
                     st.append_item(PageItem::EndnoteSeparator {
                         flow_origin: separator_origin,
                         separator_length: shape.separator_length,
