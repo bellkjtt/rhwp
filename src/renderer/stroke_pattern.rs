@@ -2,6 +2,23 @@
 
 use super::StrokeDash;
 
+// 독립 한컴 Print의 pen 해상도. HWPUNIT에서 반올림한 뒤 출력 좌표로 변환한다.
+const HANCOM_PRINT_PEN_DPI: f64 = 600.0;
+const STYLE_DPI: f64 = 96.0;
+
+pub(crate) fn shape_pen_width_to_px(width_hu: i32, line_type: u8) -> f64 {
+    if line_type == 0 {
+        return 0.0;
+    }
+    if !(1..=7).contains(&line_type) {
+        return f64::from(width_hu.max(0)) * STYLE_DPI / 7200.0;
+    }
+    let quantum_hu = 7200.0 / HANCOM_PRINT_PEN_DPI;
+    let fill_hu = (f64::from(width_hu.max(0)) / quantum_hu).round().max(1.0) * quantum_hu;
+    let outline_hu = if line_type > 1 { quantum_hu } else { 0.0 };
+    (fill_hu + outline_hu) * STYLE_DPI / 7200.0
+}
+
 impl StrokeDash {
     pub(crate) fn is_hwp_pattern(self) -> bool {
         matches!(
@@ -35,8 +52,28 @@ impl StrokeDash {
             // 길이 0인 round cap의 지름은 선 굵기다.
             Self::HwpCircle => &[0.0, 2.25],
         };
-        let scale = if self.is_hwp_pattern() { width } else { 1.0 };
-        values.iter().map(|value| value * scale).collect()
+        let outline = STYLE_DPI / HANCOM_PRINT_PEN_DPI;
+        let scale = if self.is_hwp_pattern() {
+            (width - outline).max(outline)
+        } else {
+            1.0
+        };
+        values
+            .iter()
+            .enumerate()
+            .map(|(index, value)| {
+                let edge = if self.is_hwp_pattern() && !self.uses_round_cap() {
+                    if index % 2 == 0 {
+                        outline
+                    } else {
+                        -outline
+                    }
+                } else {
+                    0.0
+                };
+                value * scale + edge
+            })
+            .collect()
     }
 
     pub(crate) fn canvas_width(self, width: f64) -> f64 {

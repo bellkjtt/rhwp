@@ -5164,10 +5164,16 @@ export class CanvasKitLayerRenderer {
       hwpDash: [7.5, 4.5], hwpDot: [1.5, 2.25], hwpDashDot: [15, 4.5, 1.5, 4.5],
       hwpDashDotDot: [15, 4.5, 1.5, 4.5, 1.5, 4.5], hwpLongDash: [15, 4.5], hwpCircle: [0, 2.25],
     };
-    const scale = dash?.startsWith('hwp') ? paint.getStrokeWidth() : 1;
+    // 도형 스타일은 96dpi 좌표이며 pen 외곽은 한컴 Print의 600dpi 물리 단위다.
+    const hwpPattern = dash?.startsWith('hwp') ?? false;
+    const outline = 96 / 600;
+    const scale = hwpPattern ? Math.max(paint.getStrokeWidth() - outline, outline) : 1;
     const intervals = dash === undefined || dash === 'solid'
       ? null
-      : patterns[dash]?.map(value => value * scale);
+      : patterns[dash]?.map((value, index) => {
+        const edge = hwpPattern && dash !== 'hwpCircle' ? (index % 2 === 0 ? outline : -outline) : 0;
+        return value * scale + edge;
+      });
     if (intervals === undefined) {
       this.unsupportedOps.add(`strokeDash:${String(dash)}`);
       return;

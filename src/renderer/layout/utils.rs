@@ -380,7 +380,10 @@ pub(crate) fn drawing_to_shape_style(
         // 선 종류 "없음" → 테두리 그리지 않음
         (0.0, None)
     } else {
-        let sw = shape_border_width_to_px(border.width);
+        let sw = crate::renderer::stroke_pattern::shape_pen_width_to_px(
+            border.width,
+            shape_line_type as u8,
+        );
         let sc = if sw > 0.0 { Some(border.color) } else { None };
         (sw, sc)
     };
@@ -442,7 +445,6 @@ pub(crate) fn drawing_to_shape_style(
 /// DrawingObjAttr → LineStyle 변환 (직선용)
 pub(crate) fn drawing_to_line_style(drawing: &crate::model::shape::DrawingObjAttr) -> LineStyle {
     let border = &drawing.border_line;
-    let width = shape_border_width_to_px(border.width);
     let attr = border.attr;
 
     // 테두리 선 속성 비트 레이아웃 (hwplib LineInfoProperty 참조):
@@ -455,6 +457,8 @@ pub(crate) fn drawing_to_line_style(drawing: &crate::model::shape::DrawingObjAtt
     //   bit 30:    시작 화살표 채움
     //   bit 31:    끝 화살표 채움
     let shape_line_type = attr & 0x3F;
+    let width =
+        crate::renderer::stroke_pattern::shape_pen_width_to_px(border.width, shape_line_type as u8);
 
     let (dash, line_render_type) =
         crate::renderer::line_style::hwp_shape_line_type(shape_line_type as u8);
@@ -532,16 +536,6 @@ fn arrow_type_from_hwp(hwp_type: u32, fill: bool) -> ArrowStyle {
         }
         _ => ArrowStyle::None,
     }
-}
-
-/// ShapeBorderLine의 width(HWPUNIT 단위, INT32) → 픽셀 변환
-/// HWP 스펙: 1인치 = 7200 HWPUNIT = 25.4mm
-fn shape_border_width_to_px(width: i32) -> f64 {
-    if width <= 0 {
-        return 0.0;
-    }
-    // HWPUNIT → px: width * 96 / 7200
-    width as f64 * 96.0 / 7200.0
 }
 
 /// LayoutRect → BoundingBox 변환
