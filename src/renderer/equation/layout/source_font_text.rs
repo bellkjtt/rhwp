@@ -35,8 +35,7 @@ pub(super) fn logical_advance(units: u16, fs: f64, dpi: f64) -> f64 {
 pub(super) fn logical_em_advance(em: f64, fs: f64, dpi: f64) -> f64 {
     const ADVANCE_QUANTUM_HWP: f64 = 75.0;
     let font_size_hwp = fs * 7200.0 / dpi;
-    let advance_hwp = (em * font_size_hwp / ADVANCE_QUANTUM_HWP).round()
-        * ADVANCE_QUANTUM_HWP;
+    let advance_hwp = (em * font_size_hwp / ADVANCE_QUANTUM_HWP).round() * ADVANCE_QUANTUM_HWP;
     advance_hwp * dpi / 7200.0
 }
 
