@@ -107,9 +107,19 @@ fn issue7642_table_text_preserves_cells_content_and_visible_center_alignment() {
             let RenderNodeType::TextRun(style_run) = &last.node_type else {
                 unreachable!()
             };
-            // 이 원본의 끝 글자는 공백이 없고, 음수 자간 제목은 전각 한글로 끝난다.
-            // 마지막 자간 전진을 표시 끝으로 사용하면 정상 Print 정렬을 오판한다.
-            let visible_right = last.bbox.x + last.bbox.width - style_run.style.letter_spacing;
+            // 독립 Print의 MalgunGothic CIDFont /W: 숫자는 550/1000em,
+            // 제목 끝 한글은 1000/1000em이다. 자간은 해당 글자의 폭 비례다.
+            // 전각 자간을 숫자에도 적용하면 정상 Print의 표시 끝을 오판한다.
+            let final_char = style_run.display_or_text().chars().last().expect("끝 글자");
+            let glyph_advance_em = if final_char.is_ascii_digit() {
+                550.0 / 1000.0
+            } else {
+                assert!(('\u{ac00}'..='\u{d7a3}').contains(&final_char));
+                1000.0 / 1000.0
+            };
+            let trailing_advance = style_run.style.letter_spacing * glyph_advance_em
+                + style_run.style.extra_char_spacing;
+            let visible_right = last.bbox.x + last.bbox.width - trailing_advance;
             let center = cell.bbox.x + cell.bbox.width / 2.0;
             assert!(
                 ((left + visible_right) / 2.0 - center).abs() <= tolerance,
