@@ -2769,31 +2769,6 @@ fn render_tree_with_header_control(control: Control) -> PageRenderTree {
     )
 }
 
-#[test]
-fn header_paper_relative_shape_uses_page_origin() {
-    let tree = render_tree_with_header_control(Control::Shape(Box::new(ShapeObject::Rectangle(
-        RectangleShape {
-            common: CommonObjAttr {
-                width: 7_500,
-                height: 3_000,
-                horizontal_offset: 1_500,
-                vertical_offset: 2_250,
-                horz_rel_to: HorzRelTo::Paper,
-                vert_rel_to: VertRelTo::Paper,
-                text_wrap: TextWrap::InFrontOfText,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-    ))));
-
-    let bbox = first_header_child_bbox(&tree, |node_type| {
-        matches!(node_type, RenderNodeType::Rectangle(_))
-    });
-    assert!((bbox.x - hwpunit_to_px(1_500, DEFAULT_DPI)).abs() < 0.01);
-    assert!((bbox.y - hwpunit_to_px(2_250, DEFAULT_DPI)).abs() < 0.01);
-}
-
 /// [#6608] 머리말 안 용지 기준 그림은 물리 용지가 아니라 **머리말 틀 원점**에서
 /// 오프셋을 잰다. PR #1682 는 바탕쪽의 용지 원점 규칙을 머리말에도 유추해
 /// 이 테스트를 용지 원점으로 적었지만, 실문서 `pic-in-head-02.hwp` 를 한/글 2020·2022
