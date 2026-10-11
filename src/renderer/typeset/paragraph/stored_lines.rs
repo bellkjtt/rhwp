@@ -5,6 +5,73 @@
 //! 이번 구조 이동으로 새로 승인하는 것은 아니다.
 
 use crate::model::paragraph::Paragraph;
+
+/// 위쪽에서 시작한 큰 개체 줄도 끝까지 소비했다면 다음 저장 프레임의 경계를 따른다.
+/// 저장 시작 위치의 수치 문턱으로 그 줄의 물리 점유를 대신하지 않는다.
+pub(super) fn saved_object_frame_reset_at_current_flow(
+    paragraphs: &[Paragraph],
+    index: usize,
+    current_items: &[crate::renderer::pagination::PageItem],
+    body_height: f64,
+    dpi: f64,
+) -> bool {
+    let Some(previous) = index.checked_sub(1).and_then(|i| paragraphs.get(i)) else {
+        return false;
+    };
+    let Some(current) = paragraphs.get(index) else {
+        return false;
+    };
+    // 실제 쪽이 앞 개체 전체를 소유해야 그 뒤의 저장 경계를 사용할 수 있다.
+    // 저장 줄 높이와 표 측정 높이는 바깥여백·줄 끝 간격의 계상 범위가 달라,
+    // 두 끝 좌표의 정확한 수치 일치를 소유 근거로 사용하지 않는다.
+    let previous_is_complete = current_items.last().is_some_and(|item| {
+        matches!(item,
+            crate::renderer::pagination::PageItem::Table { para_index, .. }
+            | crate::renderer::pagination::PageItem::FullParagraph { para_index }
+            if Some(*para_index) == index.checked_sub(1))
+    });
+    if !previous_is_complete {
+        return false;
+    }
+    if !crate::renderer::stored_frame_boundary::owns_saved_object_line(previous)
+        || current.stored_text_partition_is_dirty()
+        || current.cell_format_vpos_dirty
+        || !current
+            .controls
+            .iter()
+            .all(crate::renderer::control_is_body_flow_neutral_marker)
+    {
+        return false;
+    }
+    let Some(first) = current.line_segs.first().filter(|line| {
+        line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+    }) else {
+        return false;
+    };
+    // 사다리 재구성 전의 source 축은 직렬화와 쪽 소속의 독립 근거다.
+    // 편집된 줄은 위에서 제외하며 snapshot과 현재 줄의 대응도 확인한다.
+    let source_position = |para: &Paragraph, line: usize| match &para.source_line_seg_vertical_pos {
+        Some(source) if source.len() == para.line_segs.len() => source.get(line).copied(),
+        Some(_) => None,
+        None => para.line_segs.get(line).map(|line| line.vertical_pos),
+    };
+    let Some(previous_top) = source_position(previous, 0) else {
+        return false;
+    };
+    let Some(current_top) = source_position(current, 0) else {
+        return false;
+    };
+    let previous_line = &previous.line_segs[0];
+    let painted_end = previous_top.saturating_add(previous_line.line_height);
+    let previous_end = painted_end.saturating_add(previous_line.line_spacing);
+    let mut source_first = first.clone();
+    source_first.vertical_pos = current_top;
+    crate::renderer::stored_frame_boundary::saved_positive_frame_reset(
+        Some((previous_top, previous_end)),
+        &source_first,
+        crate::renderer::px_to_hwpunit(body_height, dpi),
+    )
+}
 use crate::renderer::hwpunit_to_px;
 use crate::renderer::style_resolver::ResolvedStyleSet;
 

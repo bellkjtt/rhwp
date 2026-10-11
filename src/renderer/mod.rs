@@ -32,6 +32,7 @@ pub mod form_appearance;
 pub(crate) mod form_caption;
 pub(crate) mod hwp3_caption_host;
 pub(crate) mod reflow_spacing;
+pub(crate) mod stored_frame_boundary;
 pub(crate) mod stored_picture_metrics;
 pub(crate) mod table_row_frame;
 pub(crate) mod gradient_geometry;

@@ -23,58 +23,7 @@ pub(super) fn preceding_saved_span(
 /// 한 개의 개체가 유효한 저장 줄 전체를 점유한 경우다.
 /// 캡션·편집된 표·수식처럼 점유를 같은 상자로 확인할 수 없으면 제외한다.
 pub(super) fn owns_saved_object_line(para: &Paragraph) -> bool {
-    let [line] = para.line_segs.as_slice() else {
-        return false;
-    };
-    let mut owners = para
-        .controls
-        .iter()
-        .filter(|control| !crate::renderer::control_is_body_flow_neutral_marker(control));
-    let Some(control) = owners.next() else {
-        return false;
-    };
-    if owners.next().is_some() {
-        return false;
-    }
-    if para.stored_text_partition_dirty
-        || line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
-        || para
-            .text
-            .chars()
-            .any(|c| !c.is_whitespace() && c > '\u{001f}' && c != '\u{fffc}')
-    {
-        return false;
-    }
-    let common = match control {
-        Control::Shape(shape)
-            if shape
-                .drawing()
-                .is_some_and(|drawing| drawing.caption.is_none()) =>
-        {
-            shape.common()
-        }
-        Control::Picture(picture) if picture.caption.is_none() => &picture.common,
-        Control::Table(table)
-            if table.caption.is_none()
-                && table.cells.iter().all(|cell| {
-                    !cell.dirty_flag
-                        && cell.paragraphs.iter().all(|paragraph| {
-                            !paragraph.stored_text_partition_is_dirty()
-                                && !paragraph.cell_format_vpos_dirty
-                                && !crate::renderer::para_has_no_stored_line_segs(paragraph)
-                        })
-                }) =>
-        {
-            &table.common
-        }
-        _ => return false,
-    };
-    common.treat_as_char
-        && common.height > 0
-        && i64::from(line.line_height)
-            == i64::from(common.height)
-                + i64::from(common.margin.top)
-                + i64::from(common.margin.bottom)
+    crate::renderer::stored_frame_boundary::owns_saved_object_line(para)
 }
 
 /// 가시 본문과 작은 TAC 도형이 유효한 저장 글줄의 기준선 상자 안에 함께 들어간다.
@@ -132,11 +81,5 @@ pub(super) fn saved_positive_frame_reset(
     first: &LineSeg,
     body_height: i32,
 ) -> bool {
-    previous.is_some_and(|(previous_first, previous_end)| {
-        first.vertical_pos > 0
-            && first.line_height > 0
-            && first.vertical_pos < previous_first
-            && first.vertical_pos.saturating_add(first.line_height) <= body_height
-            && previous_end.saturating_add(first.line_height) > body_height
-    })
+    crate::renderer::stored_frame_boundary::saved_positive_frame_reset(previous, first, body_height)
 }

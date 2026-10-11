@@ -208,9 +208,24 @@ pub(super) fn inspect(
             page_occupied_height,
             dpi,
         );
-    let stored_vpos_rewind_break = stored_vpos_rewind_base
-        && (page_occupied_height >= available * STORED_VPOS_REWIND_MIN_FILL
-            || stored_rewind_at_matching_flow_position);
+    let saved_object_frame_reset = page.col_count == 1
+        && (page.profile.hwpx_stored_layout() || page.profile.hwp5_stored_pagination_layout())
+        && !page.current_items.is_empty()
+        && !page
+            .current_items
+            .iter()
+            .any(|item| page_item_para_index(item) == Some(para_idx))
+        && super::stored_lines::saved_object_frame_reset_at_current_flow(
+            paragraphs,
+            para_idx,
+            page.current_items,
+            page.body_height,
+            dpi,
+        );
+    let stored_vpos_rewind_break = saved_object_frame_reset
+        || (stored_vpos_rewind_base
+            && (page_occupied_height >= available * STORED_VPOS_REWIND_MIN_FILL
+                || stored_rewind_at_matching_flow_position));
     // [#5755] 되돌아간 문단이 통째로는 안 들어가는 경우 — 어차피 전체 배치는 실패라
     // 종전엔 split 경로로 흘러가 저장 좌표(새 쪽의 쪽-지역 좌표)를 현재 쪽 꼬리
     // 적합 근거로 오독, 본문 밖·용지 밖까지 그렸다(156677324 pi=9: 996>934px).
@@ -225,6 +240,7 @@ pub(super) fn inspect(
     // 이 문단의 첫 줄이 (회수 보너스 포함) 들어가면 저장 되감김(=2022 조판의
     // 쪽 경계)을 덮는다. 회수도 선행 덮음도 없으면 종전 동작 그대로.
     let hangul2024_rewind_override = stored_vpos_rewind_break
+        && !saved_object_frame_reset
         && page.profile.hangul2024_layout()
         && page.hangul2024_reclaimed > 0.0
         && {
