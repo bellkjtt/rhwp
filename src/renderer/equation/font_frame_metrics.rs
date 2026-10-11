@@ -112,6 +112,20 @@ pub(super) fn line_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     Some((height, height * 0.86))
 }
 
+/// 일반 글자 분수의 독립 프레임. 22pt는 정상 저장/Print에서 추가 확인했다.
+pub(super) fn fraction_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    if let Some(metrics) = for_size_at_dpi(fs, dpi) {
+        return Some(metrics.fraction);
+    }
+    if base_unit_at_dpi(fs, dpi) != 2200 {
+        return None;
+    }
+    // 15개 크기의 정상 분수 저장 bebcb655-b7a7-4a0c-a330-423bb0eaae30,
+    // Print f85c5371-7996-4d8e-aaec-cf373235296e. 기존 14개 크기도 같은 값이다.
+    let height = crate::renderer::hwpunit_to_px(5010, dpi);
+    Some((height, height * 0.66))
+}
+
 /// 단일 위첨자의 독립 프레임. 22pt는 별도 정상 저장/Print 24건에서 확인했다.
 pub(super) fn superscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     if let Some(metrics) = for_size_at_dpi(fs, dpi) {

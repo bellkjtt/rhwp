@@ -37,7 +37,7 @@ fn contains_cjk(value: &LayoutBox) -> bool {
     }
 }
 
-fn ordinary_line(value: &LayoutBox, fs: f64) -> bool {
+pub(super) fn ordinary_line(value: &LayoutBox, fs: f64) -> bool {
     font_line(value, fs) && !contains_prime(value) && !contains_cjk(value)
 }
 

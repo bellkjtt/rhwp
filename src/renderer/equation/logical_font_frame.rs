@@ -294,6 +294,13 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
             return Some(frame);
         }
     }
+    if let LayoutKind::Fraction { numer, denom, .. } = &value.kind {
+        if super::fraction_sup_frame::ordinary_line(numer, fs)
+            && super::fraction_sup_frame::ordinary_line(denom, fs)
+        {
+            return super::font_frame_metrics::fraction_at_dpi(fs, dpi);
+        }
+    }
     if super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200 {
         return super::font_frame_22::frame(value, fs, dpi);
     }
