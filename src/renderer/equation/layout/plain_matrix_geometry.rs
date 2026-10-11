@@ -40,15 +40,29 @@ impl EqLayout {
                 .iter()
                 .map(|(height, baseline)| height - baseline)
                 .fold(line_height - line_baseline, f64::max);
-            let mut height = ascent + descent;
-            if ri + 1 == row_count {
+            let mut height = if self.hancom_math_face {
+                frames
+                    .iter()
+                    .map(|(height, _)| *height)
+                    .fold(line_height, f64::max)
+            } else {
+                ascent + descent
+            };
+            if !self.hancom_math_face && ri + 1 == row_count {
                 // 마지막 줄은 다음 줄의 피치를 예약하지 않고 표시 상자의 끝을 포함한다.
                 height = row.iter().map(|cell| cell.height).fold(height, f64::max);
             }
             let mut x = 0.0;
             for (ci, cell) in row.iter_mut().enumerate() {
                 cell.x = x + (widths[ci] - cell.width) / 2.0;
-                cell.y = y + ascent - cell.baseline;
+                cell.y = if self.hancom_math_face {
+                    // 행렬 셀은 논리 상자의 가운데를 맞춘다. 본체·첨자 기준선은
+                    // 각 셀 안에 보존하고 raw nominal em을 다시 예약하지 않는다.
+                    let (cell_height, cell_baseline) = frames[ci];
+                    y + (height - cell_height) / 2.0 + cell_baseline - cell.baseline
+                } else {
+                    y + ascent - cell.baseline
+                };
                 x += widths[ci] + gap;
             }
             y += height + if ri + 1 < row_count { row_gap } else { 0.0 };

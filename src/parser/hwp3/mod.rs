@@ -3748,23 +3748,23 @@ fn parse_paragraph_list_inner(
             para.line_segs = line_segs;
         }
 
-        // TAC 표 문단: 줄간격 배율 미적용 — lh=th (표 높이 그대로).
-        // 암호 HWP3의 한컴 변환본은 표 높이에 160% 배율을 곱하지 않되, 표 호스트 뒤에
-        // 2mm(600 HU)의 고정 줄간격을 보존한다. 일반 HWP3은 #460의 0 HU 계약을
-        // 유지한다. 이를 전역으로 바꾸면 일반 HWP3→HWPX 변환의 페이지 수가 바뀐다.
+        // TAC 표의 줄 높이는 표 자체 높이지만 뒤 간격은 원래 글자 줄의
+        // 간격이다. 표 높이에 배율을 곱하거나 일반 HWP3의 간격을 0으로
+        // 지우지 않는다. 독립 정상 저장·Print의 host 뒤 띠와 대응한다.
         if hwp3_paragraph_has_treat_as_char_table(&para) {
             for seg in para.line_segs.iter_mut() {
                 seg.line_height = seg.text_height;
                 seg.line_spacing = if use_password_layout_contract {
                     HWP3_TAC_OBJECT_LINE_SPACING_HU
                 } else {
-                    0
+                    fallback_line_spacing
                 };
             }
         }
 
         if para.text.is_empty()
             && para.controls.len() == 1
+            && !hwp3_paragraph_has_treat_as_char_table(&para)
             && hwp3_is_treat_as_char_visual_control(&para.controls[0])
         {
             for seg in para.line_segs.iter_mut() {

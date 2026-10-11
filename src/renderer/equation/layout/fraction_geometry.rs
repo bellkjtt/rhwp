@@ -138,7 +138,12 @@ impl EqLayout {
         body: &EqNode,
         fs: f64,
     ) -> LayoutBox {
-        let b = self.layout_node(body, fs);
+        let raw_body = self.layout_node(body, fs);
+        let b = if self.hancom_math_face {
+            self.matrix_row_box(raw_body, fs)
+        } else {
+            raw_body
+        };
         let pad = fs * SQRT_PAD;
         // 수식 face의 논리 전진폭. HYhwpEQ의 수학 radical은 1em,
         // 배포 Latin Modern Math의 U+221A는 833/1000em이다.
@@ -151,33 +156,67 @@ impl EqLayout {
         // 기호의 논리 em과 별도로 0.17em의 끝 여백을 예약한다.
         // 세로 여백은 같은 가로 비율로 덮어쓰지 않는다.
         let right_pad = if self.hancom_math_face {
-            fs * 0.17
+            fs * (0.17 + if ends_round_delimiter(&b) { 0.07 } else { 0.0 })
         } else {
             pad
         };
         let body_w = b.width + right_pad;
-        let body_h = b.height + pad * 2.0;
+        let top_band = if self.hancom_math_face {
+            super::super::font_frame_metrics::line_at_dpi(fs, self.dpi)
+                .map_or(fs, |(height, _)| height)
+                * 0.15
+        } else {
+            pad
+        };
+        let body_h = b.height
+            + if self.hancom_math_face {
+                top_band
+            } else {
+                pad * 2.0
+            };
 
         let idx = index.as_ref().map(|i| {
             let mut ib = self.layout_node(i, fs * RADICAL_DEGREE_SCALE);
-            // MATH RadicalKernBeforeDegree=278/1000em.
-            ib.x = fs * 0.278;
-            // MATH RadicalDegreeBottomRaisePercent=60: 근 지수 하단을
-            // radical 높이의 60%만큼 올린다.
-            ib.y = body_h * 0.4 - ib.height;
+            // 한컴 지수는 기호의 절반 슬롯에 오른쪽 정렬한다.
+            // 일반 MATH의 before-degree kern은 별도 계약이다.
+            ib.x = if self.hancom_math_face {
+                (sign_w / 2.0 - ib.width).max(0.0)
+            } else {
+                fs * 0.278
+            };
+            // 한컴 Print의 근 지수 기준선은 근호 높이의 40%에 놓인다.
+            // 일반 MATH 경로는 기존 하단 기준의 raise 계약을 유지한다.
+            ib.y = body_h * 0.4
+                - if self.hancom_math_face {
+                    ib.baseline
+                } else {
+                    ib.height
+                };
             ib
         });
-        // MATH RadicalKernAfterDegree=-556/1000em은 근 지수와 기호의
-        // 겹쳐 쓸 수 있는 폭이다. 그 폭을 넘는 지수만 추가 공간을 점유한다.
+        // 근 지수가 슬롯을 넘친 폭만 기호 앞에 추가한다. 근호의 닫는
+        // 괄호 경계 여백도 이 예약에 포함하며 각 backend는 같은 원점을 쓴다.
         let degree_extension = idx
             .as_ref()
-            .map(|i| (i.x + i.width - fs * 0.556).max(0.0))
+            .map(|i| {
+                let clearance = if self.hancom_math_face && ends_round_delimiter(i) {
+                    i.font_size * 0.07
+                } else {
+                    0.0
+                };
+                let overlap = if self.hancom_math_face {
+                    sign_w / 2.0
+                } else {
+                    fs * 0.556
+                };
+                (i.x + i.width + clearance - overlap).max(0.0)
+            })
             .unwrap_or(0.0);
         let total_w = degree_extension + sign_w + body_w;
 
         let mut body_box = b;
         body_box.x = total_w - body_w;
-        body_box.y = pad;
+        body_box.y = top_band;
 
         LayoutBox {
             font_size: fs,
@@ -191,5 +230,15 @@ impl EqLayout {
                 body: Box::new(body_box),
             },
         }
+    }
+}
+
+/// 보이는 닫는 둥근 괄호와 근호 사이의 여백은 근호가 소유한다.
+fn ends_round_delimiter(value: &LayoutBox) -> bool {
+    match &value.kind {
+        LayoutKind::Paren { right, .. } => right == ")",
+        LayoutKind::FontStyle { body, .. } => ends_round_delimiter(body),
+        LayoutKind::Row(items) => items.last().is_some_and(ends_round_delimiter),
+        _ => false,
     }
 }

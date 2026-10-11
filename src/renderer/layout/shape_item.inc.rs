@@ -380,6 +380,16 @@ impl LayoutEngine {
                                     result_y = saved_y_offset;
                                 }
                             }
+                            if !picture_outside_column && !vpos_accounts_for_height {
+                                // 그림·캡션 잉크를 이동하지 않고 같은 host 줄 띠를
+                                // 최종 흐름 끝에 더한다. 조판 예약도 같은 helper를 소비한다.
+                                result_y += hwpunit_to_px(
+                                    crate::renderer::hwp3_caption_host::line_advance_hwp(
+                                        para, pic, self.profile.get(),
+                                    ),
+                                    self.dpi,
+                                );
+                            }
                             // [Task #683] 빈 paragraph (텍스트 없음) + Para-relative TopAndBottom
                             // 그림 (caption 없음) 의 layout 진행량 보정. 한컴 한글 2022 PDF 는
                             // 그림 다음에 paragraph 의 line baseline 1줄(line_height + line_spacing)

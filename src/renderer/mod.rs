@@ -30,6 +30,7 @@ pub(crate) mod font_rule_layout_metric_projection;
 pub(crate) mod font_rule_layout_name_projection;
 pub mod form_appearance;
 pub(crate) mod form_caption;
+pub(crate) mod hwp3_caption_host;
 pub(crate) mod reflow_spacing;
 pub(crate) mod stored_picture_metrics;
 pub(crate) mod table_row_frame;

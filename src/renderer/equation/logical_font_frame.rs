@@ -29,7 +29,19 @@ const BAR_SUP_FRAMES: [[u32; 5]; 14] = [
 
 fn bar_sup_metrics(fs: f64, radical: bool, dpi: f64) -> Option<(f64, f64)> {
     let hu = super::font_frame_metrics::base_unit_at_dpi(fs, dpi);
-    let row = BAR_SUP_FRAMES.iter().find(|row| row[0] == hu)?;
+    let row = BAR_SUP_FRAMES.iter().find(|row| row[0] == hu);
+    if row.is_none() && hu == 2200 && !radical {
+        // 독립 22pt 근호·윗줄 위첨자 대조에서 본체 높이는 단일 위첨자에
+        // 윗줄의 추가 논리 띠를 더한 값이다. 사설 글리프나 화면 좌표를 쓰지 않는다.
+        let (sup_height, sup_baseline) = super::font_frame_metrics::superscript_at_dpi(fs, dpi)?;
+        let line_height = super::font_frame_metrics::line_at_dpi(fs, dpi)?.0;
+        let accent_height = super::font_frame_metrics::accent_at_dpi(fs, dpi, false)?.0;
+        let extra = accent_height - line_height;
+        let height = sup_height + extra;
+        let percent = ((sup_baseline + extra) / height * 100.0).round();
+        return Some((height, height * percent / 100.0));
+    }
+    let row = row?;
     let index = if radical { 3 } else { 1 };
     let height = crate::renderer::hwpunit_to_px(row[index] as i32, dpi);
     Some((height, height * f64::from(row[index + 1]) / 100.0))
@@ -299,6 +311,11 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
             && super::fraction_sup_frame::ordinary_line(denom, fs)
         {
             return super::font_frame_metrics::fraction_at_dpi(fs, dpi);
+        }
+    }
+    if let LayoutKind::Superscript { base, sup } = &value.kind {
+        if bar_font_line(base, fs) && font_line(sup, sup.font_size) {
+            return bar_sup_metrics(fs, false, dpi);
         }
     }
     if super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200 {
