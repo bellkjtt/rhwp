@@ -786,7 +786,13 @@ pub(super) fn prepare_fit_budget(
     }
 
     let strict_after_empty_host_float = st.take_strict_paragraph_fit(para);
-    let layout_drift_safety_px = fit::paragraph_layout_drift_safety_px(paragraphs, para);
+    // 같은 재조판 글줄 상자를 fit과 배치가 소비하면 별도 drift를 예약하지 않는다.
+    // 개체의 명시적 점유·각주·float 배제는 아래 실제 예산에서 계속 차감한다.
+    let layout_drift_safety_px = if fmt.exact_reflow_text_box && !strict_after_empty_host_float {
+        0.0
+    } else {
+        fit::paragraph_layout_drift_safety_px(paragraphs, para)
+    };
     let prev_is_partial_table =
         matches!(st.current_items.last(), Some(PageItem::PartialTable { .. }));
     let safety = st.take_paragraph_safety_margin(

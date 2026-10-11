@@ -50,6 +50,8 @@ use base64::Engine;
 mod font_file_lookup;
 #[cfg(not(target_arch = "wasm32"))]
 mod system_fonts;
+#[cfg(not(target_arch = "wasm32"))]
+mod fallback_fonts;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 use font_file_lookup::FontFileName;
 #[cfg(not(target_arch = "wasm32"))]
@@ -4965,6 +4967,7 @@ pub fn generate_font_style(
         FontEmbedMode::None => {}
     }
 
+    fallback_fonts::append_missing_serif_font_css(&mut css, renderer, font_paths, embedded_fonts);
     css
 }
 

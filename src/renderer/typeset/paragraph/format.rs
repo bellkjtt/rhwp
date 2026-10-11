@@ -206,8 +206,22 @@ pub(in crate::renderer::typeset) fn format_paragraph_for_flow(
         let remaining = available - text_width - inline_width;
         (available.is_finite() && available > 0.0 && remaining.is_finite()).then_some(remaining)
     })();
+    let exact_reflow_text_box = flow_spacing.is_some()
+        && !known_square_band
+        && !ctx.uniform_filler_ladder()
+        && composed.is_some_and(|comp| {
+            comp.lines.len() == line_heights.len()
+                && comp.lines.len() == line_spacings.len()
+                && !comp.lines.is_empty()
+                && comp.lines.iter().enumerate().all(|(index, line)| {
+                    line_heights[index] > 0.0
+                        && line_heights[index] == hwpunit_to_px(line.line_height, ctx.dpi())
+                        && line_spacings[index] == hwpunit_to_px(line.line_spacing, ctx.dpi())
+                })
+        });
     FormattedParagraph {
         stored_ladder_is_filler: ctx.uniform_filler_ladder(),
+        exact_reflow_text_box,
         tail_line_remaining_width,
         computed_host_lines,
         square_host_plan: None,

@@ -12,6 +12,8 @@ use crate::model::{paragraph::Paragraph, provenance::LayoutCompatibilityProfile}
 pub(in crate::renderer::typeset) struct FormattedParagraph {
     /// 구역의 저장 사다리가 무효이면 문단 끝도 저장 좌표로 다시 투영하지 않는다.
     pub(in crate::renderer::typeset) stored_ladder_is_filler: bool,
+    /// 물리 개체 없는 재조판 줄의 높이·간격을 배치와 동일하게 수용한 결과다.
+    pub(in crate::renderer::typeset) exact_reflow_text_box: bool,
     /// Measured remaining inline space on the composed tail line. None means
     /// that this path has no reliable width result (not an implicit overflow).
     pub(in crate::renderer::typeset) tail_line_remaining_width: Option<f64>,
