@@ -3175,14 +3175,17 @@ mod cell_reflow_width_tests {
             ..Default::default()
         };
         section.paragraphs.push(body_para);
-        let mut doc = Document::default();
-        doc.sections.push(section);
-
         let mut core = DocumentCore::new_empty();
-        core.document = doc;
-        core.composed = vec![Vec::new()];
-        core.dirty_sections = vec![true];
-        core.dirty_paragraphs = vec![None];
+        // flat helper와 같은 정상 서식표를 쓴다. 파생 기본 글자 모양의
+        // base_size=0으로 폭 없는 글자를 만들면 중첩 셀 재래핑을 검증할 수 없다.
+        core.create_blank_document_native()
+            .expect("기본 서식표를 가진 문서가 생성되어야 함");
+        let doc = Document {
+            doc_info: core.document.doc_info.clone(),
+            sections: vec![section],
+            ..Default::default()
+        };
+        core.set_document(doc);
         let path = vec![(outer_ctrl_idx, 0, 0), (inner_ctrl_idx, 0, 0)];
         (core, path)
     }

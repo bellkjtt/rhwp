@@ -159,6 +159,9 @@ pub(super) fn superscript_shift(
     fs: f64,
     dpi: f64,
 ) -> Option<f64> {
+    if let Some(shift) = super::fraction_sup_frame::shift(base, sup, fs, dpi) {
+        return Some(shift);
+    }
     if !font_line(base, fs)
         || !font_line(sup, sup.font_size)
         || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
@@ -284,6 +287,11 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
     if let LayoutKind::Subscript { base, sub } = &value.kind {
         if subscript_geometry(base, sub, fs, dpi).is_some() {
             return super::font_frame_metrics::subscript_at_dpi(fs, dpi);
+        }
+    }
+    if let LayoutKind::Superscript { base, sup } = &value.kind {
+        if let Some(frame) = super::fraction_sup_frame::frame(base, sup, fs, dpi) {
+            return Some(frame);
         }
     }
     if super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200 {

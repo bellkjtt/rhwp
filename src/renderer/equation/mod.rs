@@ -22,6 +22,7 @@ mod dot_geometry;
 mod font_frame_22;
 mod font_frame_metrics;
 mod font_style_runs;
+mod fraction_sup_frame;
 pub(crate) mod inline_box;
 pub(crate) mod integral_outline;
 pub(crate) mod multiplication_outline;
