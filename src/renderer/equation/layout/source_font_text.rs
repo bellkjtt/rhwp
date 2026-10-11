@@ -28,9 +28,14 @@ const ROMAN_LOWER: [u16; 26] = [
 /// 한컴이 재생성한 6/9/12/18pt 글자·괄호의 논리 전진폭 격자다.
 /// HWPUNIT에서 반올림하므로 출력 DPI를 바꿔도 물리 전진폭은 같다.
 pub(super) fn logical_advance(units: u16, fs: f64, dpi: f64) -> f64 {
+    logical_em_advance(f64::from(units) / 1024.0, fs, dpi)
+}
+
+/// 상대 em 예약 폭을 같은 HWPUNIT 논리 격자로 반올림한다.
+pub(super) fn logical_em_advance(em: f64, fs: f64, dpi: f64) -> f64 {
     const ADVANCE_QUANTUM_HWP: f64 = 75.0;
     let font_size_hwp = fs * 7200.0 / dpi;
-    let advance_hwp = (f64::from(units) * font_size_hwp / 1024.0 / ADVANCE_QUANTUM_HWP).round()
+    let advance_hwp = (em * font_size_hwp / ADVANCE_QUANTUM_HWP).round()
         * ADVANCE_QUANTUM_HWP;
     advance_hwp * dpi / 7200.0
 }

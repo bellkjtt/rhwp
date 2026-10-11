@@ -21,26 +21,24 @@ impl EqParser {
             };
         }
 
-        // SQRT(n) of x 패턴 확인 — 소괄호
+        // 소괄호는 OF가 뒤따를 때 지수이며, 그 외에는 근호 본체다.
+        // 한컴 Print의 (3) 지수에는 괄호도 표시되므로 구문에 보존한다.
         if self.current_type() == TokenType::LParen {
-            self.pos += 1; // (
-            let mut index_nodes = Vec::new();
-            while !self.at_end() && self.current_type() != TokenType::RParen {
-                index_nodes.push(self.parse_element());
+            let close = self.paren_match[self.pos];
+            let has_of = self.tokens.get(close + 1).is_some_and(|token| {
+                token.ty == TokenType::Command && token.value.eq_ignore_ascii_case("of")
+            });
+            let group = self.parse_paren_group();
+            if has_of {
+                self.pos += 1; // OF
+                return EqNode::Sqrt {
+                    index: Some(Box::new(group)),
+                    body: Box::new(self.parse_single_or_group()),
+                };
             }
-            self.expect(TokenType::RParen); // )
-
-            // 'of' 키워드 건너뛰기
-            if self.current_type() == TokenType::Command
-                && self.current_value().eq_ignore_ascii_case("of")
-            {
-                self.pos += 1;
-            }
-
-            let body = self.parse_single_or_group();
             return EqNode::Sqrt {
-                index: Some(Box::new(EqNode::Row(index_nodes).simplify())),
-                body: Box::new(body),
+                index: None,
+                body: Box::new(group),
             };
         }
 

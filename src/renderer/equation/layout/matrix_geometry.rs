@@ -41,6 +41,10 @@ impl EqLayout {
             };
         }
 
+        if self.hancom_math_face {
+            return self.layout_source_framed_matrix(rows, style, fs);
+        }
+
         let col_gap = fs * MATRIX_COL_GAP;
         let row_gap = fs * MATRIX_ROW_GAP;
 
@@ -116,6 +120,46 @@ impl EqLayout {
             kind: LayoutKind::Matrix {
                 cells: cell_boxes,
                 style,
+            },
+        }
+    }
+
+    fn layout_source_framed_matrix(
+        &self,
+        rows: &[Vec<EqNode>],
+        style: MatrixStyle,
+        fs: f64,
+    ) -> LayoutBox {
+        // 독립 한컴 저장·Print에서 괄호 유무와 무관하게 셀의 줄·열 프레임은 같다.
+        // 구분자 슬롯은 측정과 SVG·Canvas가 함께 소비하는 Paren에 한 번 예약한다.
+        let mut body = self.layout_plain_matrix(rows, fs);
+        let (left, right, em) = match style {
+            MatrixStyle::Paren => ("(", ")", 0.4),
+            MatrixStyle::Bracket => ("[", "]", 0.5),
+            MatrixStyle::Vert => ("|", "|", 0.5),
+            _ => return body,
+        };
+        let slot = super::source_font_text::logical_em_advance(em, fs, self.dpi);
+        body.x = slot;
+        let height = body.height;
+        let baseline = body.baseline;
+        LayoutBox {
+            font_size: fs,
+            x: 0.0,
+            y: 0.0,
+            width: body.width + slot * 2.0,
+            height,
+            baseline,
+            kind: LayoutKind::Paren {
+                left: left.to_string(),
+                right: right.to_string(),
+                left_width: slot,
+                right_width: slot,
+                delimiter_height: height,
+                glyph_delimiters: false,
+                left_outline: self.delimiter_outline(left, slot, height, baseline, fs, false),
+                right_outline: self.delimiter_outline(right, slot, height, baseline, fs, false),
+                body: Box::new(body),
             },
         }
     }

@@ -727,10 +727,12 @@ impl EqParser {
     }
 
     fn parse_paren_group_inner(&mut self) -> EqNode {
+        // 안쪽 소괄호의 닫힘을 바깥 묶음의 끝으로 오인하지 않는다.
+        let close = self.paren_match[self.pos];
         self.pos += 1; // '(' 소비
         let mut items = Vec::new();
         let mut over_run = 0u32;
-        while !self.at_end() && self.current_type() != TokenType::RParen {
+        while !self.at_end() && self.pos < close {
             if self.try_consume_infix_over_atop(&mut items, &mut over_run) {
                 continue;
             }
