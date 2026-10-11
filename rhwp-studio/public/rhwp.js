@@ -12167,6 +12167,10 @@ function __wbg_get_imports() {
         __wbg_lineTo_9495a068a4f48283: function(arg0, arg1, arg2) {
             arg0.lineTo(arg1, arg2);
         },
+        __wbg_lineWidth_df50b89fb2d27dfd: function(arg0) {
+            const ret = arg0.lineWidth;
+            return ret;
+        },
         __wbg_measureText_13aedbb9b35a9a0a: function() { return handleError(function (arg0, arg1, arg2) {
             const ret = arg0.measureText(getStringFromWasm0(arg1, arg2));
             return ret;
