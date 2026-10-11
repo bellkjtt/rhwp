@@ -171,6 +171,9 @@ pub(super) fn superscript_shift(
     fs: f64,
     dpi: f64,
 ) -> Option<f64> {
+    if let Some(shift) = super::script_fraction_frame::shift(base, sup, fs, dpi) {
+        return Some(shift);
+    }
     if let Some(shift) = super::fraction_sup_frame::shift(base, sup, fs, dpi) {
         return Some(shift);
     }
@@ -302,6 +305,9 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
         }
     }
     if let LayoutKind::Superscript { base, sup } = &value.kind {
+        if let Some(frame) = super::script_fraction_frame::frame(base, sup, fs, dpi) {
+            return Some(frame);
+        }
         if let Some(frame) = super::fraction_sup_frame::frame(base, sup, fs, dpi) {
             return Some(frame);
         }

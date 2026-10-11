@@ -102,6 +102,9 @@ pub(super) fn line_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     if let Some(metrics) = for_size_at_dpi(fs, dpi) {
         return Some(metrics.line);
     }
+    if let Some(metrics) = super::script_fraction_frame::reduced(fs, dpi, false) {
+        return Some(metrics);
+    }
     // 기존 구조별 표에 없는 22pt의 일반 글줄만 독립 정상화로 확인했다.
     // job ee04e67a-b8cb-4297-9f26-716027f9eb7e, a/n/x/m 모두 동일하다.
     let hu = base_unit_at_dpi(fs, dpi);
@@ -116,6 +119,9 @@ pub(super) fn line_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
 pub(super) fn fraction_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     if let Some(metrics) = for_size_at_dpi(fs, dpi) {
         return Some(metrics.fraction);
+    }
+    if let Some(metrics) = super::script_fraction_frame::reduced(fs, dpi, true) {
+        return Some(metrics);
     }
     if base_unit_at_dpi(fs, dpi) != 2200 {
         return None;

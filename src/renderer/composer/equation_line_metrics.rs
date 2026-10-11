@@ -9,6 +9,16 @@ pub(super) fn refresh_equation_rows(
     para: &Paragraph,
     styles: &ResolvedStyleSet,
 ) {
+    refresh_rows(composed, para, styles, false);
+}
+
+fn refresh_rows(
+    composed: &mut ComposedParagraph,
+    para: &Paragraph,
+    styles: &ResolvedStyleSet,
+    regenerated: bool,
+) {
+    append_missing_single_equation_row(composed, para, styles);
     let positions = para.control_text_positions();
     let dpi = styles.resolved_dpi.unwrap_or(DEFAULT_DPI);
     let tac_offsets_px: Vec<_> = composed
@@ -84,7 +94,7 @@ pub(super) fn refresh_equation_rows(
                 _ => {}
             }
         }
-        if !supported {
+        if !supported || new_logical_height <= 0 {
             continue;
         }
         // 실제 텍스트가 있는 줄은 텍스트의 어센트·하강부도 같은 합집합에 포함한다.
@@ -127,12 +137,19 @@ pub(super) fn refresh_equation_rows(
                     == Some(next.vertical_pos)
                     || next.vertical_pos < source.vertical_pos)
         });
+        let generated_row = para.line_segs.get(line_index).is_some_and(|line| {
+            line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+        });
+        let owned_equation_row = has_equation
+            && text_height == 0
+            && (generated_row || regenerated || para.line_segs.is_empty());
         // 저장 줄이 이 개체 합집합에서 나온 경우만 메트릭을 다시 발행한다.
         // 별도 줄 높이·수직 정렬 계약을 실제 상자의 대용으로 덮어쓰지 않는다.
         if (changed
             && line.line_height == old_logical_height
             && (line.baseline_distance - old_ascent).abs() <= 1)
             || following_inline_box_was_reserved
+            || owned_equation_row
         {
             let occupied_height = new_ascent + new_descent;
             // 저장 간격은 논리 상자 높이 뒤의 leading이다. 실제 기준선 합집합이
@@ -220,4 +237,84 @@ fn source_inline_box_height(
         })
         .max()
         .filter(|height| *height > 0)
+}
+
+/// 줄 캐시가 없는 단일 TAC 수식 호스트의 같은 구성 결과를 세 소비자에 공급한다.
+fn append_missing_single_equation_row(
+    composed: &mut ComposedParagraph,
+    para: &Paragraph,
+    styles: &ResolvedStyleSet,
+) {
+    if !composed.lines.is_empty()
+        || !para.line_segs.is_empty()
+        || !matches!(para.controls.as_slice(), [Control::Equation(e)] if e.common.treat_as_char
+            && crate::renderer::equation::flow_height_hwp(e) > 0)
+        || para
+            .text
+            .chars()
+            .any(|c| !c.is_whitespace() && !c.is_control() && c != '\u{fffc}')
+    {
+        return;
+    }
+    let fs = para
+        .char_shapes
+        .first()
+        .and_then(|s| styles.char_styles.get(s.char_shape_id as usize))
+        .map_or(12.0, |s| s.font_size);
+    let ps = styles.para_styles.get(para.para_shape_id as usize);
+    let metrics = super::frame_metrics_for_line(
+        fs,
+        fs,
+        ps.map_or(crate::model::style::LineSpacingType::Percent, |s| {
+            s.line_spacing_type
+        }),
+        ps.map_or(160.0, |s| s.line_spacing),
+        styles.resolved_dpi.unwrap_or(DEFAULT_DPI),
+    );
+    composed.lines.push(ComposedLine {
+        runs: Vec::new(),
+        line_height: metrics.line_height,
+        baseline_distance: metrics.baseline_distance,
+        segment_width: 0,
+        column_start: 0,
+        line_spacing: metrics.line_spacing,
+        has_line_break: false,
+        char_start: 0,
+    });
+}
+
+/// 실제 재조판 뒤 수식 전용 줄을 composition과 같은 메트릭으로 저장한다.
+/// 단일/여러 수식의 실제 줄 소속은 기존 composition이 결정한다.
+pub(super) fn publish_regenerated_rows(para: &mut Paragraph, styles: &ResolvedStyleSet) {
+    if para.controls.is_empty()
+        || !para
+            .controls
+            .iter()
+            .all(|c| matches!(c, Control::Equation(e) if e.common.treat_as_char))
+        || para
+            .text
+            .chars()
+            .any(|c| !c.is_whitespace() && !c.is_control() && c != '\u{fffc}')
+    {
+        return;
+    }
+    let mut composed = super::compose_paragraph(para);
+    refresh_rows(&mut composed, para, styles, true);
+    if composed.lines.len() != para.line_segs.len() {
+        return;
+    }
+    let mut rows = para.line_segs.clone();
+    let mut top = rows.first().map_or(0, |row| row.vertical_pos);
+    for (row, common) in rows.iter_mut().zip(composed.lines) {
+        row.vertical_pos = top;
+        row.line_height = common.line_height;
+        row.text_height = common.line_height;
+        row.baseline_distance = common.baseline_distance;
+        row.line_spacing = common.line_spacing;
+        row.tag |= crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY;
+        top = top
+            .saturating_add(row.line_height)
+            .saturating_add(row.line_spacing);
+    }
+    para.replace_line_segs(rows);
 }

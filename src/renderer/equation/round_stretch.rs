@@ -49,9 +49,14 @@ pub(super) fn source_commands(height: f64, fs: f64, dpi: f64, right: bool) -> Op
     let mut bottom = 0.0;
     for (index, part) in parts.iter().enumerate() {
         let map = |(gx, gy): (f64, f64)| {
-            // 공개 bbox 277..823을 원 face cap의 bbox 38..443에 대응한다.
+            // 직선 bbox 277..379를 원 face의 38..87(49/1024em)에 대응한다.
+            // cap의 나머지 곡선은 원래 bbox 끝 443까지 보존한다.
             // 오른쪽 cap bbox -41..365는 같은 디자인을 402 축으로 반전한 것이다.
-            let ink_x = 38.0 + (gx - 277.0) * (443.0 - 38.0) / (823.0 - 277.0);
+            let ink_x = if gx <= 379.0 {
+                38.0 + (gx - 277.0) * 49.0 / (379.0 - 277.0)
+            } else {
+                87.0 + (gx - 379.0) * (443.0 - 87.0) / (823.0 - 379.0)
+            };
             let x = fs * if right { 402.0 - ink_x } else { ink_x } / 1024.0;
             (x, inset + ink_height - (bottom + gy) * scale_y)
         };

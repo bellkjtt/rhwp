@@ -4532,6 +4532,7 @@ pub(crate) fn reflow_line_segs(
     dpi: f64,
 ) {
     let _ = reflow_line_segs_impl(para, paragraph_box, styles, dpi, None, false, true);
+    super::equation_line_metrics::publish_regenerated_rows(para, styles);
 }
 
 /// 셀 분할로 저장 폭이 stale해진 문단을 다시 조판한다.
@@ -4547,6 +4548,7 @@ pub(crate) fn reflow_line_segs_after_cell_split(
     dpi: f64,
 ) {
     let _ = reflow_line_segs_impl(para, paragraph_box, styles, dpi, None, true, true);
+    super::equation_line_metrics::publish_regenerated_rows(para, styles);
 }
 
 /// 저장 LINE_SEG가 유효한 셀 텍스트 편집은 수정된 줄 이전의 경계를 그대로 둔다.
@@ -4562,7 +4564,7 @@ pub(crate) fn reflow_line_segs_after_cell_text_edit(
     dpi: f64,
     edit_char_offset: usize,
 ) -> bool {
-    reflow_line_segs_impl(
+    let preserved = reflow_line_segs_impl(
         para,
         paragraph_box,
         styles,
@@ -4570,7 +4572,9 @@ pub(crate) fn reflow_line_segs_after_cell_text_edit(
         Some(edit_char_offset),
         false,
         true,
-    )
+    );
+    super::equation_line_metrics::publish_regenerated_rows(para, styles);
+    preserved
 }
 
 /// 저장 `LINE_SEG` 사다리가 배치 권위를 갖는 구역의 합성 문단을 재조판한다.
@@ -4586,6 +4590,7 @@ pub(crate) fn reflow_line_segs_in_stored_section(
     dpi: f64,
 ) {
     let _ = reflow_line_segs_impl(para, paragraph_box, styles, dpi, None, false, true);
+    super::equation_line_metrics::publish_regenerated_rows(para, styles);
 }
 
 fn reflow_line_segs_impl(
