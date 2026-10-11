@@ -111,6 +111,7 @@ pub(crate) fn plan_stored_empty_square_host(
 
 /// 실제 저장 첫 원점이 절대 전폭 표의 배제 하단일 때 앞 간격은 이미 트림됐다.
 /// 저장 줄의 원점과 끝을 측정·부분 본문 paint가 같은 계획으로 소비한다.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn plan_stored_body_wide_host(
     host: &Paragraph,
     next: &Paragraph,
@@ -118,6 +119,8 @@ pub(crate) fn plan_stored_body_wide_host(
     body: &crate::renderer::page_layout::LayoutRect,
     page_height: f64,
     dpi: f64,
+    para_index: usize,
+    measured_tables: &[crate::renderer::height_measurer::MeasuredTable],
 ) -> Option<InlineFlowPlan> {
     use crate::model::shape::VertRelTo;
     if host.stored_text_partition_is_dirty()
@@ -133,7 +136,7 @@ pub(crate) fn plan_stored_body_wide_host(
         return None;
     }
     let mut bottom = None;
-    for control in &host.controls {
+    for (control_index, control) in host.controls.iter().enumerate() {
         let table = match control {
             Control::Table(table)
                 if !table.common.treat_as_char
@@ -147,6 +150,17 @@ pub(crate) fn plan_stored_body_wide_host(
             _ => return None,
         };
         if bottom.is_some() || hwpunit_to_px(table.common.width as i32, dpi) < body.width * 0.8 {
+            return None;
+        }
+        // 셀 편집으로 내용이 선언 프레임보다 커졌으면 낡은 저장 배제 하단을 재사용하지 않는다.
+        // 다른 문단의 편집 여부 대신 이 표의 실제 측정과 현재 선언 크기를 대조한다.
+        let measured = measured_tables.iter().find(|measured| {
+            measured.para_index == para_index && measured.control_index == control_index
+        })?;
+        if !measured.total_height.is_finite()
+            || measured.total_height
+                > hwpunit_to_px(table.common.height as i32, dpi) + hwpunit_to_px(1, dpi)
+        {
             return None;
         }
         let (ref_y, ref_h) = if table.common.vert_rel_to == VertRelTo::Paper {

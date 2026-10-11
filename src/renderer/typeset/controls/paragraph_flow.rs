@@ -98,7 +98,11 @@ pub(in crate::renderer::typeset) fn place(
         return;
     }
     let mut fmt = engine.format_paragraph(para, composed, styles, Some(host_col_w));
-    let stored_body_wide_host = (st.profile.hwp5_container() && !st.profile.session_edited())
+    // 문서의 다른 개체를 편집해도 이 호스트의 저장 줄과 현재 표 프레임은 유효할 수 있다.
+    // 계획이 현재 측정 높이와 앞뒤 저장 원점을 검증하므로 문서 전체 편집 플래그로 거절하지 않는다.
+    let stored_body_wide_host = st
+        .profile
+        .hwp5_container()
         .then(|| st.stored_body_wide_host_frame())
         .flatten()
         .and_then(|(body, page_height)| {
@@ -109,6 +113,8 @@ pub(in crate::renderer::typeset) fn place(
                 &body,
                 page_height,
                 engine.dpi,
+                para_idx,
+                measured_tables,
             )
         });
 
