@@ -1223,11 +1223,7 @@ impl TypesetEngine {
                 st.advance_column_or_new_page();
                 prev_en_bottom_vpos = None;
             }
-            if (((large_between_tail_render_overflows
-                || large_between_tail_before_rewind_picture
-                || large_between_equation_tail_starts_next_column
-                || no_separator_last_column_tail_before_rewind_starts_next_page)
-                && !render_whole_fits(st))
+            if ((large_between_tail_render_overflows && !render_whole_fits(st))
                 || kept_successor_overflows
                 || no_separator_tail_table_starts_next_column)
                 && !(fit_split_column == (st.pages.len(), st.current_column)

@@ -5871,7 +5871,9 @@ impl DocumentCore {
                 out.push(None);
                 continue;
             }
-            let mut np = math_textboxes.or(math_tables).unwrap_or_else(|| section.paragraphs.clone());
+            let mut np = math_textboxes
+                .or(math_tables)
+                .unwrap_or_else(|| section.paragraphs.clone());
             let mut frame_changes = Vec::new();
             if !inline_frames.is_empty() {
                 let mut frames = inline_frames.into_iter().peekable();

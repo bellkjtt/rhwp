@@ -1,7 +1,7 @@
 //! 기존 미주 간격·구분선·SSOT 정책 관측. 정책과 상수는 변경하지 않는다.
 
 use crate::renderer::note_separator::NoteSeparatorGeometry;
-use crate::renderer::typeset::FootnoteShape;
+use crate::renderer::typeset::{hwpunit_to_px, FootnoteShape};
 
 /// [Task #1363] 미주 높이 모델 SSOT 마이그레이션 단계 플래그(`RHWP_EN_SSOT`).
 ///
@@ -175,14 +175,7 @@ impl EndnoteFlowProfile {
     /// — 한컴은 구분선을 위 여백 끝에 긋고 첫 미주를 그 자리 + 아래 여백에 놓는다(#6574,
     /// 3-09·3-10·3-11월 통합 정본 13벌에서 제목 = 선 + 아래 여백 ±1px, 아래 여백 0·7·20mm).
     pub(in crate::renderer::typeset) fn separator_height_px(self, dpi: f64) -> f64 {
-        NoteSeparatorGeometry::new(
-            self.separator_above_hu,
-            self.separator_below_hu,
-            self.visible_separator,
-            self.separator_line_width,
-            dpi,
-        )
-        .advance
+        hwpunit_to_px(self.separator_above_hu, dpi) + hwpunit_to_px(self.separator_below_hu, dpi)
     }
 }
 
