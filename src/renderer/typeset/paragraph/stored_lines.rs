@@ -8,6 +8,29 @@ use crate::model::paragraph::Paragraph;
 use crate::renderer::hwpunit_to_px;
 use crate::renderer::style_resolver::ResolvedStyleSet;
 
+/// 재조판으로 재기준한 좌표를 저장 쪽 경계의 증거로 다시 사용하지 않는다.
+/// 직렬화용으로 보존한 원본 좌표와 해당 저장 줄의 진행량을 같은 축에서 읽는다.
+pub(in crate::renderer::typeset) fn stored_tail_end_and_advance_hu(
+    para: &Paragraph,
+) -> Option<(i32, i32)> {
+    if para.stored_text_partition_is_dirty() {
+        return None;
+    }
+    let (index, line) = para
+        .line_segs
+        .iter()
+        .enumerate()
+        .rev()
+        .find(|(_, line)| !crate::renderer::typeset::is_synthetic_line_seg(line))?;
+    let source_vpos = para
+        .source_line_seg_vertical_pos
+        .as_ref()
+        .and_then(|positions| positions.get(index).copied())
+        .unwrap_or(line.vertical_pos);
+    let advance = line.line_height.saturating_add(line.line_spacing);
+    Some((source_vpos.saturating_add(advance), advance))
+}
+
 /// 재조판 뒤 저장 빈 줄만 이어지면 옛 자동 쪽 경계를 복원하지 않는다.
 /// 다만 실제 소비한 흐름 끝이 저장 경계와 일치하면 재조판 이력만으로
 /// 그 경계를 버리지 않는다. 같은 쪽 소유는 기존 저장 끝/실제 흐름 대조로 확인한다.

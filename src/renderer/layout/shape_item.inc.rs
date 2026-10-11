@@ -381,14 +381,24 @@ impl LayoutEngine {
                                 }
                             }
                             if !picture_outside_column && !vpos_accounts_for_height {
-                                // 그림·캡션 잉크를 이동하지 않고 같은 host 줄 띠를
-                                // 최종 흐름 끝에 더한다. 조판 예약도 같은 helper를 소비한다.
-                                result_y += hwpunit_to_px(
+                                let host_line_advance = hwpunit_to_px(
                                     crate::renderer::hwp3_caption_host::line_advance_hwp(
                                         para, pic, self.profile.get(),
                                     ),
                                     self.dpi,
                                 );
+                                if host_line_advance > 0.0 {
+                                    // 뒤의 빈 호스트 줄은 흐름을 전진시키지만 그림·캡션의
+                                    // 콘텐츠 하단은 아니다. 기존 초과 판정에 그 점유 끝을
+                                    // 공급하고 조판과 공유하는 다음 흐름 원점은 유지한다.
+                                    let content_bottom = self.last_item_content_bottom.get();
+                                    self.last_item_content_bottom.set(if content_bottom.is_finite() {
+                                        content_bottom.max(result_y)
+                                    } else {
+                                        result_y
+                                    });
+                                    result_y += host_line_advance;
+                                }
                             }
                             // [Task #683] 빈 paragraph (텍스트 없음) + Para-relative TopAndBottom
                             // 그림 (caption 없음) 의 layout 진행량 보정. 한컴 한글 2022 PDF 는

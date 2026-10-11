@@ -2626,15 +2626,14 @@ fn stored_rewind_boundary_matches_current_flow(
     current_height_px: f64,
     dpi: f64,
 ) -> bool {
-    let Some(prev_seg) = paragraphs[..para_idx.min(paragraphs.len())]
+    let Some((stored_end_hu, advance_hu)) = paragraphs[..para_idx.min(paragraphs.len())]
         .iter()
         .rev()
-        .find_map(|p| p.line_segs.iter().rev().find(|s| !is_synthetic_line_seg(s)))
+        .find_map(paragraph::stored_lines::stored_tail_end_and_advance_hu)
     else {
         return false;
     };
-    let advance_hu = prev_seg.line_height.saturating_add(prev_seg.line_spacing);
-    let stored_end_px = hwpunit_to_px(prev_seg.vertical_pos.saturating_add(advance_hu), dpi);
+    let stored_end_px = hwpunit_to_px(stored_end_hu, dpi);
     // 저장 줄과 실제 글꼴 측정의 차이가 한 줄보다 약간 커질 수 있다. #7333의
     // 38→39쪽 경계는 20.8px 차이로, 한 줄 공차 16px만으로는 실제 저장 쪽 경계를 놓쳤다.
     // 되감김과 새 쪽 상단이라는 소유 조건은 호출부에서 그대로 확인한다.
