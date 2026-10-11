@@ -801,7 +801,7 @@ impl DocumentCore {
                     .collect();
                 // 번호·책갈피 등의 표지와 비자리차지 부동 개체는 호스트의
                 // 저장 글줄을 없애지 않는다. 폭·높이 소유는 기존 공통 분류를 따른다.
-                // 자리차지 개체나 중첩 흐름은 이 텍스트 줄 앵커에 넣지 않는다.
+                // 자리차지 개체·각주 슬롯은 제외하고 별도 머리말/꼬리말의 부모 표지는 보존한다.
                 let has_only_text_controls =
                     |para: &Paragraph| crate::renderer::empty_host_controls_are_flow_neutral(para);
                 // 합성 텍스트 줄의 전진에는 문단 앞뒤 간격도 한 번씩 포함된다.
@@ -815,7 +815,7 @@ impl DocumentCore {
                             || !para
                                 .controls
                                 .iter()
-                                .all(crate::renderer::composer::control_is_width_neutral_marker)
+                                .all(crate::renderer::control_is_body_flow_neutral_marker)
                         {
                             return None;
                         }

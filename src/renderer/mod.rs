@@ -1726,6 +1726,17 @@ pub(crate) fn para_has_no_stored_line_segs(p: &crate::model::paragraph::Paragrap
 
 /// These controls do not replace the empty host paragraph's own text line.
 /// Square tables have a separate exclusion/flow owner and are not included.
+/// 별도 머리말/꼬리말 프레임의 표지는 본문 줄의 폭·높이를 소유하지 않는다.
+/// 각주·미주는 본문 슬롯/예약을 가지므로 같은 marker로 취급하지 않는다.
+pub(crate) fn control_is_body_flow_neutral_marker(
+    control: &crate::model::control::Control,
+) -> bool {
+    matches!(
+        control,
+        crate::model::control::Control::Header(_) | crate::model::control::Control::Footer(_)
+    ) || composer::control_is_width_neutral_marker(control)
+}
+
 pub(crate) fn empty_host_controls_are_flow_neutral(
     para: &crate::model::paragraph::Paragraph,
 ) -> bool {
@@ -1741,7 +1752,7 @@ pub(crate) fn empty_host_controls_are_flow_neutral(
                         TextWrap::InFrontOfText | TextWrap::BehindText
                     );
             }
-            marker => return composer::control_is_width_neutral_marker(marker),
+            marker => return control_is_body_flow_neutral_marker(marker),
         };
         !common.treat_as_char
             && matches!(

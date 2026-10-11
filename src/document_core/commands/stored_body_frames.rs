@@ -20,15 +20,22 @@ pub(super) fn preceding_saved_span(
     None
 }
 
-/// 한 개의 고정 크기 도형/그림이 저장 줄 전체를 점유한 경우다.
-/// 표·수식·캡션은 재조판으로 높이가 달라질 수 있으므로 이 계약에 넣지 않는다.
+/// 한 개의 개체가 유효한 저장 줄 전체를 점유한 경우다.
+/// 캡션·편집된 표·수식처럼 점유를 같은 상자로 확인할 수 없으면 제외한다.
 pub(super) fn owns_saved_object_line(para: &Paragraph) -> bool {
     let [line] = para.line_segs.as_slice() else {
         return false;
     };
-    let [control] = para.controls.as_slice() else {
+    let mut owners = para
+        .controls
+        .iter()
+        .filter(|control| !crate::renderer::control_is_body_flow_neutral_marker(control));
+    let Some(control) = owners.next() else {
         return false;
     };
+    if owners.next().is_some() {
+        return false;
+    }
     if para.stored_text_partition_dirty
         || line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
         || para
@@ -47,6 +54,19 @@ pub(super) fn owns_saved_object_line(para: &Paragraph) -> bool {
             shape.common()
         }
         Control::Picture(picture) if picture.caption.is_none() => &picture.common,
+        Control::Table(table)
+            if table.caption.is_none()
+                && table.cells.iter().all(|cell| {
+                    !cell.dirty_flag
+                        && cell.paragraphs.iter().all(|paragraph| {
+                            !paragraph.stored_text_partition_is_dirty()
+                                && !paragraph.cell_format_vpos_dirty
+                                && !crate::renderer::para_has_no_stored_line_segs(paragraph)
+                        })
+                }) =>
+        {
+            &table.common
+        }
         _ => return false,
     };
     common.treat_as_char
@@ -81,7 +101,7 @@ pub(super) fn inline_graphics_fit_saved_text_line(para: &Paragraph, alignment: u
     let mut has_graphic = false;
     let ascent_ratio = crate::renderer::composer::inline_picture_ascent_ratio(alignment);
     para.controls.iter().all(|control| {
-        if crate::renderer::composer::control_is_width_neutral_marker(control) {
+        if crate::renderer::control_is_body_flow_neutral_marker(control) {
             return true;
         }
         let (common, height) = match control {
