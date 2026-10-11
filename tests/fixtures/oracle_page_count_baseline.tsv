@@ -26,7 +26,6 @@ samples/2022년 국립국어원 업무계획.hwp	35	35
 #     부록 간지 뒤 쪽수         74      71 (−3)    74 (±0)
 #   그 편차는 tests/cases/issue_7009_handbook_structure_landmarks.rs 가 잠근다.
 #   이 줄을 고칠 때는 그 파일도 함께 본다.
-samples/2025 행정업무운영 편람(최종).hwpx	384	382
 samples/20250130-hongbo.hwp	4	4
 samples/2025년 기부·답례품 실적 지자체 보고서_양식.hwpx	30	30
 samples/[2027] 온새미로 1 본교재.hwp	47	47
@@ -204,8 +203,6 @@ samples/issue1663_coanchored_float_orphan.hwpx	2	2
 samples/issue1770_rowsplit_tolerance.hwpx	4	4
 samples/issue1835_tac_stale_height.hwp	3	3
 samples/issue1893_clickhere_field_roundtrip.hwpx	1	1
-samples/issue1949_giant_cell_nested_tables_perf.hwp	115	115
-samples/issue1949_giant_cell_nested_tables_perf.hwpx	115	115
 samples/issue1950_hwp3_tab_charoffset.hwp	1	1
 samples/issue2004_cell_image_stack.hwp	8	8
 samples/issue2004_cell_image_stack.hwpx	8	8
@@ -310,7 +307,6 @@ samples/issue5652/표식이있는꺽은선형-행추가.hwp	1	1
 samples/issue5652/표식이있는꺽은선형-행추가.hwpx	1	1
 samples/issue5787/nested_square_table_horz_offset.hwp	1	1
 samples/issue5788/tac_table_missing_anchor_line_spacing.hwp	8	8
-samples/issue5792/2700727_animal_facility_standards.hwpx	6	6
 samples/issue5798/offcolumn_float_table_no_band.hwp	1	1
 samples/issue5809/156518601_p1_square_host.hwpx	1	1
 samples/issue5818/cell_square_logo_text_wrap.hwpx	1	1

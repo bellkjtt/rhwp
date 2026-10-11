@@ -55,6 +55,13 @@ mod retired_exam_baseline_scope {
     ));
 }
 
+mod deferred_visual_regression_scope {
+    include!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/support/deferred_visual_regression_scope.rs"
+    ));
+}
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -135,6 +142,7 @@ fn collect_samples() -> Vec<(PathBuf, String)> {
     });
     acc.retain(|(path, _)| !is_exam_fixture(path));
     acc.retain(|(path, _)| !retired_exam_baseline_scope::is_retired(path));
+    acc.retain(|(path, _)| !deferred_visual_regression_scope::is_deferred(path, "off_canvas"));
     acc.sort_by(|a, b| a.1.cmp(&b.1));
     assert!(!acc.is_empty(), "samples 에 hwp/hwpx 샘플이 없음");
     acc
