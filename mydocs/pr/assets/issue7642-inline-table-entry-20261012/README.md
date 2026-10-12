@@ -15,8 +15,11 @@
 `../issue7642-owned-endnote-cut-20261012/native167-p004-review.png`에 있다.
 
 전체 23쪽 Native는 쪽수 23/23, 최저 91.84074%, 미달 0쪽, source hash 유지
-true다. fresh WASM169의 실제 시각 검증은 진행 중이며 아직 양쪽 완료나
-새 회귀/PR 승인을 선언하지 않는다. 별도로 확인한 11쪽의 큰 괄호 첨자 위치
+true다. fresh WASM169도 쪽수 23/23, 최저 91.84074%, 미달 0쪽,
+source hash 유지 true, exit 0으로 완료됐다. 실제 WASM 페이지로 만든
+[새 WASM 4쪽 review](wasm169-p004-review.png)도 97.74341%다.
+이 문서의 양쪽 전체 페이지 점수 통과를 새 회귀/PR 승인으로 대신하지 않는다.
+별도로 확인한 11쪽의 큰 괄호 첨자 위치
 문제도 보정 대상으로 유지한다.
 
 전쪽 TSV·실행 로그·빌드 영수증·입력/글꼴 해시는 ignored
