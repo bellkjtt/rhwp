@@ -11,14 +11,16 @@
 - Native 바이너리 SHA-256:
   `4bff05b4a36ea5600363e7c9272448a11c3b41090a8cc23917f1921ffb3c24a0`.
 
-## Native 결과와 확대 판독
+## Native/fresh WASM 결과와 확대 판독
 
-전체 1쪽의 2px 이웃 관용 내용 실루엣 일치율은 **98.50470%**다.
+Native와 fresh WASM 모두 전체 1쪽의 2px 이웃 관용 내용 실루엣 일치율은 **98.50470%**다.
 직전 구현의 91.61325%와 같은 원본·기준·배율로 비교했다.
-최소 대조군 `repro-dyad-min-no-script.hwpx`는 전체 1쪽 **99.17678%**다.
+최소 대조군 `repro-dyad-min-no-script.hwpx`는 Native/fresh WASM 모두 전체 1쪽 **99.17678%**다.
 실행은 `--compat 2022 --embed-fonts=full --dpi 96 --silhouette-only`를 사용했다.
 
 ![Native 전체 페이지](native165-p001-review.png)
+
+![fresh WASM 전체 페이지](fresh-wasm165-p001-review.png)
 
 ![같은 배율의 보기 영역](native165-choice-detail-compare.png)
 
@@ -34,5 +36,12 @@
 `stage165-dyad-native/receipt.json`과 각 대상의 `silhouette.tsv`에 있다.
 PNG는 해당 새 Native 출력에서 만들었다. 이전 head PNG를 재사용하지 않았다.
 
-fresh WASM은 현재 새 빌드가 진행 중이며 이 기록의 Native 결과로 대신하지 않는다.
+fresh WASM 빌드와 실제 WASM 출력 검증을 완료했다. 빌드 소스 해시 일치와
+Studio의 JS/WASM 동기화 SHA-256 일치도 확인했다.
+WASM SHA-256: `acc6e5ad7963e970bde54cda3a58f96043d6f28a322f283ebadc9fab50849bb9`.
+JS SHA-256: `2d0d0469c582a49331d023d475ae53a17cb9f601a78a78e09d18e5b6a9047cc1`.
+실행에는 `--wasm-pkg`로 이 새 web package를 전달했다.
+전체 쪽수는 실제 WASM manifest에서도 1쪽이며 두 대조군 모두 누락 쪽이 없다.
+빌드·실행 영수증은 `stage165-fresh-wasm-build.json`,
+`stage165-dyad-wasm/receipt.json`에 보존한다.
 관계형 검사, 전체 대상의 최종 head 재검증·회귀·lint와 PR 제출 게이트는 아직 남아 있다.
