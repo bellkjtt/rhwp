@@ -34,3 +34,10 @@ metafile 이미지가 함께 있다. 현재 Object parser가 Bitmap ImageDataTyp
 압축 bitmap의 Width/Height/Stride/PixelFormat은 미정 값이며 encoded 내용에서
 실제 형식·크기를 읽어야 한다는 [Microsoft의 EmfPlusBitmap 사양](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-emfplus/112a5e2c-6bb3-4daf-8ee3-0f3d3984410f)과
 [CompressedImage 사양](https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-emfplus/9c00912b-adfa-469e-8baa-82d9d3d8d6ae)을 다음 보정의 독립 근거로 확인했다.
+
+## Stage 175 후속 보정
+
+위 판정은 Stage 173 당시 출력의 기록이다. 압축 그림 객체와 C=1 정수 목적 점을
+보정한 뒤 [새 Native/fresh WASM 증적과 관계형 검사](../issue7642-wmfc-content-20261012/README.md)에서
+로봇·원 내부 선·아이콘 복원을 확인했다. 이전 PNG를 새 출력 증적으로 재사용하지 않았다.
+배경 격자와 alpha/raster 표현 차이는 새 기록에도 남기며 전체 브랜치 완료를 선언하지 않는다.
