@@ -15,14 +15,22 @@ use crate::renderer::hwpunit_to_px;
 /// 같은 텍스트 줄의 실제 fit 내용 끝을 사용할 수 있는 컨트롤이다.
 /// 독립 float·표는 별도 흐름이므로 이 문단 줄의 끝으로 인증하지 않는다.
 pub(in crate::renderer::typeset) fn text_controls_share_line(para: &Paragraph) -> bool {
-    para.controls.iter().all(|control| match control {
+    para.controls.iter().all(|control| {
+        inline_text_control(control)
+            || matches!(control, Control::Footnote(_) | Control::Endnote(_))
+            || crate::renderer::composer::control_is_width_neutral_marker(control)
+    })
+}
+
+/// 표와 독립 float를 제외하고 텍스트 줄에 참여하는 실제 컨트롤 소유다.
+pub(in crate::renderer::typeset) fn inline_text_control(control: &Control) -> bool {
+    match control {
         Control::Equation(equation) => equation.common.treat_as_char,
         Control::Picture(picture) => picture.common.treat_as_char,
         Control::Shape(shape) => shape.common().treat_as_char,
         Control::Form(form) => form.common.treat_as_char,
-        Control::Footnote(_) | Control::Endnote(_) => true,
-        other => crate::renderer::composer::control_is_width_neutral_marker(other),
-    })
+        _ => false,
+    }
 }
 
 pub(in crate::renderer::typeset) struct StoredTacPage {

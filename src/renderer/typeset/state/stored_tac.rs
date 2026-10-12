@@ -14,23 +14,7 @@ impl TypesetState {
             vpos_page_base: self.data.vpos_page_base,
             vpos_lazy_base: self.data.vpos_lazy_base,
             side_wrap_empty: self.data.side_wrap_exclusions.is_empty(),
-            previous_content_bottom: self.data.current_items.last().and_then(|item| {
-                let (owner, end_line) = match item {
-                    PageItem::FullParagraph { para_index } => {
-                        (*para_index, paragraphs.get(*para_index)?.line_segs.len())
-                    }
-                    PageItem::PartialParagraph {
-                        para_index,
-                        end_line,
-                        ..
-                    } => (*para_index, *end_line),
-                    _ => return None,
-                };
-                self.data
-                    .paragraph_fragment_content_bottoms
-                    .get(&(owner, end_line))
-                    .map(|bottom| (owner, end_line, *bottom))
-            }),
+            previous_content_bottom: self.previous_text_content_bottom(paragraphs),
             // layout의 단 초기 base와 같은 첫 완전한 표의 저장 줄을 읽는다.
             // PartialTable에는 소비된 컷이 있고, 문단 시작의 들여쓰기·앞 간격은
             // 별도 계약이므로 이 표 원점 조회에 섞지 않는다.
@@ -47,5 +31,49 @@ impl TypesetState {
                     .map(|seg| seg.vertical_pos)
             }),
         }
+    }
+
+    /// 텍스트 뒤에 방출한 같은 문단의 인라인 표시도 그 글줄의 소유를 유지한다.
+    /// 다른 문단의 표시·독립 float·표를 넘어 앞 문단을 조회하지 않는다.
+    fn previous_text_content_bottom(
+        &self,
+        paragraphs: &[crate::model::paragraph::Paragraph],
+    ) -> Option<(usize, usize, f64)> {
+        let mut inline_owner = None;
+        for item in self.data.current_items.iter().rev() {
+            let (owner, end_line) = match item {
+                PageItem::Shape {
+                    para_index,
+                    control_index,
+                } => {
+                    let control = paragraphs.get(*para_index)?.controls.get(*control_index)?;
+                    if !crate::renderer::typeset::controls::stored_tac::inline_text_control(control)
+                        || inline_owner.is_some_and(|owner| owner != *para_index)
+                    {
+                        return None;
+                    }
+                    inline_owner = Some(*para_index);
+                    continue;
+                }
+                PageItem::FullParagraph { para_index } => {
+                    (*para_index, paragraphs.get(*para_index)?.line_segs.len())
+                }
+                PageItem::PartialParagraph {
+                    para_index,
+                    end_line,
+                    ..
+                } => (*para_index, *end_line),
+                _ => return None,
+            };
+            if inline_owner.is_some_and(|inline_owner| inline_owner != owner) {
+                return None;
+            }
+            return self
+                .data
+                .paragraph_fragment_content_bottoms
+                .get(&(owner, end_line))
+                .map(|bottom| (owner, end_line, *bottom));
+        }
+        None
     }
 }
