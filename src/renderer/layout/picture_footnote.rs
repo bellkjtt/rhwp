@@ -1496,7 +1496,7 @@ impl LayoutEngine {
     }
 
     /// Paragraph plans are shared by area sizing, body reservation and paint.
-    fn footnote_paragraphs_content_height(
+    pub(crate) fn footnote_paragraphs_content_height(
         &self,
         paragraphs: &[Paragraph],
         styles: &ResolvedStyleSet,

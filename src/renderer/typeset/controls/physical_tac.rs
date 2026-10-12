@@ -76,7 +76,8 @@ pub(in crate::renderer::typeset) fn prepare(
         control_index,
         inline: InlineBoxPlacement {
             x: 0.0,
-            y: origin + hwpunit_to_px(i32::from(table.outer_margin_top), dpi),
+            // paint가 위 바깥 여백을 소비하므로 metadata에는 pen만 전달한다.
+            y: origin,
             clearance: 0.0,
             advance_end: Some(end),
         },
