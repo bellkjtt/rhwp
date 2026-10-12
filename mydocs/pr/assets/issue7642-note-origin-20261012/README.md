@@ -27,3 +27,20 @@
 실행 명령·Native/WASM 영수증·전쪽 TSV·글꼴 공급/복원 해시는 ignored
 `output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/`의
 `stage168-*`에 보존한다. TSV와 중간 JSON/log는 Git에 넣지 않는다.
+
+## fresh WASM와 확대 대조
+
+실제 fresh WASM 빌드 SHA-256은
+`ab407d8560f8d8bb339ad5ad3143a9f819f27c13fb8cfe039aefe19e98ff5b71`다.
+[10쪽 WASM review](wasm168-p010-review.png)와
+[11쪽 WASM review](wasm168-p011-review.png)를 별도로 생성했다.
+전체 Native/fresh WASM PNG 23쌍은 실제 바이트가 같다. 같은 SVG/PNG를 복사해
+두 backend의 실행을 대신하지 않았으며 각각 실제 exporter와 whole gate를 완료했다.
+
+[수식 확대](native168-selected-math-detail.png)는 같은 좌표의 독립 Print와
+Native PNG를 4배 nearest로 확대한다. 미주 문7 마지막 계산, 문12 극한/분수
+연속 계산, 문13 삼각비/근호를 대조했다. 줄 소속, 계산 내용, 정체 AH/CH와
+장식·분수·근호·첨자의 보존을 확인했다. 원문 서체/래스터의 미세 윤곽 차이가
+있으며 픽셀 일치와 수학 기호/내용 소속의 판독은 구분한다. 확대 이미지는
+진단 범위로만 선택했으며 같은 crop 좌표를 회귀 검사 기대값으로 쓰지 않는다.
+다른 원본이나 변경 영역의 확대 판독을 대신하지 않는다.
