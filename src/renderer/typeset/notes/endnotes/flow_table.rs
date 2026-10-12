@@ -7,7 +7,7 @@ use crate::renderer::typeset::{
 };
 
 impl TypesetEngine {
-    /// 별도 글줄이 없는 문단의 흐름 표를 공통 블록 표 조판으로 방출한다.
+    /// 별도 글줄이 없는 문단의 표를 본문과 같은 TAC/블록 표 조판으로 방출한다.
     /// 배경·전경·Square 표와 가시 호스트의 글줄은 기존 개체 흐름을 유지한다.
     #[allow(clippy::too_many_arguments)]
     pub(super) fn typeset_endnote_flow_tables(
@@ -28,11 +28,18 @@ impl TypesetEngine {
         else {
             return false;
         };
+        // 한 줄의 독립 TAC 표는 그 글줄 하나를 원자적으로 수용한다.
+        // 같은 줄의 여러 표나 본문 혼재를 세로 블록으로 해석하지 않는다.
+        let single_inline_table = paragraph.controls.len() == 1
+            && formatted.line_count() == 1
+            && matches!(paragraph.controls.first(), Some(Control::Table(table))
+                if table.common.treat_as_char);
         if !paragraph.text.is_empty()
             || paragraph.column_type != ColumnBreakType::None
             || paragraph.controls.is_empty()
             || !paragraph.controls.iter().all(|control| {
-                matches!(control, Control::Table(table)
+                single_inline_table
+                    || matches!(control, Control::Table(table)
                     if crate::renderer::float_placement::is_para_topbottom_float(&table.common)
                         && table.common.flow_with_text)
             })
@@ -119,6 +126,24 @@ impl TypesetEngine {
                     formatted_table.row_heights,
                     st.available_height(),
                 );
+            }
+            if single_inline_table {
+                self.typeset_tac_table(
+                    st,
+                    para_index,
+                    control_index,
+                    paragraph,
+                    table,
+                    &formatted_table,
+                    formatted,
+                    1,
+                    true,
+                    true,
+                    styles,
+                    paint_paragraphs.get(para_index + 1),
+                    crate::renderer::typeset::preceding_stored_vpos(&paint_paragraphs, para_index),
+                );
+                continue;
             }
             let normalized_frame = (!st.profile.session_edited())
                 .then(|| {
