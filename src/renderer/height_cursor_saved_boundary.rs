@@ -3,6 +3,7 @@
 //! 새로 만든 줄 좌표와 편집으로 무효가 된 저장 분할은 독립적인
 //! 배치 근거가 아니다. 유효한 저장 경계만 실제 소비한 흐름에 연결한다.
 
+use crate::model::control::Control;
 use crate::model::paragraph::{LineSeg, Paragraph};
 
 pub(super) fn continuous(previous: &Paragraph, current: &Paragraph) -> bool {
@@ -33,7 +34,12 @@ pub(super) fn restart_below_origin(
 ) -> Option<i32> {
     let valid = |para: &Paragraph| {
         !para.stored_text_partition_is_dirty()
-            && para.controls.is_empty()
+            // 각주·미주 표식은 저장 글줄 안에 포함된다. 별도 본문 개체
+            // 프레임을 소유하지 않으므로 정상 저장 축의 재시작을 막지 않는다.
+            && para
+                .controls
+                .iter()
+                .all(|control| matches!(control, Control::Footnote(_) | Control::Endnote(_)))
             && !para.line_segs.is_empty()
             && para.line_segs.iter().all(|line| {
                 line.vertical_pos >= 0 && line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
