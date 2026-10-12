@@ -5,7 +5,7 @@ use base64::Engine;
 
 use super::{
     objects::{self, Object},
-    stream::{self, f32_at, matrix, rect, u32_at},
+    stream::{self, f32_at, i16_at, matrix, rect, u32_at},
 };
 
 pub(super) struct Budget {
@@ -214,7 +214,12 @@ impl Player {
     }
 
     fn image(&mut self, flags: u16, data: &[u8], budget: &mut Budget) -> Option<()> {
-        if flags & 0x4800 != 0 || u32_at(data, 4)? != 2 || u32_at(data, 24)? != 3 {
+        let integer_points = flags & 0x4000 != 0;
+        if flags & 0x0800 != 0
+            || data.len() != if integer_points { 40 } else { 52 }
+            || u32_at(data, 4)? != 2
+            || u32_at(data, 24)? != 3
+        {
             return None;
         }
         let attribute_id = u16::try_from(u32_at(data, 0)?).ok()?;
@@ -233,7 +238,17 @@ impl Player {
         if sw <= 0.0 || sh <= 0.0 {
             return None;
         }
-        let point = |i: usize| Some((f32_at(data, 28 + i * 8)?, f32_at(data, 32 + i * 8)?));
+        // C=1의 signed Point와 C=0의 PointF는 같은 목적 삼각형으로 이어진다.
+        let point = |i: usize| {
+            if integer_points {
+                Some((
+                    f64::from(i16_at(data, 28 + i * 4)?),
+                    f64::from(i16_at(data, 30 + i * 4)?),
+                ))
+            } else {
+                Some((f32_at(data, 28 + i * 8)?, f32_at(data, 32 + i * 8)?))
+            }
+        };
         let (x0, y0) = point(0)?;
         let (x1, y1) = point(1)?;
         let (x2, y2) = point(2)?;

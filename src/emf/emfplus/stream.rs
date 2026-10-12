@@ -66,6 +66,12 @@ pub(super) fn u16_at(bytes: &[u8], offset: usize) -> Option<u16> {
     ))
 }
 
+pub(super) fn i16_at(bytes: &[u8], offset: usize) -> Option<i16> {
+    Some(i16::from_le_bytes(
+        bytes.get(offset..offset.checked_add(2)?)?.try_into().ok()?,
+    ))
+}
+
 pub(super) fn u32_at(bytes: &[u8], offset: usize) -> Option<u32> {
     Some(u32::from_le_bytes(
         bytes.get(offset..offset.checked_add(4)?)?.try_into().ok()?,
