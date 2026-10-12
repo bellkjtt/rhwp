@@ -3,6 +3,10 @@
 //! 섹션 XML의 문단(<hp:p>), 텍스트 런(<hp:run>), 표(<hp:tbl>),
 //! 이미지(<hp:pic>) 등을 기존 Document 모델로 변환한다.
 
+#[path = "note_line_positions.rs"]
+mod note_line_positions;
+use note_line_positions::normalize_hwpx_note_line_vpos;
+
 use quick_xml::events::{BytesRef, Event};
 use quick_xml::Reader;
 
@@ -5930,99 +5934,6 @@ impl Hwp3OriginSourceGuard {
 impl Drop for Hwp3OriginSourceGuard {
     fn drop(&mut self) {
         HWPX_HWP3_ORIGIN_SOURCE.with(|c| c.set(false));
-    }
-}
-
-fn is_hwp5_stored_note_zero_vpos(paragraph: &Paragraph) -> bool {
-    // [#4882] HWP5 note sublists preserve vertical_pos=0 on every stored line.
-    paragraph.line_segs.len() > 1 && paragraph.line_segs.iter().all(|seg| seg.vertical_pos == 0)
-}
-
-fn normalize_hwpx_note_line_vpos(paragraph: &mut Paragraph, preserve_all_zero: bool) {
-    // [#4882] HWP5-origin HWPX는 note lineSeg 저장값 전체를 보존한다. marker가
-    // 없는 HWP5 footnote는 all-zero 저장 패턴만 보존하고, 일반 HWPX endnote의
-    // 후속 줄 0은 연속줄 아티팩트라 종전 정규화 계약을 적용한다 (#1692).
-    if HWPX_HWP5_ORIGIN_SOURCE.with(|c| c.get())
-        || (preserve_all_zero && is_hwp5_stored_note_zero_vpos(paragraph))
-    {
-        return;
-    }
-    if paragraph.line_segs.len() <= 1 {
-        return;
-    }
-
-    // 자기 쪽 원점에서 시작한 각주는 양수 위치 뒤 다시 시작할 수 있다
-    // (예: 0/1172/0). 이는 각주 영역의 물리 페이지 경계다.
-    // 첫 줄이 이미 양수에서 시작하는 후속0 연속줄 보정과 구분한다.
-    // 반복 페이지 시작0/0/1172도 두 번째 줄을 다음 물리 쪽에 둔다.
-    // 기존 미주 정규화와2344/0 연속줄 보정 계약은 유지한다.
-    if preserve_all_zero
-        && paragraph.line_segs[0].vertical_pos == 0
-        && (paragraph.line_segs.windows(2).any(|lines| {
-            lines[0].vertical_pos > 0
-                && lines[1].vertical_pos == 0
-                && lines.iter().all(|line| line.tag & 0x8000_0000 == 0)
-        }) || (paragraph.line_segs[1].vertical_pos == 0
-            && paragraph.line_segs[..2]
-                .iter()
-                .all(|line| line.tag & 0x8000_0000 == 0)))
-    {
-        return;
-    }
-
-    // [#6495] `vertpos=0` 이 **연속줄 아티팩트**인 문단과 **실제 단/쪽 경계**인 문단을
-    // 가른다 — 판별자는 그 문단의 **0 이 아닌 값들 사이에 되감김이 있는가**다.
-    //
-    // ```text
-    // #1692  SO-SUEOP.hwpx endnote 161   vpos = [v, 0]              0 아닌 값 하나
-    //        → 되감김 없음 = 연속줄 아티팩트, 종전대로 복원
-    //
-    // #6495  3-09월_교육_통합_2023 pi=512
-    //        .hwp   vpos = 65968 / 61499(되감김) / 63001
-    //        .hwpx  vpos = 65968 /      0        / 63001   ← 0 아닌 값이 이미 되감긴다
-    //        → 이 0 도 경계다. 덮으면 65968/67320/63001 이 되어 되감김이 idx=1 에서
-    //          idx=2 로 **한 칸 밀리고** split 이 한 줄 늦어진다.
-    // ```
-    //
-    // 보존하면 `.hwpx` 가 `.hwp` 와 같은 자리에서 끊는다.
-    //
-    // ```text
-    // 3-09월_교육_통합_2022.hwpx  off-canvas 4 → 1   넘침 11 → 4   쪽수 23 불변
-    // 3-09월_교육_통합_2023.hwpx  off-canvas 2 → 0   넘침  6 → 2   쪽수 20 불변
-    // 9쪽 오른쪽 단 최하단  841.17 → 795.09pt (한/글 794.51)
-    // ```
-    let nonzero_rewinds = {
-        let mut prev = None;
-        paragraph.line_segs.iter().any(|seg| {
-            if seg.vertical_pos <= 0 {
-                return false;
-            }
-            let rewound = prev.is_some_and(|p| seg.vertical_pos < p);
-            prev = Some(seg.vertical_pos);
-            rewound
-        })
-    };
-    if nonzero_rewinds {
-        return;
-    }
-
-    let mut expected_vpos = None;
-    for line_seg in &mut paragraph.line_segs {
-        if let Some(expected) = expected_vpos {
-            if line_seg.vertical_pos == 0 && expected > 0 {
-                // HWPX 미주/각주 내부에는 실제 단/쪽 리셋이 아닌 후속 줄
-                // vpos=0이 저장되는 사례가 있다. 본문 의미는 유지하고,
-                // note 내부 연속줄만 이전 줄 advance 기준으로 복원한다.
-                line_seg.vertical_pos = expected;
-            }
-        }
-
-        expected_vpos = Some(
-            line_seg
-                .vertical_pos
-                .saturating_add(line_seg.line_height)
-                .saturating_add(line_seg.line_spacing),
-        );
     }
 }
 
