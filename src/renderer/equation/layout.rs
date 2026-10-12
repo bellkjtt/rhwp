@@ -17,6 +17,7 @@ mod fraction_geometry;
 mod glyph_advances;
 mod integral_placement;
 mod ladder_geometry;
+mod left_script_geometry;
 mod limit_geometry;
 mod literal_text;
 mod long_div_geometry;
@@ -213,6 +214,9 @@ impl EqLayout {
             EqNode::Superscript { base, sup } => self.layout_superscript(base, sup, fs),
             EqNode::Subscript { base, sub } => self.layout_subscript(base, sub, fs),
             EqNode::SubSup { base, sub, sup } => self.layout_subsup(base, sub, sup, fs),
+            EqNode::LeftScripts { base, sub, sup } => {
+                self.layout_left_scripts(base, sub.as_deref(), sup.as_deref(), fs)
+            }
             EqNode::BigOp { symbol, sub, sup } => self.layout_big_op(symbol, sub, sup, fs),
             EqNode::Limit { is_upper, sub } => self.layout_limit(*is_upper, sub, fs),
             EqNode::Matrix { rows, style } => self.layout_matrix(rows, *style, fs),

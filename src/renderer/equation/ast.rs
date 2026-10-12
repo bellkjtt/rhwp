@@ -81,6 +81,13 @@ pub enum EqNode {
         sup: Box<EqNode>,
     },
 
+    /// 중위 LSUB/LSUP: 앞 항의 왼쪽에 뒤 항을 첨자로 부착한다.
+    LeftScripts {
+        base: Box<EqNode>,
+        sub: Option<Box<EqNode>>,
+        sup: Option<Box<EqNode>>,
+    },
+
     /// 큰 연산자 (∫, ∑, ∏ 등): 위/아래 첨자 포함
     BigOp {
         symbol: String,

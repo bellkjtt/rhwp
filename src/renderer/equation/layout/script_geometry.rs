@@ -29,7 +29,12 @@ impl EqLayout {
         }
     }
 
-    fn script_superscript_shift(&self, base: &LayoutBox, sup: &LayoutBox, fs: f64) -> f64 {
+    pub(super) fn script_superscript_shift(
+        &self,
+        base: &LayoutBox,
+        sup: &LayoutBox,
+        fs: f64,
+    ) -> f64 {
         self.hancom_math_face
             .then(|| super::super::logical_font_frame::superscript_shift(base, sup, fs, self.dpi))
             .flatten()
@@ -39,7 +44,12 @@ impl EqLayout {
             })
     }
 
-    fn script_subscript_geometry(&self, base: &LayoutBox, sub: &LayoutBox, fs: f64) -> (f64, f64) {
+    pub(super) fn script_subscript_geometry(
+        &self,
+        base: &LayoutBox,
+        sub: &LayoutBox,
+        fs: f64,
+    ) -> (f64, f64) {
         let source = self
             .hancom_math_face
             .then(|| super::super::logical_font_frame::subscript_geometry(base, sub, fs, self.dpi))

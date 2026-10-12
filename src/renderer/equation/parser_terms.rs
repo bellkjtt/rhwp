@@ -44,9 +44,11 @@ impl EqParser {
         }
         // 구조 연산자·닫힘과 글꼴 전환은 피연산자 안으로 소비하지 않는다.
         token.ty != TokenType::Command
-            || !["OVER", "ATOP", "CHOOSE", "RIGHT", "END", "OF", "RM", "IT"]
-                .iter()
-                .any(|name| token.value.eq_ignore_ascii_case(name))
+            || ![
+                "OVER", "ATOP", "CHOOSE", "LSUB", "LSUP", "RIGHT", "END", "OF", "RM", "IT",
+            ]
+            .iter()
+            .any(|name| token.value.eq_ignore_ascii_case(name))
     }
 }
 

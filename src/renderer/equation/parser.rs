@@ -25,6 +25,9 @@ mod script_operand;
 #[path = "parser_terms.rs"]
 mod terms;
 
+#[path = "parser_left_scripts.rs"]
+mod left_scripts;
+
 /// 수식 중첩 깊이 상한.
 ///
 /// 적대적으로 깊게 중첩된 입력(`{{{…}}}`, `sqrt sqrt …`, `LEFT ( LEFT ( …`,
@@ -183,6 +186,9 @@ impl EqParser {
         children: &mut Vec<EqNode>,
         over_run: &mut u32,
     ) -> bool {
+        if self.try_consume_left_script(children, over_run) {
+            return true;
+        }
         if self.current_type() != TokenType::Command {
             *over_run = 0; // 다음은 일반 요소 — 연쇄 종료, 카운터 리셋.
             return false;
@@ -2759,6 +2765,10 @@ mod latex_compat_tests {
             EqNode::Superscript { base, sup } => vec![base, sup],
             EqNode::Subscript { base, sub } => vec![base, sub],
             EqNode::SubSup { base, sub, sup } => vec![base, sub, sup],
+            EqNode::LeftScripts { base, sub, sup } => std::iter::once(base.as_ref())
+                .chain(sub.as_deref())
+                .chain(sup.as_deref())
+                .collect(),
             EqNode::Paren { body, .. } => vec![body],
             EqNode::Decoration { body, .. } => vec![body],
             EqNode::FontStyle { body, .. } => vec![body],

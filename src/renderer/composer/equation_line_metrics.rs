@@ -292,8 +292,7 @@ fn append_missing_single_equation_row(
 ) {
     if !composed.lines.is_empty()
         || !para.line_segs.is_empty()
-        || !matches!(para.controls.as_slice(), [Control::Equation(e)] if e.common.treat_as_char
-            && crate::renderer::equation::flow_height_hwp(e) > 0)
+        || !matches!(para.controls.as_slice(), [Control::Equation(e)] if e.common.treat_as_char)
         || para
             .text
             .chars()
