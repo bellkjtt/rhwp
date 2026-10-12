@@ -53,6 +53,8 @@ pub struct EqParser {
     paren_match: Vec<usize>,
     document_terms: bool,
     term_limit: usize,
+    /// 독립 Print의 명령형 첨자 오류는 중첩 그룹/행을 포함한 수식 전체에 적용된다.
+    invalid_document_script: bool,
 }
 
 impl EqParser {
@@ -67,6 +69,7 @@ impl EqParser {
             paren_match,
             document_terms: false,
             term_limit,
+            invalid_document_script: false,
         }
     }
 
@@ -168,7 +171,12 @@ impl EqParser {
 
     /// 수식 전체 파싱 (엔트리 포인트)
     pub fn parse(&mut self) -> EqNode {
-        self.parse_expression()
+        let result = self.parse_expression();
+        if self.document_terms && self.invalid_document_script {
+            EqNode::Empty
+        } else {
+            result
+        }
     }
 
     /// OVER/ATOP/CHOOSE 중위 연산자 처리. 현재 토큰이 OVER/ATOP 이면 children 의 마지막 요소를
@@ -186,9 +194,6 @@ impl EqParser {
         children: &mut Vec<EqNode>,
         over_run: &mut u32,
     ) -> bool {
-        if self.try_consume_left_script(children, over_run) {
-            return true;
-        }
         if self.current_type() != TokenType::Command {
             *over_run = 0; // 다음은 일반 요소 — 연쇄 종료, 카운터 리셋.
             return false;
@@ -503,6 +508,10 @@ impl EqParser {
             }
             EqCommandClass::Color => self.parse_color(),
             EqCommandClass::LeftScript => {
+                if self.document_terms {
+                    self.invalid_document_script = true;
+                    return EqNode::Empty;
+                }
                 let script = self.parse_single_or_group();
                 let body = self.parse_single_or_group();
                 if cu == "LSUB" {
@@ -518,6 +527,10 @@ impl EqParser {
                 }
             }
             EqCommandClass::Sup | EqCommandClass::Sub => {
+                if self.document_terms {
+                    self.invalid_document_script = true;
+                    return EqNode::Empty;
+                }
                 let body = self.parse_single_or_group();
                 self.finish_command_atom(body, attach_scripts)
             }
@@ -733,7 +746,13 @@ impl EqParser {
         matches!(
             self.tokens.get(script).map(|t| t.ty),
             Some(TokenType::Subscript) | Some(TokenType::Superscript)
-        )
+        ) || (self.document_terms
+            && self.tokens.get(script).is_some_and(|token| {
+                token.ty == TokenType::Command
+                    && ["LSUB", "LSUP", "SUB", "SUP"]
+                        .iter()
+                        .any(|name| Self::cmd_eq(&token.value, name))
+            }))
     }
 
     /// `(...)` 를 자동크기 괄호 그룹으로 파싱 (#1305). 현재 LParen 전제 (깊이 가드).
@@ -837,7 +856,7 @@ impl EqParser {
         let mut sup = None;
 
         loop {
-            if self.at_end() {
+            if self.at_end() || (self.document_terms && self.pos >= self.term_limit) {
                 break;
             }
             // Thin 공백(`) 뒤에 첨자가 오면 첨자 결합은 유지하되(과거 exam_math
@@ -1174,6 +1193,7 @@ impl EqParser {
 
     /// LaTeX aligned/align 환경 파싱
     fn parse_latex_env_eqalign(&mut self, env_name: &str) -> EqNode {
+        let mut alignment_marks = Vec::new();
         let mut eq_rows: Vec<(EqNode, EqNode)> = Vec::new();
         let mut current_left = Vec::new();
         let mut current_right: Option<Vec<EqNode>> = None;
@@ -1182,6 +1202,7 @@ impl EqParser {
         while !self.at_end() && !self.at_latex_env_end(env_name) {
             if self.current_type() == TokenType::Whitespace && self.current_value() == "#" {
                 self.pos += 1;
+                alignment_marks.push(current_right.is_some());
                 let left = EqNode::Row(current_left).simplify();
                 let right = current_right
                     .map(|r| EqNode::Row(r).simplify())
@@ -1212,6 +1233,7 @@ impl EqParser {
         }
 
         if !current_left.is_empty() || current_right.is_some() {
+            alignment_marks.push(current_right.is_some());
             let left = EqNode::Row(current_left).simplify();
             let right = current_right
                 .map(|r| EqNode::Row(r).simplify())
@@ -1220,7 +1242,10 @@ impl EqParser {
         }
 
         self.consume_latex_env_end();
-        EqNode::EqAlign { rows: eq_rows }
+        EqNode::EqAlign {
+            rows: eq_rows,
+            alignment_marks,
+        }
     }
 
     /// 큰 연산자 파싱 (적분, 합 등) — 첨자 포함
@@ -1230,8 +1255,11 @@ impl EqParser {
 
         // 첨자 파싱
         loop {
-            if self.at_end() {
+            if self.at_end() || (self.document_terms && self.pos >= self.term_limit) {
                 break;
+            }
+            if self.consume_operator_script(&mut sub, &mut sup) {
+                continue;
             }
             if self.current_type() == TokenType::Subscript && sub.is_none() {
                 self.pos += 1;
@@ -2249,7 +2277,7 @@ mod latex_compat_tests {
     fn test_latex_begin_aligned() {
         let ast = parse(r"\begin{aligned} a &= b + c \\ d &= e \end{aligned}");
         match &ast {
-            EqNode::EqAlign { rows } => {
+            EqNode::EqAlign { rows, .. } => {
                 assert_eq!(rows.len(), 2);
             }
             _ => panic!("Expected EqAlign, got {:?}", ast),
@@ -2428,7 +2456,7 @@ mod latex_compat_tests {
     fn test_latex_begin_split() {
         let ast = parse(r"\begin{split} a &= b \\ c &= d \end{split}");
         match &ast {
-            EqNode::EqAlign { rows } => {
+            EqNode::EqAlign { rows, .. } => {
                 assert_eq!(rows.len(), 2);
             }
             _ => panic!(r"Expected EqAlign for \begin{{split}}, got {:?}", ast),

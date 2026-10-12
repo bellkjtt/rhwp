@@ -255,8 +255,13 @@ impl EqLayout {
         }
     }
 
-    pub(super) fn layout_eqalign(&self, rows: &[(EqNode, EqNode)], fs: f64) -> LayoutBox {
-        self.layout_aligned_rows(rows, fs, fs * 0.15)
+    pub(super) fn layout_eqalign(
+        &self,
+        rows: &[(EqNode, EqNode)],
+        alignment_marks: &[bool],
+        fs: f64,
+    ) -> LayoutBox {
+        self.layout_aligned_rows(rows, alignment_marks, fs, fs * 0.15)
     }
 
     pub(super) fn layout_newline_rows(&self, children: &[EqNode], fs: f64) -> LayoutBox {
@@ -265,10 +270,16 @@ impl EqLayout {
             .split(|node| matches!(node, EqNode::Newline))
             .map(|line| (EqNode::Empty, EqNode::Row(line.to_vec()).simplify()))
             .collect();
-        self.layout_aligned_rows(&rows, fs, 0.0)
+        self.layout_aligned_rows(&rows, &vec![false; rows.len()], fs, 0.0)
     }
 
-    fn layout_aligned_rows(&self, rows: &[(EqNode, EqNode)], fs: f64, align_gap: f64) -> LayoutBox {
+    fn layout_aligned_rows(
+        &self,
+        rows: &[(EqNode, EqNode)],
+        alignment_marks: &[bool],
+        fs: f64,
+        align_gap: f64,
+    ) -> LayoutBox {
         // 독립 정렬 묶음의 Print 피치는 1.1em이다. 분수·CASES 등 실제
         // 부모가 있으면 바깥 leading을 그 부모가 소유하므로 중복 예약하지 않는다.
         let row_gap = fs
@@ -292,38 +303,40 @@ impl EqLayout {
             .map(|(l, r)| (nested.layout_node(l, fs), nested.layout_node(r, fs)))
             .collect();
 
-        // 왼쪽 최대 폭 (& 정렬 기준)
-        let max_left_w = laid_rows
+        // &가 하나라도 있으면 첫 칸도 전체 행의 공유 열이다.
+        // &가 없는 묶음과 오른쪽이 빈 & 칸은 원문 표시로 구분한다.
+        let aligned = !self.hancom_math_face || alignment_marks.iter().any(|marked| *marked);
+        let gap = rows
             .iter()
-            .map(|(l, _)| l.width)
+            .map(|(_, right)| {
+                if self.hancom_math_face {
+                    self.alignment_boundary_gap(right, fs)
+                } else {
+                    align_gap
+                }
+            })
+            .fold(0.0, f64::max);
+        let left_column_width = laid_rows
+            .iter()
+            .map(|(left, _)| left.width)
             .fold(0.0f64, f64::max);
 
         let mut y = 0.0;
         let mut total_w = 0.0f64;
         let mut first_baseline = None;
-        for (laid_row_index, (left, right)) in laid_rows.iter_mut().enumerate() {
-            // 왼쪽: 오른쪽 정렬 (& 기준으로 맞춤)
-            left.x = if self.hancom_math_face {
+        for (left, right) in &mut laid_rows {
+            // 각 행의 본체는 공유 첫 칸에 오른쪽 정렬한다.
+            left.x = if aligned {
+                left_column_width - left.width
+            } else {
                 0.0
-            } else {
-                max_left_w - left.width
             };
-            // 오른쪽: & 기준 바로 뒤
             let has_right = !matches!(right.kind, LayoutKind::Empty);
-            // 한컴 Print의 서로 다른 글자/분수 폭과 역순 대조는 각 행의
-            // 왼쪽 원점을 공유하고 & 뒤를 그 행의 폭으로 전진시킨다.
-            let anchor = if self.hancom_math_face {
+            right.x = if aligned {
+                left_column_width
+            } else {
                 left.width
-            } else {
-                max_left_w
-            };
-            let gap = if self.hancom_math_face {
-                let index = laid_row_index;
-                self.operator_boundary_gap(&rows[index].0, &rows[index].1, fs)
-            } else {
-                align_gap
-            };
-            right.x = anchor + if has_right { gap } else { 0.0 };
+            } + if has_right { gap } else { 0.0 };
 
             let (left_h, left_bl) = self.matrix_cell_frame(left, fs);
             let (right_h, right_bl) = self.matrix_cell_frame(right, fs);

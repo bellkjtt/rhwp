@@ -58,11 +58,13 @@ impl EqParser {
         if !self.expect(TokenType::LBrace) {
             return EqNode::EqAlign {
                 rows: vec![(EqNode::Empty, EqNode::Empty)],
+                alignment_marks: vec![false],
             };
         }
 
         let end = self.find_matching_brace(self.pos);
         let mut rows: Vec<(EqNode, EqNode)> = Vec::new();
+        let mut alignment_marks = Vec::new();
         let mut current_left = Vec::new();
         let mut current_right: Option<Vec<EqNode>> = None;
         let mut over_run = 0u32;
@@ -73,6 +75,7 @@ impl EqParser {
             }
             if self.current_type() == TokenType::Whitespace && self.current_value() == "#" {
                 // 새 행: 현재 행 완료
+                alignment_marks.push(current_right.is_some());
                 let left = EqNode::Row(current_left).simplify();
                 let right = current_right
                     .map(|r| EqNode::Row(r).simplify())
@@ -126,6 +129,7 @@ impl EqParser {
 
         // 마지막 구분자 뒤의 빈 행과 빈 묶음의 한 행도 보존한다.
         {
+            alignment_marks.push(current_right.is_some());
             let left = EqNode::Row(current_left).simplify();
             let right = current_right
                 .map(|r| EqNode::Row(r).simplify())
@@ -135,6 +139,9 @@ impl EqParser {
 
         self.expect(TokenType::RBrace);
 
-        EqNode::EqAlign { rows }
+        EqNode::EqAlign {
+            rows,
+            alignment_marks,
+        }
     }
 }

@@ -114,11 +114,9 @@ fn before_operator_gap(
 }
 
 impl EqLayout {
-    /// &는 행 소속 경계다. 앞뒤 항의 일반 연산자 간격 계약을 한 번만 소비한다.
-    pub(super) fn operator_boundary_gap(&self, left: &EqNode, right: &EqNode, fs: f64) -> f64 {
-        if matches!(boundary_element(left, false), EqNode::Empty) {
-            return 0.0;
-        }
+    /// & 칸 경계의 여유는 같은 행 내부의 연산자 간격과 구분한다.
+    /// 분수·근호 뒤의 일반 행 여유를 억제하는 조건으로 열 사이 간격을 지우지 않는다.
+    pub(super) fn alignment_boundary_gap(&self, right: &EqNode, fs: f64) -> f64 {
         let next = boundary_element(right, true);
         if !operator(next) {
             return 0.0;
@@ -128,13 +126,7 @@ impl EqLayout {
             _ => return 0.0,
         };
         let source = source_font_symbol::operator_metrics(text, fs, self.dpi);
-        before_operator_gap(
-            boundary_element(left, false),
-            true,
-            source.is_some(),
-            source.map_or(fs * 0.15, |(_, pad)| pad),
-            fs,
-        )
+        source.map_or(fs * 0.15, |(_, pad)| pad)
     }
 
     pub(super) fn row_children(&self, nodes: &[EqNode], fs: f64) -> Vec<LayoutBox> {

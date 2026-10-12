@@ -2,6 +2,19 @@
 
 use super::{EqLayout, EqNode, LayoutBox, LayoutKind};
 
+/// 오른쪽 첨자의 하단 점유를 본체 글줄로 다시 사용하지 않는다.
+/// 네 슬롯은 같은 실제 본체 기준선에서 수직 위치를 결정한다.
+fn script_body(value: &LayoutBox) -> &LayoutBox {
+    match &value.kind {
+        LayoutKind::Superscript { base, .. }
+        | LayoutKind::Subscript { base, .. }
+        | LayoutKind::SubSup { base, .. } => script_body(base),
+        LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => script_body(body),
+        LayoutKind::Row(items) if items.len() == 1 => script_body(&items[0]),
+        _ => value,
+    }
+}
+
 impl EqLayout {
     pub(super) fn layout_left_scripts(
         &self,
@@ -13,11 +26,14 @@ impl EqLayout {
         let mut body = self.layout_node(base, fs);
         let mut lower = sub.map(|node| self.layout_node(node, self.script_font_size(fs)));
         let mut upper = sup.map(|node| self.layout_node(node, self.script_font_size(fs)));
+        let plain = script_body(&body);
+        let baseline_offset = body.baseline - plain.baseline;
         let upper_y = upper.as_ref().map_or(0.0, |script| {
-            body.baseline - self.script_superscript_shift(&body, script, fs) - script.baseline
+            body.baseline - self.script_superscript_shift(plain, script, fs) - script.baseline
         });
         let (lower_y, lower_height) = lower.as_ref().map_or((0.0, body.height), |script| {
-            self.script_subscript_geometry(&body, script, fs)
+            let (y, height) = self.script_subscript_geometry(plain, script, fs);
+            (y + baseline_offset, height + baseline_offset)
         });
         let body_y = (-upper_y).max(-lower_y).max(0.0);
         let width = lower

@@ -10,13 +10,13 @@ impl EqParser {
         let first_type = self.current_type();
         let first = self.parse_element_atom();
         if !self.document_terms
-            || matches!(
-                first_type,
-                TokenType::LBrace | TokenType::Whitespace | TokenType::Eof
-            )
+            || matches!(first_type, TokenType::Whitespace | TokenType::Eof)
             || is_font_switch(&first)
         {
             return first;
+        }
+        if first_type == TokenType::LBrace {
+            return self.finish_named_scripts(first);
         }
         let mut items = vec![first];
         while self.has_term_continuation() {
@@ -26,7 +26,7 @@ impl EqParser {
                 break;
             }
         }
-        EqNode::Row(items).simplify()
+        self.finish_named_scripts(EqNode::Row(items).simplify())
     }
 
     fn has_term_continuation(&self) -> bool {
@@ -45,7 +45,8 @@ impl EqParser {
         // 구조 연산자·닫힘과 글꼴 전환은 피연산자 안으로 소비하지 않는다.
         token.ty != TokenType::Command
             || ![
-                "OVER", "ATOP", "CHOOSE", "LSUB", "LSUP", "RIGHT", "END", "OF", "RM", "IT",
+                "OVER", "ATOP", "CHOOSE", "LSUB", "LSUP", "SUB", "SUP", "RIGHT", "END", "OF", "RM",
+                "IT",
             ]
             .iter()
             .any(|name| token.value.eq_ignore_ascii_case(name))

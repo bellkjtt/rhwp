@@ -117,6 +117,8 @@ pub enum EqNode {
     /// & 기준으로 왼쪽/오른쪽을 분리하여 세로 정렬
     EqAlign {
         rows: Vec<(EqNode, EqNode)>, // (& 이전, & 이후) 쌍
+        /// 빈 오른쪽 칸과 & 없는 행을 구분한다.
+        alignment_marks: Vec<bool>,
     },
 
     /// 관계식: REL 화살표 {위} {아래}, BUILDREL 화살표 {위}

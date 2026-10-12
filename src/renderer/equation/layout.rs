@@ -221,7 +221,10 @@ impl EqLayout {
             EqNode::Limit { is_upper, sub } => self.layout_limit(*is_upper, sub, fs),
             EqNode::Matrix { rows, style } => self.layout_matrix(rows, *style, fs),
             EqNode::Cases { rows } => self.layout_cases(rows, fs),
-            EqNode::EqAlign { rows } => self.layout_eqalign(rows, fs),
+            EqNode::EqAlign {
+                rows,
+                alignment_marks,
+            } => self.layout_eqalign(rows, alignment_marks, fs),
             EqNode::Rel { arrow, over, under } => self.layout_rel(arrow, over, under, fs),
             EqNode::LongDiv {
                 divisor,
