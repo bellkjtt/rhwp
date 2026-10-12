@@ -430,7 +430,27 @@ impl EqParser {
                     .unwrap_or("∫")
                     .to_string();
                 let node = EqNode::MathSymbol(symbol);
-                self.finish_command_atom(node, attach_scripts)
+                if self.document_terms {
+                    let (sub, sup) = self.parse_operator_scripts();
+                    match (sub, sup) {
+                        (Some(sub), Some(sup)) => EqNode::SubSup {
+                            base: Box::new(node),
+                            sub,
+                            sup,
+                        },
+                        (Some(sub), None) => EqNode::Subscript {
+                            base: Box::new(node),
+                            sub,
+                        },
+                        (None, Some(sup)) => EqNode::Superscript {
+                            base: Box::new(node),
+                            sup,
+                        },
+                        (None, None) => node,
+                    }
+                } else {
+                    self.finish_command_atom(node, attach_scripts)
+                }
             }
             EqCommandClass::BigOperator => {
                 let symbol = if is_big_operator(cu) {
@@ -1250,28 +1270,7 @@ impl EqParser {
 
     /// 큰 연산자 파싱 (적분, 합 등) — 첨자 포함
     fn parse_big_op(&mut self, symbol: String) -> EqNode {
-        let mut sub = None;
-        let mut sup = None;
-
-        // 첨자 파싱
-        loop {
-            if self.at_end() || (self.document_terms && self.pos >= self.term_limit) {
-                break;
-            }
-            if self.consume_operator_script(&mut sub, &mut sup) {
-                continue;
-            }
-            if self.current_type() == TokenType::Subscript && sub.is_none() {
-                self.pos += 1;
-                sub = Some(Box::new(self.parse_script_operand(sup.is_some())));
-            } else if self.current_type() == TokenType::Superscript && sup.is_none() {
-                self.pos += 1;
-                sup = Some(Box::new(self.parse_superscript_operand(sub.is_some())));
-            } else {
-                break;
-            }
-        }
-
+        let (sub, sup) = self.parse_operator_scripts();
         EqNode::BigOp { symbol, sub, sup }
     }
 

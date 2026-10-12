@@ -211,9 +211,12 @@ pub(super) fn subscript_geometry(
     if let Some(geometry) = super::fraction_sup_frame::subscript_geometry(base, sub, fs, dpi) {
         return Some(geometry);
     }
-    if !font_line(base, fs)
-        || !font_line(sub, sub.font_size)
-        || (sub.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
+    let extension = if font_line(base, fs) {
+        0.0
+    } else {
+        super::fraction_sup_frame::line_extension(base, fs, dpi)?
+    };
+    if !font_line(sub, sub.font_size) || (sub.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
     {
         return None;
     }
@@ -221,7 +224,10 @@ pub(super) fn subscript_geometry(
     let (line_height, line_baseline) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
     let sub_depth = (line_height - line_baseline) * sub.font_size / fs;
     let baseline_drop = height - baseline - sub_depth;
-    Some((base.baseline + baseline_drop - sub.baseline, height))
+    Some((
+        base.baseline + baseline_drop - sub.baseline,
+        height + extension,
+    ))
 }
 
 pub(super) fn contains_prime(value: &LayoutBox) -> bool {
@@ -319,7 +325,9 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
             return Some(frame);
         }
         if subscript_geometry(base, sub, fs, dpi).is_some() {
-            return super::font_frame_metrics::subscript_at_dpi(fs, dpi);
+            let (height, baseline) = super::font_frame_metrics::subscript_at_dpi(fs, dpi)?;
+            let extension = super::fraction_sup_frame::line_extension(base, fs, dpi)?;
+            return Some((height + extension, baseline + extension));
         }
     }
     if let LayoutKind::SubSup { base, sub, sup } = &value.kind {

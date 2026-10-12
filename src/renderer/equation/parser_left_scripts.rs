@@ -176,4 +176,30 @@ impl EqParser {
         }
         true
     }
+    /// 적분과 합계 기호가 소유하는 첨자 인자를 같은 경로에서 읽는다.
+    pub(super) fn parse_operator_scripts(&mut self) -> (Option<Box<EqNode>>, Option<Box<EqNode>>) {
+        let mut sub = None;
+        let mut sup = None;
+
+        // 첨자 파싱
+        loop {
+            if self.at_end() || (self.document_terms && self.pos >= self.term_limit) {
+                break;
+            }
+            if self.consume_operator_script(&mut sub, &mut sup) {
+                continue;
+            }
+            if self.current_type() == TokenType::Subscript && sub.is_none() {
+                self.pos += 1;
+                sub = Some(Box::new(self.parse_script_operand(sup.is_some())));
+            } else if self.current_type() == TokenType::Superscript && sup.is_none() {
+                self.pos += 1;
+                sup = Some(Box::new(self.parse_superscript_operand(sub.is_some())));
+            } else {
+                break;
+            }
+        }
+
+        (sub, sup)
+    }
 }

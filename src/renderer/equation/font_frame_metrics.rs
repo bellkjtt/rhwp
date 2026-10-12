@@ -137,6 +137,9 @@ pub(super) fn superscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     if let Some(metrics) = for_size_at_dpi(fs, dpi) {
         return Some(metrics.sup);
     }
+    if let Some(frame) = reduced_script_at_dpi(fs, dpi, true) {
+        return Some(frame);
+    }
     if base_unit_at_dpi(fs, dpi) != 2200 {
         return None;
     }
@@ -148,6 +151,9 @@ pub(super) fn superscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
 /// 한컴 2020 정상화 job 57289556-fcb9-4edd-96df-f60e9d26ac53에서
 /// a_{n}/x_{m} 두 표현식의 같은 크기 높이·기준선이 모두 일치했다.
 pub(super) fn subscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
+    if let Some(frame) = reduced_script_at_dpi(fs, dpi, false) {
+        return Some(frame);
+    }
     const FRAMES: [[u32; 3]; 15] = [
         [600, 706, 73],
         [700, 805, 73],
@@ -169,6 +175,24 @@ pub(super) fn subscript_at_dpi(fs: f64, dpi: f64) -> Option<(f64, f64)> {
     let row = FRAMES.iter().find(|row| row[0] == hu)?;
     let height = crate::renderer::hwpunit_to_px(row[1] as i32, dpi);
     Some((height, height * f64::from(row[2]) / 100.0))
+}
+
+/// 축소 글자 자체에 다시 붙는 첨자의 독립 한컴 프레임.
+/// 2020 정상 저장 5f4eddb9-06c9-4556-8c02-4b5269b067cb,
+/// Print c694ca53-3c07-4c5d-b106-b81ed47b9113에서 오른쪽·왼쪽
+/// 위첨자의 높이·기준선이 일치했다. 미측정 크기를 보간하지 않는다.
+fn reduced_script_at_dpi(fs: f64, dpi: f64, upper: bool) -> Option<(f64, f64)> {
+    // BaseUnit, 위첨자 H/BL, 아래첨자 H/BL. 화면 픽셀 좌표가 아니다.
+    const FRAMES: [[u32; 5]; 3] = [
+        [612, 750, 89, 750, 69],
+        [1020, 1213, 87, 1249, 71],
+        [1496, 1800, 88, 1822, 70],
+    ];
+    let unit = base_unit_at_dpi(fs, dpi);
+    let row = FRAMES.iter().find(|row| row[0] == unit)?;
+    let index = if upper { 1 } else { 3 };
+    let height = crate::renderer::hwpunit_to_px(row[index] as i32, dpi);
+    Some((height, height * f64::from(row[index + 1]) / 100.0))
 }
 
 /// 같은 크기의 보통 글자 위 BAR/VEC/DYAD는 같은 예약 프레임을 쓴다.
