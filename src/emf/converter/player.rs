@@ -59,20 +59,25 @@ impl Player {
     }
 
     fn open_root_group(&mut self) {
-        // Bounds → render_rect 매핑. Bounds가 비어 있으면 identity.
+        // GDI는 물리 Frame을 render_rect에 대응시킨다. Frame을 해석할
+        // 참조 장치 정보가 없는 입력만 기존 Bounds 폴백을 사용한다.
         let (rx, ry, rw, rh) = self.render_rect;
         let m = if let Some(h) = &self.header {
             // Bounds are attacker-controlled i32 coordinates; a naive
             // `right - left` overflows (DoS panic under debug overflow checks)
             // on crafted EMR_HEADER bounds. Saturate the extent computation.
-            let w = h.bounds.right.saturating_sub(h.bounds.left) as f32;
-            let hh = h.bounds.bottom.saturating_sub(h.bounds.top) as f32;
+            let (left, top, w, hh) = h.device_frame().unwrap_or((
+                f64::from(h.bounds.left),
+                f64::from(h.bounds.top),
+                f64::from(h.bounds.right.saturating_sub(h.bounds.left)),
+                f64::from(h.bounds.bottom.saturating_sub(h.bounds.top)),
+            ));
             if w > 0.0 && hh > 0.0 {
-                let sx = rw / w;
-                let sy = rh / hh;
-                let tx = rx - h.bounds.left as f32 * sx;
-                let ty = ry - h.bounds.top as f32 * sy;
-                [sx, 0.0, 0.0, sy, tx, ty]
+                let sx = f64::from(rw) / w;
+                let sy = f64::from(rh) / hh;
+                let tx = f64::from(rx) - left * sx;
+                let ty = f64::from(ry) - top * sy;
+                [sx as f32, 0.0, 0.0, sy as f32, tx as f32, ty as f32]
             } else {
                 [1.0, 0.0, 0.0, 1.0, rx, ry]
             }

@@ -62,3 +62,33 @@ Print PDF의 EMF 도형 세 쪽(12·13·14)은 이미지·벡터 그리기 항�
 입력 생성 조건·그리기 상태와 실제 출력을 먼저 검토·보정한다. 정상 원문과
 독립 Print에서 전체 Native/fresh WASM 90% 이상 및 확대 판독을 충족하기 전에는
 관련 기존 검사·golden의 기대값을 갱신하지 않는다. TSV·로그는 Git에 넣지 않는다.
+
+## Stage 176 한컴 저장 속성과 헤더 대조군
+
+[한컴 정상 저장 HWPX](metafile-primitive-roundtrip-2024.hwpx)는 그림 14개와 원문
+bytes·crop/imgDim을 보존한다. curSz는 0으로 저장된다. WMF에도 같은 값이 있으므로
+이 값으로 EMF만 숨기는 근거로 삼지 않는다.
+
+- Save job: `e0a60073-24d8-41b3-bdaa-fa6637b78f67`
+- HWPX SHA-256: `b9669a74b89fcce396cf8893b0b56e68c385b9aa4730572516b411c20519ab5c`
+
+88/108바이트 헤더와 WHITE_BRUSH·BLACK_PEN 명시 선택 여부의 조합을 사각형·타원·
+직선 각각에 적용한 12쪽이다. 한컴 정상 저장본의 그림 컨테이너를 사용하고 그리기
+명령·Bounds·Frame·장치 크기는 유지했다. 108바이트 헤더에는 pixel format/OpenGL
+값 0과 장치 크기 508000×286000 micrometers를 기록했다. 원문 기본 상태의 88바이트
+세 도형만 Print에 없다. 나머지 아홉 도형은 출력됐지만 변경 전 Native도 모두 미달이다.
+
+- [추가 입력 HWPX](metafile-emf-header-v2-input.hwpx): SHA-256 `4d7e267a7eeac60f114ca51bdecf0a37e3461e16770bf830469a963d4b4c4b19`
+- [한컴 2024 저장 HWP](metafile-emf-header-v2-2024.hwp): SHA-256 `9142fd8700ee668b6b0df0e493a59cdbed878c1b6f0b93af7f7df410dfcb7f2b`
+- [한컴 2024 Print PDF](metafile-emf-header-v2-2024.pdf): SHA-256 `95ec63ef997a1a96779bb97fa3044e85c732cc96c771e087c7d8299c5f55f62c`
+- Save job: `884406df-35fb-41fb-b5a1-c69b3d6c1dcb`
+- Print job: `80f1f330-f335-4077-a20e-dbf17416e023`
+- 실제 한컴 버전: `13.0.0.3901`, method `0`, `frame_print_to_pdf_ex_one_up`
+
+변경 전 생산 SHA `8e4f09c48`의 Native 전체 12쪽 최저 33.06477%, 모두 미달이다.
+Windows GDI에서는 12개 헤더 대조군 모두 재생됐다. GDI 진단은 Print 기준 대체가 아니다.
+서로 다른 결과와 입력을 보존하며 새로운 회귀의 기준 출력으로 승인하지 않았다.
+
+기존 `Bounds → 출력 사각형` 매핑을 Frame·참조 장치 크기로 바꾸고, WMF의
+중간 마스크가 XOR 영역을 넘는 경우의 검은 칠을 보정한다. 변경 후 Native/fresh WASM
+검증은 별도로 기록한다. 선의 cosmetic 단위와 패턴의 장치 주기도 남은 검토 대상이다.

@@ -47,6 +47,41 @@ pub struct HeaderExt2 {
 }
 
 impl Header {
+    /// 물리 Frame을 참조 장치 좌표로 환산한다. Bounds는 잉크 경계이므로
+    /// 출력 사각형에 확대할 원본 viewport를 대신할 수 없다.
+    pub(crate) fn device_frame(&self) -> Option<(f64, f64, f64, f64)> {
+        let physical_mm = self
+            .ext2
+            .filter(|v| v.micrometers_x > 0 && v.micrometers_y > 0)
+            .map(|v| {
+                (
+                    f64::from(v.micrometers_x) / 1000.0,
+                    f64::from(v.micrometers_y) / 1000.0,
+                )
+            })
+            .unwrap_or((
+                f64::from(self.millimeters.cx),
+                f64::from(self.millimeters.cy),
+            ));
+        if self.device.cx <= 0
+            || self.device.cy <= 0
+            || physical_mm.0 <= 0.0
+            || physical_mm.1 <= 0.0
+        {
+            return None;
+        }
+        let sx = f64::from(self.device.cx) / physical_mm.0 / 100.0;
+        let sy = f64::from(self.device.cy) / physical_mm.1 / 100.0;
+        let width = (f64::from(self.frame.right) - f64::from(self.frame.left)) * sx;
+        let height = (f64::from(self.frame.bottom) - f64::from(self.frame.top)) * sy;
+        (width > 0.0 && height > 0.0).then_some((
+            f64::from(self.frame.left) * sx,
+            f64::from(self.frame.top) * sy,
+            width,
+            height,
+        ))
+    }
+
     /// EMR_HEADER를 파싱한다. `cursor`는 type+size를 포함한 레코드 선두를 가리킨다.
     ///
     /// 끝에서 레코드 크기만큼 커서를 전진시킨다(남은 바이트는 Description 등으로 스킵).

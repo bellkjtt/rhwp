@@ -36,6 +36,7 @@ enum BrushOnlyRopSequenceState {
         key: BrushOnlyRopKey,
         expected_element_count: usize,
         mask_definition_index: Option<usize>,
+        mask_rect: [i32; 4],
     },
     AwaitFinalVectorInvert {
         key: BrushOnlyRopKey,
@@ -53,7 +54,6 @@ impl BrushOnlyRopSequence {
         key: BrushOnlyRopKey,
         element_count: usize,
         mask_definition_index: Option<usize>,
-        allow_mask_edge_delta: bool,
     ) -> bool {
         let state = std::mem::take(&mut self.state);
         match (state, operation) {
@@ -86,15 +86,15 @@ impl BrushOnlyRopSequence {
                 && key.clip_id == previous_key.clip_id
                 && key.clip_rect == previous_key.clip_rect =>
             {
-                // 바깥 XOR 상쇄는 기존 계약을 유지한다. 흑백 마스크의 수용은
-                // 그 중간 영역이 같은 XOR 상자에 포함되는지도 별도로 확인한다.
-                let mask_definition_index = mask_definition_index.filter(|_| {
-                    Self::mask_rect_matches(key.rect, previous_key.rect, allow_mask_edge_delta)
-                });
+                // 중간 B 영역은 바깥 XOR의 A와 달라도 된다. 흰 마스크에서는
+                // 이전 바탕, 검은 마스크에서는 A 안의 P 또는 A 밖의 검정이 남는다.
+                let mask_definition_index =
+                    mask_definition_index.filter(|_| key.rect[2] > 0 && key.rect[3] > 0);
                 self.state = Some(BrushOnlyRopSequenceState::AwaitFinalPatInvert {
                     key: previous_key,
                     expected_element_count: element_count + 1,
                     mask_definition_index,
+                    mask_rect: key.rect,
                 });
                 false
             }
@@ -103,6 +103,7 @@ impl BrushOnlyRopSequence {
                     key: previous_key,
                     expected_element_count,
                     mask_definition_index,
+                    mask_rect,
                 }),
                 TernaryRasterOperation::PATINVERT,
             ) if key == previous_key && element_count == expected_element_count => {
@@ -111,11 +112,8 @@ impl BrushOnlyRopSequence {
                     // 첫 단색 칠을 지우고 중간 DPa의 실제 패턴으로 P를 마스킹한다.
                     // 팔레트·비트를 버리면 반투명 패널과 바탕의 색이 달라진다.
                     self.suppressed_elements.push(element_count - 2);
-                    self.bitmap_masks.push((
-                        element_count - 1,
-                        previous_key.fill,
-                        previous_key.rect,
-                    ));
+                    self.bitmap_masks
+                        .push((element_count - 1, previous_key.fill, mask_rect));
                 }
                 true
             }
@@ -179,69 +177,6 @@ impl BrushOnlyRopSequence {
         });
     }
 
-    fn mask_rect_matches(mask: [i32; 4], paint: [i32; 4], allow_edge_delta: bool) -> bool {
-        if mask == paint {
-            return true;
-        }
-        let edges = |[x, y, width, height]: [i32; 4]| {
-            [
-                i64::from(x),
-                i64::from(y),
-                i64::from(x) + i64::from(width),
-                i64::from(y) + i64::from(height),
-            ]
-        };
-        let m = edges(mask);
-        let p = edges(paint);
-        // 포함된 중간 영역 밖에서는 같은 두 XOR이 정확히 상쇄된다.
-        // 이 관계는 마스크 크기·체커보드 여부와 무관한 비트 연산 계약이다.
-        if mask[2] > 0
-            && mask[3] > 0
-            && m[0] >= p[0]
-            && m[1] >= p[1]
-            && m[2] <= p[2]
-            && m[3] <= p[3]
-        {
-            return true;
-        }
-        // The issue6469 fixture has 8x8 halftone DPA rectangles whose
-        // device-space edges differ by one unit from both outer XORs.
-        // Do not extend this approximation to arbitrary masks or tiny draws.
-        if !allow_edge_delta
-            || [mask[2], mask[3], paint[2], paint[3]]
-                .iter()
-                .any(|&n| n < 8)
-        {
-            return false;
-        }
-        edges(mask)
-            .into_iter()
-            .zip(edges(paint))
-            .all(|(a, b)| a.abs_diff(b) <= 1)
-    }
-
-    fn brush_is_8x8_halftone(brush: Option<&Brush>) -> bool {
-        let Some(Brush::DIBPatternPT { brush_hatch, .. }) = brush else {
-            return false;
-        };
-        if !matches!(
-            &brush_hatch.dib_header_info,
-            BitmapInfoHeader::Info(header)
-                if header.planes == 1 && matches!(header.compression, Compression::BI_RGB)
-        ) || brush_hatch.dib_header_info.width() != 8
-            || brush_hatch.dib_header_info.height() != 8
-        {
-            return false;
-        }
-        let data = &brush_hatch.bitmap_buffer.a_data;
-        if data.len() != 32 || !matches!(data[0], 0x55 | 0xAA) {
-            return false;
-        }
-        data.chunks_exact(4)
-            .enumerate()
-            .all(|(row, bytes)| bytes[0] == if row % 2 == 0 { data[0] } else { !data[0] })
-    }
-
     pub fn finish(
         self,
         mut definitions: Vec<Node>,
@@ -254,13 +189,14 @@ impl BrushOnlyRopSequence {
                 let mask = elements[index]
                     .clone()
                     .set("id", format!("rop_bitmap_source{index}"));
-                (index, mask, color, rect)
+                let paint = elements[index - 1].clone().set("fill", &color);
+                (index, mask, color, rect, Some(paint))
             })
             .collect();
-        for (kind, (index, mask, color, [x, y, width, height])) in self
+        for (kind, (index, mask, color, [x, y, width, height], paint)) in self
             .vector_masks
             .into_iter()
-            .map(|mask| ("vector", mask))
+            .map(|(index, mask, color, rect)| ("vector", (index, mask, color, rect, None)))
             .chain(bitmap_masks.into_iter().map(|mask| ("bitmap", mask)))
         {
             let filter_id = format!("rop_{kind}_inverse{}", definitions.len());
@@ -298,10 +234,27 @@ impl BrushOnlyRopSequence {
                     .set("height", height)
                     .add(mask.set("filter", url_string(format!("#{filter_id}").as_str()))),
             );
-            elements[index] = elements[index]
-                .clone()
-                .set("fill", color)
-                .set("mask", url_string(format!("#{mask_id}").as_str()));
+            let mask_url = url_string(format!("#{mask_id}").as_str());
+            if let Some(paint) = paint {
+                // B의 검정과 A의 브러시 색을 먼저 합성한 뒤 마스크를 한 번 적용한다.
+                // 개별 칠에 따로 적용하면 보간된 마스크 경계의 alpha가 중복된다.
+                // B의 viewport와 같은 viewBox이므로 원문 장치 좌표는 그대로다.
+                let black = elements[index].clone().set("fill", "black");
+                elements[index] = Node::new("svg")
+                    .set("x", x)
+                    .set("y", y)
+                    .set("width", width)
+                    .set("height", height)
+                    .set("viewBox", format!("{x} {y} {width} {height}"))
+                    .set("mask", &mask_url)
+                    .add(black)
+                    .add(paint);
+            } else {
+                elements[index] = elements[index]
+                    .clone()
+                    .set("fill", color)
+                    .set("mask", &mask_url);
+            }
         }
         // Indices are recorded in emission order. Do not remove nodes while
         // collecting: doing so would change IDs or invalidate later indices.
@@ -533,8 +486,6 @@ impl TernaryRasterOperator {
                     "approximating brush-only TernaryRasterOperation as PATCOPY"
                 );
                 let is_mask = BrushOnlyRopSequence::brush_is_monochrome_mask(self.brush.as_ref());
-                let allow_mask_edge_delta =
-                    is_mask && BrushOnlyRopSequence::brush_is_8x8_halftone(self.brush.as_ref());
                 let mut mask_definition_index = None;
                 let fill = match Fill::from(self.brush.clone().unwrap()) {
                     Fill::Pattern { pattern } => {
@@ -565,7 +516,6 @@ impl TernaryRasterOperator {
                     key,
                     element_count,
                     mask_definition_index,
-                    allow_mask_edge_delta,
                 ) {
                     return Ok(None);
                 }
