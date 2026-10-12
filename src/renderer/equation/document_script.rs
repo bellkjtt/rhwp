@@ -11,7 +11,14 @@ pub(crate) fn tokenize(script: &str) -> Vec<Token> {
     let mut tokens = tokenizer::Tokenizer::new(script).tokenize();
     let chars: Vec<char> = script.chars().collect();
     for token in &mut tokens {
-        if token.ty != TokenType::Command || chars.get(token.pos) == Some(&'\\') {
+        if token.ty != TokenType::Command {
+            continue;
+        }
+        if chars.get(token.pos) == Some(&'\\') {
+            if token.value.eq_ignore_ascii_case("sqrt") || token.value.eq_ignore_ascii_case("root")
+            {
+                token.value.insert(0, '\\');
+            }
             continue;
         }
         let class = classify_command(&token.value);

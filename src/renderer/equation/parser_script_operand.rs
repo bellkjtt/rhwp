@@ -57,7 +57,7 @@ impl EqParser {
                 self.pos += 1;
                 self.parse_command_atom(&command)
             } else {
-                self.parse_single_or_group()
+                self.parse_single_atom_or_group()
             };
             items.push(node);
         }

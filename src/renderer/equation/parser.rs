@@ -22,6 +22,9 @@ mod alignment;
 #[path = "parser_script_operand.rs"]
 mod script_operand;
 
+#[path = "parser_terms.rs"]
+mod terms;
+
 /// 수식 중첩 깊이 상한.
 ///
 /// 적대적으로 깊게 중첩된 입력(`{{{…}}}`, `sqrt sqrt …`, `LEFT ( LEFT ( …`,
@@ -45,17 +48,29 @@ pub struct EqParser {
     /// 매 호출당 O(n) 전방 스캔을 O(1) 조회로 바꿔, 괄호가 많은/깊은 입력에서의
     /// O(n^2) 행(hang)을 없앤다. LParen 이 아니거나 짝이 없으면 `tokens.len()`.
     paren_match: Vec<usize>,
+    document_terms: bool,
+    term_limit: usize,
 }
 
 impl EqParser {
     pub fn new(mut tokens: Vec<Token>) -> Self {
         super::brace_recovery::retain_owned_closing_braces(&mut tokens);
         let paren_match = Self::compute_paren_match(&tokens);
+        let term_limit = tokens.len();
         Self {
             tokens,
             pos: 0,
             depth: 0,
             paren_match,
+            document_terms: false,
+            term_limit,
+        }
+    }
+
+    pub(crate) fn for_document(tokens: Vec<Token>) -> Self {
+        Self {
+            document_terms: true,
+            ..Self::new(tokens)
         }
     }
 
@@ -227,7 +242,7 @@ impl EqParser {
     }
 
     /// 단일 요소 파싱
-    fn parse_element(&mut self) -> EqNode {
+    fn parse_element_atom(&mut self) -> EqNode {
         if self.at_end() {
             return EqNode::Empty;
         }
@@ -340,6 +355,11 @@ impl EqParser {
     }
 
     fn parse_command_inner(&mut self, cmd: &str, attach_scripts: bool) -> EqNode {
+        // 문서 tokenizer가 표시한 명시적 LaTeX 근호만 각괄호 지수를 쓴다.
+        let explicit_root = cmd
+            .strip_prefix('\\')
+            .filter(|name| name.eq_ignore_ascii_case("sqrt") || name.eq_ignore_ascii_case("root"));
+        let cmd = explicit_root.unwrap_or(cmd);
         let cmd_upper = cmd.to_ascii_uppercase();
         let cu = cmd_upper.as_str();
         match classify_command(cmd) {
@@ -383,7 +403,9 @@ impl EqParser {
                 self.skip_brace_arg();
                 EqNode::Empty
             }
-            EqCommandClass::Sqrt => self.parse_sqrt(),
+            EqCommandClass::Sqrt => {
+                self.parse_sqrt(explicit_root.is_some() || !self.document_terms)
+            }
             EqCommandClass::IntegralNolimits => {
                 // nolimits: 큰 기호 + 일반 첨자 (BigOp이 아닌 MathSymbol로 처리)
                 let symbol = lookup_symbol(cu)
@@ -415,7 +437,7 @@ impl EqParser {
             EqCommandClass::RightDiscard => EqNode::Empty,
             EqCommandClass::Rel => {
                 let is_buildrel = cu == "BUILDREL";
-                let arrow_node = self.parse_element();
+                let arrow_node = self.parse_element_atom();
                 let arrow = match &arrow_node {
                     EqNode::MathSymbol(s) => s.clone(),
                     EqNode::Symbol(s) => s.clone(),
@@ -729,6 +751,8 @@ impl EqParser {
     fn parse_paren_group_inner(&mut self) -> EqNode {
         // 안쪽 소괄호의 닫힘을 바깥 묶음의 끝으로 오인하지 않는다.
         let close = self.paren_match[self.pos];
+        let previous_limit = self.term_limit;
+        self.term_limit = self.term_limit.min(close);
         self.pos += 1; // '(' 소비
         let mut items = Vec::new();
         let mut over_run = 0u32;
@@ -738,6 +762,7 @@ impl EqParser {
             }
             items.push(self.parse_element());
         }
+        self.term_limit = previous_limit;
         self.expect(TokenType::RParen); // ')' 소비
         EqNode::Paren {
             left: "(".to_string(),
@@ -748,6 +773,18 @@ impl EqParser {
 
     /// 단일 토큰 또는 그룹 파싱 (첨자/인자용)
     fn parse_single_or_group(&mut self) -> EqNode {
+        if self.at_end() || self.current_type() == TokenType::RBrace || self.pos >= self.term_limit
+        {
+            return EqNode::Empty;
+        }
+        if self.document_terms {
+            self.parse_element()
+        } else {
+            self.parse_single_atom_or_group()
+        }
+    }
+
+    fn parse_single_atom_or_group(&mut self) -> EqNode {
         if self.at_end() {
             return EqNode::Empty;
         }

@@ -3883,7 +3883,8 @@ impl LayoutEngine {
                                 let tokens =
                                     super::super::equation::document_script::tokenize(&eq.script);
                                 let ast =
-                                    super::super::equation::parser::EqParser::new(tokens).parse();
+                                    super::super::equation::parser::EqParser::for_document(tokens)
+                                        .parse();
                                 let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                                 let layout_box =
                                     super::super::equation::layout_for_paint(eq, &ast, self.dpi);

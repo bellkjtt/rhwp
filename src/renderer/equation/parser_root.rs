@@ -4,14 +4,21 @@ use super::{EqNode, EqParser, TokenType};
 
 impl EqParser {
     /// 제곱근 파싱: SQRT x, SQRT(n) of x
-    pub(super) fn parse_sqrt(&mut self) -> EqNode {
+    pub(super) fn parse_sqrt(&mut self, latex_index: bool) -> EqNode {
         // LaTeX \sqrt[n]{x} 패턴
-        if self.current_type() == TokenType::LBracket {
+        if latex_index && self.current_type() == TokenType::LBracket {
             self.pos += 1; // [
+            let previous_limit = self.term_limit;
+            let close = self.tokens[self.pos..]
+                .iter()
+                .position(|token| token.ty == TokenType::RBracket)
+                .map_or(self.tokens.len(), |offset| self.pos + offset);
+            self.term_limit = self.term_limit.min(close);
             let mut index_nodes = Vec::new();
             while !self.at_end() && self.current_type() != TokenType::RBracket {
                 index_nodes.push(self.parse_element());
             }
+            self.term_limit = previous_limit;
             self.expect(TokenType::RBracket);
 
             let body = self.parse_single_or_group();

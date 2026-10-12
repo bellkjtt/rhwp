@@ -5108,7 +5108,8 @@ impl LayoutEngine {
             if let Some(p) = para {
                 if let Some(Control::Equation(eq)) = p.controls.get(tac_ci) {
                     let tokens = crate::renderer::equation::document_script::tokenize(&eq.script);
-                    let ast = crate::renderer::equation::parser::EqParser::new(tokens).parse();
+                    let ast =
+                        crate::renderer::equation::parser::EqParser::for_document(tokens).parse();
                     let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                     let layout_box =
                         crate::renderer::equation::layout_for_paint(eq, &ast, self.dpi);
@@ -9160,7 +9161,8 @@ impl LayoutEngine {
                             let tokens =
                                 crate::renderer::equation::document_script::tokenize(&eq.script);
                             let ast =
-                                crate::renderer::equation::parser::EqParser::new(tokens).parse();
+                                crate::renderer::equation::parser::EqParser::for_document(tokens)
+                                    .parse();
                             let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                             let layout_box =
                                 crate::renderer::equation::layout_for_paint(eq, &ast, self.dpi);

@@ -33,10 +33,10 @@ impl EqParser {
                         EqNode::Text(first.to_string())
                     }
                 }
-                _ => self.parse_single_or_group(),
+                _ => self.parse_single_atom_or_group(),
             }
         } else {
-            self.parse_single_or_group()
+            self.parse_single_atom_or_group()
         };
         EqNode::Decoration {
             kind: DecoKind::StrikeThrough,
