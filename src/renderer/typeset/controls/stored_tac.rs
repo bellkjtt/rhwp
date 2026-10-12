@@ -17,6 +17,9 @@ use crate::renderer::hwpunit_to_px;
 pub(in crate::renderer::typeset) fn text_controls_share_line(para: &Paragraph) -> bool {
     para.controls.iter().all(|control| match control {
         Control::Equation(equation) => equation.common.treat_as_char,
+        Control::Picture(picture) => picture.common.treat_as_char,
+        Control::Shape(shape) => shape.common().treat_as_char,
+        Control::Form(form) => form.common.treat_as_char,
         Control::Footnote(_) | Control::Endnote(_) => true,
         other => crate::renderer::composer::control_is_width_neutral_marker(other),
     })

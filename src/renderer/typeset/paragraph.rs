@@ -11,6 +11,7 @@
 
 pub(super) mod boundary;
 mod columns;
+mod content;
 pub(super) mod context;
 pub(super) mod empty;
 mod entry;
@@ -453,10 +454,14 @@ pub(super) fn place_fitted_paragraph(
             (para_idx, fmt.line_count()),
             stored_successor_flow.map_or_else(
                 || {
-                    fmt.line_content_height(
-                        0..fmt.line_count(),
-                        fmt.spacing_before - trimmed_spacing_before,
-                    )
+                    content::stored_content_bottom(st, para, fmt, paragraphs, styles, dpi)
+                        .map(|bottom| bottom - st.current_height)
+                        .unwrap_or_else(|| {
+                            fmt.line_content_height(
+                                0..fmt.line_count(),
+                                fmt.spacing_before - trimmed_spacing_before,
+                            )
+                        })
                 },
                 |(bottom, _)| bottom - st.current_height,
             ),
