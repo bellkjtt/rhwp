@@ -34,7 +34,9 @@
 `ab407d8560f8d8bb339ad5ad3143a9f819f27c13fb8cfe039aefe19e98ff5b71`다.
 [10쪽 WASM review](wasm168-p010-review.png)와
 [11쪽 WASM review](wasm168-p011-review.png)를 별도로 생성했다.
-전체 Native/fresh WASM PNG 23쌍은 실제 바이트가 같다. 같은 SVG/PNG를 복사해
+전체 Native/fresh WASM PNG 23쌍 중 20쌍은 실제 바이트가 같고, 나머지
+3쌍은 바이트가 다르다. 페이지별 기록을 별도로 보존한다. 대표 10·11쪽은
+실제 PNG 바이트가 같다. 같은 SVG/PNG를 복사해
 두 backend의 실행을 대신하지 않았으며 각각 실제 exporter와 whole gate를 완료했다.
 
 [수식 확대](native168-selected-math-detail.png)는 같은 좌표의 독립 Print와
