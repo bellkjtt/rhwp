@@ -70,44 +70,40 @@ Issue: #7642
 
 ## Stage 186 — 인자 없는 MATRIX의 후속 문맥 영향
 
-첫 EQALIGN과 namespace·문단·라벨·ID·스타일·구역 및 다른 ZIP entry 바이트를 유지하고, 다른 수식의 script 내용만 `x`로 바꿔 정상 저장·Print했다. XML을 재직렬화하지 않은 대조군에서도 후속 bare `MATRIX` 하나를 남기면 첫 수식의 열 정렬이 바뀐다. 이는 관측한 한컴 출력의 문맥 영향이며 RHWP의 문서별 우회 조건이나 회귀 기대값으로 사용하지 않는다. 원본 30쪽과 18쪽의 Print 실패 증거는 유지한다.
+첫 EQALIGN과 namespace·문단·라벨·ID·스타일·구역 및 다른 ZIP entry 바이트를 유지하고 다른 수식의 script만 `x`로 바꿔 정상 저장·Print했다. XML을 재직렬화하지 않은 대조군에서도 후속 bare `MATRIX` 하나를 남기면 첫 수식의 열 정렬이 바뀐다. 이 관측을 RHWP의 문서별 우회 조건이나 회귀 기대값으로 사용하지 않는다. 원본 30쪽과 18쪽의 실패 증거는 유지한다.
 
 | 대조군 | 첫 행/둘째 행 = 원점(CSS, 관측) | HWP job | Print job |
 |---|---|---|---|
 | all_x | [160.365, 160.365] | `22f67c30-98e4-41f6-829e-9867620ecbfc` | `bd2764e5-202d-4efc-928d-55a2ffb722d3` |
+| first_half | [90.655, 160.685] | `1838c66b-5297-4e1e-98e5-ed4cada9d29e` | `11cb3a5a-b641-4dbf-b9c0-6d593851caa2` |
+| second_half | [160.365, 160.365] | `bcb39110-c184-4062-b3e7-aabc799d59f7` | `0761d33c-3b41-4d0e-83e3-0e35ba790ffb` |
+| empty_commands | [90.655, 160.685] | `56dc6d6a-9070-464d-a015-fc60909ac097` | `8f678ada-c635-4d3d-bfda-f8d3fe5a5ae5` |
+| bare_matrix | [90.655, 160.685] | `297b5b3d-ba54-4383-8ccd-432421ba1a02` | `12d26675-da59-44f8-ab0f-9d544d247089` |
+| bare_pile | [160.365, 160.365] | `bed10196-fa8d-4841-a528-01bd8ec4bedd` | `98d4dd4a-5c95-4e06-a12a-2b0f94436837` |
+| two_bare | [90.655, 160.685] | `256c3bac-ff05-4a4b-922d-220c286e2c10` | `355451b9-7f56-41d2-a5cb-9972d2cd7cae` |
 
+`bare_matrix`와 `two_bare`는 원본의 개별 행 원점을 재현했고, `all_x`·`second_half`·`bare_pile`는 공유 열 원점을 출력했다. 실제 원인은 서비스/한컴의 파서·출력 상태까지 추가 확인이 필요하다. 자료가 충돌하는 범위를 정상 출력 일치로 보고하지 않는다.
+
+### 파일 해시
+
+- `stage186-all_x/all_x-hancom-2020.hwp` SHA-256 `8f250362f57dbdd777ff3888ca57994f9525069f631394bc6fa045a5b461cbf5`.
 - `stage186-all_x/all_x-hancom-2020.pdf` SHA-256 `9e6856488810459c2f38f1cc9497e82d123dc70b70d4096c23ab88a7c5045f47`.
 - `stage186-all_x/all_x-input.hwpx` SHA-256 `25851690a3bbced1214fee2578785b4fc0ce6046ee643b5ce55f1a4f0714f9e3`.
-- `stage186-all_x/all_x-hancom-2020.hwp` SHA-256 `8f250362f57dbdd777ff3888ca57994f9525069f631394bc6fa045a5b461cbf5`.
-| first_half | [90.655, 160.685] | `1838c66b-5297-4e1e-98e5-ed4cada9d29e` | `11cb3a5a-b641-4dbf-b9c0-6d593851caa2` |
-
-- `stage186-first_half/first_half-input.hwpx` SHA-256 `c73b197907c46bf0b537975948f01174a9722e40e9e4a052c29a59c8e14591db`.
-- `stage186-first_half/first_half-hancom-2020.pdf` SHA-256 `fb138da0ee3928fcb8ec539fe371af731db28c6f94891a8c22d531e454a1dcba`.
 - `stage186-first_half/first_half-hancom-2020.hwp` SHA-256 `f5b6a52d0838b3fabfee7790a58f603e647946f9818f6b908992df6e5de74a61`.
-| second_half | [160.365, 160.365] | `bcb39110-c184-4062-b3e7-aabc799d59f7` | `0761d33c-3b41-4d0e-83e3-0e35ba790ffb` |
-
-- `stage186-second_half/second_half-hancom-2020.pdf` SHA-256 `a361755549ac0bb1c02fb8dc71cbfb4bc5bccfab2c2bdfe2e61a7971f92538f8`.
+- `stage186-first_half/first_half-hancom-2020.pdf` SHA-256 `fb138da0ee3928fcb8ec539fe371af731db28c6f94891a8c22d531e454a1dcba`.
+- `stage186-first_half/first_half-input.hwpx` SHA-256 `c73b197907c46bf0b537975948f01174a9722e40e9e4a052c29a59c8e14591db`.
 - `stage186-second_half/second_half-hancom-2020.hwp` SHA-256 `51263d83ddbddb8d2c73082fad61b7b52bb98fcf80178fe605e45ad7a7fe394d`.
+- `stage186-second_half/second_half-hancom-2020.pdf` SHA-256 `a361755549ac0bb1c02fb8dc71cbfb4bc5bccfab2c2bdfe2e61a7971f92538f8`.
 - `stage186-second_half/second_half-input.hwpx` SHA-256 `209d3738985149bff726cef8f72e594c589f3a6172d1310adf5b2ec2d6942720`.
-| empty_commands | [90.655, 160.685] | `56dc6d6a-9070-464d-a015-fc60909ac097` | `8f678ada-c635-4d3d-bfda-f8d3fe5a5ae5` |
-
+- `stage186-empty_commands/empty_commands-hancom-2020.hwp` SHA-256 `9218c2d9c4bbbcc0e4cd845d15057eccc9d133afe2b687e333378e5b515e7931`.
 - `stage186-empty_commands/empty_commands-hancom-2020.pdf` SHA-256 `4d4e99dc4418a489dd9abf6a621239231d0d968513785196e21141774bed4ce3`.
 - `stage186-empty_commands/empty_commands-input.hwpx` SHA-256 `f2bd34b5adabd094b85fa1245674cddf20ea6e79799d588e6b836a0a85715390`.
-- `stage186-empty_commands/empty_commands-hancom-2020.hwp` SHA-256 `9218c2d9c4bbbcc0e4cd845d15057eccc9d133afe2b687e333378e5b515e7931`.
-| bare_matrix | [90.655, 160.685] | `297b5b3d-ba54-4383-8ccd-432421ba1a02` | `12d26675-da59-44f8-ab0f-9d544d247089` |
-
 - `stage186-bare_matrix/bare_matrix-hancom-2020.hwp` SHA-256 `b077b062c89c59a3e854341a0a43ae53ce2cff61adf8fa6ef331519460c8f02d`.
 - `stage186-bare_matrix/bare_matrix-hancom-2020.pdf` SHA-256 `5253f6c36058f566da70dee76ace47962a09699d40dd74f506ae37f16b33d188`.
 - `stage186-bare_matrix/bare_matrix-input.hwpx` SHA-256 `552a3e712f4f7d81d55c76b3c49a61484eb0c6ebd90539560ecd1b577b990f4c`.
-| bare_pile | [160.365, 160.365] | `bed10196-fa8d-4841-a528-01bd8ec4bedd` | `98d4dd4a-5c95-4e06-a12a-2b0f94436837` |
-
-- `stage186-bare_pile/bare_pile-input.hwpx` SHA-256 `5a1ad5b3339a7055c458ab4a6fa6fe424e539424d08d14bd25c274833847f9ab`.
 - `stage186-bare_pile/bare_pile-hancom-2020.hwp` SHA-256 `a83a1dd765bf672af879b1231fa3b06c8e019675dffa267f57c513a3a91a2d6c`.
 - `stage186-bare_pile/bare_pile-hancom-2020.pdf` SHA-256 `e15f719fac5fc78c39768b3faf5da3f018248267b00f87a8ee47ac81b2580be4`.
-| two_bare | [90.655, 160.685] | `256c3bac-ff05-4a4b-922d-220c286e2c10` | `355451b9-7f56-41d2-a5cb-9972d2cd7cae` |
-
-- `stage186-two_bare/two_bare-input.hwpx` SHA-256 `4a854e49286ed6dd5a99ead1f4e0d78457bd1b1240df23273b173d9a0ad3a87e`.
+- `stage186-bare_pile/bare_pile-input.hwpx` SHA-256 `5a1ad5b3339a7055c458ab4a6fa6fe424e539424d08d14bd25c274833847f9ab`.
 - `stage186-two_bare/two_bare-hancom-2020.hwp` SHA-256 `b2c868def6a195d1260e7f350b8de82539962d7a4993b3d0957b34d8ad7e38f3`.
 - `stage186-two_bare/two_bare-hancom-2020.pdf` SHA-256 `1de7feff26a2d93a6a0d4b606ffb1d4ce7917ecee250d54484668ff96b6f7cdd`.
-
-`bare_matrix`와 `two_bare`는 원본의 개별 행 원점을 재현했고, `all_x`·`second_half`·`bare_pile`는 공유 열 원점을 출력했다. 빈 MATRIX가 다른 수식의 정렬에 영향을 주는 실제 원인은 서비스/한컴의 파서·출력 상태까지 추가 확인이 필요하다. 자료가 충돌하는 범위를 정상 출력 일치로 보고하지 않는다.
+- `stage186-two_bare/two_bare-input.hwpx` SHA-256 `4a854e49286ed6dd5a99ead1f4e0d78457bd1b1240df23273b173d9a0ad3a87e`.
