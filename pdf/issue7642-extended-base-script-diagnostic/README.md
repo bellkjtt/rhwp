@@ -80,3 +80,12 @@ Native 생산 소스 `589ed5c9d`의 진단 7종 전체 17쪽은 모두 90% 이�
 새 관계형 회귀 두 건은 nextest에서 PASS했다. 전체 최종 검증·PR 승인은 미완료다.
 v8 그리스 문자 철자 진단은 별도의 후속 분석이며 위 v1~v7의 통과 범위에 포함하지 않는다.
 실행·메트릭·미검증 범위는 [Stage 171](../../mydocs/working/task_m100_7642_stage171.md)을 따른다.
+
+## v8 그리스 이름 대조
+
+`extended-base-script-input-v8.hwpx`는 24개 이름의 소문자·첫 글자 대문자·전체
+대문자 및 혼합 철자·붙여 쓴 피연산자 80개다. 한컴 2024 재저장 HWP와 Print
+PDF를 함께 보존한다. 출처·job·해시는
+[Stage 172](../../mydocs/working/task_m100_7642_stage172.md)를 따른다.
+Native 두 쪽 최저 99.95954%이나 `phi` 확대 차이와 fresh WASM 대조가 남아
+진단 자료로 보존한다. v1–v7의 최종 통과 범위에 v8을 포함하지 않는다.
