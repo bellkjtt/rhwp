@@ -53,7 +53,11 @@ fn source_content(sample: &Path) -> SourceContent {
     };
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index).unwrap();
-        if !entry.name().ends_with(".wmf") {
+        if !entry
+            .name()
+            .expect("원본 WMFC ZIP의 유효한 파일명")
+            .ends_with(".wmf")
+        {
             continue;
         }
         let mut bytes = Vec::new();

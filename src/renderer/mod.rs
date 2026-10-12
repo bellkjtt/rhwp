@@ -30,12 +30,6 @@ pub(crate) mod font_rule_layout_metric_projection;
 pub(crate) mod font_rule_layout_name_projection;
 pub mod form_appearance;
 pub(crate) mod form_caption;
-pub(crate) mod hwp3_caption_host;
-pub(crate) mod reflow_spacing;
-pub(crate) mod stored_frame_boundary;
-pub(crate) mod stored_picture_metrics;
-mod stroke_pattern;
-pub(crate) mod table_row_frame;
 pub(crate) mod gradient_geometry;
 pub(crate) mod hancom_pua;
 pub mod height_cursor;
@@ -43,6 +37,7 @@ pub mod height_measurer;
 pub(crate) mod hft_ascii_evidence;
 pub(crate) mod hft_outline;
 pub mod html;
+pub(crate) mod hwp3_caption_host;
 pub mod hyperlinks;
 pub(crate) mod image_header;
 pub mod image_resolver;
@@ -67,6 +62,7 @@ pub mod pdf_raster_fidelity;
 pub mod pua_oldhangul;
 pub mod raster_pixels;
 pub(crate) mod reflow_float_host_line;
+pub(crate) mod reflow_spacing;
 pub mod render_normalization;
 pub mod render_tree;
 pub mod scheduler;
@@ -77,6 +73,10 @@ pub(crate) mod shaping_paragraph;
 pub(crate) mod shaping_publication;
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-skia"))]
 pub mod sixel;
+pub(crate) mod stored_frame_boundary;
+pub(crate) mod stored_picture_metrics;
+mod stroke_pattern;
+pub(crate) mod table_row_frame;
 // Q4-D1 registers the exact-source-bound vertical owner while all product
 // layout/publication callers remain closed until their own approved slices.
 #[allow(dead_code)]
