@@ -380,7 +380,8 @@ impl TypesetEngine {
         column_width: f64,
         measured_tables: &[MeasuredTable],
     ) -> bool {
-        paragraph.column_type == ColumnBreakType::None
+        super::super::measure::stored_endnote_column_cut(st, paragraphs, para_index).is_none()
+            && paragraph.column_type == ColumnBreakType::None
             && self
                 .simulate_endnote_column_with_item(
                     st,

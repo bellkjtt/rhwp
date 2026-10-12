@@ -68,6 +68,44 @@ pub(in crate::renderer::typeset) fn endnote_column_starts_at_stored_break(
     }
 }
 
+/// 같은 저장 단의 뒤 조각이 소유한 최초 줄 컷이다. 물리 fit만으로 지우지 않는다.
+/// 편집 후 재조판·합성 줄·다른 시작 단과 이미 소비한 앞 조각에는 적용하지 않는다.
+pub(super) fn stored_endnote_column_cut(
+    st: &TypesetState,
+    paragraphs: &[Paragraph],
+    para_index: usize,
+) -> Option<usize> {
+    if st.profile.session_edited()
+        || st.col_count <= 1
+        || para_index < paragraphs.len()
+        || !endnote_column_starts_at_stored_break(st, paragraphs)
+    {
+        return None;
+    }
+    let para = paragraph_by_global_index(paragraphs, &st.endnote_paragraphs, para_index)?;
+    if para.stored_text_partition_is_dirty()
+        || para.line_segs.iter().any(|line| {
+            line.vertical_pos < 0
+                || line.line_height < 0
+                || line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+        })
+    {
+        return None;
+    }
+    let cut = para
+        .line_segs
+        .windows(2)
+        .position(|lines| lines[1].vertical_pos < lines[0].vertical_pos)?
+        + 1;
+    if st.current_items.iter().any(|item| {
+        matches!(item, PageItem::PartialParagraph { para_index: owner, start_line, .. }
+            if *owner == para_index && *start_line >= cut)
+    }) {
+        return None;
+    }
+    Some(cut)
+}
+
 impl TypesetEngine {
     /// [#6574] 현재 단 항목 뒤에 `en_para_idx` 를 붙여 렌더 경로로 그렸을 때 글줄 잉크
     /// 하단이 단 하단(`available`)을 넘는지 판정한다. 넘으면 앞 줄부터 다시 그려 단 안에
@@ -144,10 +182,15 @@ impl TypesetEngine {
         if full.is_none() {
             return EndnoteRenderInkFit::Unjudged;
         }
-        if fits(full) {
+        let stored_cut =
+            stored_endnote_column_cut(st, paragraphs, en_para_idx).filter(|cut| *cut < line_count);
+        if fits(full) && stored_cut.is_none() {
             return EndnoteRenderInkFit::Fits;
         }
-        for split in (1..line_count).rev() {
+        // 뒤 단의 저장 소속은 전체 자연 높이의 수용과 별개다. 같은 컷의 앞
+        // 조각을 실제로 재생하며, 공간이 부족하면 더 작은 앞 조각만 수용한다.
+        let split_limit = stored_cut.unwrap_or(line_count.saturating_sub(1));
+        for split in (1..=split_limit).rev() {
             let head = ink_bottom(PageItem::PartialParagraph {
                 para_index: en_para_idx,
                 start_line: 0,
