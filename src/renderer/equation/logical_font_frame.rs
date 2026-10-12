@@ -199,6 +199,9 @@ pub(super) fn subscript_geometry(
     fs: f64,
     dpi: f64,
 ) -> Option<(f64, f64)> {
+    if let Some(geometry) = super::fraction_sup_frame::subscript_geometry(base, sub, fs, dpi) {
+        return Some(geometry);
+    }
     if !font_line(base, fs)
         || !font_line(sub, sub.font_size)
         || (sub.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
@@ -300,9 +303,23 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
         }
     }
     if let LayoutKind::Subscript { base, sub } = &value.kind {
+        if let Some(frame) = super::fraction_sup_frame::subscript_frame(base, sub, fs, dpi) {
+            return Some(frame);
+        }
         if subscript_geometry(base, sub, fs, dpi).is_some() {
             return super::font_frame_metrics::subscript_at_dpi(fs, dpi);
         }
+    }
+    if let LayoutKind::SubSup { base, sub, sup } = &value.kind {
+        if let Some(frame) = super::fraction_sup_frame::subsup_frame(base, sub, sup, fs, dpi) {
+            return Some(frame);
+        }
+    }
+    if matches!(&value.kind, LayoutKind::Sqrt { .. })
+        && super::fraction_sup_frame::line_extension(value, fs, dpi).is_some()
+    {
+        // 근호의 본체·상단 밴드가 만든 프레임을 다음 근호와 분수도 소비한다.
+        return Some((value.height, value.baseline));
     }
     if let LayoutKind::Superscript { base, sup } = &value.kind {
         if let Some(frame) = super::script_fraction_frame::frame(base, sup, fs, dpi) {

@@ -41,22 +41,49 @@ pub(super) fn ordinary_line(value: &LayoutBox, fs: f64) -> bool {
     font_line(value, fs) && !contains_prime(value) && !contains_cjk(value)
 }
 
-/// 같은 글자 줄 위의 근호가 추가한 상단 밴드다. 근 지수·다줄·복합 본체는
-/// 일반 글줄로 접지 않는다. 원 face의 줄 프레임과 자연 glyph 높이를 구별한다.
-pub(super) fn line_extension(value: &LayoutBox, fs: f64) -> Option<f64> {
+/// 같은 글자 줄과 그 줄을 감싼 근호의 추가 점유다.
+/// 다줄·분수·크기 변경은 글자 줄로 접지 않는다. 정상화된 줄은 원래 자식과
+/// 독립 폰트 프레임의 기준선 연결을 확인하며 자연 glyph 높이와 구별한다.
+pub(super) fn line_extension(value: &LayoutBox, fs: f64, dpi: f64) -> Option<f64> {
     if ordinary_line(value, fs) {
         return Some(0.0);
     }
     match &value.kind {
-        LayoutKind::Sqrt { index: None, body }
-            if ordinary_line(body, fs)
+        LayoutKind::Sqrt { index, body }
+            if index
+                .as_deref()
+                .is_none_or(|index| index.y >= 0.0 && index.y + index.height <= value.height)
                 && (value.font_size - fs).abs() <= f64::EPSILON * fs * 4.0 =>
         {
-            let extension = value.height - body.height;
+            line_extension(body, fs, dpi)?;
+            let (line_height, _) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+            let extension = value.height - line_height;
             (extension.is_finite() && extension >= 0.0).then_some(extension)
         }
-        LayoutKind::FontStyle { body, .. } => line_extension(body, fs),
-        LayoutKind::Row(items) if items.len() == 1 => line_extension(&items[0], fs),
+        LayoutKind::FontStyle { body, .. } => line_extension(body, fs, dpi),
+        LayoutKind::Row(items) if items.len() == 1 => {
+            let child = &items[0];
+            let extension = line_extension(child, fs, dpi)?;
+            if extension == 0.0 {
+                let (height, baseline) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+                let tolerance = f64::EPSILON * fs * 16.0;
+                if (value.height - height).abs() > tolerance
+                    || (value.baseline - baseline).abs() > tolerance
+                    || (child.y + child.baseline - baseline).abs() > tolerance
+                {
+                    return None;
+                }
+            } else {
+                let tolerance = f64::EPSILON * value.height.abs().max(fs) * 16.0;
+                if (value.height - child.height).abs() > tolerance
+                    || (value.baseline - child.baseline).abs() > tolerance
+                    || child.y.abs() > tolerance
+                {
+                    return None;
+                }
+            }
+            Some(extension)
+        }
         _ => None,
     }
 }
@@ -68,27 +95,28 @@ pub(super) fn source_fraction_frame(
     fs: f64,
     dpi: f64,
 ) -> Option<(f64, f64)> {
-    let above = line_extension(numer, fs)?;
-    let below = line_extension(denom, fs)?;
+    let above = line_extension(numer, fs, dpi)?;
+    let below = line_extension(denom, fs, dpi)?;
     let (height, baseline) = super::font_frame_metrics::fraction_at_dpi(fs, dpi)?;
     Some((height + above + below, baseline + above))
 }
 
-fn fraction_extensions(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
+fn fraction_extensions(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
     match &value.kind {
-        LayoutKind::Fraction { numer, denom, .. } => {
-            Some((line_extension(numer, fs)?, line_extension(denom, fs)?))
-        }
+        LayoutKind::Fraction { numer, denom, .. } => Some((
+            line_extension(numer, fs, dpi)?,
+            line_extension(denom, fs, dpi)?,
+        )),
         LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => {
-            fraction_extensions(body, fs)
+            fraction_extensions(body, fs, dpi)
         }
-        LayoutKind::Row(items) if items.len() == 1 => fraction_extensions(&items[0], fs),
+        LayoutKind::Row(items) if items.len() == 1 => fraction_extensions(&items[0], fs, dpi),
         _ => None,
     }
 }
 
 pub(super) fn frame(base: &LayoutBox, sup: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
-    let (above, below) = fraction_extensions(base, fs)?;
+    let (above, below) = fraction_extensions(base, fs, dpi)?;
     if !ordinary_line(sup, sup.font_size)
         || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
     {
@@ -111,4 +139,52 @@ pub(super) fn shift(base: &LayoutBox, sup: &LayoutBox, fs: f64, dpi: f64) -> Opt
     // 기존 단일 글자 첨자의 기준선 위치를 소비해 큰 본체의 shift를 해소한다.
     let plain_shift = sup_height - line_height + line_baseline * (1.0 - sup.font_size / fs);
     Some(fraction_baseline - sup_baseline + plain_shift)
+}
+
+/// 독립 출력에서 분수의 아래첨자는 일반 아래첨자와 같은 하강 확장을 예약한다.
+pub(super) fn subscript_frame(
+    base: &LayoutBox,
+    sub: &LayoutBox,
+    fs: f64,
+    dpi: f64,
+) -> Option<(f64, f64)> {
+    if !ordinary_line(sub, sub.font_size)
+        || (sub.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
+    {
+        return None;
+    }
+    let (above, below) = fraction_extensions(base, fs, dpi)?;
+    let (fraction_height, fraction_baseline) = super::font_frame_metrics::fraction_at_dpi(fs, dpi)?;
+    let (sub_height, _) = super::font_frame_metrics::subscript_at_dpi(fs, dpi)?;
+    let (line_height, _) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+    Some((
+        fraction_height + above + below + sub_height - line_height,
+        fraction_baseline + above,
+    ))
+}
+
+pub(super) fn subscript_geometry(
+    base: &LayoutBox,
+    sub: &LayoutBox,
+    fs: f64,
+    dpi: f64,
+) -> Option<(f64, f64)> {
+    let (height, _) = subscript_frame(base, sub, fs, dpi)?;
+    let (line_height, line_baseline) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+    let sub_depth = (line_height - line_baseline) * sub.font_size / fs;
+    Some((height - sub_depth - sub.baseline, height))
+}
+
+pub(super) fn subsup_frame(
+    base: &LayoutBox,
+    sub: &LayoutBox,
+    sup: &LayoutBox,
+    fs: f64,
+    dpi: f64,
+) -> Option<(f64, f64)> {
+    subscript_frame(base, sub, fs, dpi)?;
+    let (height, baseline) = frame(base, sup, fs, dpi)?;
+    let (sub_height, _) = super::font_frame_metrics::subscript_at_dpi(fs, dpi)?;
+    let (line_height, _) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+    Some((height + sub_height - line_height, baseline))
 }

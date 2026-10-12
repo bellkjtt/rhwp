@@ -14,7 +14,7 @@ fn source_position(
 ) -> Option<(f64, f64)> {
     let (height, baseline) =
         super::super::fraction_sup_frame::source_fraction_frame(numer, denom, fs, dpi)?;
-    let above = super::super::fraction_sup_frame::line_extension(numer, fs)?;
+    let above = super::super::fraction_sup_frame::line_extension(numer, fs, dpi)?;
     let (line_height, line_baseline) = super::super::font_frame_metrics::line_at_dpi(fs, dpi)?;
     // 논리 글줄의 기준선과 자식 glyph의 자연 기준선을 분리한다.
     // 측정에 쓴 독립 분수 높이의 첫/마지막 글줄에 실제 표시도 배치한다.
@@ -159,9 +159,11 @@ impl EqLayout {
         };
         let body_w = b.width + right_pad;
         let top_band = if self.hancom_math_face {
-            super::super::font_frame_metrics::line_at_dpi(fs, self.dpi)
-                .map_or(fs, |(height, _)| height)
-                * 0.15
+            super::super::radical_line_frame::top_band(&b, fs, self.dpi).unwrap_or_else(|| {
+                super::super::font_frame_metrics::line_at_dpi(fs, self.dpi)
+                    .map_or(fs, |(height, _)| height)
+                    * 0.15
+            })
         } else {
             pad
         };

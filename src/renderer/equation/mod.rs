@@ -37,6 +37,7 @@ pub(crate) mod legacy_hwpeq;
 mod logical_font_frame;
 pub mod parser;
 pub(crate) mod radical_outline;
+mod radical_line_frame;
 mod relation_outline;
 mod round_stretch;
 pub mod svg_render;
