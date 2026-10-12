@@ -23,3 +23,12 @@ Issue: #7642
 - `ownership-hancom-2020.hwp`: `c8131c4551489cdb2b93a0ca3f52d666984c2c078b738b466f2a19fcd36bacb5`
 - `ownership-hancom-2020.pdf`: `5356dfa18a1a139096a5ca25e1b3bb5c40bcf4c05f8ccfdc64a56d120a6f23b0`
 - `ownership-input.hwpx`: `32ff253e5fdae35c83ed322b5439862524bc63abe86d0556676b9f7a0d1cc861`
+
+## 항의 순서 대조 5쪽
+
+별도 `alignment-order-*` 입력은 단어 EQALIGN을 첫 식으로 두고, 그룹 식·동일 단어 식·분수 식·동일 단어 식 순서로 Print했다. 다섯 쪽 모두 & 열을 공유했다. 이전 HWP의 로컬 행 정렬과 달라 원인을 아직 특정하지 못했다.
+정상 저장 job `4cc5dd96-0560-47eb-a676-144874dec0b5`, Print job `9b77a5c3-ff5b-455c-a347-5247e7b8341c`. 엔진/인쇄 방식은 위 32쪽 대조군과 같다.
+
+- `alignment-order-hancom-2020.hwp`: `7ed07ee13d97c09823c78fd35241da1709258edec3b36519a0b03088884fc1cd`
+- `alignment-order-hancom-2020.pdf`: `dbaf9a1e8126986666543289d3be7f870f429db848ad126e7ab6df28e89f24c3`
+- `alignment-order-input.hwpx`: `e6937fa7a0b596af83d4c8d5ed972b28f28259a1c4cc871b08daecb95d008bbc`
