@@ -29,7 +29,7 @@ fn ordinary_glyph(body: &LayoutBox) -> bool {
                     && (text.chars().all(|ch| ch.is_ascii_alphabetic())
                         || super::layout::is_styled_variable(text)))
         }
-        LayoutKind::FontStyle { body, .. } => ordinary_glyph(body),
+        LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => ordinary_glyph(body),
         LayoutKind::Row(children) if children.len() == 1 => ordinary_glyph(&children[0]),
         _ => false,
     }
@@ -110,7 +110,9 @@ fn angular_relation(body: &LayoutBox) -> bool {
         LayoutKind::Symbol(text) | LayoutKind::MathSymbol(text) => {
             matches!(text.as_str(), "<" | ">" | "≤" | "≥")
         }
-        LayoutKind::FontStyle { body, .. } => angular_relation(body),
+        LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => {
+            angular_relation(body)
+        }
         LayoutKind::Row(children) if children.len() == 1 => angular_relation(&children[0]),
         _ => false,
     }

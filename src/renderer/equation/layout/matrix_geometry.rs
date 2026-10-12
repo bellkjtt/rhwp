@@ -298,10 +298,21 @@ impl EqLayout {
         let mut first_baseline = None;
         for (left, right) in &mut laid_rows {
             // 왼쪽: 오른쪽 정렬 (& 기준으로 맞춤)
-            left.x = max_left_w - left.width;
+            left.x = if self.hancom_math_face {
+                0.0
+            } else {
+                max_left_w - left.width
+            };
             // 오른쪽: & 기준 바로 뒤
             let has_right = !matches!(right.kind, LayoutKind::Empty);
-            right.x = max_left_w + if has_right { align_gap } else { 0.0 };
+            // 한컴 Print의 서로 다른 글자/분수 폭과 역순 대조는 각 행의
+            // 왼쪽 원점을 공유하고 & 뒤를 그 행의 폭으로 전진시킨다.
+            let anchor = if self.hancom_math_face {
+                left.width
+            } else {
+                max_left_w
+            };
+            right.x = anchor + if has_right { align_gap } else { 0.0 };
 
             let (left_h, left_bl) = self.matrix_cell_frame(left, fs);
             let (right_h, right_bl) = self.matrix_cell_frame(right, fs);
@@ -367,6 +378,11 @@ impl EqLayout {
             .collect();
 
         let max_w = row_boxes.iter().map(|b| b.width).fold(0.0f64, f64::max);
+        let max_w = if max_w == 0.0 && self.hancom_math_face && !row_boxes.is_empty() {
+            fs * 0.5
+        } else {
+            max_w
+        };
         let mut y = 0.0;
         for b in &mut row_boxes {
             b.x = match align {

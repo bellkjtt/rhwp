@@ -299,6 +299,10 @@ fn dump_layout(out: &mut String, lb: &LayoutBox, indent: usize) {
             let _ = writeln!(out, "{pad}Decoration({kind:?}) {metrics}");
             dump_layout(out, body, indent + 1);
         }
+        LayoutKind::Color { rgb, body } => {
+            let _ = writeln!(out, "{pad}Color({rgb:?}) {metrics}");
+            dump_layout(out, body, indent + 1);
+        }
         LayoutKind::FontStyle { style, body } => {
             let _ = writeln!(out, "{pad}FontStyle({style:?}) {metrics}");
             dump_layout(out, body, indent + 1);

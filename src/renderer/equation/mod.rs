@@ -94,6 +94,18 @@ pub fn intrinsic_size_hwp(script: &str, font_size: u32) -> (u32, u32) {
 /// 일반 수식의 저장 프레임과 보호된 크기는 유지한다. 독립 한컴 출력에서
 /// 확인한 글자 줄·윗줄·단일 위첨자·BOX의 낡은 캐시만 논리 상자로 재발행한다.
 pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u32, u32, i32) {
+    // 표시 내용이 없는 구문과 유효한 빈 템플릿은 다르다. 정상 한컴 저장본의
+    // 인자 없는 PILE은 범위 밖 기준선을 가진 무효 캐시를 남기지만, 호스트의
+    // 빈 글줄은 여전히 점유한다. 캐시를 표시 상자의 크기로 보정하지 않는다.
+    if !equation.common.size_protect
+        && !(0..=100).contains(&equation.baseline)
+        && matches!(
+            parser::EqParser::for_document(document_script::tokenize(&equation.script)).parse(),
+            ast::EqNode::Empty
+        )
+    {
+        return (0, 0, 0);
+    }
     if let Some(metrics) = uncached_flow_metrics::metrics(equation) {
         return metrics;
     }
@@ -184,7 +196,9 @@ fn math_layout_has_line_break(value: &layout::LayoutBox) -> bool {
     match &value.kind {
         layout::LayoutKind::Newline => true,
         layout::LayoutKind::Row(items) => items.iter().any(math_layout_has_line_break),
-        layout::LayoutKind::FontStyle { body, .. } => math_layout_has_line_break(body),
+        layout::LayoutKind::Color { body, .. } | layout::LayoutKind::FontStyle { body, .. } => {
+            math_layout_has_line_break(body)
+        }
         _ => false,
     }
 }
@@ -200,7 +214,9 @@ fn simple_box_height(value: &layout::LayoutBox, fs: f64) -> Option<f64> {
             .iter()
             .filter_map(|item| simple_box_height(item, fs))
             .max_by(f64::total_cmp),
-        layout::LayoutKind::FontStyle { body, .. } => simple_box_height(body, fs),
+        layout::LayoutKind::Color { body, .. } | layout::LayoutKind::FontStyle { body, .. } => {
+            simple_box_height(body, fs)
+        }
         layout::LayoutKind::Decoration { body, .. }
         | layout::LayoutKind::Sqrt { body, .. }
         | layout::LayoutKind::Paren { body, .. } => simple_box_height(body, fs),
@@ -222,7 +238,8 @@ fn simple_box_height(value: &layout::LayoutBox, fs: f64) -> Option<f64> {
 fn is_simple_box_expression(value: &layout::LayoutBox) -> bool {
     match &value.kind {
         layout::LayoutKind::Row(items) => items.iter().all(is_simple_box_expression),
-        layout::LayoutKind::FontStyle { body, .. }
+        layout::LayoutKind::Color { body, .. }
+        | layout::LayoutKind::FontStyle { body, .. }
         | layout::LayoutKind::Decoration { body, .. }
         | layout::LayoutKind::Paren { body, .. } => is_simple_box_expression(body),
         layout::LayoutKind::Sqrt { body, index } => {

@@ -55,6 +55,8 @@ pub enum LayoutKind {
     },
     /// 함수 이름 (로만체)
     Function(String),
+    /// 색 범위는 배치와 무관하며 모든 출력 경로에 같은 본체를 공급한다.
+    Color { rgb: [u8; 3], body: Box<LayoutBox> },
     /// 분수
     Fraction {
         numer: Box<LayoutBox>,

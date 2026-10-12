@@ -17,6 +17,7 @@ mod integral_placement;
 mod ladder_geometry;
 mod limit_geometry;
 mod literal_text;
+mod long_div_geometry;
 mod matrix_geometry;
 mod matrix_row_frame;
 mod paren_geometry;
@@ -215,11 +216,30 @@ impl EqLayout {
             EqNode::Cases { rows } => self.layout_cases(rows, fs),
             EqNode::EqAlign { rows } => self.layout_eqalign(rows, fs),
             EqNode::Rel { arrow, over, under } => self.layout_rel(arrow, over, under, fs),
+            EqNode::LongDiv {
+                divisor,
+                quotient,
+                body,
+            } => self.layout_long_div(divisor, quotient, body, fs),
             EqNode::Pile { rows, align } => self.layout_pile(rows, *align, fs),
             EqNode::Paren { left, right, body } => self.layout_paren(left, right, body, fs),
             EqNode::Decoration { kind, body } => self.layout_decoration(*kind, body, fs),
             EqNode::FontStyle { style, body } => self.layout_font_style(*style, body, fs),
-            EqNode::Color { body, .. } => self.layout_node(body, fs),
+            EqNode::Color { r, g, b, body } => {
+                let child = self.layout_node(body, fs);
+                LayoutBox {
+                    font_size: fs,
+                    x: 0.0,
+                    y: 0.0,
+                    width: child.width,
+                    height: child.height,
+                    baseline: child.baseline,
+                    kind: LayoutKind::Color {
+                        rgb: [*r, *g, *b],
+                        body: Box::new(child),
+                    },
+                }
+            }
             EqNode::Space(kind) => self.layout_space(*kind, fs),
             EqNode::Newline => LayoutBox {
                 font_size: fs,

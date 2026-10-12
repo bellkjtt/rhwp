@@ -55,7 +55,9 @@ impl EqParser {
     /// EQALIGN 파싱: EQALIGN{row1_left & row1_right # row2_left & row2_right}
     pub(super) fn parse_eqalign(&mut self) -> EqNode {
         if !self.expect(TokenType::LBrace) {
-            return EqNode::Empty;
+            return EqNode::EqAlign {
+                rows: vec![(EqNode::Empty, EqNode::Empty)],
+            };
         }
 
         let end = self.find_matching_brace(self.pos);

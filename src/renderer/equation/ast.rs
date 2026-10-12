@@ -113,6 +113,13 @@ pub enum EqNode {
         under: Option<Box<EqNode>>, // BUILDREL은 None
     },
 
+    /// 긴 나눗셈: LONGDIV{제수}{몫}{피제수}
+    LongDiv {
+        divisor: Box<EqNode>,
+        quotient: Box<EqNode>,
+        body: Box<EqNode>,
+    },
+
     /// 자동 크기 괄호: LEFT ( ... RIGHT )
     Paren {
         left: String,

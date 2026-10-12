@@ -4519,6 +4519,11 @@ export class CanvasKitLayerRenderer {
             color,
             fontSize,
           );
+      case 'color':
+        return this.renderEquationBox(
+          canvas, layout.kind.body, x, y, layout.kind.color, fontSize,
+          italic, bold, depth + 1, budget,
+        );
       case 'fontStyle': {
         if (!['roman', 'italic', 'bold'].includes(layout.kind.fontStyle)) return false;
         const nextItalic = layout.kind.fontStyle === 'roman'

@@ -32,7 +32,9 @@ fn contains_cjk(value: &LayoutBox) -> bool {
         | LayoutKind::Function(text)
         | LayoutKind::FontGlyph { text, .. } => super::text_has_cjk(text),
         LayoutKind::Row(items) => items.iter().any(contains_cjk),
-        LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => contains_cjk(body),
+        LayoutKind::Color { body, .. }
+        | LayoutKind::FontStyle { body, .. }
+        | LayoutKind::Paren { body, .. } => contains_cjk(body),
         _ => false,
     }
 }
@@ -60,7 +62,9 @@ pub(super) fn line_extension(value: &LayoutBox, fs: f64, dpi: f64) -> Option<f64
             let extension = value.height - line_height;
             (extension.is_finite() && extension >= 0.0).then_some(extension)
         }
-        LayoutKind::FontStyle { body, .. } => line_extension(body, fs, dpi),
+        LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => {
+            line_extension(body, fs, dpi)
+        }
         LayoutKind::Row(items) if items.len() == 1 => {
             let child = &items[0];
             let extension = line_extension(child, fs, dpi)?;
@@ -107,9 +111,9 @@ fn fraction_extensions(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64
             line_extension(numer, fs, dpi)?,
             line_extension(denom, fs, dpi)?,
         )),
-        LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => {
-            fraction_extensions(body, fs, dpi)
-        }
+        LayoutKind::Color { body, .. }
+        | LayoutKind::FontStyle { body, .. }
+        | LayoutKind::Paren { body, .. } => fraction_extensions(body, fs, dpi),
         LayoutKind::Row(items) if items.len() == 1 => fraction_extensions(&items[0], fs, dpi),
         _ => None,
     }

@@ -54,7 +54,9 @@ fn bar_font_line(value: &LayoutBox, fs: f64) -> bool {
 fn accent_font_line(value: &LayoutBox, fs: f64, accent: DecoKind) -> bool {
     match &value.kind {
         LayoutKind::Decoration { kind, body, .. } if *kind == accent => font_line(body, fs),
-        LayoutKind::FontStyle { body, .. } => accent_font_line(body, fs, accent),
+        LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => {
+            accent_font_line(body, fs, accent)
+        }
         LayoutKind::Row(items) if items.len() == 1 => accent_font_line(&items[0], fs, accent),
         _ => false,
     }
@@ -88,7 +90,9 @@ fn bar_sup_radical_body(value: &LayoutBox, fs: f64) -> Option<bool> {
         {
             Some(true)
         }
-        LayoutKind::FontStyle { body, .. } => bar_sup_radical_body(body, fs),
+        LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => {
+            bar_sup_radical_body(body, fs)
+        }
         LayoutKind::Row(items) => items.iter().try_fold(false, |has_sup, item| {
             Some(has_sup | bar_sup_radical_body(item, fs)?)
         }),
@@ -120,7 +124,9 @@ pub(super) fn font_line(value: &LayoutBox, fs: f64) -> bool {
         LayoutKind::Row(items) => {
             horizontal_row(value, items) && items.iter().all(|item| font_line(item, fs))
         }
-        LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => font_line(body, fs),
+        LayoutKind::Color { body, .. }
+        | LayoutKind::FontStyle { body, .. }
+        | LayoutKind::Paren { body, .. } => font_line(body, fs),
         _ => false,
     }
 }
@@ -136,7 +142,8 @@ pub(super) fn dyad_font_line(value: &LayoutBox, fs: f64) -> bool {
             | LayoutKind::MathSymbol(text)
             | LayoutKind::Function(text)
             | LayoutKind::FontGlyph { text, .. } => super::text_has_cjk(text),
-            LayoutKind::FontStyle { body, .. }
+            LayoutKind::Color { body, .. }
+            | LayoutKind::FontStyle { body, .. }
             | LayoutKind::Decoration { body, .. }
             | LayoutKind::Paren { body, .. } => contains_cjk(body),
             LayoutKind::Row(items) => items.iter().any(contains_cjk),
@@ -150,7 +157,9 @@ pub(super) fn dyad_font_line(value: &LayoutBox, fs: f64) -> bool {
                 body,
                 ..
             } if font_line(body, fs) => Some(true),
-            LayoutKind::FontStyle { body, .. } => contains_dyad(body, fs),
+            LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => {
+                contains_dyad(body, fs)
+            }
             LayoutKind::Row(items) => items
                 .iter()
                 .try_fold(false, |found, item| Some(found | contains_dyad(item, fs)?)),
@@ -223,7 +232,8 @@ pub(super) fn contains_prime(value: &LayoutBox) -> bool {
             s.chars().any(|ch| matches!(ch, '′' | '″' | '‴'))
         }
         LayoutKind::Row(items) => items.iter().any(contains_prime),
-        LayoutKind::FontStyle { body, .. }
+        LayoutKind::Color { body, .. }
+        | LayoutKind::FontStyle { body, .. }
         | LayoutKind::Paren { body, .. }
         | LayoutKind::Decoration { body, .. } => contains_prime(body),
         _ => false,
@@ -249,7 +259,9 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
         } => {
             return frame_with_style(body, fs, dpi, false);
         }
-        LayoutKind::Paren { body, .. } => return frame_with_style(body, fs, dpi, roman),
+        LayoutKind::Color { body, .. } | LayoutKind::Paren { body, .. } => {
+            return frame_with_style(body, fs, dpi, roman);
+        }
         LayoutKind::Row(items) if !items.is_empty() && horizontal_row(value, items) => {
             let mut ascent = 0.0_f64;
             let mut descent = 0.0_f64;
@@ -394,7 +406,9 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
             let percent = ((metrics.fraction.1 + extra_numer) / height * 100.0).round();
             Some((height, height * percent / 100.0))
         }
-        LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => frame(body, fs, dpi),
+        LayoutKind::Color { body, .. }
+        | LayoutKind::FontStyle { body, .. }
+        | LayoutKind::Paren { body, .. } => frame(body, fs, dpi),
         LayoutKind::Row(items) if horizontal_row(value, items) => {
             let mut ascent = 0.0_f64;
             let mut descent = 0.0_f64;

@@ -14,6 +14,7 @@ pub(super) fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> 
         Some((height, height * percent / 100.0))
     };
     match &value.kind {
+        LayoutKind::Color { body, .. } => frame(body, fs, dpi),
         LayoutKind::Space(_) => Some((fs, fs * 0.86)),
         LayoutKind::FontStyle {
             style: FontStyleKind::Roman,

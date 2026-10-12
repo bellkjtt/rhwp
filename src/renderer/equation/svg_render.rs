@@ -493,6 +493,10 @@ fn render_box(
                 draw_decoration(svg, *kind, mid_x, deco_y, body.width, color, fs);
             }
         }
+        LayoutKind::Color { rgb, body } => {
+            let body_color = format!("#{:02x}{:02x}{:02x}", rgb[0], rgb[1], rgb[2]);
+            render_box(svg, body, x, y, &body_color, fs, italic, bold);
+        }
         LayoutKind::FontStyle { style, body } => {
             let (new_italic, new_bold) = match style {
                 FontStyleKind::Roman | FontStyleKind::SansSerif | FontStyleKind::Monospace => {

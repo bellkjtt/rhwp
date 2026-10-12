@@ -2077,6 +2077,7 @@ fn canvaskit_equation_layout_is_supported(layout: &LayoutBox) -> bool {
                         | DecoKind::StrikeThrough
                 ) && child(body, remaining_nodes)
             }
+            LayoutKind::Color { body, .. } => child(body, remaining_nodes),
             LayoutKind::FontStyle { style, body } => {
                 matches!(
                     style,

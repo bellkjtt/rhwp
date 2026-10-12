@@ -9,7 +9,21 @@ impl EqLayout {
     pub(super) fn layout_plain_matrix(&self, rows: &[Vec<EqNode>], fs: f64) -> LayoutBox {
         let mut cells: Vec<Vec<LayoutBox>> = rows
             .iter()
-            .map(|row| row.iter().map(|cell| self.layout_node(cell, fs)).collect())
+            .map(|row| {
+                let mut boxes: Vec<_> = row.iter().map(|cell| self.layout_node(cell, fs)).collect();
+                if self.hancom_math_face {
+                    // 빈 템플릿/명시적 빈 칸도 반 em의 논리 슬롯을 소유한다.
+                    if boxes.is_empty() {
+                        boxes.push(self.layout_node(&EqNode::Empty, fs));
+                    }
+                    for cell in &mut boxes {
+                        if matches!(cell.kind, LayoutKind::Empty) {
+                            cell.width = fs * 0.5;
+                        }
+                    }
+                }
+                boxes
+            })
             .collect();
         let columns = cells.iter().map(Vec::len).max().unwrap_or(0);
         let mut widths = vec![0.0_f64; columns];

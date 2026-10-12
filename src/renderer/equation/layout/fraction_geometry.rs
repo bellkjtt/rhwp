@@ -236,7 +236,9 @@ impl EqLayout {
 fn ends_round_delimiter(value: &LayoutBox) -> bool {
     match &value.kind {
         LayoutKind::Paren { right, .. } => right == ")",
-        LayoutKind::FontStyle { body, .. } => ends_round_delimiter(body),
+        LayoutKind::Color { body, .. } | LayoutKind::FontStyle { body, .. } => {
+            ends_round_delimiter(body)
+        }
         LayoutKind::Row(items) => items.last().is_some_and(ends_round_delimiter),
         _ => false,
     }

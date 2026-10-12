@@ -3234,6 +3234,15 @@ fn write_equation_layout_kind(buf: &mut String, layout: &LayoutBox) {
             }
             buf.push('}');
         }
+        LayoutKind::Color { rgb, body } => {
+            let _ = write!(
+                buf,
+                "{{\"type\":\"color\",\"color\":\"#{:02x}{:02x}{:02x}\",\"body\":",
+                rgb[0], rgb[1], rgb[2]
+            );
+            write_equation_layout_box(buf, body);
+            buf.push('}');
+        }
         LayoutKind::FontStyle { style, body } => {
             let _ = write!(
                 buf,

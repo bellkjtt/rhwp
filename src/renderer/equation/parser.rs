@@ -168,7 +168,7 @@ impl EqParser {
         self.parse_expression()
     }
 
-    /// OVER/ATOP 중위 연산자 처리. 현재 토큰이 OVER/ATOP 이면 children 의 마지막 요소를
+    /// OVER/ATOP/CHOOSE 중위 연산자 처리. 현재 토큰이 OVER/ATOP 이면 children 의 마지막 요소를
     /// pop 하여 분수/atop 으로 결합한다. 처리했으면 true, 아니면 false.
     /// CASES/PILE/EQALIGN 등 row-collecting 파서가 분수를 인식하지 못하는 결함(#505)을
     /// 방지하기 위해 모든 token-collecting 루프에서 호출한다.
@@ -190,7 +190,8 @@ impl EqParser {
         let val = self.current_value();
         let is_over = Self::cmd_eq(val, "OVER");
         let is_atop = Self::cmd_eq(val, "ATOP");
-        if !is_over && !is_atop {
+        let is_choose = Self::cmd_eq(val, "CHOOSE");
+        if !is_over && !is_atop && !is_choose {
             *over_run = 0; // OVER/ATOP 이 아닌 명령 — 연쇄 종료, 카운터 리셋.
             return false;
         }
@@ -203,7 +204,16 @@ impl EqParser {
         self.pos += 1;
         let top = children.pop().unwrap_or(EqNode::Empty);
         let bottom = self.parse_element();
-        children.push(if is_atop {
+        children.push(if is_choose {
+            EqNode::Paren {
+                left: "(".into(),
+                right: ")".into(),
+                body: Box::new(EqNode::Atop {
+                    top: Box::new(top),
+                    bottom: Box::new(bottom),
+                }),
+            }
+        } else if is_atop {
             EqNode::Atop {
                 top: Box::new(top),
                 bottom: Box::new(bottom),
@@ -460,13 +470,11 @@ impl EqParser {
                 let divisor = self.parse_single_or_group();
                 let quotient = self.parse_single_or_group();
                 let body = self.parse_single_or_group();
-                EqNode::Row(vec![
-                    quotient,
-                    EqNode::Symbol("÷".to_string()),
-                    divisor,
-                    EqNode::Symbol("=".to_string()),
-                    body,
-                ])
+                EqNode::LongDiv {
+                    divisor: Box::new(divisor),
+                    quotient: Box::new(quotient),
+                    body: Box::new(body),
+                }
             }
             EqCommandClass::Ladder => self.parse_matrix(if cu == "SLADDER" {
                 MatrixStyle::ShortLadder
@@ -1260,7 +1268,10 @@ impl EqParser {
     /// 행렬 파싱: MATRIX{a & b # c & d}
     fn parse_matrix(&mut self, style: MatrixStyle) -> EqNode {
         if !self.expect(TokenType::LBrace) {
-            return EqNode::Empty;
+            return EqNode::Matrix {
+                rows: vec![vec![]],
+                style,
+            };
         }
 
         let end = self.find_matching_brace(self.pos);
@@ -1334,7 +1345,7 @@ impl EqParser {
             }
         }
 
-        if !current_row.is_empty() {
+        if !current_row.is_empty() || rows.is_empty() {
             rows.push(EqNode::Row(current_row).simplify());
         }
 
@@ -1489,10 +1500,12 @@ impl EqParser {
         }
     }
 
-    /// COLOR{R,G,B}{body} 파싱
+    /// COLOR의 색 인자와 본체를 각각 소비한다. 비 RGB 색 인자는 한컴처럼 무시한다.
     fn parse_color(&mut self) -> EqNode {
         if !self.expect(TokenType::LBrace) {
-            return EqNode::Empty;
+            // 독립 Print는 이름/미지원 색 인자를 표시하지 않고 본체를 검정으로 그린다.
+            let _color_argument = self.parse_element();
+            return self.parse_element();
         }
 
         // R, G, B 값 읽기
