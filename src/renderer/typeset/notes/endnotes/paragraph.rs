@@ -62,7 +62,7 @@ impl TypesetEngine {
         let projected_endnote = super::row_projection::project_equation_rows(
             en_ctrl,
             styles,
-            st.profile.hwpx_stored_layout() && !st.profile.session_edited() && st.col_count > 1,
+            st,
         );
         let en_ctrl = projected_endnote.as_ref();
         let EndnoteEmitVars {

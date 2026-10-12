@@ -78,6 +78,9 @@ pub(super) fn stored_endnote_column_cut(
     if st.profile.session_edited()
         || st.col_count <= 1
         || para_index < paragraphs.len()
+        || st
+            .reissued_endnote_rows
+            .contains(&(para_index - paragraphs.len()))
         || !endnote_column_starts_at_stored_break(st, paragraphs)
     {
         return None;

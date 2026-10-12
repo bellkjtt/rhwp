@@ -7,8 +7,10 @@ use std::borrow::Cow;
 pub(super) fn project_equation_rows<'a>(
     original: &'a Endnote,
     styles: &ResolvedStyleSet,
-    stored_hwpx_columns: bool,
+    st: &mut crate::renderer::typeset::TypesetState,
 ) -> Cow<'a, Endnote> {
+    let stored_hwpx_columns =
+        st.profile.hwpx_stored_layout() && !st.profile.session_edited() && st.col_count > 1;
     let mut normalized = Cow::Borrowed(original);
     if stored_hwpx_columns {
         for (paragraph_index, paragraph) in original.paragraphs.iter().enumerate() {
@@ -40,6 +42,25 @@ pub(super) fn project_equation_rows<'a>(
         styles,
     ) {
         Some(paragraphs) => {
+            let first_local_index = st.endnote_paragraphs.len();
+            for (index, (source, derived)) in
+                normalized.paragraphs.iter().zip(&paragraphs).enumerate()
+            {
+                // 원래 폭·문자 분할은 유지한다. 실제 높이로 재발행한 세로 좌표만
+                // 과거 단 경계의 근거로 사용하지 않는다.
+                if source
+                    .line_segs
+                    .iter()
+                    .zip(&derived.line_segs)
+                    .any(|(before, after)| {
+                        before.vertical_pos != after.vertical_pos
+                            || before.line_height != after.line_height
+                            || before.line_spacing != after.line_spacing
+                    })
+                {
+                    st.record_reissued_endnote_rows(first_local_index + index);
+                }
+            }
             let mut derived = normalized.into_owned();
             derived.paragraphs = paragraphs;
             Cow::Owned(derived)

@@ -471,6 +471,12 @@ impl TypesetState {
     pub(in crate::renderer::typeset) fn begin_endnote_paragraphs(&mut self, base: usize) {
         self.data.endnote_para_base = Some(base);
     }
+    pub(in crate::renderer::typeset) fn record_reissued_endnote_rows(
+        &mut self,
+        local_index: usize,
+    ) {
+        self.data.reissued_endnote_rows.insert(local_index);
+    }
     pub(in crate::renderer::typeset) fn append_endnote_measured_table(
         &mut self,
         table: crate::renderer::height_measurer::MeasuredTable,
