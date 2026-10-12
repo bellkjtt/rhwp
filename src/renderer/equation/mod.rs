@@ -144,7 +144,12 @@ pub(crate) fn normalized_simple_math_metrics(
     let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
     let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
     let fs = super::hwpunit_to_px(equation.font_size.max(1) as i32, super::DEFAULT_DPI);
-    if intrinsic.width <= 0.0 || math_layout_has_line_break(&intrinsic) {
+    if intrinsic.width <= 0.0
+        || math_layout_has_line_break(&intrinsic)
+        || logical_font_frame::dyad_font_line(&intrinsic, fs)
+    {
+        // DYAD 글자 줄의 저장 높이는 표시 글리프보다 큰 예약 영역일 수 있다.
+        // paint가 보존하는 그 영역을 일반 글자 캐시 재발행으로 줄이지 않는다.
         return None;
     }
     let single_box_line =
