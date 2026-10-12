@@ -39,7 +39,7 @@ fn reserves_operator_gap(node: &EqNode) -> bool {
             ..
         } => true,
         EqNode::Paren { right, .. } => !right.is_empty(),
-        EqNode::FontStyle { body, .. } => reserves_operator_gap(body),
+        EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => reserves_operator_gap(body),
         EqNode::Row(items) => items.last().is_some_and(reserves_operator_gap),
         _ => false,
     }
@@ -74,7 +74,69 @@ fn operand_end(node: &EqNode) -> bool {
     }
 }
 
+fn boundary_element(node: &EqNode, first: bool) -> &EqNode {
+    match node {
+        EqNode::Row(items) => {
+            let mut significant = items
+                .iter()
+                .filter(|item| !matches!(item, EqNode::Space(_) | EqNode::Empty));
+            let edge = if first {
+                significant.next()
+            } else {
+                significant.next_back()
+            };
+            edge.map_or(node, |item| boundary_element(item, first))
+        }
+        EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => {
+            boundary_element(body, first)
+        }
+        _ => node,
+    }
+}
+
+fn before_operator_gap(
+    previous: &EqNode,
+    adjacent: bool,
+    source: bool,
+    padding: f64,
+    fs: f64,
+) -> f64 {
+    if (operator(previous) && adjacent)
+        || opening_delimiter(previous)
+        || (source && reserves_operator_gap(previous))
+    {
+        0.0
+    } else if source && ends_with_script(previous) {
+        padding.max(fs * 0.2)
+    } else {
+        padding
+    }
+}
+
 impl EqLayout {
+    /// &는 행 소속 경계다. 앞뒤 항의 일반 연산자 간격 계약을 한 번만 소비한다.
+    pub(super) fn operator_boundary_gap(&self, left: &EqNode, right: &EqNode, fs: f64) -> f64 {
+        if matches!(boundary_element(left, false), EqNode::Empty) {
+            return 0.0;
+        }
+        let next = boundary_element(right, true);
+        if !operator(next) {
+            return 0.0;
+        }
+        let text = match next {
+            EqNode::Symbol(text) | EqNode::MathSymbol(text) => text,
+            _ => return 0.0,
+        };
+        let source = source_font_symbol::operator_metrics(text, fs, self.dpi);
+        before_operator_gap(
+            boundary_element(left, false),
+            true,
+            source.is_some(),
+            source.map_or(fs * 0.15, |(_, pad)| pad),
+            fs,
+        )
+    }
+
     pub(super) fn row_children(&self, nodes: &[EqNode], fs: f64) -> Vec<LayoutBox> {
         let significant: Vec<usize> = nodes
             .iter()
@@ -128,22 +190,16 @@ impl EqLayout {
                     source_font_symbol::operator_metrics(text, fs, self.dpi)
                 };
                 let padding = source_metrics.map_or(fs * 0.15, |(_, padding)| padding);
-                let left = if position == 0
-                    || (operator(&nodes[significant[position - 1]])
-                        && !explicit_gap(nodes, significant[position - 1], significant[position]))
-                    || opening_delimiter(&nodes[significant[position - 1]])
-                    || (source_metrics.is_some()
-                        && reserves_operator_gap(&nodes[significant[position - 1]]))
-                {
+                let left = if position == 0 {
                     0.0
                 } else {
-                    if source_metrics.is_some()
-                        && ends_with_script(&nodes[significant[position - 1]])
-                    {
-                        padding.max(fs * 0.20)
-                    } else {
-                        padding
-                    }
+                    before_operator_gap(
+                        &nodes[significant[position - 1]],
+                        !explicit_gap(nodes, significant[position - 1], significant[position]),
+                        source_metrics.is_some(),
+                        padding,
+                        fs,
+                    )
                 };
                 let right = if position + 1 == significant.len()
                     || (operator(&nodes[significant[position + 1]])

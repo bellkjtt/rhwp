@@ -6,7 +6,9 @@ impl EqParser {
     /// 조건식 파싱: CASES{...}
     pub(super) fn parse_cases(&mut self) -> EqNode {
         if !self.expect(TokenType::LBrace) {
-            return EqNode::Empty;
+            return EqNode::Cases {
+                rows: vec![EqNode::Empty],
+            };
         }
 
         let end = self.find_matching_brace(self.pos);
@@ -43,9 +45,8 @@ impl EqParser {
             }
         }
 
-        if !current_row.is_empty() || !rows.is_empty() {
-            rows.push(EqNode::Row(current_row).simplify());
-        }
+        // 명시적 빈 템플릿도 한 논리 행을 예약한다.
+        rows.push(EqNode::Row(current_row).simplify());
 
         self.expect(TokenType::RBrace);
 

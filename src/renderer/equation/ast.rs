@@ -56,6 +56,12 @@ pub enum EqNode {
         bottom: Box<EqNode>,
     },
 
+    /// 조합: CHOOSE/BINOM은 일반 ATOP을 감싼 괄호와 다른 행 프레임을 소유한다.
+    Binomial {
+        top: Box<EqNode>,
+        bottom: Box<EqNode>,
+    },
+
     /// 제곱근: SQRT x, SQRT(n) of x
     Sqrt {
         index: Option<Box<EqNode>>,

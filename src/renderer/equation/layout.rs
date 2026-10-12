@@ -6,7 +6,9 @@
 use super::ast::*;
 use super::symbols::FontStyleKind;
 
+mod atop_geometry;
 mod big_op_geometry;
+mod binomial_geometry;
 mod cases_columns;
 mod decoration_geometry;
 mod delimiter_advance;
@@ -206,6 +208,7 @@ impl EqLayout {
             EqNode::Quoted(s) => self.layout_literal_text(s, fs),
             EqNode::Fraction { numer, denom } => self.layout_fraction(numer, denom, fs),
             EqNode::Atop { top, bottom } => self.layout_atop(top, bottom, fs),
+            EqNode::Binomial { top, bottom } => self.layout_binomial(top, bottom, fs),
             EqNode::Sqrt { index, body } => self.layout_sqrt(index, body, fs),
             EqNode::Superscript { base, sup } => self.layout_superscript(base, sup, fs),
             EqNode::Subscript { base, sub } => self.layout_subscript(base, sub, fs),

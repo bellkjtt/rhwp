@@ -199,6 +199,11 @@ impl EqLayout {
             .iter()
             .map(|row| row.x + row.width)
             .fold(0.0f64, f64::max);
+        let full_w = if self.hancom_math_face && full_w == 0.0 && !row_boxes.is_empty() {
+            fs * 0.5
+        } else {
+            full_w
+        };
         // 행 구성과 관계없이 묶음의 수학 축을 가운데에 놓는다. 왼쪽 식의
         // 기준선은 일반 글줄의 축 거리만큼 내려간다. 분수 행을 앞뒤로
         // 옮겨도 두 글자 기준선의 평균으로 축이 바뀌지 않는다.
@@ -296,7 +301,7 @@ impl EqLayout {
         let mut y = 0.0;
         let mut total_w = 0.0f64;
         let mut first_baseline = None;
-        for (left, right) in &mut laid_rows {
+        for (laid_row_index, (left, right)) in laid_rows.iter_mut().enumerate() {
             // 왼쪽: 오른쪽 정렬 (& 기준으로 맞춤)
             left.x = if self.hancom_math_face {
                 0.0
@@ -312,7 +317,13 @@ impl EqLayout {
             } else {
                 max_left_w
             };
-            right.x = anchor + if has_right { align_gap } else { 0.0 };
+            let gap = if self.hancom_math_face {
+                let index = laid_row_index;
+                self.operator_boundary_gap(&rows[index].0, &rows[index].1, fs)
+            } else {
+                align_gap
+            };
+            right.x = anchor + if has_right { gap } else { 0.0 };
 
             let (left_h, left_bl) = self.matrix_cell_frame(left, fs);
             let (right_h, right_bl) = self.matrix_cell_frame(right, fs);

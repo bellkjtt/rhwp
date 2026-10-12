@@ -14,7 +14,13 @@ impl EqLayout {
         let logical_frame = self
             .hancom_math_face
             .then(|| super::super::logical_font_frame::metrics_at_dpi(&b, fs, self.dpi))
-            .flatten();
+            .flatten()
+            .or_else(|| {
+                // 한컴 ATOP이 발행한 상하 행은 이미 논리 프레임이다.
+                // 구분자는 그 프레임을 소비하며 일반 캐시 정규화 범위를 넓히지 않는다.
+                (self.hancom_math_face && matches!(b.kind, LayoutKind::Atop { .. }))
+                    .then_some((b.height, b.baseline))
+            });
         let delimiter_height = logical_frame.map_or(b.height, |(height, _)| height);
         let glyph_delimiters = delimiter_height <= fs * 1.2;
         let source_stretch = (!glyph_delimiters && logical_frame.is_some())

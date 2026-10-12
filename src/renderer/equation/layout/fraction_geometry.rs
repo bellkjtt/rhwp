@@ -95,6 +95,9 @@ impl EqLayout {
     }
 
     pub(super) fn layout_atop(&self, top: &EqNode, bottom: &EqNode, fs: f64) -> LayoutBox {
+        if self.hancom_math_face {
+            return self.layout_source_atop(top, bottom, fs);
+        }
         let t = self.layout_node(top, fs);
         let b = self.layout_node(bottom, fs);
 

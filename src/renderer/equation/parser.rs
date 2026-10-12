@@ -205,13 +205,9 @@ impl EqParser {
         let top = children.pop().unwrap_or(EqNode::Empty);
         let bottom = self.parse_element();
         children.push(if is_choose {
-            EqNode::Paren {
-                left: "(".into(),
-                right: ")".into(),
-                body: Box::new(EqNode::Atop {
-                    top: Box::new(top),
-                    bottom: Box::new(bottom),
-                }),
+            EqNode::Binomial {
+                top: Box::new(top),
+                bottom: Box::new(bottom),
             }
         } else if is_atop {
             EqNode::Atop {
@@ -486,25 +482,17 @@ impl EqParser {
             EqCommandClass::Choose => {
                 // n CHOOSE r → 이전 요소와 다음 요소를 조합으로
                 let body = self.parse_single_or_group();
-                EqNode::Paren {
-                    left: "(".to_string(),
-                    right: ")".to_string(),
-                    body: Box::new(EqNode::Atop {
-                        top: Box::new(EqNode::Empty), // 이전 요소는 상위에서 처리
-                        bottom: Box::new(body),
-                    }),
+                EqNode::Binomial {
+                    top: Box::new(EqNode::Empty),
+                    bottom: Box::new(body),
                 }
             }
             EqCommandClass::Binom => {
                 let top = self.parse_single_or_group();
                 let bottom = self.parse_single_or_group();
-                EqNode::Paren {
-                    left: "(".to_string(),
-                    right: ")".to_string(),
-                    body: Box::new(EqNode::Atop {
-                        top: Box::new(top),
-                        bottom: Box::new(bottom),
-                    }),
+                EqNode::Binomial {
+                    top: Box::new(top),
+                    bottom: Box::new(bottom),
                 }
             }
             EqCommandClass::Color => self.parse_color(),
@@ -2762,7 +2750,7 @@ mod latex_compat_tests {
         let kids: Vec<&EqNode> = match node {
             EqNode::Row(v) => v.iter().collect(),
             EqNode::Fraction { numer, denom } => vec![numer, denom],
-            EqNode::Atop { top, bottom } => vec![top, bottom],
+            EqNode::Atop { top, bottom } | EqNode::Binomial { top, bottom } => vec![top, bottom],
             EqNode::Sqrt { index, body } => index
                 .as_deref()
                 .into_iter()

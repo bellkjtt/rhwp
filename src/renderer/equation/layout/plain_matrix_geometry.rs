@@ -26,6 +26,16 @@ impl EqLayout {
             })
             .collect();
         let columns = cells.iter().map(Vec::len).max().unwrap_or(0);
+        if self.hancom_math_face && columns > 0 {
+            // 한컴 정상 저장·Print의 불균등 행은 셀을 원문 순서대로 고정 열
+            // 격자에 채운다. 선언한 행 수의 빈 예약 영역은 뒤에 보존한다.
+            // 직사각형 행과 명시적 빈 칸의 소속은 이 연산으로 변하지 않는다.
+            let row_count = cells.len();
+            let mut ordered = cells.into_iter().flatten();
+            cells = (0..row_count)
+                .map(|_| ordered.by_ref().take(columns).collect())
+                .collect();
+        }
         let mut widths = vec![0.0_f64; columns];
         for row in &cells {
             for (ci, cell) in row.iter().enumerate() {

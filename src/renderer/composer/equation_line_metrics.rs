@@ -97,7 +97,48 @@ fn refresh_rows(
         // 수식이 없는 앞 텍스트 줄도 뒤 개체의 저장 예약 상자를 공유할 수 있다.
         // 글자 메트릭을 합치기 전에 반환하면 아래의 실제 소유 검사가 실행되지 않는다.
         // 현재 줄에 수식이 있되 그 메트릭이 유효하지 않은 경우는 계속 보류한다.
-        if !supported || (has_equation && new_logical_height <= 0) {
+        if !supported {
+            continue;
+        }
+        if has_equation
+            && new_logical_height <= 0
+            && !line.runs.iter().any(|run| !run.text.trim().is_empty())
+        {
+            // 표시 개체의 0 점유가 유효한 호스트 빈 글줄을 지우지 않는다.
+            // 저장 줄의 별도 계약은 보존하고 새로 만든 줄만 원본 글자/문단
+            // 속성의 공통 frame 결과로 복원한다. 후속 문단도 이 결과를 소비한다.
+            let generated = para.line_segs.get(line_index).is_some_and(|source| {
+                source.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+            });
+            if generated || regenerated || para.line_segs.is_empty() {
+                let fs = line
+                    .runs
+                    .iter()
+                    .filter_map(|run| styles.char_styles.get(run.char_style_id as usize))
+                    .map(|style| style.font_size)
+                    .reduce(f64::max)
+                    .or_else(|| {
+                        para.char_shapes
+                            .first()
+                            .and_then(|shape| styles.char_styles.get(shape.char_shape_id as usize))
+                            .map(|style| style.font_size)
+                    });
+                if let Some(fs) = fs.filter(|value| *value > 0.0) {
+                    let ps = styles.para_styles.get(para.para_shape_id as usize);
+                    let frame = super::frame_metrics_for_line(
+                        fs,
+                        fs,
+                        ps.map_or(crate::model::style::LineSpacingType::Percent, |style| {
+                            style.line_spacing_type
+                        }),
+                        ps.map_or(160.0, |style| style.line_spacing),
+                        dpi,
+                    );
+                    line.line_height = frame.line_height;
+                    line.baseline_distance = frame.baseline_distance;
+                    line.line_spacing = frame.line_spacing;
+                }
+            }
             continue;
         }
         // 실제 텍스트가 있는 줄은 텍스트의 어센트·하강부도 같은 합집합에 포함한다.
