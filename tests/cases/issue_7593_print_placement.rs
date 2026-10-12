@@ -1,5 +1,6 @@
 //! #7593 공개 원본과 독립 MCP2020 Print의 배치 관계를 보존한다.
-//! Native/fresh WASM 전쪽 최저92.28714% 확인 후 추가했다.
+//! Stage 165의 Native/fresh WASM 전쪽 최저 98.50470%를 확인했다.
+//! 윤곽 표시의 두 검사는 issue_7642_dyad_outline_paint의 새 이름으로 이관했다.
 //! 실물 문서의 절대 픽셀이나 SVG 해시 대신 소유·기준선·탭 격자를 검사한다.
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -16,24 +17,6 @@ fn descendants<'a>(node: &'a RenderNode, out: &mut Vec<&'a RenderNode>) {
     for child in &node.children {
         descendants(child, out);
     }
-}
-
-// 가장 안쪽 요소부터 모든 조상 변환을 소비한 실제 glyph 기준선이다.
-fn svg_text_origin(node: roxmltree::Node<'_, '_>) -> (f64, f64) {
-    let mut x: f64 = node.attribute("x").unwrap().parse().unwrap();
-    let mut y: f64 = node.attribute("y").unwrap().parse().unwrap();
-    for parent in node.ancestors().filter(|parent| parent.is_element()) {
-        let transform: svgtypes::Transform = parent
-            .attribute("transform")
-            .unwrap_or("matrix(1 0 0 1 0 0)")
-            .parse()
-            .unwrap();
-        (x, y) = (
-            transform.a * x + transform.c * y + transform.e,
-            transform.b * x + transform.d * y + transform.f,
-        );
-    }
-    (x, y)
 }
 
 #[test]
@@ -112,87 +95,6 @@ fn master_separator_owns_the_saved_frame_without_advancing_body() {
 }
 
 #[test]
-fn tall_cell_equation_keeps_print_baseline_order_and_inline_ownership() {
-    let core = DocumentCore::from_bytes(ORIGINAL).unwrap();
-    let tree = core.build_page_render_tree(0).unwrap();
-    let mut nodes = Vec::new();
-    descendants(&tree.root, &mut nodes);
-    let line = nodes.iter().find(|n| n.children.iter().any(|child| {
-        matches!(&child.node_type, RenderNodeType::Equation(eq) if eq.script == "dyad{rm AB}" && eq.cell_index.is_some())
-    })).expect("보기 ㄴ의 실제 인라인 줄");
-    let (equation_node, equation) = line
-        .children
-        .iter()
-        .find_map(|n| match &n.node_type {
-            RenderNodeType::Equation(eq) if eq.script == "dyad{rm AB}" => Some((n, eq)),
-            _ => None,
-        })
-        .unwrap();
-    let (text_node, text) = line
-        .children
-        .iter()
-        .find_map(|n| match &n.node_type {
-            RenderNodeType::TextRun(run) if run.text.contains("이다") => Some((n, run)),
-            _ => None,
-        })
-        .expect("수식 뒤 글자 보존");
-    let context = text.cell_context.as_ref().expect("뒤 글자의 셀 소유");
-    let cell = context.path.first().unwrap();
-    assert_eq!(equation.para_index, Some(context.parent_para_index));
-    assert_eq!(equation.control_index, Some(cell.control_index));
-    assert_eq!(equation.cell_index, Some(cell.cell_index));
-    assert_eq!(equation.cell_para_index, Some(cell.cell_para_index));
-    assert_eq!(text.para_index, Some(cell.cell_para_index));
-    assert!(equation_node.bbox.x + equation_node.bbox.width <= text_node.bbox.x);
-    let text_baseline = text_node.bbox.y + text.baseline;
-    assert!(
-        equation_node.bbox.height >= equation.layout_box.height,
-        "보기 ㄴ은 자연 glyph 높이를 담는 비압축 예약 프레임이다"
-    );
-    let fragment = format!("<svg>{}</svg>", equation.svg_content);
-    let xml = roxmltree::Document::parse(&fragment).unwrap();
-    let glyphs: Vec<_> = xml
-        .descendants()
-        .filter(|node| node.has_tag_name("text"))
-        .collect();
-    assert_eq!(
-        glyphs
-            .iter()
-            .filter_map(|node| node.text())
-            .collect::<String>(),
-        "AB",
-        "실제 표시 수식의 내용과 순서"
-    );
-    let origins: Vec<_> = glyphs.iter().map(|node| svg_text_origin(*node)).collect();
-    assert!(origins.windows(2).all(|pair| pair[0].0 < pair[1].0));
-    let visible_baseline = equation_node.bbox.y + origins[0].1;
-    assert!(
-        visible_baseline < text_baseline - text_baseline.abs() * f64::EPSILON * 128.0,
-        "Print의 ㄴ 수식은 앞뒤 본문보다 위에 표시된다"
-    );
-    let Control::Table(table) = &core.document().sections[0].paragraphs
-        [equation.para_index.unwrap()]
-    .controls[equation.control_index.unwrap()] else {
-        panic!("셀의 표 소유");
-    };
-    let paragraph =
-        &table.cells[equation.cell_index.unwrap()].paragraphs[equation.cell_para_index.unwrap()];
-    let saved = paragraph
-        .controls
-        .iter()
-        .find_map(|c| match c {
-            Control::Equation(eq) if eq.script == equation.script => Some(eq),
-            _ => None,
-        })
-        .unwrap();
-    let anchor_ratio = (text_baseline - equation_node.bbox.y) / equation_node.bbox.height;
-    assert!(
-        (anchor_ratio - f64::from(saved.baseline) / 100.0).abs() <= f64::EPSILON * 128.0,
-        "저장 기준선 거리와 실제 줄 원점이 일치한다"
-    );
-}
-
-#[test]
 fn no_stored_rows_reflow_choice_equations_on_the_paragraph_tab_grid() {
     let core = DocumentCore::from_bytes(ORIGINAL).unwrap();
     let tree = core.build_page_render_tree(0).unwrap();
@@ -237,84 +139,6 @@ fn no_stored_rows_reflow_choice_equations_on_the_paragraph_tab_grid() {
         .unwrap();
     let last = equations.last().unwrap().0;
     assert!(last.bbox.x + last.bbox.width <= column.bbox.x + column.bbox.width);
-}
-
-#[test]
-fn same_base_unit_keeps_arrow_paint_width_when_reserved_frames_differ() {
-    let core = DocumentCore::from_bytes(ORIGINAL).unwrap();
-    let tree = core.build_page_render_tree(0).unwrap();
-    let mut nodes = Vec::new();
-    descendants(&tree.root, &mut nodes);
-    let equation = |script: &str| {
-        nodes
-            .iter()
-            .find_map(|node| match &node.node_type {
-                RenderNodeType::Equation(eq) if eq.script == script => Some((*node, eq)),
-                _ => None,
-            })
-            .unwrap()
-    };
-    let (first_node, first) = equation("rm dyadAB");
-    let (cell_node, cell) = equation("rm dyad AB");
-    assert_eq!(first.font_size, cell.font_size);
-    assert!(first_node.bbox.width > cell_node.bbox.width);
-    assert_eq!(first.layout_box.width, cell.layout_box.width);
-
-    // 독립 Print의 발문/보기 AB는 같은 BaseUnit과 같은 장식 폭이다.
-    // 생산 SVG의 모든 조상 transform을 반영해 실제 paint 폭을 비교한다.
-    let svg = core
-        .render_page_svg_layer_with_profile_native(0, rhwp::paint::RenderProfile::Print)
-        .unwrap();
-    let xml = roxmltree::Document::parse(&svg).unwrap();
-    let mut widths = Vec::new();
-    for group in xml.descendants().filter(|n| n.has_tag_name("g")) {
-        let texts: Vec<_> = group
-            .children()
-            .filter(|n| n.has_tag_name("text"))
-            .collect();
-        if texts
-            .iter()
-            .filter_map(|node| node.text())
-            .collect::<String>()
-            != "AB"
-        {
-            continue;
-        }
-        let Some(line) = group.children().find(|n| n.has_tag_name("line")) else {
-            continue;
-        };
-        let x1: f64 = line.attribute("x1").unwrap().parse().unwrap();
-        let x2: f64 = line.attribute("x2").unwrap().parse().unwrap();
-        let mut scale = 1.0;
-        for parent in group.ancestors() {
-            for transform in
-                svgtypes::TransformListParser::from(parent.attribute("transform").unwrap_or(""))
-            {
-                match transform.unwrap() {
-                    svgtypes::TransformListToken::Scale { sx, .. } => scale *= sx,
-                    svgtypes::TransformListToken::Translate { .. } => {}
-                    other => panic!("원본 AB의 축 정렬 대조에 예상하지 않은 transform: {other:?}"),
-                }
-            }
-        }
-        widths.push((x2 - x1).abs() * scale);
-        let origins: Vec<_> = texts.iter().map(|node| svg_text_origin(*node)).collect();
-        assert!(origins.windows(2).all(|pair| pair[0].0 < pair[1].0));
-        for text in texts {
-            assert!(
-                text.ancestors()
-                    .all(|parent| parent.attribute("font-style") != Some("italic")),
-                "rm은 실제 글자와 조상 모두 정체다"
-            );
-        }
-    }
-    assert_eq!(widths.len(), 3, "발문·보기 ㄱ/ㄴ AB 장식 모두 보존");
-    for width in &widths[1..] {
-        assert!(
-            (widths[0] / width - 1.0).abs() <= f64::EPSILON * 128.0,
-            "같은 BaseUnit의 장식 폭 비율이 프레임 폭에 따라 달라지면 안 된다: {widths:?}"
-        );
-    }
 }
 
 fn assert_relation_space(marker: &str, expected_symbol: &str) {

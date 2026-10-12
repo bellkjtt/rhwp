@@ -44,4 +44,14 @@ JS SHA-256: `2d0d0469c582a49331d023d475ae53a17cb9f601a78a78e09d18e5b6a9047cc1`.
 전체 쪽수는 실제 WASM manifest에서도 1쪽이며 두 대조군 모두 누락 쪽이 없다.
 빌드·실행 영수증은 `stage165-fresh-wasm-build.json`,
 `stage165-dyad-wasm/receipt.json`에 보존한다.
-관계형 검사, 전체 대상의 최종 head 재검증·회귀·lint와 PR 제출 게이트는 아직 남아 있다.
+새 관계형 검사 `saved_dyad_reservation_keeps_the_cell_text_below_the_visible_math`는
+수정 전 `4bf6ca10edccd50459edc30758bf3eccbb59e8fd`의 실제 nextest에서 예약 영역
+보존 assertion으로 1개 FAIL, 수정 후 1개 PASS였다. 같은 Rust 검사 원문의
+SHA-256은 `675a61308bf51aca7c0500d8b33ccc2e0776f184ee21085e39377cd07b620eeb`다.
+이 증거는 `stage165-dyad-reservation-before-after.json`에 보존한다.
+전체 대상의 최종 head 재검증·회귀·lint와 PR 제출 게이트는 아직 남아 있다.
+
+
+두 기존 SVG `<text>`/`<line>` 검사도 새 이름의 최종 윤곽 관계 검사로 이관했다.
+새 2건과 저장 예약 영역·기존 소유/탭/관계 기호를 포함한 실제 nextest 7개가
+모두 PASS다. 세부 이름·의미·재컴파일 확인은 Stage 166 작업 기록에 연결했다.
