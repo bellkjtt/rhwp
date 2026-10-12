@@ -3,7 +3,7 @@
 Issue: #7642
 
 이 자료는 일반 아래첨자·분수·근 지수·중첩 근호의 크기별 관계를 확인하는 진단 자료다.
-정식 회귀 fixture가 아니며, 원본 시험지의 시각 검증을 대신하지 않는다.
+독립 진단과 관계형 회귀의 입력이며, 원본 시험지의 시각 검증을 대신하지 않는다.
 기존 `pdf/issue7642-radical-function-contract/radical-function-contract.hwpx`의 본문을
 진단 식으로 바꾸고 저장 줄·수식 크기·기준선을 비운 뒤 한컴에서 다시 저장했다.
 생성 HWPX에는 BinData나 글꼴 파일이 없다. 원본 HWPX, 한컴 저장 HWP와 그 HWP의
@@ -89,3 +89,36 @@ PDF를 함께 보존한다. 출처·job·해시는
 [Stage 172](../../mydocs/working/task_m100_7642_stage172.md)를 따른다.
 Native 두 쪽 최저 99.95954%이나 `phi` 확대 차이와 fresh WASM 대조가 남아
 진단 자료로 보존한다. v1–v7의 최종 통과 범위에 v8을 포함하지 않는다.
+
+## v9–v11 변형·스타일·혼합 대조
+
+세 입력 모두 한컴 2024 MCP 저장 후 그 저장 HWP를 Print했다. 실제 한컴은
+13.0.0.3901이며, Print method 0·`frame_print_to_pdf_ex_one_up`이다.
+
+### 입력 9
+
+- 저장 job: `5bc5ed4e-a69e-4fbd-9464-e8afde89f687`
+- Print job: `f9b7c8fd-20c3-4fa0-8664-b08fb3ef6854`
+- [extended-base-script-input-v9.hwpx](extended-base-script-input-v9.hwpx): SHA-256 `a14e92e2fc078e808592cec14edde7de53994705dd91f97546a09433a871d039`
+- [extended-base-script-v9-2024.hwp](extended-base-script-v9-2024.hwp): SHA-256 `c4a9730c84ed0bf3e0f19dced8d763c3aed25798ecfe9539aa39213f082115a6`
+- [extended-base-script-v9-2024.pdf](extended-base-script-v9-2024.pdf): SHA-256 `9ed460125893451a0caa68dc9b5fb31ca9e24b90c8741d0b8b5bf87fee638f41`
+
+### 입력 10
+
+- 저장 job: `9b73184d-2788-4171-893a-ebdd887ba4f5`
+- Print job: `480b4b26-825b-4546-b33e-4d53ab6dd658`
+- [extended-base-script-input-v10.hwpx](extended-base-script-input-v10.hwpx): SHA-256 `f000c0a9a8d01930b2988e502cf139402a38b3e909f92b87e2ab437ffe0d7397`
+- [extended-base-script-v10-2024.hwp](extended-base-script-v10-2024.hwp): SHA-256 `98df10d71938fca0881fa0b4199aa0a05434c8ae1821b68edb5b25500936b9d7`
+- [extended-base-script-v10-2024.pdf](extended-base-script-v10-2024.pdf): SHA-256 `805ee219c86101b1b3ed0a7cfcaa0131dc927f320bca8efed52a2ddfcb071732`
+
+### 입력 11
+
+- 저장 job: `c84d7bb9-cb25-4549-a2fb-88e50a359472`
+- Print job: `3ebf59ac-3618-45f5-af09-38330d086b70`
+- [extended-base-script-input-v11.hwpx](extended-base-script-input-v11.hwpx): SHA-256 `c5eaae4cbb3083f145776dd1b690b9ed82fc0c176a8eb3fd17e6f43434a19c4b`
+- [extended-base-script-v11-2024.hwp](extended-base-script-v11-2024.hwp): SHA-256 `75849e5bc794274e72be43f83aea8b7b5b03a1dd8300c2b1c3ceb9edb1e8934f`
+- [extended-base-script-v11-2024.pdf](extended-base-script-v11-2024.pdf): SHA-256 `2321fc907ac8e425802f9a1bb660e30fd149900422ae8593736b4b074530798f`
+
+v8–v11의 현재 생산 코드 `d93d905d4` 전체 Native/fresh WASM 13쪽은 모두
+90% 이상이다. 이는 위 Stage 172의 phi 보정 전 증적과 구분한다.
+[현재 결과와 확대 판독](../../mydocs/pr/assets/issue7642-greek-symbol-contract-20261012/README.md).
