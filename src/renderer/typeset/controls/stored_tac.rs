@@ -527,7 +527,15 @@ pub(super) fn prepare(
                 let inherited_trailing_band = previous_para.is_some_and(|previous| {
                     if previous.stored_text_partition_is_dirty()
                         || previous.cell_format_vpos_dirty
-                        || !previous.controls.is_empty()
+                        // 저장 글줄은 TAC 수식과 각주·미주 표시도 소유한다.
+                        // 독립 배치가 있는 float/개체는 이 진입 밴드의 근거가 아니다.
+                        || previous.controls.iter().any(|control| match control {
+                            Control::Equation(equation) => !equation.common.treat_as_char,
+                            Control::Footnote(_) | Control::Endnote(_) => false,
+                            other => !crate::renderer::composer::control_is_width_neutral_marker(
+                                other,
+                            ),
+                        })
                     {
                         return false;
                     }
