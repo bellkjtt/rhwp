@@ -35,8 +35,8 @@
 [10쪽 WASM review](wasm168-p010-review.png)와
 [11쪽 WASM review](wasm168-p011-review.png)를 별도로 생성했다.
 전체 Native/fresh WASM PNG 23쌍 중 20쌍은 실제 바이트가 같고, 나머지
-3쌍은 바이트가 다르다. 페이지별 기록을 별도로 보존한다. 대표 10·11쪽은
-실제 PNG 바이트가 같다. 같은 SVG/PNG를 복사해
+3쌍은 바이트가 다르다. 페이지별 기록을 별도로 보존한다. 10쪽은 실제 PNG 바이트가 같고, 11쪽은 다르다. 다른 쪽은 9·11·13쪽이며
+실제 픽셀 차이도 있어 각각의 WASM 출력으로 확대 판독한다. 같은 SVG/PNG를 복사해
 두 backend의 실행을 대신하지 않았으며 각각 실제 exporter와 whole gate를 완료했다.
 
 [수식 확대](native168-selected-math-detail.png)는 같은 좌표의 독립 Print와
@@ -46,3 +46,6 @@ Native PNG를 4배 nearest로 확대한다. 미주 문7 마지막 계산, 문12 
 있으며 픽셀 일치와 수학 기호/내용 소속의 판독은 구분한다. 확대 이미지는
 진단 범위로만 선택했으며 같은 crop 좌표를 회귀 검사 기대값으로 쓰지 않는다.
 다른 원본이나 변경 영역의 확대 판독을 대신하지 않는다.
+
+[같은 영역의 실제 fresh WASM 확대](wasm168-selected-math-detail.png)도 별도로 생성했다.
+Native 이미지의 바이트 동일성을 가정해 WASM 확대 판독을 대신하지 않는다.
