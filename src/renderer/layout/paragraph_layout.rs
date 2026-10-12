@@ -5107,7 +5107,7 @@ impl LayoutEngine {
             }
             if let Some(p) = para {
                 if let Some(Control::Equation(eq)) = p.controls.get(tac_ci) {
-                    let tokens = crate::renderer::equation::tokenizer::tokenize(&eq.script);
+                    let tokens = crate::renderer::equation::document_script::tokenize(&eq.script);
                     let ast = crate::renderer::equation::parser::EqParser::new(tokens).parse();
                     let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);
                     let layout_box =
@@ -9157,7 +9157,8 @@ impl LayoutEngine {
                     if let Some(p) = para {
                         if let Some(Control::Equation(eq)) = p.controls.get(tac_ci) {
                             // 수식 스크립트 → AST → 레이아웃 → SVG 조각
-                            let tokens = crate::renderer::equation::tokenizer::tokenize(&eq.script);
+                            let tokens =
+                                crate::renderer::equation::document_script::tokenize(&eq.script);
                             let ast =
                                 crate::renderer::equation::parser::EqParser::new(tokens).parse();
                             let font_size_px = hwpunit_to_px(eq.font_size as i32, self.dpi);

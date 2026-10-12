@@ -32,6 +32,7 @@ mod operator_outline;
 mod script_fraction_frame;
 pub use integral_outline::Command as GlyphOutlineCommand;
 pub use negation_geometry::NegationGeometry;
+pub(crate) mod document_script;
 pub mod layout;
 pub(crate) mod legacy_hwpeq;
 mod logical_font_frame;
@@ -80,7 +81,7 @@ pub(crate) fn stored_horizontal_scale(width: f64, layout: &layout::LayoutBox) ->
 /// 수식 스크립트와 BaseUnit에서 레이아웃이 소비할 intrinsic HWPUNIT 크기를 계산한다.
 pub fn intrinsic_size_hwp(script: &str, font_size: u32) -> (u32, u32) {
     let font_size_px = super::hwpunit_to_px(font_size.max(1) as i32, super::DEFAULT_DPI);
-    let tokens = tokenizer::tokenize(script);
+    let tokens = document_script::tokenize(script);
     let ast = parser::EqParser::new(tokens).parse();
     let layout = layout::EqLayout::new(font_size_px).layout(&ast);
     (
@@ -103,7 +104,7 @@ pub(crate) fn flow_metrics_hwp(equation: &crate::model::control::Equation) -> (u
             .chars()
             .any(|ch| matches!(ch, '\u{AC00}'..='\u{D7A3}'))
     {
-        let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
+        let ast = parser::EqParser::new(document_script::tokenize(&equation.script)).parse();
         let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
         let font_frame = (equation.attr & 1 == 0 && equation.font_size > 0)
             .then(|| {
@@ -142,7 +143,7 @@ pub(crate) fn normalized_simple_math_metrics(
     {
         return None;
     }
-    let ast = parser::EqParser::new(tokenizer::tokenize(&equation.script)).parse();
+    let ast = parser::EqParser::new(document_script::tokenize(&equation.script)).parse();
     let intrinsic = layout::EqLayout::for_equation(equation, super::DEFAULT_DPI).layout(&ast);
     let fs = super::hwpunit_to_px(equation.font_size.max(1) as i32, super::DEFAULT_DPI);
     if intrinsic.width <= 0.0

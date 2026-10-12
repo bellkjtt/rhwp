@@ -389,10 +389,10 @@ impl DocumentCore {
         font_size_hwpunit: u32,
         color: u32,
     ) -> Result<String, HwpError> {
+        use crate::renderer::equation::document_script::tokenize;
         use crate::renderer::equation::layout::EqLayout;
         use crate::renderer::equation::parser::EqParser;
         use crate::renderer::equation::svg_render::{eq_color_to_svg, render_equation_svg};
-        use crate::renderer::equation::tokenizer::tokenize;
 
         let font_size_px = crate::renderer::hwpunit_to_px(font_size_hwpunit as i32, self.dpi);
         let tokens = tokenize(script);
