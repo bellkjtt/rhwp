@@ -247,6 +247,14 @@ pub(in crate::renderer::typeset) fn scan_lines(
                 page.body_height,
                 page.current_height,
             );
+            // 진단은 원본 줄의 수용 근거와 실제 예약 경계를 함께 남긴다.
+            if std::env::var("RHWP_DIAG_SPLIT_BUDGET").is_ok() {
+                eprintln!(
+                    "DIAG_LINE_FIT pi={para_idx} line={li} cursor={cursor_line} current={:.3} cumulative={cumulative:.3} content={content_h:.3} available={avail_for_lines:.3} body={:.3} notes={:.3} zone={:.3} saved_tail={saved_tail_vpos_fit} authoritative={hwp_authoritative} reset_owner={hwpx_reset_fragment_owner} note_reset={native_hwp5_reset_tail_fits_actual_footnote_boundary} note_clear={saved_line_clears_footnote_area} dirty={}",
+                    page.current_height, page.body_height, page.current_footnote_height,
+                    page.current_zone_y_offset, page.vpos_ladder_dirty,
+                );
+            }
             match saved_tail_fit_chain_decision(
                 tail_fit_chain,
                 saved_tail_vpos_fit,
