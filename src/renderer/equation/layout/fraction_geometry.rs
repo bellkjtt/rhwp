@@ -12,16 +12,13 @@ fn source_position(
     fs: f64,
     dpi: f64,
 ) -> Option<(f64, f64)> {
-    if !super::super::fraction_sup_frame::ordinary_line(numer, fs)
-        || !super::super::fraction_sup_frame::ordinary_line(denom, fs)
-    {
-        return None;
-    }
-    let (height, baseline) = super::super::font_frame_metrics::fraction_at_dpi(fs, dpi)?;
+    let (height, baseline) =
+        super::super::fraction_sup_frame::source_fraction_frame(numer, denom, fs, dpi)?;
+    let above = super::super::fraction_sup_frame::line_extension(numer, fs)?;
     let (line_height, line_baseline) = super::super::font_frame_metrics::line_at_dpi(fs, dpi)?;
     // 논리 글줄의 기준선과 자식 glyph의 자연 기준선을 분리한다.
     // 측정에 쓴 독립 분수 높이의 첫/마지막 글줄에 실제 표시도 배치한다.
-    numer.y = line_baseline - numer.baseline;
+    numer.y = line_baseline + above - numer.baseline;
     denom.y = height - line_height + line_baseline - denom.baseline;
     Some((height, baseline))
 }

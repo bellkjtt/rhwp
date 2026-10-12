@@ -41,22 +41,55 @@ pub(super) fn ordinary_line(value: &LayoutBox, fs: f64) -> bool {
     font_line(value, fs) && !contains_prime(value) && !contains_cjk(value)
 }
 
-fn ordinary_fraction(value: &LayoutBox, fs: f64) -> bool {
+/// 같은 글자 줄 위의 근호가 추가한 상단 밴드다. 근 지수·다줄·복합 본체는
+/// 일반 글줄로 접지 않는다. 원 face의 줄 프레임과 자연 glyph 높이를 구별한다.
+pub(super) fn line_extension(value: &LayoutBox, fs: f64) -> Option<f64> {
+    if ordinary_line(value, fs) {
+        return Some(0.0);
+    }
+    match &value.kind {
+        LayoutKind::Sqrt { index: None, body }
+            if ordinary_line(body, fs)
+                && (value.font_size - fs).abs() <= f64::EPSILON * fs * 4.0 =>
+        {
+            let extension = value.height - body.height;
+            (extension.is_finite() && extension >= 0.0).then_some(extension)
+        }
+        LayoutKind::FontStyle { body, .. } => line_extension(body, fs),
+        LayoutKind::Row(items) if items.len() == 1 => line_extension(&items[0], fs),
+        _ => None,
+    }
+}
+
+/// 분자 위쪽 밴드와 분모 아래쪽 점유를 같은 논리 분수 프레임으로 연결한다.
+pub(super) fn source_fraction_frame(
+    numer: &LayoutBox,
+    denom: &LayoutBox,
+    fs: f64,
+    dpi: f64,
+) -> Option<(f64, f64)> {
+    let above = line_extension(numer, fs)?;
+    let below = line_extension(denom, fs)?;
+    let (height, baseline) = super::font_frame_metrics::fraction_at_dpi(fs, dpi)?;
+    Some((height + above + below, baseline + above))
+}
+
+fn fraction_extensions(value: &LayoutBox, fs: f64) -> Option<(f64, f64)> {
     match &value.kind {
         LayoutKind::Fraction { numer, denom, .. } => {
-            ordinary_line(numer, fs) && ordinary_line(denom, fs)
+            Some((line_extension(numer, fs)?, line_extension(denom, fs)?))
         }
         LayoutKind::FontStyle { body, .. } | LayoutKind::Paren { body, .. } => {
-            ordinary_fraction(body, fs)
+            fraction_extensions(body, fs)
         }
-        LayoutKind::Row(items) if items.len() == 1 => ordinary_fraction(&items[0], fs),
-        _ => false,
+        LayoutKind::Row(items) if items.len() == 1 => fraction_extensions(&items[0], fs),
+        _ => None,
     }
 }
 
 pub(super) fn frame(base: &LayoutBox, sup: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> {
-    if !ordinary_fraction(base, fs)
-        || !ordinary_line(sup, sup.font_size)
+    let (above, below) = fraction_extensions(base, fs)?;
+    if !ordinary_line(sup, sup.font_size)
         || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
     {
         return None;
@@ -64,7 +97,10 @@ pub(super) fn frame(base: &LayoutBox, sup: &LayoutBox, fs: f64, dpi: f64) -> Opt
     let unit = super::font_frame_metrics::base_unit_at_dpi(fs, dpi);
     let row = FRAMES.iter().find(|row| row[0] == unit)?;
     let height = crate::renderer::hwpunit_to_px(row[1] as i32, dpi);
-    Some((height, height * 0.68))
+    // 한컴 2024 재생성·Print에서 근호 분모의 600/900/1500HU 높이는
+    // 보통 분수 첨자보다 각각 90/135/225HU 크다. 하강 점유를 늘리되
+    // 첨자를 본체 중앙의 일반 글자 기준선으로 되돌리지 않는다.
+    Some((height + above + below, height * 0.68 + above))
 }
 
 pub(super) fn shift(base: &LayoutBox, sup: &LayoutBox, fs: f64, dpi: f64) -> Option<f64> {

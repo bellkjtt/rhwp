@@ -313,10 +313,9 @@ fn frame_with_style(value: &LayoutBox, fs: f64, dpi: f64, roman: bool) -> Option
         }
     }
     if let LayoutKind::Fraction { numer, denom, .. } = &value.kind {
-        if super::fraction_sup_frame::ordinary_line(numer, fs)
-            && super::fraction_sup_frame::ordinary_line(denom, fs)
+        if let Some(frame) = super::fraction_sup_frame::source_fraction_frame(numer, denom, fs, dpi)
         {
-            return super::font_frame_metrics::fraction_at_dpi(fs, dpi);
+            return Some(frame);
         }
     }
     if let LayoutKind::Superscript { base, sup } = &value.kind {
