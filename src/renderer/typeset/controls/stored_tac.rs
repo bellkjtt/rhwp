@@ -358,7 +358,7 @@ pub(super) fn prepare_computed(
 }
 
 /// 각주·미주는 일반 컨트롤 경로에서 예약·등록해야 하므로 통배치 단축을 쓰지 않는다.
-fn table_has_notes(table: &crate::model::table::Table) -> bool {
+pub(super) fn table_has_notes(table: &crate::model::table::Table) -> bool {
     table.cells.iter().any(|cell| {
         cell.paragraphs.iter().any(|para| {
             para.controls.iter().any(|control| match control {

@@ -3983,6 +3983,7 @@ impl TypesetEngine {
         is_last_placed: bool,
         styles: &ResolvedStyleSet,
         composed: Option<&ComposedParagraph>,
+        next_para: Option<&Paragraph>,
         // [#3837] 값이 있는 가장 가까운 앞 문단의 마지막 저장 vpos.
         prev_stored_vpos: Option<i32>,
     ) {
@@ -4470,6 +4471,11 @@ impl TypesetEngine {
             }
         }
 
+        let leading_spacing = if st.current_height < 1.0 {
+            0.0
+        } else {
+            fmt.spacing_before
+        };
         if let Some(mut placement) = side_wrap_placement {
             st.advance_flow_by(placement.clearance);
             let placement_column = st.inline_flow_column();
@@ -4501,6 +4507,33 @@ impl TypesetEngine {
                 }
                 + band_height,
         );
+        if let Some(mut placement) = controls::physical_tac::prepare(
+            para,
+            ctrl_idx,
+            next_para,
+            next_para
+                .and_then(|next| styles.para_styles.get(next.para_shape_id as usize))
+                .map_or(0.0, |style| style.spacing_before),
+            fmt,
+            ft.effective_height,
+            st.profile,
+            st.current_height,
+            leading_spacing,
+            st.available_height(),
+            self.dpi,
+        ) {
+            // 회피로 확정한 가로 원점도 보존한다. 흐름 끝을 paint에 전달하고
+            // 뒤 문단의 cap이 그 물리 간격을 다시 회수하지 않게 한다.
+            if let Some(inline) = st.inline_placements.get(&(para_idx, ctrl_idx)) {
+                placement.inline.x = inline.x;
+                placement.inline.clearance = inline.clearance;
+            }
+            let end = placement.end;
+            st.commit_stored_tac_control(para_idx, placement);
+            st.record_inline_flow_bottom(end);
+            st.protect_current_ladder_floor();
+            return;
+        }
         self.place_table_with_text(
             st,
             para_idx,

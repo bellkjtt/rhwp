@@ -32,6 +32,7 @@ pub(super) mod flow_table;
 pub(super) mod host_wrap;
 pub(super) mod order;
 pub(super) mod paragraph_flow;
+pub(super) mod physical_tac;
 pub(super) mod shape_flow;
 pub(super) mod stored_tac;
 pub(super) mod table_entry;
