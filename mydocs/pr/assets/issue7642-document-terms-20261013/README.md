@@ -41,4 +41,4 @@ Native는 `cargo build --locked --profile release-test --bin rhwp --target-dir /
 
 ## 남은 검증
 
-이 자료는 Native 대조군 개선 증거다. fresh WASM은 별도 빌드·검증 중이며 이 Native 결과로 대체하지 않는다. 원 카탈로그 18쪽은 2·3·4쪽이 각각 97.91157 / 98.38242 / 98.86500%로 개선됐지만 5·6·13·14·16·17·18쪽이 여전히 90% 미만이고 최저 40.22286%다. 전체 요청 문서, 전체 Rust 회귀, lint, 새로운 관계형 회귀, PR·CI·merge·후속 처리는 완료되지 않았다.
+같은 코드의 fresh WASM도 별도 빌드·검증을 완료했다. 전체 18쪽 최저 99.06542%이며 Native/fresh WASM의 같은 원문 PNG 18쌍이 모두 byte 동일하다. Studio JS/WASM 동기화와 source 해시 불변도 확인했다. WASM TSV와 실행 증거는 ignored output의 stage179-operand-frame-whole-wasm에 있다. 이는 rebase 전 코드의 증거이며 새 head의 검증은 별도로 수행한다. 원 카탈로그 18쪽은 2·3·4쪽이 각각 97.91157 / 98.38242 / 98.86500%로 개선됐지만 5·6·13·14·16·17·18쪽이 여전히 90% 미만이고 최저 40.22286%다. 전체 요청 문서, 전체 Rust 회귀, lint, 새로운 관계형 회귀, PR·CI·merge·후속 처리는 완료되지 않았다.
