@@ -143,9 +143,10 @@ fn refresh_rows(
         let generated_row = para.line_segs.get(line_index).is_some_and(|line| {
             line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
         });
-        let owned_equation_row = has_equation
-            && text_height == 0
-            && (generated_row || regenerated || para.line_segs.is_empty());
+        // 저장 줄이 없거나 재생성된 줄은 본문과 수식의 실제 합집합을
+        // 소비한다. 본문 유무로 수식의 점유·기준선을 제외하지 않는다.
+        let owned_equation_row =
+            has_equation && (generated_row || regenerated || para.line_segs.is_empty());
         // 저장 줄이 이 개체 합집합에서 나온 경우만 메트릭을 다시 발행한다.
         // 별도 줄 높이·수직 정렬 계약을 실제 상자의 대용으로 덮어쓰지 않는다.
         if (changed

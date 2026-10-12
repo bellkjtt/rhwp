@@ -14,14 +14,22 @@ pub(crate) fn tokenize(script: &str) -> Vec<Token> {
         if token.ty != TokenType::Command || chars.get(token.pos) == Some(&'\\') {
             continue;
         }
-        if matches!(
-            classify_command(&token.value),
-            EqCommandClass::LatexFraction
-                | EqCommandClass::RomanText
-                | EqCommandClass::LatexSpacing
-                | EqCommandClass::BeginEnv
-                | EqCommandClass::EndEnv
-        ) || token.value.eq_ignore_ascii_case("STACKREL")
+        let class = classify_command(&token.value);
+        // 독립 한컴 Print에서 혼합 대소문자의 SQRT/ROOT는 일반 문자다.
+        // 모든 대문자·소문자 및 공개 LaTeX tokenizer의 계약은 유지한다.
+        let mixed_root = class == EqCommandClass::Sqrt
+            && token.value != token.value.to_ascii_uppercase()
+            && token.value != token.value.to_ascii_lowercase();
+        if mixed_root
+            || matches!(
+                class,
+                EqCommandClass::LatexFraction
+                    | EqCommandClass::RomanText
+                    | EqCommandClass::LatexSpacing
+                    | EqCommandClass::BeginEnv
+                    | EqCommandClass::EndEnv
+            )
+            || token.value.eq_ignore_ascii_case("STACKREL")
         {
             token.ty = TokenType::Text;
         }

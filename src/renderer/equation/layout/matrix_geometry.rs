@@ -346,8 +346,25 @@ impl EqLayout {
     }
 
     pub(super) fn layout_pile(&self, rows: &[EqNode], align: PileAlign, fs: f64) -> LayoutBox {
-        let row_gap = fs * MATRIX_ROW_GAP;
-        let mut row_boxes: Vec<LayoutBox> = rows.iter().map(|r| self.layout_node(r, fs)).collect();
+        // 한컴 PILE은 논리 행 프레임과 경계마다 0.15em을 예약한다.
+        // 글리프 높이만 더하면 일반 글자·분수·행렬이 다른 행 피치를 쓴다.
+        let row_gap = fs
+            * if self.hancom_math_face {
+                0.15
+            } else {
+                MATRIX_ROW_GAP
+            };
+        let mut row_boxes: Vec<LayoutBox> = rows
+            .iter()
+            .map(|row| {
+                let child = self.layout_node(row, fs);
+                if self.hancom_math_face {
+                    self.matrix_row_box(child, fs)
+                } else {
+                    child
+                }
+            })
+            .collect();
 
         let max_w = row_boxes.iter().map(|b| b.width).fold(0.0f64, f64::max);
         let mut y = 0.0;
@@ -368,7 +385,14 @@ impl EqLayout {
             y: 0.0,
             width: max_w,
             height: total_h,
-            baseline: total_h / 2.0,
+            // 가운데 수학 축에서 본문 기준선까지의 거리를 보존한다.
+            // 논리 글자 프레임의 기준선 0.86em에서 가운데 0.5em을 뺀다.
+            baseline: total_h / 2.0
+                + if self.hancom_math_face {
+                    fs * 0.36
+                } else {
+                    0.0
+                },
             kind: LayoutKind::Row(row_boxes),
         }
     }
