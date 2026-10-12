@@ -43,7 +43,7 @@ static GREEK_LOWER: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::ne
         ("gamma", "γ"),
         ("delta", "δ"),
         ("epsilon", "ε"),
-        ("varepsilon", "ε"),
+        ("varepsilon", "ϵ"),
         ("zeta", "ζ"),
         ("eta", "η"),
         ("theta", "θ"),
@@ -58,12 +58,13 @@ static GREEK_LOWER: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::ne
         ("pi", "π"),
         ("varpi", "ϖ"),
         ("rho", "ρ"),
+        ("varrho", "ϱ"),
         ("sigma", "σ"),
         ("varsigma", "ς"),
         ("tau", "τ"),
         ("upsilon", "υ"),
         ("phi", "φ"),
-        ("varphi", "φ"),
+        ("varphi", "ϕ"),
         ("chi", "χ"),
         ("psi", "ψ"),
         ("omega", "ω"),
@@ -604,7 +605,8 @@ pub fn is_function(cmd: &str) -> bool {
 ///
 /// 한컴 수식은 대소문자를 구분하지 않으므로 (예: `times` = `TIMES`),
 /// 원래 대소문자로 먼저 찾고 실패하면 대문자 변환 후 재시도한다.
-/// 그리스 문자와 화살표는 대소문자가 의미를 가지므로 (alpha ≠ Alpha) 원래 값만 사용.
+/// 그리스 이름은 소문자·첫 글자 대문자·전체 대문자를 구분하며 혼합 철자는 접지 않는다.
+/// 화살표는 기호표에 등록된 원래 철자로만 조회한다.
 pub fn lookup_symbol(cmd: &str) -> Option<&'static str> {
     // 독립 한컴 Print에서 MINUSPLUS만 명령이며 minusplus는 min과 usplus다.
     if cmd != "MINUSPLUS" && cmd.eq_ignore_ascii_case("MINUSPLUS") {

@@ -25,6 +25,7 @@ mod script_geometry;
 mod source_font_advance;
 mod source_font_symbol;
 mod source_font_text;
+mod source_greek_symbol;
 mod source_italic_advance;
 mod source_roman_advance;
 mod source_variable_style;
@@ -341,6 +342,9 @@ impl EqLayout {
             }
         }
         if self.hancom_math_face {
+            if let Some(result) = source_greek_symbol::literal(text, fs, self.dpi) {
+                return result;
+            }
             if let Some(result) = source_font_text::layout(
                 text,
                 fs,
@@ -484,7 +488,13 @@ impl EqLayout {
         {
             return layout;
         }
-        // 기호 명령으로 들어온 그리스 변수도 ASCII 변수와 같은 표시 스타일을 쓴다.
+        // 독립 Print에서 그리스 기호는 라틴 rm/it/bold와 별도의 face 계약이다.
+        if self.hancom_math_face {
+            if let Some(result) = source_greek_symbol::command(text, fs, self.dpi) {
+                return result;
+            }
+        }
+        // 일반 수학 face는 기존 수학 알파벳의 표시 스타일을 쓴다.
         // AST와 논리 전진은 유지하고 SVG·Canvas·Skia가 소비할 글리프만 투영한다.
         let kind = || {
             if !text.is_empty() && text.chars().all(variable_style::is_greek_variable) {
