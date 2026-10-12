@@ -26,6 +26,14 @@ impl Default for Budget {
     }
 }
 
+impl Budget {
+    /// 표시 전 객체에 저장하는 encoded 문자열도 전체 재생 예산에 포함한다.
+    pub(super) fn reserve_object_bytes(&mut self, bytes: usize) -> Option<()> {
+        self.bytes = self.bytes.checked_sub(bytes)?;
+        Some(())
+    }
+}
+
 #[derive(Clone)]
 struct State {
     world: [f64; 6],

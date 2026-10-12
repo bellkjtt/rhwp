@@ -1,6 +1,7 @@
 //! 표준 EMF+의 지원 가능한 벡터 스트림만 완전하게 재생한다.
 //! 일부 레코드를 버려 만든 출력을 성공으로 반환하지 않는다.
 
+mod bitmap;
 mod objects;
 mod player;
 mod stream;

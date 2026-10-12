@@ -25,6 +25,7 @@ pub(super) fn parse(kind: u16, data: &[u8], depth: usize, budget: &mut Budget) -
             let bytes = data.get(16..16usize.checked_add(size)?)?;
             render(bytes, metafile_source_bounds(bytes)?, depth + 1, budget).map(Object::Image)
         }
+        5 if u32_at(data, 4)? == 1 => super::bitmap::compressed(data, budget).map(Object::Image),
         // 색상 효과 없는 TileFlipXY만 수용한다. 다른 이미지 효과를 무시하지 않는다.
         8 if data.len() == 24
             && u32_at(data, 8)? == 3
