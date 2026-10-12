@@ -102,6 +102,23 @@ impl FormattedParagraph {
             .sum()
     }
 
+    /// 구성한 줄의 실제 점유 끝이다. fit 예산의 cap이나 문단 뒤 간격에서 역산하지 않는다.
+    /// 음수 줄간격도 이미 점유한 앞 줄 상자를 지우지 않는다.
+    pub(in crate::renderer::typeset) fn line_content_height(
+        &self,
+        range: std::ops::Range<usize>,
+        leading: f64,
+    ) -> f64 {
+        let end = range.end.min(self.line_count());
+        let mut top = leading;
+        let mut bottom = leading;
+        for line in range.start.min(end)..end {
+            bottom = bottom.max(top + self.line_heights[line]);
+            top += self.line_advance(line);
+        }
+        bottom
+    }
+
     /// [#6753] `flow_advance_height` 가 실제로 트림한 것 중 **`spacing_before` 몫**(px).
     ///
     /// 트림 자체는 "저장 사다리가 이미 담았고 vpos-snap 이 좌표를 복원한다"는 전제 위에

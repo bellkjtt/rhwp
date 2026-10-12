@@ -452,7 +452,12 @@ pub(super) fn place_fitted_paragraph(
         st.record_paragraph_content_bottom(
             (para_idx, fmt.line_count()),
             stored_successor_flow.map_or_else(
-                || (fmt.height_for_fit - fmt.spacing_after - trimmed_spacing_before).max(0.0),
+                || {
+                    fmt.line_content_height(
+                        0..fmt.line_count(),
+                        fmt.spacing_before - trimmed_spacing_before,
+                    )
+                },
                 |(bottom, _)| bottom - st.current_height,
             ),
         );
