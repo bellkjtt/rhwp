@@ -623,6 +623,18 @@ pub fn lookup_symbol(cmd: &str) -> Option<&'static str> {
         return Some(s);
     }
 
+    // 독립 한컴 Print의 24개 이름에서 ALPHA/Alpha는 같은 대문자 기호다.
+    // AlPhA 같은 혼합 철자는 문자이므로 전체 대문자 철자만 함께 수용한다.
+    // tokenizer의 안전 접두사도 이 조회를 소비해 ALPHAX의 X를 보존한다.
+    if cmd.bytes().all(|ch| ch.is_ascii_uppercase()) {
+        if let Some(symbol) = GREEK_UPPER.iter().find_map(|(name, symbol)| {
+            (name.starts_with(|ch: char| ch.is_ascii_uppercase()) && name.eq_ignore_ascii_case(cmd))
+                .then_some(*symbol)
+        }) {
+            return Some(symbol);
+        }
+    }
+
     // 2차: 대문자 변환 후 재시도 (SPECIAL_SYMBOLS, OPERATORS, BIG_OPERATORS, BRACKETS)
     let upper = cmd.to_ascii_uppercase();
     if upper != cmd {
