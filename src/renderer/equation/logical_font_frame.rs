@@ -186,8 +186,14 @@ pub(super) fn superscript_shift(
     if let Some(shift) = super::fraction_sup_frame::shift(base, sup, fs, dpi) {
         return Some(shift);
     }
-    if !font_line(base, fs)
-        || !font_line(sup, sup.font_size)
+    // 근호의 추가 상단 띠도 원본 글줄 기준선 위의 첨자 공간이다.
+    // 아래첨자와 같은 인증을 사용하며 복합 본체를 일반 글줄로 접지 않는다.
+    let extension = if font_line(base, fs) {
+        0.0
+    } else {
+        super::fraction_sup_frame::line_extension(base, fs, dpi)?
+    };
+    if !font_line(sup, sup.font_size)
         || (sup.font_size - fs * 0.68).abs() > f64::EPSILON * fs * 4.0
         || (super::font_frame_metrics::base_unit_at_dpi(fs, dpi) == 2200
             && (contains_prime(base) || contains_prime(sup)))
@@ -196,7 +202,7 @@ pub(super) fn superscript_shift(
     }
     let (sup_height, _) = super::font_frame_metrics::superscript_at_dpi(fs, dpi)?;
     let (line_height, line_baseline) = super::font_frame_metrics::line_at_dpi(fs, dpi)?;
-    let shift = sup_height - line_height + line_baseline * (1.0 - sup.font_size / fs);
+    let shift = sup_height - line_height + line_baseline * (1.0 - sup.font_size / fs) + extension;
     Some(shift)
 }
 
