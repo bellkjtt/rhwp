@@ -12,14 +12,24 @@ use crate::renderer::float_placement::InlineBoxPlacement;
 use crate::renderer::height_measurer::MeasuredTable;
 use crate::renderer::hwpunit_to_px;
 
+/// 같은 텍스트 줄의 실제 fit 내용 끝을 사용할 수 있는 컨트롤이다.
+/// 독립 float·표는 별도 흐름이므로 이 문단 줄의 끝으로 인증하지 않는다.
+pub(in crate::renderer::typeset) fn text_controls_share_line(para: &Paragraph) -> bool {
+    para.controls.iter().all(|control| match control {
+        Control::Equation(equation) => equation.common.treat_as_char,
+        Control::Footnote(_) | Control::Endnote(_) => true,
+        other => crate::renderer::composer::control_is_width_neutral_marker(other),
+    })
+}
+
 pub(in crate::renderer::typeset) struct StoredTacPage {
     pub profile: LayoutCompatibilityProfile,
     pub current_height: f64,
     pub vpos_col_anchor: f64,
     pub vpos_page_base: Option<i32>,
     pub vpos_lazy_base: Option<i32>,
-    /// 앞 문단의 흐름 예약에서 제외됐지만 실제 글줄 원점에는 소비된 앞 간격.
-    pub trimmed_previous_spacing_before: f64,
+    /// 실제 수용한 직전 문단의 소유·끝 줄과 뒤 간격을 제외한 내용 하단.
+    pub previous_content_bottom: Option<(usize, usize, f64)>,
     pub side_wrap_empty: bool,
     pub stored_table_column_base: Option<i32>,
 }
@@ -499,7 +509,7 @@ pub(super) fn prepare(
             };
             // 앞 문단의 저장 사다리가 누적 높이보다 앞서 있으면 그 앵커를
             // fit와 paint에 함께 보존한다. 문단 상대 top만 더하면 앞 표로 되감긴다.
-            let saved_origin = page.vpos_col_anchor
+            let mut saved_origin = page.vpos_col_anchor
                 + hwpunit_to_px(
                     if single_saved_line {
                         // An original object box is page-relative. A paragraph
@@ -524,23 +534,17 @@ pub(super) fn prepare(
                     || (saved_origin - unreserved_origin).abs() <= dpi / 7200.0;
                 // 앞 저장 글줄의 후행 간격은 표의 진입 밴드다. 수용 커서가
                 // 그 글줄의 내용 끝에 있으면 같은 좌표축에서 표 원점까지 연결한다.
-                let inherited_trailing_band = previous_para.is_some_and(|previous| {
+                let inherited_origin = previous_para.and_then(|previous| {
                     if previous.stored_text_partition_is_dirty()
                         || previous.cell_format_vpos_dirty
                         // 저장 글줄은 TAC 수식과 각주·미주 표시도 소유한다.
                         // 독립 배치가 있는 float/개체는 이 진입 밴드의 근거가 아니다.
-                        || previous.controls.iter().any(|control| match control {
-                            Control::Equation(equation) => !equation.common.treat_as_char,
-                            Control::Footnote(_) | Control::Endnote(_) => false,
-                            other => !crate::renderer::composer::control_is_width_neutral_marker(
-                                other,
-                            ),
-                        })
+                        || !text_controls_share_line(previous)
                     {
-                        return false;
+                        return None;
                     }
                     let Some(last) = previous.line_segs.last() else {
-                        return false;
+                        return None;
                     };
                     let next = &para.line_segs[0];
                     let valid = last.tag
@@ -558,19 +562,25 @@ pub(super) fn prepare(
                                 ))
                             })
                             == Some(next.vertical_pos);
-                    let content_end = page.vpos_col_anchor
-                        + hwpunit_to_px(last.vertical_pos.saturating_add(last.line_height), dpi);
-                    // 본문 예약은 저장 사다리에 든 앞 간격을 제외할 수 있다.
-                    // 실제 글줄 끝과 대조할 때만 그 소비 기록을 복원한다. 이 밴드의
-                    // 후행 간격과 다음 표 앞 간격은 확정된 저장 표 원점에 한 번 포함된다.
-                    let consumed_end = page.current_height + page.trimmed_previous_spacing_before
-                        - previous_spacing_after;
-                    valid
-                        && (content_end - consumed_end).abs() <= dpi / 7200.0
-                        && saved_origin >= page.current_height
+                    let (owner, end_line, content_end) = page.previous_content_bottom?;
+                    if owner.checked_add(1) != Some(para_idx)
+                        || end_line != previous.line_segs.len()
+                    {
+                        return None;
+                    }
+                    // 확정된 내용 하단에 원본의 같은 줄 사다리가 소유하는
+                    // 상대 간격을 한 번 연결한다. 스타일 뒤 간격의 소비량을 추측하지 않는다.
+                    let source_end = last.vertical_pos.checked_add(last.line_height)?;
+                    let gap = next.vertical_pos.checked_sub(source_end)?;
+                    (valid && gap >= 0).then(|| content_end + hwpunit_to_px(gap, dpi))
                 });
-                if !same_frame && !inherited_trailing_band {
+                if !same_frame && inherited_origin.is_none() {
                     return None;
+                }
+                // 기존 축이 증명된 경우는 보존한다. 다른 경우에는 소유가
+                // 확인된 직전 실제 줄과 저장 상대 간격으로 축을 확립한다.
+                if !same_frame {
+                    saved_origin = inherited_origin?;
                 }
             }
             let origin = flow_origin.max(saved_origin);

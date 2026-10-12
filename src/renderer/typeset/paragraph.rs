@@ -16,6 +16,8 @@ pub(super) mod empty;
 mod entry;
 pub(super) mod fit;
 pub(super) mod flow;
+mod forced_boundary;
+pub(super) use forced_boundary::prepare_forced_page_boundary;
 pub(super) mod format;
 pub(super) mod line_queries;
 pub(super) mod metrics;
@@ -443,7 +445,7 @@ pub(super) fn place_fitted_paragraph(
         };
     // 다음 저장 표가 이 문단의 후행 간격을 사용할 수는 있어도
     // 실제 글줄 안으로 들어오면 안 된다. 수용에 쓴 구성 높이를 공유한다.
-    if para.controls.is_empty()
+    if super::controls::stored_tac::text_controls_share_line(para)
         && fmt.line_count() > 0
         && (para_has_non_whitespace_text(para) || stored_guide_advance.is_none())
     {
@@ -986,130 +988,6 @@ pub(super) struct ForcedPageBoundary {
 
 /// 기존 각주 경계를 먼저 조회하고, 저장/각주/그림 후보를 원래 단락 순서로 선택한다.
 /// 이 조정자는 읽기 전용이다. 각주 측정 helper의 좁은 관측 경계 분리는 R4에 남긴다.
-pub(super) fn prepare_forced_page_boundary(
-    st: &TypesetState,
-    para_idx: usize,
-    para: &Paragraph,
-    fmt: &FormattedParagraph,
-    paragraphs: &[Paragraph],
-    available: f64,
-    note_measure: &super::notes::footnotes::measure::BodyFootnoteMeasure<'_>,
-) -> ForcedPageBoundary {
-    let dpi = note_measure.engine.dpi;
-    // native HWP5 본문은 기존 각주가 있는 page tail에서도 `vpos=0` reset으로
-    // 다음 physical page를 기록할 수 있다. 일반 reset은 과분할 위험이 있으므로,
-    // 실제 FootnoteArea 경계와 source/flow가 함께 맞을 때만 강제 경계로 쓴다.
-    let native_hwp5_existing_footnote_reset_line =
-        native_hwp5_existing_footnote_reset_overlap_break_line(
-            st,
-            para,
-            fmt,
-            paragraphs,
-            note_measure,
-        );
-    // 흐름 스냅이 이미 확정한 지연 기준은 마지막 줄·내부 쪽 경계도 함께 소비한다.
-    // 첫 빈 개체 호스트의 저장 위치는 표 밴드 뒤의 줄일 수 있어 쪽 원점으로 다시 쓰지 않는다.
-    let current_page_vpos_base = st.vpos_page_base.or(st.vpos_lazy_base).or_else(|| {
-        st.current_items
-            .first()
-            .and_then(|item| page_item_vpos_base(item, paragraphs))
-    });
-    // 쪽 소유가 저장 앵커와 현재 흐름으로 입증된 일반 본문은 시작 높이의
-    // 비율로 다시 거절하지 않는다. 기존 세션 편집 플래그와 구성 줄 수,
-    // 유효 저장 앵커를 확인하고 실제 재조판으로 사라진 reset은 재사용하지 않는다.
-    // 같은 원본 줄 사다리와 실제 흐름은 컨테이너 형식과 무관하게 같은 쪽을 소유한다.
-    let anchored_stored_body_reset_line = (!st.profile.session_edited()
-        && para_has_visible_text(para)
-        && fmt.line_heights.len() == para.line_segs.len())
-    .then(|| {
-        (1..para.line_segs.len()).find(|&break_line| {
-            para.line_segs[break_line].vertical_pos < para.line_segs[break_line - 1].vertical_pos
-                && stored_body_reset_fragment_matches_current_flow(
-                    st,
-                    para,
-                    0,
-                    break_line,
-                    current_page_vpos_base.unwrap_or(0),
-                    fmt.spacing_before,
-                    dpi,
-                )
-        })
-    })
-    .flatten();
-    let hwp3_converted_hwp5 = st.profile.hwp3_layout()
-        && !st.profile.hwp3_native_layout()
-        && !st.profile.hwpx_container();
-    let internal_forced_page_break_line = boundary::internal_vpos_page_break_line(
-        para,
-        fmt.line_heights.len(),
-        st.layout.body_area.height,
-        dpi,
-        st.profile.hwpx_stored_layout() || st.profile.hwp3_native_layout() || hwp3_converted_hwp5,
-        st.profile.hwp5_stored_pagination_layout(),
-        hwp3_converted_hwp5,
-    )
-    .filter(|break_line| {
-        // HWPX의 reset은 local writer cursor도 재사용한다. 현재 flow와
-        // anchor가 맞지 않는 reset은 physical page 경계로 승격하지 않는다.
-        !st.profile.hwpx_stored_layout()
-            || st.current_items.is_empty()
-            || stored_body_reset_fragment_matches_current_flow(
-                st,
-                para,
-                0,
-                *break_line,
-                current_page_vpos_base.unwrap_or(0),
-                fmt.spacing_before,
-                dpi,
-            )
-    });
-    let stored_page_start_line = (!st.profile.session_edited())
-        .then(|| boundary::stored_page_start_line(para, fmt.line_count(), 0))
-        .flatten();
-    let forced_page_break_line = stored_page_start_line
-        .or(anchored_stored_body_reset_line)
-        .or(internal_forced_page_break_line)
-        .or_else(|| {
-            st.profile.hwpx_stored_layout().then(|| {
-                boundary::hwpx_explicit_page_break_tail_line(
-                    para,
-                    paragraphs.get(para_idx + 1),
-                    fmt.line_heights.len(),
-                    st.layout.body_area.height,
-                    dpi,
-                )
-            })?
-        })
-        .or_else(|| {
-            native_hwp5_first_footnote_overlap_break_line(st, para, fmt, dpi)
-                .map(|footnote_break| footnote_break.body_break_line)
-        })
-        .or_else(|| {
-            missing_lineseg_trailing_line_break(
-                para,
-                fmt.line_heights.len(),
-                st.current_height,
-                available,
-                fmt.line_spacings.last().copied().unwrap_or(0.0),
-                st.profile.hwpx_stored_layout() || hwp3_converted_hwp5,
-                hwp3_converted_hwp5,
-            )
-        })
-        .or_else(|| {
-            native_hwp5_text_reset_before_large_tac_topbottom_picture_break_line(
-                st, para, fmt, paragraphs, para_idx, dpi,
-            )
-        })
-        // full-fit early return보다 앞의 같은 chain에 넣어야 reset tail을 통째로
-        // 배치해 separator와 겹치는 우회가 없다.
-        .or(native_hwp5_existing_footnote_reset_line);
-    ForcedPageBoundary {
-        native_hwp5_existing_footnote_reset_line,
-        current_page_vpos_base,
-        forced_page_break_line,
-    }
-}
-
 /// 일반 줄 분할과 구분되는 저장 다단 경로. 선택된 경계가 있으면 기존처럼 이 경로가
 /// 문단을 소비한다. 유효 조각이 없어 루프를 종료해도 일반 fit 경로로 재진입하지 않는다.
 pub(super) fn try_place_multicolumn_paragraph(
