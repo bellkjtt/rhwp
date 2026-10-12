@@ -75,5 +75,8 @@ PDF는 Print method 0, `frame_print_to_pdf_ex_one_up`, 원본 용지·방향·1-
 Native 생산 소스 `589ed5c9d`의 진단 7종 전체 17쪽은 모두 90% 이상이다.
 최저는 v7의 99.56009%이며 실제 쪽수와 Print 쪽수가 일치한다.
 대표 분수 아래첨자·근 지수·두 겹 근호와 세·네 겹 근호의 확대 출력을 직접 확인했다.
-fresh WASM 전체 TSV와 확대 판독은 진행 중이며, 새 관계형 회귀와 PR 승인은 미완료다.
+동일 생산 소스의 fresh WASM도 v1~v7 전체 17쪽이 같은 최저값·쪽수로 종료됐다.
+실제 Native/WASM PNG 17개는 각각 SHA-256이 동일하며 새 WASM review를 직접 확인했다.
+새 관계형 회귀 두 건은 nextest에서 PASS했다. 전체 최종 검증·PR 승인은 미완료다.
+v8 그리스 문자 철자 진단은 별도의 후속 분석이며 위 v1~v7의 통과 범위에 포함하지 않는다.
 실행·메트릭·미검증 범위는 [Stage 171](../../mydocs/working/task_m100_7642_stage171.md)을 따른다.
