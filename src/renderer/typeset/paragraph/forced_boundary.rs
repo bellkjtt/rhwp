@@ -8,7 +8,7 @@ pub(in crate::renderer::typeset) fn prepare_forced_page_boundary(
     fmt: &FormattedParagraph,
     paragraphs: &[Paragraph],
     available: f64,
-    note_measure: &super::notes::footnotes::measure::BodyFootnoteMeasure<'_>,
+    note_measure: &super::super::notes::footnotes::measure::BodyFootnoteMeasure<'_>,
 ) -> ForcedPageBoundary {
     let dpi = note_measure.engine.dpi;
     // native HWP5 본문은 기존 각주가 있는 page tail에서도 `vpos=0` reset으로
