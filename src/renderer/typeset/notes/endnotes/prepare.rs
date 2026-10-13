@@ -63,13 +63,15 @@ impl TypesetEngine {
                 // 구분선과 위/아래 여백을 예약한다. 높이가 0이어도 선은 표시한다.
                 if !st.current_items.is_empty() {
                     if sep_height == 0.0 {
-                        let trailing = crate::renderer::note_separator::completed_body_tail_spacing_hu(
-                            &st.current_items,
-                            paragraphs,
-                        );
+                        let trailing =
+                            crate::renderer::note_separator::completed_body_tail_spacing_hu(
+                                &st.current_items,
+                                paragraphs,
+                            );
                         st.reclaim_flow_by(hwpunit_to_px(trailing, self.dpi));
                         vpos_offset = vpos_offset.saturating_sub(trailing);
-                        prev_en_bottom_vpos = prev_en_bottom_vpos.map(|v| v.saturating_sub(trailing));
+                        prev_en_bottom_vpos =
+                            prev_en_bottom_vpos.map(|v| v.saturating_sub(trailing));
                         prev_en_content_bottom_vpos =
                             prev_en_content_bottom_vpos.map(|v| v.saturating_sub(trailing));
                     }

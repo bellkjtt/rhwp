@@ -3,8 +3,7 @@ use skia_safe::{font, paint, Canvas, Color, Font, FontMgr, FontStyle, Paint, Pat
 
 use super::font_catalog::TypefaceCatalog;
 use super::font_lookup::{
-    match_supplied_family, match_system_family_style, select_typeface_for_character,
-    text_family_candidates, typeface_candidates_for_families, SystemFontFamilies,
+    match_supplied_family, match_system_family_style, SystemFontFamilies,
 };
 mod glyphs;
 use glyphs::{draw_stretch_bracket, draw_text, draw_text_with_family};

@@ -7922,11 +7922,17 @@ impl LayoutEngine {
                 last_line_box_bottom.unwrap_or(y),
                 if cell_ctx.is_none()
                     && !crate::renderer::paragraph_outline_reserves_line_spacing(
-                        para_border_fill_id, styles,
-                    ) {
-                    last_line_border_bottom.or(last_line_box_bottom).unwrap_or(y)
+                        para_border_fill_id,
+                        styles,
+                    )
+                {
+                    last_line_border_bottom
+                        .or(last_line_box_bottom)
+                        .unwrap_or(y)
                 } else {
-                    last_line_border_bottom.unwrap_or(y).max(paragraph_flow_bottom)
+                    last_line_border_bottom
+                        .unwrap_or(y)
+                        .max(paragraph_flow_bottom)
                 },
                 self.border_box_override.get(),
             );

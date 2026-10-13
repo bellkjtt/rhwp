@@ -128,7 +128,8 @@ pub(super) fn format(
     });
     let effective_height = if profile().hwp5_stored_pagination_layout()
         || profile().hwpx_stored_layout()
-        || unrestricted_wrapper {
+        || unrestricted_wrapper
+    {
         crate::renderer::height_measurer::unwrapped_table_whole_height(table, effective_height, dpi)
     } else {
         effective_height

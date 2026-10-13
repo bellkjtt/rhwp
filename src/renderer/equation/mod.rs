@@ -17,12 +17,12 @@ pub(crate) mod brace_stretch;
 #[cfg(target_arch = "wasm32")]
 pub mod canvas_render;
 pub(crate) mod dispatch;
-pub mod hancom_glyphs;
 mod dot_geometry;
 mod font_frame_22;
 mod font_frame_metrics;
 mod font_style_runs;
 mod fraction_sup_frame;
+pub mod hancom_glyphs;
 pub(crate) mod inline_box;
 pub(crate) mod integral_outline;
 pub(crate) mod multiplication_outline;

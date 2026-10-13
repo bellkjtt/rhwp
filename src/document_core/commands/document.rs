@@ -25,10 +25,10 @@ use serde::Deserialize;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-mod stored_table_tail;
-mod tac_cache_repair;
 #[path = "stored_body_frames.rs"]
 mod stored_body_frames;
+mod stored_table_tail;
+mod tac_cache_repair;
 
 /// HWP 내보내기 + 자기 재로드 검증 결과 (#178 Stage 6).
 ///

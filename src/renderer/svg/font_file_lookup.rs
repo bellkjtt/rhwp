@@ -123,7 +123,11 @@ pub(super) fn plan_svg_font_file_lookup(
         search_dirs: crate::renderer::font_paths::search_dirs(extra_paths),
         custom_dirs: crate::renderer::font_paths::custom_font_dirs(extra_paths),
         families: std::iter::once(font_name.to_string())
-            .chain(font_local_aliases(font_name).into_iter().map(str::to_string))
+            .chain(
+                font_local_aliases(font_name)
+                    .into_iter()
+                    .map(str::to_string),
+            )
             .collect(),
         bold,
     }
@@ -133,16 +137,14 @@ pub(super) fn plan_svg_font_file_lookup(
 pub(super) fn find_font_file(plan: &FontFileLookupPlan) -> Option<std::path::PathBuf> {
     // 원 face의 직접 파일을 모든 루트에서 확인한 뒤 대체 face를 찾는다.
     // 같은 face가 여러 루트에 있으면 호출자가 지정한 루트 순서를 보존한다.
-    for candidates in [&plan.original_candidates] {
-        for dir in &plan.search_dirs {
-            if !dir.exists() {
-                continue;
-            }
-            for candidate in candidates {
-                let path = dir.join(candidate.as_path());
-                if path.is_file() {
-                    return Some(path);
-                }
+    for dir in &plan.search_dirs {
+        if !dir.exists() {
+            continue;
+        }
+        for candidate in &plan.original_candidates {
+            let path = dir.join(candidate.as_path());
+            if path.is_file() {
+                return Some(path);
             }
         }
     }

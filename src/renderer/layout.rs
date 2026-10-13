@@ -3651,9 +3651,9 @@ mod column_separators;
 mod fill_background;
 mod fixed_textbox_flow;
 mod hidden_paragraph_marker;
-mod note_reference;
 mod floating_equation;
 mod header_footer_layout;
+mod note_reference;
 mod paragraph_border;
 mod paragraph_layout;
 mod picture_footnote;
@@ -12344,14 +12344,15 @@ impl LayoutEngine {
                 // 이중 가산이 된다 (복학원서 접수증 오라클 실측: 한컴 ※ 81.7 vs
                 // rhwp leading 포함 86.9 — leading 축 자체의 잔차가 미해결이므로
                 // 그 케이스는 종전 위치를 유지한다).
-                let (om_l, om_r) = if leading > note_advance && !computed_own_line && !stored_whitespace_prefix {
-                    (0.0, 0.0)
-                } else {
-                    (
-                        hwpunit_to_px(t.outer_margin_left as i32, self.dpi),
-                        hwpunit_to_px(t.outer_margin_right as i32, self.dpi),
-                    )
-                };
+                let (om_l, om_r) =
+                    if leading > note_advance && !computed_own_line && !stored_whitespace_prefix {
+                        (0.0, 0.0)
+                    } else {
+                        (
+                            hwpunit_to_px(t.outer_margin_left as i32, self.dpi),
+                            hwpunit_to_px(t.outer_margin_right as i32, self.dpi),
+                        )
+                    };
                 let base_x = col_area.x
                     + effective_margin
                     + leading
