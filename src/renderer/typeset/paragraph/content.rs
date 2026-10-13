@@ -51,12 +51,24 @@ pub(super) fn stored_content_bottom(
                 .checked_add(crate::renderer::px_to_hwpunit(frame.before, dpi))
                 == Some(first_seg.vertical_pos)
         });
+    // 책갈피처럼 줄 상자를 소유하지 않는 표시가 있어도 첫 문단은
+    // 같은 쪽 상대 여백 축을 쓴다. 단 초기화와 paint가 사용하는 인증을
+    // 그대로 소비하며, 프레임 기록 유무를 물리 여백 유무로 대신하지 않는다.
+    let page_relative_margin = first_line == 0
+        && st.vpos_page_base == Some(0)
+        && crate::renderer::layout::stored_first_margin_is_page_relative(
+            first,
+            paragraphs.get(first_owner.checked_add(1)?),
+            styles,
+            dpi,
+        );
     // 표의 확정 원점이 인증한 축도 실제 단 시작 높이를 소유한다.
     // 저장 좌표의 기준과 물리 앵커를 분리하여 시작 밴드를 두 번 더하지 않는다.
     let (source_base, anchor) = if st.vpos_page_base_stored {
         let base = st.vpos_page_base?;
         if first_seg.vertical_pos != base
             && !retained_frame.is_some_and(|frame| frame.source_origin_hu == base)
+            && !page_relative_margin
         {
             return None;
         }
@@ -78,6 +90,7 @@ pub(super) fn stored_content_bottom(
         || first.cell_format_vpos_dirty
         || first_seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
         || (retained_frame.is_none()
+            && !page_relative_margin
             && styles
                 .para_styles
                 .get(first.para_shape_id as usize)?
