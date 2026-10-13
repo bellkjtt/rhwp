@@ -185,14 +185,20 @@ impl TypesetEngine {
         if full.is_none() {
             return EndnoteRenderInkFit::Unjudged;
         }
-        // 저장 되감김은 과거 자동 분할의 결과다. 현재 전체가 같은 배치 경로의
-        // 물리 글자 상자 안에 들어가면 낡은 컷으로 한 줄을 다음 단에 보내지 않는다.
-        // 명시적 문단 나누기는 호출부가 먼저 소비하며, 수용 실패 때만 앞 컷을 재생한다.
-        if fits(full) {
-            return EndnoteRenderInkFit::Fits;
-        }
         let stored_cut =
             stored_endnote_column_cut(st, paragraphs, en_para_idx).filter(|cut| *cut < line_count);
+        // 같은 저장 단의 구성이 유지되면 물리 여유만으로 다음 단의 소속을 지우지 않는다.
+        // 앞에서 재발행한 줄이 있으면 과거 컷을 현재 실제 수용 결과로 재검증한다.
+        let reissued_column = stored_cut.is_some()
+            && self.endnote_column_has_reissued_rows(st, paragraphs, styles);
+        if en_ssot_debug() && stored_cut.is_some() {
+            eprintln!(
+                "EN_SAVED_CUT pi={en_para_idx} cut={stored_cut:?} reissued_column={reissued_column}"
+            );
+        }
+        if fits(full) && (stored_cut.is_none() || reissued_column) {
+            return EndnoteRenderInkFit::Fits;
+        }
         // 뒤 단의 저장 소속은 전체 자연 높이의 수용과 별개다. 같은 컷의 앞
         // 조각을 실제로 재생하며, 공간이 부족하면 더 작은 앞 조각만 수용한다.
         let split_limit = stored_cut.unwrap_or(line_count.saturating_sub(1));

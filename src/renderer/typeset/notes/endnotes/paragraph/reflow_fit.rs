@@ -380,9 +380,12 @@ impl TypesetEngine {
         column_width: f64,
         measured_tables: &[MeasuredTable],
     ) -> bool {
-        // 현재 전체 배치의 수용 결과가 과거 자동 분할 컷보다 우선한다.
-        // 명시적 나누기는 이 경로에서 수용하지 않는다.
+        // 저장 단 구성이 유지되면 컷을 보존한다. 재발행된 앞 줄 때문에 구성이
+        // 달라진 경우만 실제 전체 배치를 재검증하며 명시적 나누기는 수용하지 않는다.
         paragraph.column_type == ColumnBreakType::None
+            && (super::super::measure::stored_endnote_column_cut(st, paragraphs, para_index)
+                .is_none()
+                || self.endnote_column_has_reissued_rows(st, paragraphs, styles))
             && self
                 .simulate_endnote_column_with_item(
                     st,
