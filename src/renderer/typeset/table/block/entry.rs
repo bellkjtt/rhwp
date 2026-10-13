@@ -596,7 +596,9 @@ impl TypesetEngine {
         // 판정한다. 동기화하지 않으면 footer 가 flowed cur_h(vpos 보다 ~수십px 낮음)에 배치되어
         // page-fit 이 과소되고 footer 가 본문 페이지에 흡수된다(−1쪽 갭 요인 B).
         let is_page_bottom_topbottom_block = is_page_bottom_fixed_float(&table.common);
-        if is_page_bottom_topbottom_block && st.current_column == 0 {
+        // 쪽 하단 고정 개체는 어느 단에서 만나도 본문 순서로 높이를 소비하지 않는다.
+        // 현재 단의 하단 배타 영역과 호스트 글줄은 같은 기존 계약으로 예약한다.
+        if is_page_bottom_topbottom_block {
             if let Some(first_seg) = para.line_segs.first() {
                 // 한컴은 고정크기 자리차지 블록을 **선언 높이**(common.height)로 렌더·예약한다.
                 // 페이지네이터의 effective_height 는 셀 내용 기반 측정치라 선언보다 작을 수 있어

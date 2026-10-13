@@ -663,11 +663,22 @@ pub(super) fn prepare(
                     .iter()
                     .find(|m| m.para_index == para_idx && m.control_index == line.control)
                     .is_some_and(|m| {
+                        // 측정 행은 내부 표를 소유한다. 일반 표 포맷과 같은
+                        // 바깥 프레임을 복원한 전체 높이로 저장 줄을 인증한다.
+                        let physical_height = if page.profile.hwp5_stored_pagination_layout() {
+                            crate::renderer::height_measurer::unwrapped_table_whole_height(
+                                table,
+                                m.total_height,
+                                dpi,
+                            )
+                        } else {
+                            m.total_height
+                        };
                         let caption_extent = table.caption.as_ref().map_or(0.0, |caption| {
                             crate::renderer::composer::caption_height_px(&table.caption, dpi)
                                 + hwpunit_to_px(i32::from(caption.spacing), dpi)
                         });
-                        (m.total_height
+                        (physical_height
                             - hwpunit_to_px(table.common.height as i32, dpi)
                             - caption_extent)
                             .abs()
