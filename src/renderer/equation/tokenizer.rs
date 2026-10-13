@@ -31,6 +31,9 @@ pub struct Token {
     /// 이 토큰 앞에 일반 공백이 있었는지. 무브레이스 첨자 operand 의 경계 판정에 쓰인다
     /// (HWP 수식에서 일반 공백은 시각적으로는 무의미하나 operand 구분자 역할을 한다, #1304).
     pub space_before: bool,
+    /// 저장 문서의 백슬래시 문자 전환으로 선택된 정체 글리프다.
+    /// 인자 소유·토큰 위치·공백 경계와 독립적인 표시 속성이다.
+    pub roman_literal: bool,
 }
 
 impl Token {
@@ -40,6 +43,7 @@ impl Token {
             value: value.into(),
             pos,
             space_before: false,
+            roman_literal: false,
         }
     }
 
@@ -49,6 +53,7 @@ impl Token {
             value: String::new(),
             pos,
             space_before: false,
+            roman_literal: false,
         }
     }
 }

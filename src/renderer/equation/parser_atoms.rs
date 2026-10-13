@@ -11,6 +11,11 @@ impl EqParser {
 
         let ty = self.current_type();
         let val = self.current_value().to_string();
+        let roman_literal = self.document_terms
+            && self
+                .tokens
+                .get(self.pos)
+                .is_some_and(|token| token.roman_literal);
 
         match ty {
             TokenType::Command => {
@@ -40,13 +45,13 @@ impl EqParser {
                 let node = if super::super::symbols::is_relation_symbol(&val) {
                     EqNode::MathSymbol(val)
                 } else {
-                    EqNode::Text(val)
+                    literal_font(EqNode::Text(val), roman_literal)
                 };
                 self.try_parse_scripts(node)
             }
             TokenType::Quoted => {
                 self.pos += 1;
-                self.try_parse_scripts(EqNode::Quoted(val))
+                self.try_parse_scripts(literal_font(EqNode::Quoted(val), roman_literal))
             }
             TokenType::Whitespace => {
                 self.pos += 1;
@@ -125,6 +130,11 @@ impl EqParser {
         // 단일 토큰
         let ty = self.current_type();
         let val = self.current_value().to_string();
+        let roman_literal = self.document_terms
+            && self
+                .tokens
+                .get(self.pos)
+                .is_some_and(|token| token.roman_literal);
         self.pos += 1;
 
         match ty {
@@ -141,10 +151,22 @@ impl EqParser {
                 }
             }
             TokenType::Number => EqNode::Number(val),
-            TokenType::Text => EqNode::Text(val),
-            TokenType::Quoted => EqNode::Quoted(val),
+            TokenType::Text => literal_font(EqNode::Text(val), roman_literal),
+            TokenType::Quoted => literal_font(EqNode::Quoted(val), roman_literal),
             TokenType::Symbol => EqNode::Symbol(val),
             _ => EqNode::Text(val),
         }
+    }
+}
+
+/// 글리프 선택은 공통 AST 글꼴 노드로 전달한다. 토큰 경계나 인자 소유는 바꾸지 않는다.
+pub(super) fn literal_font(node: EqNode, roman_literal: bool) -> EqNode {
+    if roman_literal {
+        EqNode::FontStyle {
+            style: FontStyleKind::Roman,
+            body: Box::new(node),
+        }
+    } else {
+        node
     }
 }

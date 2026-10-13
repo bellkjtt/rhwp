@@ -219,6 +219,12 @@ impl EqParser {
 
     /// 장식·글꼴·기호·함수·미지 명령. 분류표에 없는 이름만 여기로 온다.
     pub(super) fn parse_command_fallback(&mut self, cmd: &str, attach_scripts: bool) -> EqNode {
+        let roman_literal = self.document_terms
+            && self
+                .pos
+                .checked_sub(1)
+                .and_then(|index| self.tokens.get(index))
+                .is_some_and(|token| token.roman_literal);
         // [#1204] hwpeq 명령은 대소문자 무시 — DECORATIONS/FONT_STYLES 는 소문자 키이므로
         // 1차 lookup 실패 시 소문자 fallback (`RM`/`BAR` 등 대문자 변형이 leak 되지 않도록).
         let cmd_lower = cmd.to_ascii_lowercase();
@@ -297,7 +303,7 @@ impl EqParser {
             return self.finish_command_atom(node, attach_scripts);
         }
 
-        let node = EqNode::Text(cmd.to_string());
+        let node = super::atoms::literal_font(EqNode::Text(cmd.to_string()), roman_literal);
         self.finish_command_atom(node, attach_scripts)
     }
 }
