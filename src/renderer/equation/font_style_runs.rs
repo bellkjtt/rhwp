@@ -10,20 +10,44 @@ pub(super) fn resolve(children: Vec<EqNode>) -> Vec<EqNode> {
     let mut result = Vec::new();
     let mut style = None;
     let mut run = Vec::new();
-    for child in children {
-        if let EqNode::FontStyle { style: next, body } = &child {
-            if matches!(next, FontStyleKind::Roman | FontStyleKind::Italic)
-                && matches!(body.as_ref(), EqNode::Empty)
-            {
-                flush(&mut result, &mut run, style);
-                style = Some(*next);
-                continue;
+    for mut child in children {
+        let switch = match &child {
+            EqNode::Subscript { base, .. }
+            | EqNode::Superscript { base, .. }
+            | EqNode::SubSup { base, .. } => font_switch(base),
+            _ => font_switch(&child),
+        };
+        if let Some(next) = switch {
+            flush(&mut result, &mut run, style);
+            style = Some(next);
+            match &mut child {
+                EqNode::Subscript { base, .. }
+                | EqNode::Superscript { base, .. }
+                | EqNode::SubSup { base, .. } => {
+                    // 전환 marker는 가시 본체가 아니다. 첨자와 뒤 형제 항이
+                    // 같은 전환 범위를 사용하고 빈 본체의 기준선은 보존한다.
+                    **base = EqNode::Empty;
+                    run.push(child);
+                }
+                _ => {}
             }
+            continue;
         }
         run.push(child);
     }
     flush(&mut result, &mut run, style);
     result
+}
+
+fn font_switch(node: &EqNode) -> Option<FontStyleKind> {
+    if let EqNode::FontStyle { style, body } = node {
+        if matches!(style, FontStyleKind::Roman | FontStyleKind::Italic)
+            && matches!(body.as_ref(), EqNode::Empty)
+        {
+            return Some(*style);
+        }
+    }
+    None
 }
 
 fn flush(result: &mut Vec<EqNode>, run: &mut Vec<EqNode>, style: Option<FontStyleKind>) {

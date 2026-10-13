@@ -16,8 +16,9 @@ impl EqParser {
             // 전환 marker는 뒤 항에도 적용된다. 그 바로 뒤 첨자는 같은 인자
             // 경로로 소비하되 marker를 보존해 정체/이탤릭 범위를 유지한다.
             // 기저 없는 새 항으로 다시 읽으면 유효한 it_{n}rmP it_{r}가 중단된다.
-            let script = self.try_parse_scripts(EqNode::Empty);
-            return EqNode::Row(vec![first, script]).simplify();
+            // marker를 여기서 Row로 단순화하면 첨자가 없는 전환이 사라지거나
+            // 첨자만 인자 범위로 묶인다. 현재 그룹의 Row가 전환을 소비하게 한다.
+            return self.try_parse_scripts(first);
         }
         if first_type == TokenType::LBrace {
             return self.finish_named_scripts(first);
