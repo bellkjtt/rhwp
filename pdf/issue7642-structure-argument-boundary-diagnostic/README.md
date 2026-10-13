@@ -49,3 +49,16 @@ ignored `output/pr-review/issue7642/failed-inputs-20261008/stage15-current-valid
 두 자료도 Hancom engine `2020`, build `11.0.0.9136`, PrintMethod `0`의
 `hancom2020_pdf_driver_one_up`으로 출력했다. 모든 수식 script의 저장 전후 보존을 확인했다.
 빈 첨자와 명령 우선순위의 진단 자료이며 아직 시각 통과 fixture로 등록하지 않는다.
+
+## 최장 명령과 백슬래시 대조군
+
+`native-keyword-longest`의 24개 script도 일반 저장 전후 보존됐고, 한컴 2020의
+PrintMethod 0으로 전체 1쪽을 출력했다. OVERLINE과 OVER의 우선순위, UNDER의
+별칭, 백슬래시 뒤 명령의 문서 해석을 대조한다. 시각 통과 fixture가 아닌 진단 자료다.
+
+- hwp job: `2f4dc6ef-b3e1-4555-8260-c4f4b341657e`.
+- pdf job: `a6486a2b-5c7b-401b-9e3e-f961b379455d`.
+- `native-keyword-longest-hancom-2020.hwp`: `aacd2a219bc256e33c475b4b22ae4cedbde2ef4274f4fd46aa2bdc7de57c4157`.
+- `native-keyword-longest-hancom-2020.pdf`: `bb6e10cc15a8fe1f2cfd00d82b5ee3bba113eef79f85d53011d8797bd075e612`.
+- `native-keyword-longest-input.hwpx`: `ce0a80dd9b13487b34644de2f318177bb9f5f70377140c5410167703ef747c02`.
+- `native-keyword-longest-rhwp-input.hwp`: `34a3dd113b024dd8d37da9582c9f1bfd5d1f00fc30e433859b2d603e0a43920e`.
