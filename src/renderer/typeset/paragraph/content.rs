@@ -39,11 +39,25 @@ pub(super) fn stored_content_bottom(
     };
     let first = paragraphs.get(first_owner)?;
     let first_seg = first.line_segs.get(first_line)?;
+    // 단 첫 줄의 앞 간격을 보존한 프레임은 원점과 첫 vpos가 다르다.
+    // pagination과 paint가 이미 수용한 같은 프레임을 내용 하단에도 쓴다.
+    // 첫 vpos를 원점으로 요구하면 이 경로만 간격을 잃어 뒤 TAC 표가 올라간다.
+    let retained_frame = (first_line == 0)
+        .then(|| st.stored_column_top_spacings.get(&first_owner))
+        .flatten()
+        .filter(|frame| {
+            frame
+                .source_origin_hu
+                .checked_add(crate::renderer::px_to_hwpunit(frame.before, dpi))
+                == Some(first_seg.vertical_pos)
+        });
     // 표의 확정 원점이 인증한 축도 실제 단 시작 높이를 소유한다.
     // 저장 좌표의 기준과 물리 앵커를 분리하여 시작 밴드를 두 번 더하지 않는다.
     let (source_base, anchor) = if st.vpos_page_base_stored {
         let base = st.vpos_page_base?;
-        if first_seg.vertical_pos != base {
+        if first_seg.vertical_pos != base
+            && !retained_frame.is_some_and(|frame| frame.source_origin_hu == base)
+        {
             return None;
         }
         (base, st.vpos_col_anchor)
@@ -63,11 +77,12 @@ pub(super) fn stored_content_bottom(
     if first.stored_text_partition_is_dirty()
         || first.cell_format_vpos_dirty
         || first_seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
-        || styles
-            .para_styles
-            .get(first.para_shape_id as usize)?
-            .spacing_before
-            != 0.0
+        || (retained_frame.is_none()
+            && styles
+                .para_styles
+                .get(first.para_shape_id as usize)?
+                .spacing_before
+                != 0.0)
         || para
             .line_segs
             .windows(2)
