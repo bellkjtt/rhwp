@@ -641,10 +641,9 @@ pub(super) fn prepare(
                     // 시작 밴드를 기준축에도 넣으면 이후 표에 그 밴드가 중복된다.
                     // 뒤 간격은 원점 이동량이 아니므로 이 환산에 포함하지 않는다.
                     // 원본 정수 단위로 돌아갈 때 절삭하면 계산 오차가 1HU 이동을 만든다.
-                    let relative_origin = ((origin - page.vpos_col_anchor)
-                        * crate::renderer::HWPUNIT_PER_INCH
-                        / dpi)
-                        .round() as i32;
+                    let relative_origin =
+                        ((origin - page.vpos_col_anchor) * crate::renderer::HWPUNIT_PER_INCH / dpi)
+                            .round() as i32;
                     seg.vertical_pos.saturating_sub(relative_origin)
                 });
                 return Some(StoredTacPlan {

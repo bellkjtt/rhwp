@@ -59,11 +59,7 @@ impl TypesetEngine {
         flow: EndnoteFlowState,
     ) -> EndnoteFlowState {
         let original_endnote = en_ctrl;
-        let projected_endnote = super::row_projection::project_equation_rows(
-            en_ctrl,
-            styles,
-            st,
-        );
+        let projected_endnote = super::row_projection::project_equation_rows(en_ctrl, styles, st);
         let en_ctrl = projected_endnote.as_ref();
         let EndnoteEmitVars {
             reserved_tail_spacing_px,

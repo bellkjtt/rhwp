@@ -49,6 +49,15 @@ pub(super) fn stored_content_bottom(
         (base, st.vpos_col_anchor)
     } else if first_seg.vertical_pos == 0 && st.current_start_height == 0.0 {
         (0, 0.0)
+    } else if first_line == 0
+        && first.column_type == crate::model::paragraph::ColumnBreakType::Column
+        && st.vpos_col_anchor == st.current_start_height
+        && first_seg.vertical_pos
+            == (st.current_start_height * crate::renderer::HWPUNIT_PER_INCH / dpi).round() as i32
+    {
+        // 명시적 단 시작의 원본 줄과 실제 시작 밴드가 같은 축을 인증한다.
+        // 첫 표가 일반 float여도 뒤 본문을 순차 누적 높이로 되돌리지 않는다.
+        (first_seg.vertical_pos, st.vpos_col_anchor)
     } else {
         return None;
     };
@@ -81,6 +90,7 @@ pub(super) fn stored_content_bottom(
         let end = seg.vertical_pos.checked_add(seg.line_height)?;
         bottom = Some(bottom.map_or(end, |previous: i32| previous.max(end)));
     }
-    bottom.and_then(|end| end.checked_sub(source_base))
+    bottom
+        .and_then(|end| end.checked_sub(source_base))
         .map(|end| anchor + hwpunit_to_px(end, dpi))
 }
