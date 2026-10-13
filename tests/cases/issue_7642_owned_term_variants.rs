@@ -57,57 +57,109 @@ fn glyphs(value: &LayoutBox, parent_x: f64, parent_y: f64, output: &mut Vec<Glyp
 
 fn roundoff_equal(left: f64, right: f64, scale: f64) {
     // 같은 물리 항의 상대 관계다. 화면 위치나 고정 px 허용치를 쓰지 않는다.
-    assert!((left-right).abs() <= f64::EPSILON * scale.max(1.0) * 128.0,
-        "동치 표기의 전진·기준선이 다르다: {left} / {right}");
+    assert!(
+        (left - right).abs() <= f64::EPSILON * scale.max(1.0) * 128.0,
+        "동치 표기의 전진·기준선이 다르다: {left} / {right}"
+    );
 }
 
 #[test]
 fn issue7642_owned_term_variants_preserve_the_same_glyph_sequence_and_baselines() {
-    let path=std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("pdf/issue7642-term-context-diagnostic/term-context-hancom-2020.hwp");
-    let core=DocumentCore::from_bytes(&std::fs::read(path).unwrap()).unwrap();
-    let mut rendered=Vec::new();
+    let core = DocumentCore::from_bytes(&std::fs::read(path).unwrap()).unwrap();
+    let mut rendered = Vec::new();
     for page in 0..core.page_count() {
-        equations(&core.build_page_render_tree(page).unwrap().root,&mut rendered);
+        equations(
+            &core.build_page_render_tree(page).unwrap().root,
+            &mut rendered,
+        );
     }
-    let variants=["a _n -3","a _n - 3","a _n {-3}","{a _n} -3"];
-    let sources:Vec<_>=core.document().sections.iter().enumerate().flat_map(|(section,data)| {
-        data.paragraphs.iter().enumerate().flat_map(move |(paragraph,para)| {
-            para.controls.iter().enumerate().filter_map(move |(control,value)| {
-                match value {
-                    Control::Equation(eq) if variants.contains(&eq.script.as_str()) => {
-                        Some((section,paragraph,control,eq.as_ref()))
-                    }
-                    _=>None,
-                }
-            })
+    let variants = ["a _n -3", "a _n - 3", "a _n {-3}", "{a _n} -3"];
+    let sources: Vec<_> = core
+        .document()
+        .sections
+        .iter()
+        .enumerate()
+        .flat_map(|(section, data)| {
+            data.paragraphs
+                .iter()
+                .enumerate()
+                .flat_map(move |(paragraph, para)| {
+                    para.controls
+                        .iter()
+                        .enumerate()
+                        .filter_map(move |(control, value)| match value {
+                            Control::Equation(eq) if variants.contains(&eq.script.as_str()) => {
+                                Some((section, paragraph, control, eq.as_ref()))
+                            }
+                            _ => None,
+                        })
+                })
         })
-    }).collect();
-    assert_eq!(sources.len(),16,"독립 한컴 저장본의 네 크기·네 동치 표기 보존");
-    for (section,paragraph,control,source) in &sources {
-        let count=rendered.iter().filter(|eq| (eq.section_index,eq.para_index,eq.control_index)
-            ==(Some(*section),Some(*paragraph),Some(*control)) && eq.script==source.script).count();
-        assert_eq!(count,1,"수식의 원본 소유·누락·중복 검사: {}",source.script);
+        .collect();
+    assert_eq!(
+        sources.len(),
+        16,
+        "독립 한컴 저장본의 네 크기·네 동치 표기 보존"
+    );
+    for (section, paragraph, control, source) in &sources {
+        let count = rendered
+            .iter()
+            .filter(|eq| {
+                (eq.section_index, eq.para_index, eq.control_index)
+                    == (Some(*section), Some(*paragraph), Some(*control))
+                    && eq.script == source.script
+            })
+            .count();
+        assert_eq!(
+            count, 1,
+            "수식의 원본 소유·누락·중복 검사: {}",
+            source.script
+        );
     }
-    let flats:Vec<_>=rendered.iter().filter(|eq| eq.script==variants[0]).collect();
-    assert_eq!(flats.len(),4);
+    let flats: Vec<_> = rendered
+        .iter()
+        .filter(|eq| eq.script == variants[0])
+        .collect();
+    assert_eq!(flats.len(), 4);
     for flat in flats {
-        let mut expected=Vec::new();
-        glyphs(&flat.layout_box,0.0,-flat.layout_box.baseline,&mut expected);
-        assert_eq!(expected.len(),4,"a·아래첨자 n·빼기·3의 내용 보존");
+        let mut expected = Vec::new();
+        glyphs(
+            &flat.layout_box,
+            0.0,
+            -flat.layout_box.baseline,
+            &mut expected,
+        );
+        assert_eq!(expected.len(), 4, "a·아래첨자 n·빼기·3의 내용 보존");
         for variant in &variants[1..] {
-            let alternatives:Vec<_>=rendered.iter().filter(|eq| eq.script==*variant && eq.font_size==flat.font_size).collect();
-            assert_eq!(alternatives.len(),1);
-            let grouped=alternatives[0];
-            roundoff_equal(grouped.layout_box.width,flat.layout_box.width,flat.font_size);
-            let mut actual=Vec::new();
-            glyphs(&grouped.layout_box,0.0,-grouped.layout_box.baseline,&mut actual);
-            assert_eq!(actual.len(),expected.len());
-            for (left,right) in actual.iter().zip(&expected) {
-                assert_eq!(left.text,right.text,"그룹 경계가 내용 순서를 바꾸지 않는다");
-                roundoff_equal(left.x,right.x,flat.font_size);
-                roundoff_equal(left.baseline,right.baseline,flat.font_size);
-                roundoff_equal(left.font_size,right.font_size,flat.font_size);
+            let alternatives: Vec<_> = rendered
+                .iter()
+                .filter(|eq| eq.script == *variant && eq.font_size == flat.font_size)
+                .collect();
+            assert_eq!(alternatives.len(), 1);
+            let grouped = alternatives[0];
+            roundoff_equal(
+                grouped.layout_box.width,
+                flat.layout_box.width,
+                flat.font_size,
+            );
+            let mut actual = Vec::new();
+            glyphs(
+                &grouped.layout_box,
+                0.0,
+                -grouped.layout_box.baseline,
+                &mut actual,
+            );
+            assert_eq!(actual.len(), expected.len());
+            for (left, right) in actual.iter().zip(&expected) {
+                assert_eq!(
+                    left.text, right.text,
+                    "그룹 경계가 내용 순서를 바꾸지 않는다"
+                );
+                roundoff_equal(left.x, right.x, flat.font_size);
+                roundoff_equal(left.baseline, right.baseline, flat.font_size);
+                roundoff_equal(left.font_size, right.font_size, flat.font_size);
             }
         }
     }
