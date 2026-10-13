@@ -1,5 +1,6 @@
 import { CanvasKitBundledFontFamily } from './canvaskit/font-style-selection.ts';
 import { textRequiresComplexShaping } from './canvaskit/nominal-text-replay.ts';
+import { singleDigitGeometry } from './canvaskit/boxed-digit-geometry.ts';
 import CanvasKitInit from 'canvaskit-wasm';
 import { blake3 } from '@noble/hashes/blake3.js';
 import type {
@@ -2987,7 +2988,7 @@ export class CanvasKitLayerRenderer {
             }
             const candidateIndex = candidateGlyphIds.findIndex(ids => (ids[index] ?? 0) !== 0);
             if (candidateIndex >= 0) return candidateIndex;
-            return code >= 0xF02B1 && code <= 0xF02C4 ? -1 : 0;
+            return code >= 0xF02B0 && code <= 0xF02C4 ? -1 : 0;
           });
           for (const fontIndex of new Set(selectedFontIndices)) {
             if (fontIndex > 0) {
@@ -3108,6 +3109,29 @@ export class CanvasKitLayerRenderer {
             if (fontIndex === -1) {
               const codePoint = codePoints[runStart].codePointAt(0) ?? 0;
               const displayNumber = String(codePoint - 0xF02B0);
+              const geometry = singleDigitGeometry(codePoint - 0xF02B0, fontSize);
+              if (geometry) {
+                const framePaint = this.makeStrokePaint(style.color ?? '#000000', geometry.strokeWidth);
+                const numberFace = this.findPreparedTypeface(geometry.face)?.typeface
+                  ?? this.symbolFallbackTypeface ?? this.defaultTypeface ?? typeface;
+                const numberFont = new this.canvasKit.Font(numberFace, fontSize);
+                try {
+                  canvas.drawRect(this.canvasKit.XYWHRect(
+                    originX + replayPositions![runStart] + offsetX + geometry.frameX,
+                    originY + baselineShift + offsetY + geometry.frameY,
+                    geometry.frameWidth, geometry.frameHeight), framePaint);
+                  canvas.save();
+                  canvas.translate(originX + replayPositions![runStart] + offsetX + geometry.numberX,
+                    originY + baselineShift + offsetY + geometry.numberY);
+                  canvas.scale(geometry.scaleX, geometry.scaleY);
+                  canvas.drawText(displayNumber, 0, 0, fillPaint, numberFont);
+                  canvas.restore();
+                } finally {
+                  framePaint.delete();
+                  numberFont.delete();
+                }
+                continue;
+              }
               const boxSize = Math.max(1, fontSize * 0.72);
               const boxX = originX + replayPositions![runStart];
               const boxY = originY + baselineShift - fontSize * 0.76;

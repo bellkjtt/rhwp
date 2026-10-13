@@ -597,6 +597,63 @@ impl SkiaTextReplay<'_> {
                                     + char_positions.get(*char_idx).copied().unwrap_or(0.0) as f32
                                     + dx;
                                 let baseline_y = y as f32 + dy;
+                                if let Some(g) = crate::renderer::boxed_digit_geometry::single_digit(
+                                    number,
+                                    f64::from(font_size),
+                                ) {
+                                    let family = format!(
+                                        "{},{}",
+                                        crate::renderer::boxed_digit_geometry::number_face(),
+                                        style.font_family
+                                    );
+                                    let (_, number_faces) = text_typeface_candidates(
+                                        self.font_mgr,
+                                        self.system_families,
+                                        self.custom_typefaces,
+                                        self.bundled_typefaces,
+                                        &family,
+                                        FontStyle::normal(),
+                                    );
+                                    if let Some(face) = select_typeface_for_character(
+                                        &number_faces,
+                                        char::from_digit(number, 10).unwrap(),
+                                    ) {
+                                        let mut number_font =
+                                            Font::new(face.typeface.clone(), font_size);
+                                        number_font.set_edging(font::Edging::AntiAlias);
+                                        let mut frame_paint = Paint::default();
+                                        frame_paint.set_anti_alias(true);
+                                        frame_paint.set_style(paint::Style::Stroke);
+                                        frame_paint.set_stroke_width(g.stroke_width as f32);
+                                        frame_paint.set_color(color);
+                                        canvas.draw_rect(
+                                            Rect::from_xywh(
+                                                char_x + g.frame_x as f32,
+                                                baseline_y + g.frame_y as f32,
+                                                g.frame_width as f32,
+                                                g.frame_height as f32,
+                                            ),
+                                            &frame_paint,
+                                        );
+                                        canvas.save();
+                                        canvas.translate((
+                                            char_x + g.number_x as f32,
+                                            baseline_y + g.number_y as f32,
+                                        ));
+                                        canvas.scale((
+                                            g.number_scale_x as f32,
+                                            g.number_scale_y as f32,
+                                        ));
+                                        canvas.draw_str(
+                                            number.to_string(),
+                                            (0.0, 0.0),
+                                            &number_font,
+                                            &text_paint,
+                                        );
+                                        canvas.restore();
+                                        continue;
+                                    }
+                                }
                                 let box_size = (font_size * 0.72).max(1.0);
                                 let box_y = baseline_y - font_size * 0.76;
                                 let mut box_paint = Paint::default();

@@ -10,6 +10,7 @@ use crate::model::paragraph::LineSeg;
 use crate::model::style::{LineSpacingType, UnderlineType};
 
 pub(crate) mod arrow;
+pub(crate) mod boxed_digit_geometry;
 pub mod canvas;
 pub mod canvas_text_font;
 pub mod canvaskit_policy;

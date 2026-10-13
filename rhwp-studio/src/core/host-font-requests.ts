@@ -1,5 +1,6 @@
 import type { LayerEquationLayoutBox, LayerNode, LayerTextStyle, PageLayerTree } from './types.ts';
 import { resolveRendererLocalFont, localFontFaceKey, type LocalFontRecord } from './local-fonts.ts';
+import boxedDigitMetrics from '../../../assets/fonts/boxed-digit-metrics.json';
 
 export function hostFontStyle(style?: LayerTextStyle): { weight: number; slant: 'normal' | 'italic' } {
   return { weight: style?.bold ? 700 : 400, slant: style?.italic ? 'italic' : 'normal' };
@@ -74,6 +75,14 @@ export function collectHostFontRequests(tree: PageLayerTree): LocalFontRecord[] 
       if (!family) continue;
       const record = resolveRendererLocalFont(primaryHostFontFamily(family), hostFontStyle(op.style));
       if (record?.hostReference) selected.set(localFontFaceKey(record), record);
+      if ([...op.text].some(character => {
+        const code = character.codePointAt(0) ?? 0;
+        return code >= 0xf02b0 && code <= 0xf02b9;
+      })) {
+        const numberFace = resolveRendererLocalFont(boxedDigitMetrics.numberFace,
+          { weight: 400, slant: 'normal' });
+        if (numberFace?.hostReference) selected.set(localFontFaceKey(numberFace), numberFace);
+      }
     }
   }
   return [...selected.values()];

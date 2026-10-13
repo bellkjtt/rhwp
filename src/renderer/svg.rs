@@ -3030,6 +3030,30 @@ impl SvgRenderer {
         style: &TextStyle,
         font_size: f64,
     ) {
+        if let Some(g) = super::boxed_digit_geometry::single_digit(number, font_size) {
+            let face = super::boxed_digit_geometry::number_face();
+            self.font_codepoints
+                .entry(face.to_string())
+                .or_default()
+                .extend(number.to_string().chars());
+            let family = format!(
+                "'{face}',{}",
+                super::render_font_family_chain_for_weight(
+                    &style.font_family,
+                    style.is_visually_bold()
+                )
+            );
+            let color = color_to_svg(style.color);
+            self.output.push_str(&format!(
+                "<rect x=\"{}\" y=\"{}\" width=\"{}\" height=\"{}\" fill=\"none\" stroke=\"{}\" stroke-width=\"{}\"/>\n",
+                x + g.frame_x, baseline_y + g.frame_y, g.frame_width, g.frame_height,
+                color, g.stroke_width));
+            self.output.push_str(&format!(
+                "<text transform=\"matrix({} 0 0 {} {} {})\" x=\"0\" y=\"0\" font-family=\"{}\" font-size=\"{}\" fill=\"{}\">{}</text>\n",
+                g.number_scale_x, g.number_scale_y, x + g.number_x,
+                baseline_y + g.number_y, escape_xml(&family), font_size, color, number));
+            return;
+        }
         let box_size = (font_size * 0.72).max(1.0);
         let box_y = baseline_y - font_size * 0.76;
         let color = color_to_svg(style.color);

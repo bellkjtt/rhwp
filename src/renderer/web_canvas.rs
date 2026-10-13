@@ -3019,6 +3019,38 @@ impl WebCanvasRenderer {
         style: &TextStyle,
         font_size: f64,
     ) {
+        if let Some(g) = super::boxed_digit_geometry::single_digit(number, font_size) {
+            let color = color_to_css(style.color);
+            let family = format!(
+                "'{}',{}",
+                super::boxed_digit_geometry::number_face(),
+                super::canvas_font_family_chain(&style.font_family)
+            );
+            self.ctx.save();
+            self.ctx.set_stroke_style_str(&color);
+            self.ctx.set_fill_style_str(&color);
+            self.ctx.set_line_width(g.stroke_width);
+            self.ctx.stroke_rect(
+                x + g.frame_x,
+                baseline_y + g.frame_y,
+                g.frame_width,
+                g.frame_height,
+            );
+            let _ = self.ctx.transform(
+                g.number_scale_x,
+                0.0,
+                0.0,
+                g.number_scale_y,
+                x + g.number_x,
+                baseline_y + g.number_y,
+            );
+            self.ctx.set_font(&format!("{font_size}px {family}"));
+            self.ctx.set_text_align("left");
+            self.ctx.set_text_baseline("alphabetic");
+            let _ = self.ctx.fill_text(&number.to_string(), 0.0, 0.0);
+            self.ctx.restore();
+            return;
+        }
         let box_size = (font_size * 0.72).max(1.0);
         let box_y = baseline_y - font_size * 0.76;
         let color = color_to_css(style.color);
