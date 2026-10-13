@@ -567,7 +567,9 @@ pub(crate) fn tac_next_line_full_spacing(
             .iter()
             .enumerate()
             .any(|(ci, _)| owned_rowbreak_tac_height(para, ci).is_some());
-    let stored_host = profile.hwp5_stored_pagination_layout()
+    // 저장 줄의 닫힌 사다리는 컨테이너와 무관하다. 원본 HWPX도 같은
+    // 원점·점유 높이·문단 간격을 입증하면 fit과 paint가 그 끝을 함께 쓴다.
+    let stored_host = (profile.hwp5_stored_pagination_layout() || profile.hwpx_stored_layout())
         && !profile.session_edited()
         && !para.stored_text_partition_is_dirty()
         && seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0;
