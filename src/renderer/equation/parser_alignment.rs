@@ -5,13 +5,11 @@ use super::{EqNode, EqParser, TokenType};
 impl EqParser {
     /// 조건식 파싱: CASES{...}
     pub(super) fn parse_cases(&mut self) -> EqNode {
-        if !self.expect(TokenType::LBrace) {
+        let Some(end) = self.begin_structure_body(false) else {
             return EqNode::Cases {
                 rows: vec![EqNode::Empty],
             };
-        }
-
-        let end = self.find_matching_brace(self.pos);
+        };
         let mut rows = Vec::new();
         let mut current_row = Vec::new();
         let mut over_run = 0u32;
@@ -55,14 +53,12 @@ impl EqParser {
 
     /// EQALIGN 파싱: EQALIGN{row1_left & row1_right # row2_left & row2_right}
     pub(super) fn parse_eqalign(&mut self) -> EqNode {
-        if !self.expect(TokenType::LBrace) {
+        let Some(end) = self.begin_structure_body(false) else {
             return EqNode::EqAlign {
                 rows: vec![(EqNode::Empty, EqNode::Empty)],
                 alignment_marks: vec![false],
             };
-        }
-
-        let end = self.find_matching_brace(self.pos);
+        };
         let mut rows: Vec<(EqNode, EqNode)> = Vec::new();
         let mut alignment_marks = Vec::new();
         let mut current_left = Vec::new();
