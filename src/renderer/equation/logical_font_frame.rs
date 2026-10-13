@@ -110,9 +110,6 @@ pub(super) fn horizontal_row(value: &LayoutBox, items: &[LayoutBox]) -> bool {
 }
 
 pub(super) fn font_line(value: &LayoutBox, fs: f64) -> bool {
-    if (value.height - fs).abs() > f64::EPSILON * fs * 4.0 {
-        return false;
-    }
     match &value.kind {
         LayoutKind::Text(_)
         | LayoutKind::Number(_)
@@ -120,8 +117,11 @@ pub(super) fn font_line(value: &LayoutBox, fs: f64) -> bool {
         | LayoutKind::MathSymbol(_)
         | LayoutKind::FontGlyph { .. }
         | LayoutKind::Function(_)
-        | LayoutKind::Space(_) => true,
+        | LayoutKind::Space(_) => (value.height - fs).abs() <= f64::EPSILON * fs * 4.0,
         LayoutKind::Row(items) => {
+            // 가로 소속과 실제 글자 크기로 단일 글줄을 판정한다.
+            // 논리 괄호와 자연 글리프의 기준선이 섞인 임시 합집합 높이는
+            // 분수의 원래 글줄 계약을 무효화하는 근거가 아니다.
             horizontal_row(value, items) && items.iter().all(|item| font_line(item, fs))
         }
         LayoutKind::Color { body, .. }
