@@ -263,7 +263,7 @@ impl TypesetEngine {
     }
 
     /// 저장 단의 잔여 높이는 현재 문단뿐 아니라 앞서 방출한 수식 줄에도 의존한다.
-    pub(super) fn endnote_column_has_reissued_rows(
+    pub(in crate::renderer::typeset) fn endnote_column_has_reissued_rows(
         &self,
         st: &TypesetState,
         paragraphs: &[Paragraph],
