@@ -380,8 +380,9 @@ impl TypesetEngine {
         column_width: f64,
         measured_tables: &[MeasuredTable],
     ) -> bool {
-        super::super::measure::stored_endnote_column_cut(st, paragraphs, para_index).is_none()
-            && paragraph.column_type == ColumnBreakType::None
+        // 현재 전체 배치의 수용 결과가 과거 자동 분할 컷보다 우선한다.
+        // 명시적 나누기는 이 경로에서 수용하지 않는다.
+        paragraph.column_type == ColumnBreakType::None
             && self
                 .simulate_endnote_column_with_item(
                     st,
