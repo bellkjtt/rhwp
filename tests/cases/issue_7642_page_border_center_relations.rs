@@ -17,8 +17,8 @@ fn page_border_centers_preserve_source_gaps_and_match_the_public_page_informatio
         serde_json::from_str(&core.get_page_border_fill_native(0).unwrap()).unwrap();
     assert_eq!(fill["basis"], "page", "원본 UI 기준 보존");
     assert_eq!(
-        fill["spacingTop"].as_u64(),
-        Some(u64::from(section.page_border_fill.spacing_top))
+        fill["spacingTop"].as_i64(),
+        Some(i64::from(section.page_border_fill.spacing_top))
     );
     let source_gap =
         f64::from(section.page_border_fill.spacing_top) / f64::from(section.page_def.height);
