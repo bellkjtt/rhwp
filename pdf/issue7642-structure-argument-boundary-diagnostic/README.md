@@ -79,3 +79,13 @@ PrintMethod 0으로 전체 1쪽을 출력했다. OVERLINE과 OVER의 우선순�
 세로 기호이며, 대문자 `LEFTARROW`와 소문자 `leftarrow`는 각각 이중·단일 화살표다.
 escaped UNDERLINE은 인자 첫 여는 중괄호를 보여 주고, 내부 그룹과 닫힘은 구분한다.
 원시 PDF trace와 명령·해시는 ignored Stage 334 output에 보존한다.
+
+## Source 335의 직접 검토 이미지
+
+code `d5006b134`, 실제 빌드 source `339c2f25100cead6537fc4290ea902d9159b7b7e`
+(차이는 문서 정정)의 Native/fresh WASM은 최장 명령 99.40591%, 문자 전환
+99.34022%다. 새 Native review를 직접 판독했으며 다음 파일로 보존했다.
+이는 해당 진단의 결과이고 전체 PR 승인이나 최신 후속 head의 증거를 대신하지 않는다.
+
+- `escape-30-source335-native-review.png`: `f584c337d8260630ff2cbc8fe79a00034dbc8fe3ad9790edb951eef60d0c27d7`.
+- `longest-24-source335-native-review.png`: `f95f303ea56b515f56e87c46d0d92ceb054282d057e011541e7208394deb5f38`.
