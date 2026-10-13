@@ -121,3 +121,70 @@ pub(super) fn stored_content_bottom(
         .and_then(|end| end.checked_sub(source_base))
         .map(|end| anchor + hwpunit_to_px(end, dpi))
 }
+
+/// A certified source guide owns its whole empty line band, including trailing
+/// space. Fit may omit the trailing space at the page end; accepted flow must
+/// still advance by the same band which the paragraph painter consumes.
+pub(super) fn stored_overlay_guide_advance(
+    st: &TypesetState,
+    fmt: &FormattedParagraph,
+    paragraphs: &[Paragraph],
+    index: usize,
+) -> Option<f64> {
+    ((st.profile.hwp5_stored_pagination_layout() || st.profile.hwpx_stored_layout())
+        && !st.profile.session_edited()
+        && !st.vpos_ladder_dirty
+        && crate::renderer::float_placement::stored_overlay_guide_owns_flow(paragraphs, index))
+    .then_some(fmt.total_height)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(super) fn stored_successor_flow(
+    st: &TypesetState,
+    para: &Paragraph,
+    fmt: &FormattedParagraph,
+    paragraphs: &[Paragraph],
+    styles: &ResolvedStyleSet,
+    para_idx: usize,
+    dpi: f64,
+) -> Option<(f64, f64)> {
+    if st.col_count != 1
+        || fmt.stored_ladder_is_filler
+        || fmt.computed_host_lines.is_some()
+        || fmt.line_count() != para.line_segs.len()
+    {
+        return None;
+    }
+    let frame = crate::renderer::float_placement::stored_paragraph_successor_flow(
+        para,
+        paragraphs.get(para_idx + 1)?,
+        styles,
+        st.paragraph_flow_profile(),
+        dpi,
+    )?;
+    frame.project(
+        st.current_height,
+        st.vpos_page_base.or(st.vpos_lazy_base),
+        if st.vpos_page_base.is_some() {
+            st.vpos_col_anchor
+        } else {
+            0.0
+        },
+        dpi,
+    )
+}
+
+/// paint와 같은 첫 수용 항목의 저장 원점과 물리 앵커를 보존한다.
+/// 이미 확립한 단 첫 여백 프레임은 실제 첫 vpos로 덮어쓰지 않는다.
+pub(super) fn record_first_fragment_origin(
+    st: &mut TypesetState,
+    item: &crate::renderer::pagination::PageItem,
+    paragraphs: &[Paragraph],
+) {
+    if st.current_items.is_empty() {
+        let origin = st.vpos_stored_column_origin.or_else(|| {
+            super::page_item_vpos_base(item, paragraphs).map(|base| (base, st.current_height))
+        });
+        st.record_stored_column_origin(origin);
+    }
+}

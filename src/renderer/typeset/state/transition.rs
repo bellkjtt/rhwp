@@ -123,6 +123,7 @@ impl TypesetState {
                 current_zone_design_spacing_px: 0.0,
                 vpos_page_base: None,
                 vpos_lazy_base: None,
+                vpos_stored_column_origin: None,
                 vpos_page_base_stored: false,
                 vpos_ladder_dirty: false,
                 vpos_compacted_stored_delta: 0.0,
@@ -157,6 +158,7 @@ impl TypesetState {
         self.data.vpos_prev_trimmed_sb_px = 0.0;
         self.data.vpos_page_base = None;
         self.data.vpos_lazy_base = None;
+        self.data.vpos_stored_column_origin = None;
         self.data.vpos_page_base_stored = false;
         self.data.vpos_ladder_dirty = false;
         self.data.vpos_compacted_stored_delta = 0.0;

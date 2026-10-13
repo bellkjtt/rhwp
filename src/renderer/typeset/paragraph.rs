@@ -75,22 +75,6 @@ fn record_stored_column_top_spacing(
     }
 }
 
-/// A certified source guide owns its whole empty line band, including trailing
-/// space. Fit may omit the trailing space at the page end; accepted flow must
-/// still advance by the same band which the paragraph painter consumes.
-fn stored_overlay_guide_advance(
-    st: &TypesetState,
-    fmt: &FormattedParagraph,
-    paragraphs: &[Paragraph],
-    index: usize,
-) -> Option<f64> {
-    ((st.profile.hwp5_stored_pagination_layout() || st.profile.hwpx_stored_layout())
-        && !st.profile.session_edited()
-        && !st.vpos_ladder_dirty
-        && crate::renderer::float_placement::stored_overlay_guide_owns_flow(paragraphs, index))
-    .then_some(fmt.total_height)
-}
-
 /// 진입 fit에서 소비한 여백과 쪽 전환 뒤의 기본 여백을 구분한다.
 /// 저장 앵커나 한 번만 적용하는 면제를 다음 쪽까지 이어받지 않는다.
 #[derive(Clone, Copy)]
@@ -252,6 +236,7 @@ pub(super) fn place_split_paragraph(
         if cursor_line == 0 {
             record_stored_column_top_spacing(st, paragraphs, para_idx, fmt, styles, dpi);
         }
+        content::record_first_fragment_origin(st, &fragment.item, paragraphs);
         st.commit_split_paragraph_fragment(fragment);
 
         if end_line >= line_count {
@@ -326,42 +311,6 @@ pub(super) fn plan_stored_float_text_prefix(
     )
 }
 
-#[allow(clippy::too_many_arguments)]
-fn stored_successor_flow(
-    st: &TypesetState,
-    para: &Paragraph,
-    fmt: &FormattedParagraph,
-    paragraphs: &[Paragraph],
-    styles: &ResolvedStyleSet,
-    para_idx: usize,
-    dpi: f64,
-) -> Option<(f64, f64)> {
-    if st.col_count != 1
-        || fmt.stored_ladder_is_filler
-        || fmt.computed_host_lines.is_some()
-        || fmt.line_count() != para.line_segs.len()
-    {
-        return None;
-    }
-    let frame = crate::renderer::float_placement::stored_paragraph_successor_flow(
-        para,
-        paragraphs.get(para_idx + 1)?,
-        styles,
-        st.paragraph_flow_profile(),
-        dpi,
-    )?;
-    frame.project(
-        st.current_height,
-        st.vpos_page_base.or(st.vpos_lazy_base),
-        if st.vpos_page_base.is_some() {
-            st.vpos_col_anchor
-        } else {
-            0.0
-        },
-        dpi,
-    )
-}
-
 /// 진입 fit을 통과한 전체 문단을 배치한다. 항목 순서 확정 뒤 흐름 메트릭을 계산한다.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn place_fitted_paragraph(
@@ -381,7 +330,7 @@ pub(super) fn place_fitted_paragraph(
     record_stored_column_top_spacing(st, paragraphs, para_idx, fmt, styles, dpi);
     st.insert_fitted_paragraph(para_idx, defer_preceding_float);
     let stored_successor_flow =
-        stored_successor_flow(st, para, fmt, paragraphs, styles, para_idx, dpi);
+        content::stored_successor_flow(st, para, fmt, paragraphs, styles, para_idx, dpi);
     if let Some((_, end)) = stored_successor_flow {
         st.record_stored_paragraph_flow_end(para_idx, end);
     }
@@ -390,7 +339,7 @@ pub(super) fn place_fitted_paragraph(
     //   - 다단 (col_count > 1): height_for_fit (exam_eng 8p 정상 단 채움 복원)
     // 다단에서는 layout 이 vpos 기반으로 항목을 단별로 stacking 하므로
     // typeset 누적 시 trailing_ls 인플레이션이 단을 조기 종료시킴.
-    let stored_guide_advance = stored_overlay_guide_advance(st, fmt, paragraphs, para_idx);
+    let stored_guide_advance = content::stored_overlay_guide_advance(st, fmt, paragraphs, para_idx);
     let advance = stored_successor_flow
         .map(|(_, end)| end - st.current_height)
         .or(stored_guide_advance)
@@ -538,7 +487,8 @@ pub(super) fn try_place_overflow_paragraph(
     let page = st.paragraph_overflow_page();
     if overflow::atomic_overflow_fits(para, fmt, paragraphs, para_idx, &page, available, dpi) {
         st.begin_atomic_overflow_paragraph(para_idx);
-        let stored_flow = stored_successor_flow(st, para, fmt, paragraphs, styles, para_idx, dpi);
+        let stored_flow =
+            content::stored_successor_flow(st, para, fmt, paragraphs, styles, para_idx, dpi);
         if let Some((_, end)) = stored_flow {
             st.record_stored_paragraph_flow_end(para_idx, end);
         }

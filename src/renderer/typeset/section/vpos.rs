@@ -56,6 +56,9 @@ impl TypesetEngine {
                     }),
             );
             st.record_vpos_lazy_origin(None);
+            st.record_stored_column_origin(
+                st.vpos_page_base.map(|base| (base, st.vpos_col_anchor)),
+            );
             // [#2243] 저장 여부 태깅 — dirty 역스냅 금지 판단용.
             st.record_vpos_origin_provenance(
                 paragraphs
@@ -88,7 +91,7 @@ impl TypesetEngine {
             col_anchor_y: st.vpos_col_anchor,
             vpos_page_base: st.vpos_page_base,
             vpos_lazy_base: st.vpos_lazy_base,
-            stored_column_origin: st.vpos_page_base.map(|base| (base, st.vpos_col_anchor)),
+            stored_column_origin: st.vpos_stored_column_origin,
             prev_layout_para: st.vpos_prev_layout_para,
             prev_item_was_partial_table: st.vpos_prev_partial_table,
             skip_spacing_before_prededuct: st.skip_spacing_before_prededuct,
@@ -280,6 +283,7 @@ impl TypesetEngine {
         // 재조판 뒤 저장 줄의 원점 연결과 지연 기준 산출을 모두 회수한다.
         st.record_vpos_page_origin(hc.vpos_page_base);
         st.record_vpos_lazy_origin(hc.vpos_lazy_base);
+        st.record_stored_column_origin(hc.stored_column_origin);
         st.align_flow_to(y);
         st.record_vpos_snapped_flow_start(para_idx, y);
     }

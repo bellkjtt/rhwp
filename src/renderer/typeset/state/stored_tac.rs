@@ -2,6 +2,89 @@
 use super::*;
 
 impl TypesetState {
+    /// 각주 등록 뒤 단일 단의 vpos 관측값을 기존 순서로 확정한다.
+    pub(in crate::renderer::typeset) fn commit_deferred_table_anchor(
+        &mut self,
+        para_index: usize,
+        paragraphs: &[Paragraph],
+    ) {
+        if self.data.col_count == 1 {
+            self.data.vpos_prev_layout_para = Some(para_index);
+            if matches!(
+                self.data.current_items.last(),
+                Some(PageItem::Table { .. } | PageItem::PartialTable { .. })
+            ) {
+                let preserves_paragraph_frame = match self.data.current_items.last() {
+                    Some(PageItem::Table { para_index, control_index }) => paragraphs
+                        .get(*para_index)
+                        .and_then(|para| para.controls.get(*control_index))
+                        .is_some_and(|control| matches!(control, Control::Table(table)
+                            if crate::renderer::float_placement::is_para_topbottom_float(&table.common))),
+                    _ => false,
+                };
+                if preserves_paragraph_frame {
+                    // Whole paragraph-following tables keep the column's
+                    // source axis in paint. A table opening the column owns
+                    // the same initial origin as build_single_column.
+                    self.seed_whole_table_column_origin(para_index, paragraphs);
+                } else {
+                    self.data.vpos_page_base = None;
+                    self.data.vpos_lazy_base = None;
+                }
+                self.data.vpos_prev_partial_table = matches!(
+                    self.data.current_items.last(),
+                    Some(PageItem::PartialTable { .. })
+                );
+            }
+        }
+    }
+
+    /// The whole table that opens this column owns paint's initial source axis.
+    pub(in crate::renderer::typeset) fn seed_whole_table_column_origin(
+        &mut self,
+        para_index: usize,
+        paragraphs: &[Paragraph],
+    ) {
+        if let Some(PageItem::Table {
+            para_index: first,
+            control_index,
+        }) = self.data.current_items.first()
+        {
+            if *first == para_index {
+                let has_host_line = self.data.current_items.iter().any(|item| {
+                    matches!(
+                        item,
+                        PageItem::FullParagraph { para_index: owner }
+                            | PageItem::PartialParagraph { para_index: owner, start_line: 0, .. }
+                            if owner == first
+                    )
+                }) || paragraphs
+                    .get(*first)
+                    .is_some_and(crate::renderer::typeset::para_has_visible_text);
+                self.data.vpos_page_base = paragraphs.get(*first).and_then(|para| {
+                    crate::renderer::float_placement::stored_table_column_origin(
+                        para,
+                        has_host_line,
+                        self.data
+                            .paragraph_float_placements
+                            .get(&(*first, *control_index)),
+                        self.data.layout.dpi,
+                    )
+                });
+                self.data.vpos_lazy_base = None;
+                self.data.vpos_page_base_stored = self.data.vpos_page_base.is_some()
+                    && paragraphs
+                        .get(*first)
+                        .and_then(|para| para.line_segs.first())
+                        .is_some_and(|line| !crate::renderer::typeset::is_synthetic_line_seg(line));
+                self.data.vpos_stored_column_origin = self
+                    .data
+                    .vpos_page_base
+                    .map(|base| (base, self.data.vpos_col_anchor));
+            }
+        }
+    }
+
     /// 저장 TAC 줄 수용에 필요한 읽기 전용 페이지 관측값.
     pub(in crate::renderer::typeset) fn stored_tac_page(
         &self,

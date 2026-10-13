@@ -332,6 +332,12 @@ impl TypesetState {
     pub(in crate::renderer::typeset) fn record_vpos_lazy_origin(&mut self, value: Option<i32>) {
         self.data.vpos_lazy_base = value;
     }
+    pub(in crate::renderer::typeset) fn record_stored_column_origin(
+        &mut self,
+        value: Option<(i32, f64)>,
+    ) {
+        self.data.vpos_stored_column_origin = value;
+    }
     pub(in crate::renderer::typeset) fn record_vpos_page_origin(&mut self, value: Option<i32>) {
         self.data.vpos_page_base = value;
     }
@@ -450,6 +456,8 @@ impl TypesetState {
         self.data.vpos_page_base = Some(frame.source_origin_hu);
         self.data.vpos_lazy_base = None;
         self.data.vpos_col_anchor = self.data.current_height;
+        self.data.vpos_stored_column_origin =
+            Some((frame.source_origin_hu, self.data.current_height));
         self.data.stored_column_top_spacings.insert(para_idx, frame);
     }
     /// 뒤 줄간격과 문단 아래 여백을 제외한 확정 본문 하단을 보존한다.

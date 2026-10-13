@@ -339,6 +339,9 @@ pub(in crate::renderer::typeset) struct StateView {
     /// current_height 상대공간(col_area_y=0)에서 HeightCursor 를 구동한다.
     pub(in crate::renderer::typeset) vpos_page_base: Option<i32>,
     pub(in crate::renderer::typeset) vpos_lazy_base: Option<i32>,
+    /// 단 첫 수용 항목의 저장 축. 활성 page/lazy 기준이 소거돼도 paint와 같은
+    /// 새 축 판정에 사용하며, HeightCursor가 종료한 결과도 그대로 보존한다.
+    pub(in crate::renderer::typeset) vpos_stored_column_origin: Option<(i32, f64)>,
     /// [#2243] page_base 가 **저장**(비합성) lineseg 에서 왔는지. 저장-앵커 사다리는
     /// 저장 lineseg 없는 문단(생성기 누락 — 한글 fresh 재계산으로 성장 가능)을
     /// 만나면 연속성이 깨지므로 dirty 판단에 쓴다.
