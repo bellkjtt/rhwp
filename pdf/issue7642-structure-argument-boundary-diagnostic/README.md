@@ -32,3 +32,20 @@ ignored `output/pr-review/issue7642/failed-inputs-20261008/stage15-current-valid
 - `structure-empty-arguments-hancom-2020.pdf`: `ab22ab17823189853b413ade1cbefbf54d067aebdc49d85509ec7a8f97e122e8`
 - `structure-empty-arguments-input.hwpx`: `40f242f6d06c5c69df516f4f9f6f82e77b867837c6c3bd711085d153d2a34ac1`
 - `structure-empty-arguments-rhwp-input.hwp`: `b204d519e2f3aa33c9b517d0b56bff9517940a730cec3033306a412a004e645d`
+
+## 추가 명령·첨자 오류 경계의 Print 자료
+
+- `native-keyword-precedence`: 저장 job `7062ed9a-1dd6-4a22-8626-b5c23dff378b`, Print job `e57ee230-482a-4ae4-90ab-319acefff042`, 전체 2쪽.
+  - `native-keyword-precedence-hancom-2020.hwp`: `d6c1d3142b6b309707c7d8f96556e757df86c7dff841c175da87a0ba7cbd925a`.
+  - `native-keyword-precedence-hancom-2020.pdf`: `3303a56f88c094776bc0345acad541d1ee7d5ca16e28e7bdfd77f551650d979c`.
+  - `native-keyword-precedence-input.hwpx`: `3f274efc14f441d5a04d135fb082a97c42fd6b88e3814a4f2153b92296e29690`.
+  - `native-keyword-precedence-rhwp-input.hwp`: `30d4a6a85a157bb7ec0bcf57e24bb48f543fc01dfe862226e85a0d529a94f1c8`.
+- `script-failure-boundary`: 저장 job `ffa2df12-a677-4e0f-bbd7-2c8c0cc0d177`, Print job `10fe4c1a-d360-4d88-8368-5cfcafce9d2c`, 전체 1쪽.
+  - `script-failure-boundary-hancom-2020.hwp`: `e01078beebe463b7c8bf7905f30d59403de5c40d2dac7a792dc3728504e0f7d8`.
+  - `script-failure-boundary-hancom-2020.pdf`: `87abb0f9ea45ca63a536fe0107f7375584b20776f62ebdddedb3672665eda020`.
+  - `script-failure-boundary-input.hwpx`: `9b698d7561a7d311474f4f9ff99cc20d15b062a9812cdf3f2f96cb22b5343d88`.
+  - `script-failure-boundary-rhwp-input.hwp`: `5ec33a179e3424bcfd82fc9e0070d4f2c3809f8ba8979e8c04653d07a7118174`.
+
+두 자료도 Hancom engine `2020`, build `11.0.0.9136`, PrintMethod `0`의
+`hancom2020_pdf_driver_one_up`으로 출력했다. 모든 수식 script의 저장 전후 보존을 확인했다.
+빈 첨자와 명령 우선순위의 진단 자료이며 아직 시각 통과 fixture로 등록하지 않는다.
