@@ -89,3 +89,26 @@ code `d5006b134`, 실제 빌드 source `339c2f25100cead6537fc4290ea902d9159b7b7e
 
 - `escape-30-source335-native-review.png`: `f584c337d8260630ff2cbc8fe79a00034dbc8fe3ad9790edb951eef60d0c27d7`.
 - `longest-24-source335-native-review.png`: `f95f303ea56b515f56e87c46d0d92ceb054282d057e011541e7208394deb5f38`.
+
+## Source 348 명령 문자 범위의 전쪽 재확인
+
+보정 코드 `7c30f0a6a6fef1c7732078b8faafc2f867d5e166`에서 같은 한컴 저장본·Print PDF를 Native/fresh WASM으로 다시 산출했다.
+
+`native-keyword-longest` 1쪽은 양쪽 최저 99.40591%, `native-command-escape-scope` 1쪽은 양쪽 최저 99.34022%다. 전체 쪽수 일치와 누락 없음도 확인했다.
+
+두 문서의 실제 Native/fresh WASM 페이지 픽셀은 같았다. 같은 배율로 escaped 명령의 정체 범위, `it` 복귀, 여는 중괄호, 단일·이중 화살표와 세로 기호 및 앞뒤 문자를 확대 판독했다.
+
+정식 새 이름의 검사 원본은 `tests/cases/issue_7642_native_command_literal_relations.rs`다. 소유·누락·중복·내용 순서와 문자/기호의 의미를 검사하며 절대 화면 px와 SVG hash를 고정하지 않는다.
+
+같은 검사 3건은 수정 전 `3a8bd6aac3b995d994be3c0c3bbc248157d2faf7`에서 의도한 문자 스타일·명령어 잔류로 FAIL, 보정 코드에서 PASS했다. 최장 장식 명령 자체는 수정 전 코드에도 이미 보정돼 있고, 해당 검사의 escaped 문자 assertion이 뒤의 스타일 결함을 검출한다.
+
+전쪽 TSV·로그·수정 전후 실행 증거는 ignored `output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/stage352-*`, `stage353-*`, `stage358-*`, `stage359-*`, `stage360-*`, `stage364-*`에 보존한다.
+
+앞 절의 구조·catalog 미달을 이 두 문서의 통과로 면제하지 않는다.
+
+| 대표 이미지 | SHA-256 |
+| --- | --- |
+| [escape-30-source348-native-review.png](escape-30-source348-native-review.png) | `dc03a51965d068cef0fb2c6e4c1e2ef825ac544b057ef912810c1d505bf85581` |
+| [escape-30-source348-wasm-review.png](escape-30-source348-wasm-review.png) | `ae76490e170758a1e7e8f617762a3019fdc9e9be434278ea8cb040ac2d09414b` |
+| [longest-24-source348-native-review.png](longest-24-source348-native-review.png) | `05074348e55045f5300a4d5370ddd3c759c1952dd469f8acf0c746701ea30a08` |
+| [longest-24-source348-wasm-review.png](longest-24-source348-wasm-review.png) | `19fe96dc130a8abf32835421797d1cced34b32cad3f4f377328186df290aa544` |

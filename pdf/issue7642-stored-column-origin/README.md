@@ -38,3 +38,26 @@ receipt의 실제 `source_commit`과 빌드 입력 해시는 위 source를 고�
 | --- | --- |
 | `sample16-p026-before-native-review.png` | `564436429579ff9c5f7ce440426182c47e763a87e989082868122ba873ef0b04` |
 | `sample16-p026-after-native-review.png` | `f08c8ad9403485431c7531535b233dead6f9b43b1186ae8de48e678e74314ef4` |
+
+## Source 348 전쪽 Native/fresh WASM와 정식 관계 검사
+
+보정 코드 `7c30f0a6a6fef1c7732078b8faafc2f867d5e166`의 같은 64쪽 원본과 독립 2024 Print를 전쪽 비교했다.
+
+양쪽 모두 쪽수 64, 최저 91.99347%, 90% 미만·누락 없음이다. 7쪽은 99.79126%, 26쪽은 99.81163%다.
+
+최신 7·26쪽을 직접 판독해 제목·앞 본문·표·후속 본문의 저장 원점, 괘선·합계 행·순서를 확인했다.
+
+새 이름의 검사 `tests/cases/issue_7642_stored_column_margin_owner_relations.rs`는 절대 화면 px 대신 원본 간격/줄·표 높이의 비율과 소유·순서·비겹침을 검사한다.
+
+수정 전 `3a8bd6aac3b995d994be3c0c3bbc248157d2faf7`에서 두 검사 모두 의도한 간격 비율 오류로 FAIL, 보정 코드에서 PASS했다.
+
+전쪽 TSV·재개 provenance·로그는 ignored `output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/stage349-*`, `stage357-*`, `stage359-*`, `stage360-*`, `stage364-*`에 보존한다.
+
+전체 PR gate와 회귀 실패 42건의 해소는 별도 진행 중이다. 이 전쪽 통과를 전체 브랜치 승인으로 확대하지 않는다.
+
+| 대표 이미지 | SHA-256 |
+| --- | --- |
+| [after-source348-native-p007-review.png](after-source348-native-p007-review.png) | `67b043852d1ce482b1a2b2111b91b1aee70f9e94bb007855c3f8bc064c8ecaf4` |
+| [after-source348-native-p026-review.png](after-source348-native-p026-review.png) | `f08c8ad9403485431c7531535b233dead6f9b43b1186ae8de48e678e74314ef4` |
+| [after-source348-wasm-p007-review.png](after-source348-wasm-p007-review.png) | `7819f042503e85e7f0c74c2cd698273e3e3476505597bbb659b99315162a765f` |
+| [after-source348-wasm-p026-review.png](after-source348-wasm-p026-review.png) | `cc189dd0da25875d78b44337a37738c195903e5d7c4dddee99a73488b435d0cd` |
