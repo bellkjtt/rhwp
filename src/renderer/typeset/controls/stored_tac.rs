@@ -635,16 +635,16 @@ pub(super) fn prepare(
                     <= available_height()
             });
             if measured_fits && fits {
-                let source_origin = (single_saved_line
-                    && (page.profile.hwp5_container()
-                        || page.profile.hwp5_stored_pagination_layout()))
-                .then(|| {
+                let source_origin = single_saved_line.then(|| {
                     let seg = &para.line_segs[0];
-                    // Authenticate the shared coordinate axis at the original
-                    // object origin. A flow-only trailing gap is not a source
-                    // translation and must not shift the following paragraphs.
+                    // 저장 축은 단의 물리 앵커를 제외한 상대 원점에서 역산한다.
+                    // 시작 밴드를 기준축에도 넣으면 이후 표에 그 밴드가 중복된다.
+                    // 뒤 간격은 원점 이동량이 아니므로 이 환산에 포함하지 않는다.
                     seg.vertical_pos
-                        .saturating_sub(crate::renderer::px_to_hwpunit(origin, dpi))
+                        .saturating_sub(crate::renderer::px_to_hwpunit(
+                            origin - page.vpos_col_anchor,
+                            dpi,
+                        ))
                 });
                 return Some(StoredTacPlan {
                     lines,

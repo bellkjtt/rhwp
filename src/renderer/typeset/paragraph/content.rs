@@ -5,7 +5,7 @@ use super::{Paragraph, ResolvedStyleSet, TypesetState};
 use crate::model::paragraph::LineSeg;
 use crate::renderer::{hwpunit_to_px, pagination::PageItem};
 
-/// 단의 첫 원본 글줄이 0 원점을 소유하고 구성 메트릭이 그대로일 때의 실제 하단.
+/// 단의 원본 글줄 축과 구성 메트릭이 그대로일 때의 실제 하단.
 /// 순차 fit 커서에서 생략한 간격을 글줄의 물리 원점으로 대신하지 않는다.
 /// 다른 단 원점·미주·재조판은 이 저장 좌표 계약으로 인증하지 않는다.
 pub(super) fn stored_content_bottom(
@@ -16,10 +16,10 @@ pub(super) fn stored_content_bottom(
     styles: &ResolvedStyleSet,
     dpi: f64,
 ) -> Option<f64> {
-    if !st.profile.hwp5_stored_pagination_layout()
+    if !(st.profile.hwp5_stored_pagination_layout() || st.profile.hwpx_stored_layout())
+        || st.profile.hwp3_layout()
         || st.profile.session_edited()
         || st.current_endnote_flow
-        || st.current_start_height != 0.0
         || st.vpos_ladder_dirty
         || para.stored_text_partition_is_dirty()
         || para.cell_format_vpos_dirty
@@ -39,10 +39,22 @@ pub(super) fn stored_content_bottom(
     };
     let first = paragraphs.get(first_owner)?;
     let first_seg = first.line_segs.get(first_line)?;
+    // 표의 확정 원점이 인증한 축도 실제 단 시작 높이를 소유한다.
+    // 저장 좌표의 기준과 물리 앵커를 분리하여 시작 밴드를 두 번 더하지 않는다.
+    let (source_base, anchor) = if st.vpos_page_base_stored {
+        let base = st.vpos_page_base?;
+        if first_seg.vertical_pos != base {
+            return None;
+        }
+        (base, st.vpos_col_anchor)
+    } else if first_seg.vertical_pos == 0 && st.current_start_height == 0.0 {
+        (0, 0.0)
+    } else {
+        return None;
+    };
     if first.stored_text_partition_is_dirty()
         || first.cell_format_vpos_dirty
         || first_seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
-        || first_seg.vertical_pos != 0
         || styles
             .para_styles
             .get(first.para_shape_id as usize)?
@@ -69,5 +81,6 @@ pub(super) fn stored_content_bottom(
         let end = seg.vertical_pos.checked_add(seg.line_height)?;
         bottom = Some(bottom.map_or(end, |previous: i32| previous.max(end)));
     }
-    bottom.map(|end| hwpunit_to_px(end, dpi))
+    bottom.and_then(|end| end.checked_sub(source_base))
+        .map(|end| anchor + hwpunit_to_px(end, dpi))
 }
