@@ -43,6 +43,8 @@ pub(in crate::renderer::typeset) struct StoredTacPage {
     pub previous_content_bottom: Option<(usize, usize, f64)>,
     pub side_wrap_empty: bool,
     pub stored_table_column_base: Option<i32>,
+    /// 원본 단 첫 글줄과 물리 앵커가 함께 인증한 영점 축.
+    pub stored_zero_column_origin: bool,
 }
 
 pub(super) struct StoredTacPlan {
@@ -100,6 +102,7 @@ pub(super) fn prepare_coanchored_first_line(
     }
     let mut has_float = false;
     let mut has_fixed_decoration = false;
+    let mut has_nonflow_decoration = false;
     for (index, control) in para.controls.iter().enumerate() {
         if index == control_index {
             continue;
@@ -125,6 +128,26 @@ pub(super) fn prepare_coanchored_first_line(
                 // 후행 간격을 소비하는 앞 개체로 해석하지 않는다.
                 has_fixed_decoration = true;
             }
+            Control::Picture(picture)
+                if !picture.common.treat_as_char
+                    && matches!(
+                        picture.common.text_wrap,
+                        crate::model::shape::TextWrap::BehindText
+                            | crate::model::shape::TextWrap::InFrontOfText
+                    ) =>
+            {
+                has_nonflow_decoration = true;
+            }
+            Control::Shape(shape)
+                if !shape.common().treat_as_char
+                    && matches!(
+                        shape.common().text_wrap,
+                        crate::model::shape::TextWrap::BehindText
+                            | crate::model::shape::TextWrap::InFrontOfText
+                    ) =>
+            {
+                has_nonflow_decoration = true;
+            }
             Control::SectionDef(_)
             | Control::ColumnDef(_)
             | Control::Header(_)
@@ -141,7 +164,31 @@ pub(super) fn prepare_coanchored_first_line(
         page.profile,
         dpi,
     );
-    if !has_float && !(has_fixed_decoration && full_trailing) {
+    // 독립 배경은 보이지만 줄을 점유하지 않는다. 단 축과 다음 저장 원점이
+    // 표의 완전한 한 줄을 인증할 때만 일반 흐름의 압축 높이를 대신한다.
+    let closed_decorated_line = has_nonflow_decoration
+        && page.stored_zero_column_origin
+        && para.line_segs.len() == 1
+        && fmt.line_count() == 1
+        && fmt.spacing_after == 0.0
+        && next_spacing_before == 0.0
+        && next_para.is_some_and(|next| {
+            !next.stored_text_partition_is_dirty()
+                && !next.cell_format_vpos_dirty
+                && next.line_segs.first().is_some_and(|after| {
+                    after.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
+                        && line
+                            .vertical_pos
+                            .checked_add(line.line_height)
+                            .and_then(|end| end.checked_add(line.line_spacing))
+                            == Some(after.vertical_pos)
+                })
+        })
+        && full_trailing;
+    if has_nonflow_decoration && !closed_decorated_line {
+        return None;
+    }
+    if !has_float && !(has_fixed_decoration && full_trailing) && !closed_decorated_line {
         return None;
     }
     let origin = page.vpos_col_anchor

@@ -15,6 +15,25 @@ impl TypesetState {
             vpos_lazy_base: self.data.vpos_lazy_base,
             side_wrap_empty: self.data.side_wrap_exclusions.is_empty(),
             previous_content_bottom: self.previous_text_content_bottom(paragraphs),
+            stored_zero_column_origin: !self.data.current_endnote_flow
+                && !self.data.vpos_ladder_dirty
+                && self.data.current_start_height == 0.0
+                && self.data.vpos_col_anchor == 0.0
+                && self.data.current_items.first().is_some_and(|item| {
+                    let PageItem::FullParagraph { para_index } = item else {
+                        return false;
+                    };
+                    paragraphs.get(*para_index).is_some_and(|para| {
+                        !para.stored_text_partition_is_dirty()
+                            && !para.cell_format_vpos_dirty
+                            && para.line_segs.first().is_some_and(|seg| {
+                                seg.vertical_pos == 0
+                                    && seg.tag
+                                        & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
+                                        == 0
+                            })
+                    })
+                }),
             // layout의 단 초기 base와 같은 첫 완전한 표의 저장 줄을 읽는다.
             // PartialTable에는 소비된 컷이 있고, 문단 시작의 들여쓰기·앞 간격은
             // 별도 계약이므로 이 표 원점 조회에 섞지 않는다.
