@@ -73,6 +73,14 @@ static VERIFIED_TECHNICAL_1_PRESENT: [bool; 256] = [
 ];
 
 fn verified_technical_symbol_entry(metric: &FontMetric, ch: char) -> Option<(bool, u16)> {
+    // 독립 한컴 2020 Print의 Batang 프로그램: U+25A1 전진은 911/1024em이다.
+    // 기존 DB가 수집하지 않은 기하 기호를 전각 추정으로 바꾸지 않는다.
+    // 근거: 2599643_port_call_form-2020.pdf의 xref 12, glyph 15, hmtx.
+    if (metric.name, metric.em_size, metric.bold, metric.italic, ch)
+        == ("Batang", 1024, false, false, '\u{25A1}')
+    {
+        return Some((true, 911));
+    }
     if !(0x2300..=0x23FF).contains(&(ch as u32)) {
         return None;
     }
