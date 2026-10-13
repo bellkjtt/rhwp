@@ -62,3 +62,20 @@ PrintMethod 0으로 전체 1쪽을 출력했다. OVERLINE과 OVER의 우선순�
 - `native-keyword-longest-hancom-2020.pdf`: `bb6e10cc15a8fe1f2cfd00d82b5ee3bba113eef79f85d53011d8797bd075e612`.
 - `native-keyword-longest-input.hwpx`: `ce0a80dd9b13487b34644de2f318177bb9f5f70377140c5410167703ef747c02`.
 - `native-keyword-longest-rhwp-input.hwp`: `34a3dd113b024dd8d37da9582c9f1bfd5d1f00fc30e433859b2d603e0a43920e`.
+
+## 백슬래시 문자 글꼴의 전환 범위와 기호 대소문자
+
+`native-command-escape-scope`의 30개 script는 저장 전후 같고 전체 1쪽이다.
+한컴 2020 build 11.0.0.9136, PrintMethod 0으로 출력했다.
+- hwp job: `251306ed-2409-4da8-bdfa-f9c53d58c427`.
+- pdf job: `67b79bbd-3ee4-4a31-a603-33c3a151e9e0`.
+- `native-command-escape-scope-hancom-2020.hwp`: `2b0a84ab560db949879f225979f77570b8b27820c6d5eac80eff6bfbb422d819`.
+- `native-command-escape-scope-hancom-2020.pdf`: `910ff8646770416e2d93dfb28d6c2ac9d4b8e5babaef6abd52c51c8b11efaa32`.
+- `native-command-escape-scope-input.hwpx`: `afb42d4458d1526f64e09f5ed393be1107316251998c033863dd1208e3c51263`.
+- `native-command-escape-scope-rhwp-input.hwp`: `206605c80669142b3919389bf71013aa084a1ef29ac46fe0ac9575ff35d16b8b`.
+
+백슬래시 뒤 일반 문자는 ASCII 글리프로 출력되고, 중괄호가 끝나도 유지된다.
+명시적 `it` 전환 뒤 문자는 다시 변수 PUA 글리프로 출력된다. `LINE`/`line`/`Line`은
+세로 기호이며, 대문자 `LEFTARROW`와 소문자 `leftarrow`는 각각 이중·단일 화살표다.
+escaped UNDERLINE은 인자 첫 여는 중괄호를 보여 주고, 내부 그룹과 닫힘은 구분한다.
+원시 PDF trace와 명령·해시는 ignored Stage 334 output에 보존한다.
