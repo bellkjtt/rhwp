@@ -116,6 +116,7 @@ pub(super) fn font_line(value: &LayoutBox, fs: f64) -> bool {
         | LayoutKind::Symbol(_)
         | LayoutKind::MathSymbol(_)
         | LayoutKind::FontGlyph { .. }
+        | LayoutKind::HancomGlyphs(_)
         | LayoutKind::Function(_)
         | LayoutKind::Space(_) => (value.height - fs).abs() <= f64::EPSILON * fs * 4.0,
         LayoutKind::Row(items) => {

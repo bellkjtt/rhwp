@@ -28,7 +28,10 @@ pub(super) fn frame(value: &LayoutBox, fs: f64, dpi: f64) -> Option<(f64, f64)> 
         LayoutKind::Text(text) if font_line(value, fs) && !super::text_has_cjk(text) => {
             measured(2175, 86.0)
         }
-        LayoutKind::Number(_) | LayoutKind::FontGlyph { .. } | LayoutKind::Symbol(_)
+        LayoutKind::Number(_)
+        | LayoutKind::FontGlyph { .. }
+        | LayoutKind::HancomGlyphs(_)
+        | LayoutKind::Symbol(_)
             if font_line(value, fs) =>
         {
             measured(2175, 86.0)
