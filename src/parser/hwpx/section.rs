@@ -373,6 +373,10 @@ fn parse_master_page_start(e: &quick_xml::events::BytesStart, master_page: &mut 
         master_page.replace_base = page_duplicate == Some(false);
         master_page.overlap = true;
     }
+    if is_optional_page {
+        master_page.optional_page_number =
+            master_page.hwpx_page_number.filter(|number| *number > 0);
+    }
     master_page.ext_flags = u16::from(master_page.overlap)
         | if master_page.is_extension { 0x02 } else { 0 }
         | if is_optional_page { 0x04 } else { 0 };
@@ -405,7 +409,11 @@ fn build_hwpx_master_page_list_header(master_page: &MasterPage) -> Vec<u8> {
     bytes.extend_from_slice(&master_page.text_height.to_le_bytes());
     bytes.push(master_page.text_ref);
     bytes.push(master_page.num_ref);
-    bytes.extend_from_slice(&master_page.ext_flags.to_le_bytes());
+    let kind = master_page
+        .optional_page_number
+        .and_then(|number| number.checked_add(3))
+        .unwrap_or(master_page.ext_flags);
+    bytes.extend_from_slice(&kind.to_le_bytes());
     bytes.extend_from_slice(&[0u8; 14]);
     bytes
 }

@@ -1007,13 +1007,24 @@ fn assign_master_pages_for_section(
         };
         page.active_master_page = selected;
 
-        if is_last && !ext_mp_indices.is_empty() {
-            let replace_exts: Vec<usize> = ext_mp_indices
+        // 임의 쪽과 마지막 쪽은 별도 범위다. 표시 쪽 번호의 재시작과 구분하여
+        // 구역 안 물리 위치로 지정 대상을 고르고 같은 대체/겹침 계약을 소비한다.
+        let applicable_ext_mp_indices: Vec<usize> = ext_mp_indices
+            .iter()
+            .copied()
+            .filter(|&index| {
+                mps[index].optional_page_number.map_or(is_last, |number| {
+                    usize::from(number) == page_idx_in_section + 1
+                })
+            })
+            .collect();
+        if !applicable_ext_mp_indices.is_empty() {
+            let replace_exts: Vec<usize> = applicable_ext_mp_indices
                 .iter()
                 .filter(|&&i| !mps[i].overlap || mps[i].replace_base)
                 .copied()
                 .collect();
-            let overlap_exts: Vec<usize> = ext_mp_indices
+            let overlap_exts: Vec<usize> = applicable_ext_mp_indices
                 .iter()
                 .filter(|&&i| mps[i].overlap && !mps[i].replace_base)
                 .copied()
