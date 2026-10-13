@@ -21,6 +21,16 @@ fn ends_with_uppercase_letter(node: &EqNode) -> bool {
 }
 
 impl EqLayout {
+    /// 빈 본체도 첨자의 기준선 프레임을 소유한다. 잉크와 전진폭은 없다.
+    /// 일반 Empty나 공개 LaTeX의 배치를 빈 글줄로 바꾸지 않는다.
+    pub(super) fn layout_script_base(&self, base: &EqNode, fs: f64) -> LayoutBox {
+        if self.hancom_math_face && matches!(base, EqNode::Empty) {
+            self.layout_row(&[], fs)
+        } else {
+            self.layout_node(base, fs)
+        }
+    }
+
     fn script_uppercase_gap(&self, base: &EqNode, fs: f64) -> f64 {
         if self.hancom_math_face && ends_with_uppercase_letter(base) {
             fs * 0.15
@@ -67,7 +77,7 @@ impl EqLayout {
                 .integral_placement(base, None, Some(sup), fs)
                 .into_script(fs);
         }
-        let mut base_box = self.layout_node(base, fs);
+        let mut base_box = self.layout_script_base(base, fs);
         let mut sup_box = self.layout_node(sup, self.script_font_size(fs));
         let letter_gap = self.script_uppercase_gap(base, fs);
 
@@ -99,7 +109,7 @@ impl EqLayout {
                 .integral_placement(base, Some(sub), None, fs)
                 .into_script(fs);
         }
-        let b = self.layout_node(base, fs);
+        let b = self.layout_script_base(base, fs);
         let s = self.layout_node(sub, self.script_font_size(fs));
 
         let (sub_shift, total_h) = self.script_subscript_geometry(&b, &s, fs);
@@ -140,7 +150,7 @@ impl EqLayout {
                 .integral_placement(base, Some(sub), Some(sup), fs)
                 .into_script(fs);
         }
-        let b = self.layout_node(base, fs);
+        let b = self.layout_script_base(base, fs);
         let sb = self.layout_node(sub, self.script_font_size(fs));
         let sp = self.layout_node(sup, self.script_font_size(fs));
 

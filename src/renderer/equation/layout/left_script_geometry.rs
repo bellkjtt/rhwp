@@ -23,7 +23,7 @@ impl EqLayout {
         sup: Option<&EqNode>,
         fs: f64,
     ) -> LayoutBox {
-        let mut body = self.layout_node(base, fs);
+        let mut body = self.layout_script_base(base, fs);
         let mut lower = sub.map(|node| self.layout_node(node, self.script_font_size(fs)));
         let mut upper = sup.map(|node| self.layout_node(node, self.script_font_size(fs)));
         let plain = script_body(&body);
