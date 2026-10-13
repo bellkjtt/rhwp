@@ -346,8 +346,10 @@ impl TypesetEngine {
         }
         let mut reclaimed = 0_i64;
         for item in &st.current_items {
-            let Some(para_index) = crate::renderer::typeset::page_item_para_index(item) else {
-                continue;
+            let para_index = match item {
+                PageItem::FullParagraph { para_index }
+                | PageItem::PartialParagraph { para_index, .. } => *para_index,
+                _ => continue,
             };
             let Some(source) = para_index
                 .checked_sub(paragraphs.len())
