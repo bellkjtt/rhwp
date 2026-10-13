@@ -3109,13 +3109,23 @@ export class CanvasKitLayerRenderer {
             if (fontIndex === -1) {
               const codePoint = codePoints[runStart].codePointAt(0) ?? 0;
               const displayNumber = String(codePoint - 0xF02B0);
-              const geometry = singleDigitGeometry(codePoint - 0xF02B0, fontSize);
+              let geometry = singleDigitGeometry(codePoint - 0xF02B0, fontSize);
               if (geometry) {
-                const framePaint = this.makeStrokePaint(style.color ?? '#000000', geometry.strokeWidth);
-                const numberFace = this.findPreparedTypeface(geometry.face)?.typeface
-                  ?? this.symbolFallbackTypeface ?? this.defaultTypeface ?? typeface;
+                const measuredFace = this.findPreparedTypeface(geometry.face)?.typeface;
+                // 숫자는 본문 regular face를 먼저 사용한다. 기호 글꼴의 사선 0을
+                // 선택하거나 그 윤곽에 다른 face의 source bounds를 적용하지 않는다.
+                const numberFace = measuredFace
+                  ?? this.findPreparedTypeface(requestedFontFamily,
+                    { bold: false, italic: false })?.typeface
+                  ?? this.defaultTypeface ?? typeface ?? this.symbolFallbackTypeface;
                 const numberFont = new this.canvasKit.Font(numberFace, fontSize);
+                const framePaint = this.makeStrokePaint(style.color ?? '#000000', geometry.strokeWidth);
                 try {
+                  if (!measuredFace) {
+                    const glyphs = numberFont.getGlyphIDs(displayNumber, displayNumber.length);
+                    const bounds = numberFont.getGlyphBounds(glyphs);
+                    geometry = singleDigitGeometry(codePoint - 0xF02B0, fontSize, Array.from(bounds))!;
+                  }
                   canvas.drawRect(this.canvasKit.XYWHRect(
                     originX + replayPositions![runStart] + offsetX + geometry.frameX,
                     originY + baselineShift + offsetY + geometry.frameY,
