@@ -59,8 +59,8 @@ impl TypesetEngine {
                 // 이어받지 않는다. 첫 수용 줄의 저장 축은 별도로 보존한다.
                 st.record_previous_layout_paragraph(None);
                 st.record_vpos_page_origin(None);
-                let seed = st.vpos_stored_column_origin.map(|(source, anchor)| {
-                    source - crate::renderer::px_to_hwpunit(anchor, self.dpi)
+                let seed = st.vpos_stored_column_origin.and_then(|(source, anchor)| {
+                    source.checked_sub(crate::renderer::px_to_hwpunit(anchor, self.dpi))
                 });
                 st.record_vpos_lazy_origin(seed);
             } else if current_origin_rewinds {
