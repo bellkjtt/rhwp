@@ -776,12 +776,20 @@ pub(super) fn prepare_fit_budget(
     // [#2243 진단] 문단 진입 시 누적 높이 — 항목별 실소비 델타 추적용. 동작 불변.
     if std::env::var("RHWP_DIAG_FLOW").is_ok() {
         eprintln!(
-            "DIAG_FLOW pi={} cur_h={:.1} page={} items={} ct={:?}",
+            "DIAG_FLOW pi={} cur_h={:.1} page={} items={} ct={:?} col={} start={} anchor={} page_base={:?} lazy_base={:?} stored={} dirty={} first={:?}",
             para_idx,
             st.current_height,
             st.pages.len(),
             st.current_items.len(),
             para.column_type,
+            st.current_column,
+            st.current_start_height,
+            st.vpos_col_anchor,
+            st.vpos_page_base,
+            st.vpos_lazy_base,
+            st.vpos_page_base_stored,
+            st.vpos_ladder_dirty,
+            st.current_items.first(),
         );
     }
 

@@ -585,6 +585,14 @@ pub(super) fn prepare(
                     let gap = next.vertical_pos.checked_sub(source_end)?;
                     (valid && gap >= 0).then(|| content_end + hwpunit_to_px(gap, dpi))
                 });
+                // 저장 축과 실제 내용 하단이 갈리는 경계를 같은 진단에서 추적한다.
+                if std::env::var("RHWP_DIAG_FLOW").is_ok() {
+                    eprintln!(
+                        "DIAG_STORED_TAC pi={para_idx} current={} saved={} same_frame={same_frame} inherited={inherited_origin:?} previous={:?} page_base={:?} lazy_base={:?} anchor={}",
+                        page.current_height, saved_origin, page.previous_content_bottom,
+                        page.vpos_page_base, page.vpos_lazy_base, page.vpos_col_anchor,
+                    );
+                }
                 if !same_frame && inherited_origin.is_none() {
                     return None;
                 }
