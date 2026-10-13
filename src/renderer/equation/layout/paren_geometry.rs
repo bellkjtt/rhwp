@@ -34,7 +34,14 @@ impl EqLayout {
             && !use_stretch_round
             && matches!(left, "" | "(" | ")")
             && matches!(right, "" | "(" | ")");
-        let pad = if source_round || source_curly || source_stretch.is_some() {
+        let source_vertical = (self.hancom_math_face && left == "|" && right == "|")
+            .then(|| source_font_advance::vertical_slot(fs, self.dpi))
+            .flatten();
+        let pad = if source_round
+            || source_curly
+            || source_stretch.is_some()
+            || source_vertical.is_some()
+        {
             0.0
         } else if use_stretch_round {
             fs * 0.03
@@ -43,7 +50,9 @@ impl EqLayout {
         };
         // Times New Roman '(' advance (em 기준) = 0.333. 텍스트 높이 glyph는 이 폭을 유지하고,
         // 큰 둥근 괄호 path는 한컴 HyhwpEQ 출력에 가깝게 더 좁게 잡는다. (Task #283, #1139)
-        let paren_w = if source_curly {
+        let paren_w = if let Some(width) = source_vertical {
+            width
+        } else if source_curly {
             source_font_advance::curly_slot(fs, self.dpi)
         } else if source_round {
             source_font_advance::paren(fs, self.dpi)

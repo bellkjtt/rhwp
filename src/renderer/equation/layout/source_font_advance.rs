@@ -42,3 +42,16 @@ pub(super) fn curly_slot(fs: f64, dpi: f64) -> f64 {
     let em = super::source_roman_advance::em_advance(fs, dpi).unwrap_or(fs);
     super::source_font_text::logical_advance(512, em, dpi)
 }
+
+/// 독립 한컴 저장·Print에서 확인한 절댓값 구분자의 논리 슬롯이다.
+pub(super) fn vertical_slot(fs: f64, dpi: f64) -> Option<f64> {
+    let size = super::super::font_frame_metrics::base_unit_at_dpi(fs, dpi);
+    let advance = match size {
+        900 => 450,
+        1100 => 525,
+        1600 => 900,
+        2200 => 1125,
+        _ => return None,
+    };
+    Some(crate::renderer::hwpunit_to_px(advance, dpi))
+}
