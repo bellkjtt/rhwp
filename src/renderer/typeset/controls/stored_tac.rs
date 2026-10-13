@@ -601,9 +601,7 @@ pub(super) fn prepare(
                     {
                         return None;
                     }
-                    let Some(last) = previous.line_segs.last() else {
-                        return None;
-                    };
+                    let last = previous.line_segs.last()?;
                     let next = &para.line_segs[0];
                     let valid = last.tag
                         & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
