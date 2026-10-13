@@ -324,6 +324,79 @@ impl TypesetEngine {
         reissued
     }
 
+    /// 저장 컷의 뒤 조각을 현재 단에 가져올 만큼 실제 전진이 줄었는지 확인한다.
+    /// 재발행했다는 사실만으로 다음 단 소유의 글줄을 현재 단에 합치지 않는다.
+    pub(in crate::renderer::typeset) fn endnote_column_reclaims_saved_tail(
+        &self,
+        st: &TypesetState,
+        paragraphs: &[Paragraph],
+        styles: &ResolvedStyleSet,
+        paragraph: &Paragraph,
+        cut: usize,
+    ) -> bool {
+        let Some(tail) = paragraph.line_segs.get(cut..) else {
+            return false;
+        };
+        let tail_advance: i64 = tail
+            .iter()
+            .map(|line| i64::from(line.line_height) + i64::from(line.line_spacing))
+            .sum();
+        if tail.is_empty() || tail_advance <= 0 {
+            return false;
+        }
+        let mut reclaimed = 0_i64;
+        for item in &st.current_items {
+            let Some(para_index) = crate::renderer::typeset::page_item_para_index(item) else {
+                continue;
+            };
+            let Some(source) = para_index
+                .checked_sub(paragraphs.len())
+                .and_then(|local| st.endnote_para_sources.get(local))
+            else {
+                continue;
+            };
+            let Some(crate::model::control::Control::Endnote(note)) = paragraphs
+                .get(source.para_index)
+                .and_then(|parent| parent.controls.get(source.control_index))
+            else {
+                return false;
+            };
+            let Some(original) = note.paragraphs.get(source.note_para_index) else {
+                return false;
+            };
+            let composed =
+                crate::renderer::composer::compose_paragraph_in_context(original, styles);
+            if original.stored_text_partition_is_dirty()
+                || composed.lines.len() != original.line_segs.len()
+            {
+                return false;
+            }
+            let (first, end) = match item {
+                PageItem::PartialParagraph {
+                    start_line,
+                    end_line,
+                    ..
+                } => (*start_line, *end_line),
+                _ => (0, original.line_segs.len()),
+            };
+            for (source, actual) in original
+                .line_segs
+                .iter()
+                .zip(&composed.lines)
+                .skip(first)
+                .take(end.saturating_sub(first))
+            {
+                reclaimed += i64::from(source.line_height) + i64::from(source.line_spacing)
+                    - i64::from(actual.line_height)
+                    - i64::from(actual.line_spacing);
+            }
+        }
+        if std::env::var_os("RHWP_EN_ROW_METRIC_DEBUG").is_some() {
+            eprintln!("EN_SAVED_TAIL cut={cut} reclaimed={reclaimed} advance={tail_advance}");
+        }
+        reclaimed >= tail_advance
+    }
+
     /// 저장 컷의 확대·축소 모두 실제 앞부분의 점유로 확인한다.
     /// 유효한 컷이 없으면 Overflow, 별도 배치 계약이면 None을 반환한다.
     #[allow(clippy::too_many_arguments)]
@@ -411,9 +484,10 @@ impl TypesetEngine {
         // 저장 단 구성이 유지되면 컷을 보존한다. 재발행된 앞 줄 때문에 구성이
         // 달라진 경우만 실제 전체 배치를 재검증하며 명시적 나누기는 수용하지 않는다.
         paragraph.column_type == ColumnBreakType::None
-            && (super::super::measure::stored_endnote_column_cut(st, paragraphs, para_index)
-                .is_none()
-                || self.endnote_column_has_reissued_rows(st, paragraphs, styles))
+            && super::super::measure::stored_endnote_column_cut(st, paragraphs, para_index)
+                .is_none_or(|cut| {
+                    self.endnote_column_reclaims_saved_tail(st, paragraphs, styles, paragraph, cut)
+                })
             && self
                 .simulate_endnote_column_with_item(
                     st,

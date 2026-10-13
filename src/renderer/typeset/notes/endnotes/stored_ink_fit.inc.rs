@@ -188,9 +188,13 @@ impl TypesetEngine {
         let stored_cut =
             stored_endnote_column_cut(st, paragraphs, en_para_idx).filter(|cut| *cut < line_count);
         // 같은 저장 단의 구성이 유지되면 물리 여유만으로 다음 단의 소속을 지우지 않는다.
-        // 앞에서 재발행한 줄이 있으면 과거 컷을 현재 실제 수용 결과로 재검증한다.
-        let reissued_column = stored_cut.is_some()
-            && self.endnote_column_has_reissued_rows(st, paragraphs, styles);
+        // 앞 줄의 실제 감소량이 뒤 조각의 전진을 회수한 경우만 전체 수용을 재검증한다.
+        let reissued_column = stored_cut.is_some_and(|cut| {
+            paragraph_by_global_index(paragraphs, &st.endnote_paragraphs, en_para_idx)
+                .is_some_and(|paragraph| {
+                    self.endnote_column_reclaims_saved_tail(st, paragraphs, styles, paragraph, cut)
+                })
+        });
         if en_ssot_debug() && stored_cut.is_some() {
             eprintln!(
                 "EN_SAVED_CUT pi={en_para_idx} cut={stored_cut:?} reissued_column={reissued_column}"
