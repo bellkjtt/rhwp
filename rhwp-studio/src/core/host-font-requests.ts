@@ -1,6 +1,6 @@
 import type { LayerEquationLayoutBox, LayerNode, LayerTextStyle, PageLayerTree } from './types.ts';
 import { resolveRendererLocalFont, localFontFaceKey, type LocalFontRecord } from './local-fonts.ts';
-import boxedDigitMetrics from '../../../assets/fonts/boxed-digit-metrics.json';
+import boxedDigitMetrics from '../../../assets/fonts/boxed-digit-metrics.json' with { type: 'json' };
 
 export function hostFontStyle(style?: LayerTextStyle): { weight: number; slant: 'normal' | 'italic' } {
   return { weight: style?.bold ? 700 : 400, slant: style?.italic ? 'italic' : 'normal' };

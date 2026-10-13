@@ -1,5 +1,5 @@
 // Rust와 같은 동봉 em 메트릭을 소비한다. 화면 px 핀이나 사유 글리프는 포함하지 않는다.
-import metrics from '../../../../assets/fonts/boxed-digit-metrics.json';
+import metrics from '../../../../assets/fonts/boxed-digit-metrics.json' with { type: 'json' };
 
 export function singleDigitGeometry(number: number, fontSize: number) {
   const digit = metrics.digits[number];
