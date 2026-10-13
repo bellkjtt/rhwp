@@ -269,31 +269,59 @@ impl TypesetEngine {
         paragraphs: &[Paragraph],
         styles: &ResolvedStyleSet,
     ) -> bool {
-        st.current_items.iter().any(|item| {
+        let mut reissued = false;
+        for item in &st.current_items {
             let Some(para_index) = crate::renderer::typeset::page_item_para_index(item) else {
-                return false;
+                continue;
             };
             let Some(source) = para_index
                 .checked_sub(paragraphs.len())
                 .and_then(|local| st.endnote_para_sources.get(local))
             else {
-                return false;
+                continue;
             };
             let Some(crate::model::control::Control::Endnote(note)) = paragraphs
                 .get(source.para_index)
                 .and_then(|parent| parent.controls.get(source.control_index))
             else {
-                return false;
+                continue;
             };
             let Some(original) = note.paragraphs.get(source.note_para_index) else {
-                return false;
+                continue;
             };
             let composed =
                 crate::renderer::composer::compose_paragraph_in_context(original, styles);
-            crate::renderer::composer::stored_row_projection::reissued_equation_rows(
+            let changed = crate::renderer::composer::stored_row_projection::reissued_equation_rows(
                 original, &composed,
-            )
-        })
+            );
+            if std::env::var_os("RHWP_EN_ROW_METRIC_DEBUG").is_some() {
+                let (first, end) = match item {
+                    PageItem::PartialParagraph {
+                        start_line,
+                        end_line,
+                        ..
+                    } => (*start_line, *end_line),
+                    _ => (0, original.line_segs.len()),
+                };
+                let mut source_advance = 0_i64;
+                let mut actual_advance = 0_i64;
+                for (source, actual) in original
+                    .line_segs
+                    .iter()
+                    .zip(&composed.lines)
+                    .skip(first)
+                    .take(end.saturating_sub(first))
+                {
+                    source_advance +=
+                        i64::from(source.line_height) + i64::from(source.line_spacing);
+                    actual_advance +=
+                        i64::from(actual.line_height) + i64::from(actual.line_spacing);
+                }
+                eprintln!("EN_ROW_METRIC pi={para_index} lines={first}..{end} source={source_advance} actual={actual_advance} changed={changed}");
+            }
+            reissued |= changed;
+        }
+        reissued
     }
 
     /// 저장 컷의 확대·축소 모두 실제 앞부분의 점유로 확인한다.
