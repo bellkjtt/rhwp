@@ -164,3 +164,35 @@ pub(super) fn commands(text: &str, fs: f64, dpi: f64, baseline: f64) -> Option<V
             .collect(),
     )
 }
+
+/// 한컴 Print는 작은 확장 괄호의 세로 em을 본체 높이에 맞추고 가로 em은 유지한다.
+/// 공개 기본 괄호의 닫힌 윤곽을 같은 잉크 프레임에 투영한다.
+pub(super) fn small_round_commands(
+    height: f64,
+    fs: f64,
+    dpi: f64,
+    right: bool,
+) -> Option<Vec<Command>> {
+    if !height.is_finite() || height <= 0.0 || !fs.is_finite() || fs <= 0.0 {
+        return None;
+    }
+    let text = if right { ")" } else { "(" };
+    let origin = -super::negation_geometry::math_origin_shift(fs, dpi);
+    let top = origin - fs * 826.0 / 1024.0;
+    let descent = if right { 208.0 } else { 207.0 };
+    let bottom = origin + fs * descent / 1024.0;
+    let scale_y = height / fs;
+    let inset = (height - (bottom - top) * scale_y) / 2.0;
+    let map = |(x, y): (f64, f64)| (x, inset + (y - top) * scale_y);
+    Some(
+        commands(text, fs, dpi, 0.0)?
+            .into_iter()
+            .map(|command| match command {
+                Command::Move(p) => Command::Move(map(p)),
+                Command::Line(p) => Command::Line(map(p)),
+                Command::Cubic(p) => Command::Cubic(p.map(map)),
+                Command::Close => Command::Close,
+            })
+            .collect(),
+    )
+}

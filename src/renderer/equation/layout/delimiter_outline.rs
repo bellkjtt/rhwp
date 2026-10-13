@@ -30,7 +30,16 @@ impl EqLayout {
         } else if self.hancom_math_face && glyph && matches!(text, "(" | ")") {
             super::super::relation_outline::commands(text, fs, self.dpi, baseline)
         } else if self.hancom_math_face && !glyph && matches!(text, "(" | ")") {
-            super::super::round_stretch::source_commands(height, fs, self.dpi, text == ")")
+            super::super::round_stretch::source_commands(height, fs, self.dpi, text == ")").or_else(
+                || {
+                    super::super::relation_outline::small_round_commands(
+                        height,
+                        fs,
+                        self.dpi,
+                        text == ")",
+                    )
+                },
+            )
         } else {
             None
         }
