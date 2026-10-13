@@ -27,6 +27,11 @@ impl EqLayout {
             } else {
                 super::super::brace_stretch::commands(0.0, 0.0, width, height, fs, text == "}")
             })
+        } else if self.hancom_math_face
+            && text == "|"
+            && super::source_font_advance::vertical_slot(fs, self.dpi).is_some()
+        {
+            super::super::relation_outline::vertical_delimiter_commands(height, fs)
         } else if self.hancom_math_face && glyph && matches!(text, "(" | ")") {
             super::super::relation_outline::commands(text, fs, self.dpi, baseline)
         } else if self.hancom_math_face && !glyph && matches!(text, "(" | ")") {

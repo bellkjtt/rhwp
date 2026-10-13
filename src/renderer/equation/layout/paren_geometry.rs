@@ -22,7 +22,10 @@ impl EqLayout {
                     .then_some((b.height, b.baseline))
             });
         let delimiter_height = logical_frame.map_or(b.height, |(height, _)| height);
-        let glyph_delimiters = delimiter_height <= fs * 1.2;
+        let ordinary_height = logical_frame
+            .and_then(|_| super::super::font_frame_metrics::line_at_dpi(fs, self.dpi))
+            .map_or(fs * 1.2, |(height, _)| height);
+        let glyph_delimiters = delimiter_height <= ordinary_height;
         let source_stretch = (!glyph_delimiters && logical_frame.is_some())
             .then(|| delimiter_advance::source_stretch(left, right, fs, self.dpi))
             .flatten();
@@ -67,9 +70,10 @@ impl EqLayout {
             if right.is_empty() { 0.0 } else { paren_w },
         ));
 
+        let (height, baseline) = logical_frame.unwrap_or((b.height, b.baseline));
         let mut body_box = b;
         body_box.x = left_w + pad;
-        body_box.y = 0.0;
+        body_box.y = baseline - body_box.baseline;
 
         let total_w = left_w + pad + body_box.width + pad + right_w;
 
@@ -78,8 +82,8 @@ impl EqLayout {
             x: 0.0,
             y: 0.0,
             width: total_w,
-            height: body_box.height,
-            baseline: body_box.baseline,
+            height,
+            baseline,
             kind: LayoutKind::Paren {
                 left: left.to_string(),
                 right: right.to_string(),
@@ -91,7 +95,7 @@ impl EqLayout {
                     left,
                     left_w,
                     delimiter_height,
-                    body_box.baseline,
+                    baseline,
                     fs,
                     glyph_delimiters,
                 ),
@@ -99,7 +103,7 @@ impl EqLayout {
                     right,
                     right_w,
                     delimiter_height,
-                    body_box.baseline,
+                    baseline,
                     fs,
                     glyph_delimiters,
                 ),

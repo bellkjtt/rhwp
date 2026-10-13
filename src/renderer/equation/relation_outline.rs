@@ -196,3 +196,20 @@ pub(super) fn small_round_commands(
             .collect(),
     )
 }
+
+/// 한컴 Print의 E101은 UPM 1024에서 가로 bbox 225..286인 세로 막대다.
+/// 폰트 윤곽 대신 논리 구분자 높이를 소비하는 공통 채움 사각형을 발행한다.
+pub(super) fn vertical_delimiter_commands(height: f64, fs: f64) -> Option<Vec<Command>> {
+    if !height.is_finite() || height <= 0.0 || !fs.is_finite() || fs <= 0.0 {
+        return None;
+    }
+    let left = fs * 225.0 / 1024.0;
+    let right = fs * 286.0 / 1024.0;
+    Some(vec![
+        Command::Move((left, 0.0)),
+        Command::Line((right, 0.0)),
+        Command::Line((right, height)),
+        Command::Line((left, height)),
+        Command::Close,
+    ])
+}

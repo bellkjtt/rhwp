@@ -100,14 +100,15 @@ fn before_operator_gap(
     source: bool,
     padding: f64,
     fs: f64,
+    relation: bool,
 ) -> f64 {
-    if (operator(previous) && adjacent)
+    if (operator(boundary_element(previous, false)) && adjacent)
         || opening_delimiter(previous)
         || (source && reserves_operator_gap(previous))
     {
         0.0
     } else if source && ends_with_script(previous) {
-        padding.max(fs * 0.2)
+        padding.max(fs * if relation { 0.3 } else { 0.2 })
     } else {
         padding
     }
@@ -164,8 +165,65 @@ impl EqLayout {
                         kind: LayoutKind::Row(vec![result]),
                     };
                 }
-                if !self.hancom_math_face || !operator(node) {
+                if !self.hancom_math_face {
                     return result;
+                }
+                // 항 묶음의 경계에도 바깥 피연산자의 연산자 문맥을 전달한다.
+                // 첨자 결합과 명시적 그룹은 보존하고 경계 여백만 한 번 소비한다.
+                if !operator(node) {
+                    let edge_metrics = |first| {
+                        let edge = boundary_element(node, first);
+                        if !operator(edge) {
+                            return None;
+                        }
+                        let text = match edge {
+                            EqNode::Symbol(text) | EqNode::MathSymbol(text) => text,
+                            _ => return None,
+                        };
+                        source_font_symbol::operator_metrics(text, fs, self.dpi)
+                            .map(|(_, pad)| (pad, super::super::symbols::is_relation_symbol(text)))
+                    };
+                    let left = edge_metrics(true).map_or(0.0, |(pad, relation)| {
+                        if position == 0 {
+                            return 0.0;
+                        }
+                        before_operator_gap(
+                            &nodes[significant[position - 1]],
+                            !explicit_gap(nodes, significant[position - 1], significant[position]),
+                            true,
+                            pad,
+                            fs,
+                            relation,
+                        )
+                    });
+                    let right = edge_metrics(false).map_or(0.0, |(pad, _)| {
+                        if position + 1 == significant.len()
+                            || (operator(boundary_element(&nodes[significant[position + 1]], true))
+                                && !explicit_gap(
+                                    nodes,
+                                    significant[position],
+                                    significant[position + 1],
+                                ))
+                        {
+                            0.0
+                        } else {
+                            pad
+                        }
+                    });
+                    if left == 0.0 && right == 0.0 {
+                        return result;
+                    }
+                    let width = result.width + left + right;
+                    result.x += left;
+                    return LayoutBox {
+                        font_size: fs,
+                        x: 0.0,
+                        y: 0.0,
+                        width,
+                        height: result.height,
+                        baseline: result.baseline,
+                        kind: LayoutKind::Row(vec![result]),
+                    };
                 }
                 let text = match &result.kind {
                     LayoutKind::Symbol(text) => text.as_str(),
@@ -191,10 +249,11 @@ impl EqLayout {
                         source_metrics.is_some(),
                         padding,
                         fs,
+                        super::super::symbols::is_relation_symbol(text),
                     )
                 };
                 let right = if position + 1 == significant.len()
-                    || (operator(&nodes[significant[position + 1]])
+                    || (operator(boundary_element(&nodes[significant[position + 1]], true))
                         && !explicit_gap(nodes, significant[position], significant[position + 1]))
                 {
                     0.0
