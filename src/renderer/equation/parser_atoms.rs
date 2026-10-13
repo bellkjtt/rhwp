@@ -79,6 +79,12 @@ impl EqParser {
                 EqNode::Symbol(val)
             }
             TokenType::Subscript | TokenType::Superscript => {
+                if self.document_terms {
+                    // 한컴 Print의 기저 없는 첨자는 이미 읽은 항을 남기고
+                    // 이 위치 이후 입력을 중단한다. 공개 호환 파서는 별도다.
+                    self.stopped_document_input = true;
+                    return EqNode::Empty;
+                }
                 // 베이스 없는 첨자 (예: _{y} x)
                 self.try_parse_scripts(EqNode::Empty)
             }

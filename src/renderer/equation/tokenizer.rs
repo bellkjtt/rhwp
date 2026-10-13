@@ -59,6 +59,8 @@ pub struct Tokenizer {
     pos: usize,
     /// 직전 `next_token` 호출이 토큰 앞에서 일반 공백을 건너뛰었는지 (#1304).
     last_had_space: bool,
+    /// 저장 문서의 한컴 명령 해석과 공개 LaTeX 호환 해석을 구분한다.
+    document_commands: bool,
 }
 
 impl Tokenizer {
@@ -67,6 +69,14 @@ impl Tokenizer {
             chars: script.chars().collect(),
             pos: 0,
             last_had_space: false,
+            document_commands: false,
+        }
+    }
+
+    pub(crate) fn for_document(script: &str) -> Self {
+        Self {
+            document_commands: true,
+            ..Self::new(script)
         }
     }
 
@@ -142,6 +152,23 @@ impl Tokenizer {
     /// (`11 over20`, `3 over5`)가 있어 over/atop 뒤가 숫자인 경우에만 분리한다.
     fn read_command(&mut self) -> Token {
         let start = self.pos;
+
+        // 한컴 Print는 OVERSET을 OVER + SET으로 읽지만 OVERLINE은
+        // 하나의 장식 명령으로 읽는다. 긴 명령을 먼저 읽고 남은 항을
+        // 다음 토큰에 맡긴다. 혼합 대소문자를 새로운 명령으로 합치지 않는다.
+        if self.document_commands {
+            for name in ["OVERLINE", "UNDERLINE", "OVER", "UNDER", "ATOP"] {
+                if self.matches_at(name) || self.matches_at(&name.to_ascii_lowercase()) {
+                    self.pos += name.len();
+                    let value = if name == "UNDER" {
+                        "UNDERLINE".to_owned()
+                    } else {
+                        self.chars[start..self.pos].iter().collect()
+                    };
+                    return Token::new(TokenType::Command, value, start);
+                }
+            }
+        }
 
         // OVER/ATOP 분리: 뒤가 숫자(#1122, 임의 길이) 또는 [#1204-E] 짧은(≤2) 글자
         // 피연산자(`overa^2`,`overdx`)면 분리. 단 `overlap`/`overline` 등 긴 word·keyword 는
@@ -319,6 +346,11 @@ impl Tokenizer {
             } else {
                 break;
             }
+        }
+        if self.document_commands && !value.is_empty() {
+            // 저장 문서의 백슬래시는 뒤 명령 이름을 문자로 남긴다.
+            // 공개 tokenizer의 LaTeX 확장과 pm/mp 별칭은 별도로 유지한다.
+            return Token::new(TokenType::Text, value, start);
         }
         // LaTeX 확장과 한컴의 일반 pm/mp 식별자를 구분한다.
         match value.as_str() {

@@ -40,7 +40,7 @@ fn inline_equations_match_saved_line(
     *height > 0.0
         && saved_height > 0.0
         && *height <= saved_height + roundoff
-        && current_height + (fmt.height_for_fit - fmt.spacing_after).max(0.0) <= body_height
+        && current_height + fmt.height_for_fit <= body_height
 }
 
 pub(in crate::renderer::typeset) struct WholeFitPage<'a> {

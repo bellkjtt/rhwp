@@ -33,7 +33,7 @@ pub(in crate::renderer::typeset) struct FormattedParagraph {
     pub(in crate::renderer::typeset) spacing_before: f64,
     /// spacing_after
     pub(in crate::renderer::typeset) spacing_after: f64,
-    /// trailing line_spacing을 제외한 판단용 높이
+    /// 마지막 줄간격과 문단 뒤 간격을 제외한 물리 점유의 판단용 높이
     pub(in crate::renderer::typeset) height_for_fit: f64,
     /// `total_height` 에 섞어 넣은 TAC 표 바깥 여백(세로). 저장 사다리 지문처럼
     /// **생성기가 쓴 값과 대조하는** 계산에서는 이 몫을 도로 빼야 한다.
@@ -67,7 +67,7 @@ impl FormattedParagraph {
         let object_fit = plan
             .square_host_placement
             .map_or(0.0, |p| p.occupied_bottom);
-        self.height_for_fit = text_fit.max(object_fit) + self.spacing_after;
+        self.height_for_fit = text_fit.max(object_fit);
         self.square_host_plan = Some(plan);
     }
 
@@ -195,7 +195,9 @@ impl FormattedParagraph {
             seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
         });
         if col_count > 1 && has_authoritative_seg_for_multicolumn {
-            return self.height_for_fit;
+            // fit은 마지막 줄의 점유까지만 판정한다. 다음 문단의 원점을
+            // 전진시키는 뒤 간격은 수용된 흐름에서 한 번 보존한다.
+            return (self.height_for_fit + self.spacing_after).min(self.total_height);
         }
         // [#2279 ①] spacing 트림은 **비합성(authoritative) 저장 lineseg** 문단에만.
         // 저장 ladder 가 spacing 을 이미 반영하고 vpos-snap 이 좌표를 복원하는
