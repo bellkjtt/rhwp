@@ -1823,7 +1823,7 @@ impl LayoutEngine {
                         marker_para,
                         bin_data_content,
                         &[],
-                    ) + placement.spacing.after - after;
+                    ).flow_bottom + placement.spacing.after - after;
                     if is_last_selected_line {
                         y -= hwpunit_to_px(composed.lines[0].line_spacing, self.dpi);
                     }

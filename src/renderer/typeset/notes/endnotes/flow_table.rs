@@ -140,6 +140,7 @@ impl TypesetEngine {
                     true,
                     true,
                     styles,
+                    paint_composed.get(para_index),
                     paint_paragraphs.get(para_index + 1),
                     crate::renderer::typeset::preceding_stored_vpos(&paint_paragraphs, para_index),
                 );

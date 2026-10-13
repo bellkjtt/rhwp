@@ -444,8 +444,8 @@ fn tokenize_paragraph_with_regenerated_space_metric(
         // 공백 (줄 바꿈 지점) — NonBreakingSpace(\u{00A0})는 제외
         // 개체 슬롯은 뒤 글자와 별개의 분할 불가 토큰이다. 글꼴 글리프의
         // 폭은 없으며 공통 측정 결과가 제공한 물리 폭만 소비한다.
-        if ch == '\u{FFFC}' && inline_width_px_at(inline_controls, i) > 0.0 {
-            let width = inline_width_px_at(inline_controls, i);
+        if ch == '\u{FFFC}' && inline_width_px_at(inline_controls, i, styles) > 0.0 {
+            let width = inline_width_px_at(inline_controls, i, styles);
             let style_id = find_active_char_shape(
                 char_shapes,
                 char_offsets.get(i).copied().unwrap_or(i as u32),
@@ -1039,7 +1039,7 @@ fn prepare_paragraph_projection(
         );
 
         let scalar_width = match character {
-            '\u{FFFC}' if inline_width_px_at(inline_controls, index) > 0.0 => 0.0,
+            '\u{FFFC}' if inline_width_px_at(inline_controls, index, styles) > 0.0 => 0.0,
             '\t' | '\n' | '\r' => 0.0,
             ' ' => space_metric.space_advance(&text_style),
             _ => estimate_text_width_unrounded(&character.to_string(), &text_style),

@@ -149,7 +149,7 @@ pub(crate) fn is_used(layout: &super::layout::LayoutBox) -> bool {
         match &item.kind {
             LayoutKind::HancomGlyphs(_) => return true,
             LayoutKind::Row(children) => pending.extend(children),
-            LayoutKind::Fraction { numer, denom } => {
+            LayoutKind::Fraction { numer, denom, .. } => {
                 pending.push(numer);
                 pending.push(denom);
             }

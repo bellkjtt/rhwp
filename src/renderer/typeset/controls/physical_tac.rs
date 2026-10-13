@@ -80,6 +80,7 @@ pub(in crate::renderer::typeset) fn prepare(
             y: origin,
             clearance: 0.0,
             advance_end: Some(end),
+            stored_horizontal_pen: None,
         },
         end,
         rebase_line_origin: false,
