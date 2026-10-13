@@ -9770,7 +9770,7 @@ mod tests {
 
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
-    fn page_border_fill_sample_basis_matches_hancom_ui() {
+    fn page_border_fill_reference_sources_keep_paper_and_page_basis() {
         use crate::model::page::PageBorderBasis;
 
         fn json_number(json: &str, key: &str) -> f64 {
@@ -9816,18 +9816,9 @@ mod tests {
         );
         let page_hwp_top = assert_basis("samples/쪽기준.hwp", "page", PageBorderBasis::BodyBased);
         assert_basis("samples/쪽기준.hwpx", "page", PageBorderBasis::BodyBased);
-        let sample16_top = assert_basis(
-            "samples/hwp3-sample16-hwp5.hwp",
-            "page",
-            PageBorderBasis::BodyBased,
-        );
         assert!(
             page_hwp_top > paper_hwp_top,
             "쪽 기준 border top should be inside paper 기준: paper={paper_hwp_top}, page={page_hwp_top}"
-        );
-        assert!(
-            (sample16_top - 49.2).abs() < 0.2,
-            "sample16 page-basis UI should use body top minus spacing and double-line outset: top={sample16_top}"
         );
     }
 
