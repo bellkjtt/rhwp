@@ -663,7 +663,9 @@ pub(super) fn prepare(
                     .is_some_and(|m| {
                         // 측정 행은 내부 표를 소유한다. 일반 표 포맷과 같은
                         // 바깥 프레임을 복원한 전체 높이로 저장 줄을 인증한다.
-                        let physical_height = if page.profile.hwp5_stored_pagination_layout() {
+                        let physical_height = if page.profile.hwp5_stored_pagination_layout()
+                            || page.profile.hwpx_stored_layout()
+                        {
                             crate::renderer::height_measurer::unwrapped_table_whole_height(
                                 table,
                                 m.total_height,

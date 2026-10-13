@@ -126,7 +126,9 @@ pub(super) fn format(
     .is_some_and(|nested| {
         crate::renderer::height_measurer::unrestricted_wrapper_frame(table, nested, dpi).is_some()
     });
-    let effective_height = if profile().hwp5_stored_pagination_layout() || unrestricted_wrapper {
+    let effective_height = if profile().hwp5_stored_pagination_layout()
+        || profile().hwpx_stored_layout()
+        || unrestricted_wrapper {
         crate::renderer::height_measurer::unwrapped_table_whole_height(table, effective_height, dpi)
     } else {
         effective_height
@@ -191,6 +193,7 @@ pub(super) fn fit_measured_for_host(
     if crate::renderer::height_measurer::transparent_table_wrapper_child(table).is_some_and(
         |nested| {
             profile().hwp5_stored_pagination_layout()
+                || profile().hwpx_stored_layout()
                 || crate::renderer::height_measurer::unrestricted_wrapper_frame(table, nested, dpi)
                     .is_some()
         },
