@@ -25,6 +25,13 @@ impl TypesetEngine {
         // PartialTable 배치 후 page/lazy base 무효화(LINE_SEG lh 가 개체 높이를
         // 반영 못 해 drift 유발 → 직후 paragraph 는 lazy 역산으로 재산출). 단단 전용.
         if st.col_count == 1 {
+            let first_continuation = !st.current_endnote_flow
+                && matches!(st.current_items.first(),
+                    Some(PageItem::PartialParagraph { para_index: owner, start_line, .. })
+                        if *owner == para_idx && *start_line > 0)
+                && matches!(st.current_items.last(),
+                    Some(PageItem::PartialParagraph { para_index: owner, .. })
+                        if *owner == para_idx);
             let current_origin_rewinds = st
                 .vpos_prev_layout_para
                 // A table may have emitted several new columns before this
@@ -47,6 +54,15 @@ impl TypesetEngine {
                 // 본문 문단이 자체 stored VPOS에서 시작하게 한다.
                 st.reset_vpos_cursor();
                 st.acknowledge_queued_footnote_reset(false);
+            } else if first_continuation {
+                // paint의 첫 continuation은 앞 쪽의 문단을 이전 owner로
+                // 이어받지 않는다. 첫 수용 줄의 저장 축은 별도로 보존한다.
+                st.record_previous_layout_paragraph(None);
+                st.record_vpos_page_origin(None);
+                let seed = st.vpos_stored_column_origin.map(|(source, anchor)| {
+                    source - crate::renderer::px_to_hwpunit(anchor, self.dpi)
+                });
+                st.record_vpos_lazy_origin(seed);
             } else if current_origin_rewinds {
                 // Paint closes the preceding coordinate frame after this
                 // owner. Apply the same transition before the next fit;
