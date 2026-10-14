@@ -4505,6 +4505,8 @@ pub struct InlineBoxPlacement {
     pub advance_end: Option<f64>,
     /// 원본 개체 줄이 확정한 가로 펜. 없으면 기존 표 정렬을 소비한다.
     pub stored_horizontal_pen: Option<f64>,
+    /// 수용한 저장 TAC 줄의 단 좌표 원점. 뒤 글줄도 같은 축을 소비한다.
+    pub stored_column_origin_hu: Option<i32>,
 }
 
 /// 가로 구간에서 원자적 inline 상자가 들어갈 첫 줄을 찾는다.
@@ -4568,6 +4570,7 @@ pub(crate) fn place_inline_box(
         clearance: y - top,
         advance_end: None,
         stored_horizontal_pen: None,
+        stored_column_origin_hu: None,
     })
 }
 

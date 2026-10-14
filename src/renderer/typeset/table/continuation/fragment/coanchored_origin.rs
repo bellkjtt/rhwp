@@ -86,6 +86,23 @@ impl TypesetEngine {
             return None;
         }
         let top = anchor + host_before + vertical_offset;
+        // 첫 조각의 선언 높이는 저장 호스트 줄과 같은 물리 축에서만 인증한다.
+        // 앞 TAC의 흐름 끝을 호스트 원점으로 쓰면 선언된 첫 컷을 잃는다.
+        let spacing_before = input
+            .source
+            .styles
+            .para_styles
+            .get(para.para_shape_id as usize)?
+            .spacing_before;
+        let source_host_origin = st
+            .vpos_stored_column_origin
+            .or_else(|| st.vpos_page_base.map(|base| (base, st.vpos_col_anchor)))
+            .and_then(|(base, column_origin)| {
+                line.vertical_pos.checked_sub(base).map(|position| {
+                    column_origin + crate::renderer::hwpunit_to_px(position, self.dpi)
+                })
+            })
+            .filter(|origin| (origin - anchor - spacing_before).abs() <= self.dpi / 7200.0);
         if std::env::var("RHWP_TABLE_DRIFT").is_ok() {
             eprintln!(
                 "COANCHORED_FIRST_FRAME: pi={} ci={} anchor={:.3} flow={:.3} top={:.3}",
@@ -95,7 +112,7 @@ impl TypesetEngine {
         let placement = ParagraphFloatPlacement {
             flow: ParagraphFloatFlow::NextLine,
             anchor_y: anchor,
-            stored_host_origin: None,
+            stored_host_origin: source_host_origin,
             stored_successor_line_origin: None,
             table_left: None,
             table_top: top,

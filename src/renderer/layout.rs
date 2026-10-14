@@ -10349,11 +10349,28 @@ impl LayoutEngine {
                 hcursor.vpos_lazy_base = None;
                 hcursor.stored_column_origin = Some((origin, 0.0));
             }
+            // 저장 TAC 줄의 fit이 인증한 원점을 뒤 본문 paint에도 그대로 전달한다.
+            let accepted_tac_origin = match item {
+                PageItem::Table {
+                    para_index,
+                    control_index,
+                } => col_content
+                    .inline_placements
+                    .get(&(*para_index, *control_index))
+                    .and_then(|placement| placement.stored_column_origin_hu),
+                _ => None,
+            };
+            if let Some(origin) = accepted_tac_origin {
+                hcursor.vpos_page_base = Some(origin);
+                hcursor.vpos_lazy_base = None;
+                hcursor.stored_column_origin = Some((origin, hcursor.vpos_col_anchor));
+            }
             if !heading_shape_keeps_page_base
                 && !stored_overlay_host_keeps_page_base
                 && !shape_keeps_host_line_base
                 && !resolved_stored_wrap_fragment
                 && !opening_tac_keeps_page_base
+                && accepted_tac_origin.is_none()
                 && (was_tac || (is_table_or_shape && !is_para_float_table && !is_inline_tac_object))
             {
                 hcursor.vpos_page_base = None;

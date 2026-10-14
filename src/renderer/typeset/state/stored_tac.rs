@@ -10,6 +10,26 @@ impl TypesetState {
     ) {
         if self.data.col_count == 1 {
             self.data.vpos_prev_layout_para = Some(para_index);
+            // 저장 줄 수용이 발행한 축은 표 뒤의 일반 앵커 초기화로 지우지 않는다.
+            // 다른 줄·합성·분할 경로는 이 인증을 갖지 않는다.
+            let accepted_origin = match self.data.current_items.last() {
+                Some(PageItem::Table {
+                    para_index: owner,
+                    control_index,
+                }) if *owner == para_index => self
+                    .data
+                    .inline_placements
+                    .get(&(*owner, *control_index))
+                    .and_then(|placement| placement.stored_column_origin_hu),
+                _ => None,
+            };
+            if let Some(origin) = accepted_origin {
+                self.record_vpos_page_origin(Some(origin));
+                self.record_vpos_lazy_origin(None);
+                self.record_vpos_origin_provenance(true);
+                self.data.vpos_prev_partial_table = false;
+                return;
+            }
             if matches!(
                 self.data.current_items.last(),
                 Some(PageItem::Table { .. } | PageItem::PartialTable { .. })

@@ -4467,6 +4467,7 @@ impl TypesetEngine {
                     clearance: 0.0,
                     advance_end: None,
                     stored_horizontal_pen: None,
+                    stored_column_origin_hu: None,
                 }));
             }
         }
@@ -4493,6 +4494,7 @@ impl TypesetEngine {
                     clearance: 0.0,
                     advance_end: Some(st.current_height + table_height),
                     stored_horizontal_pen: Some(row.horizontal_pen),
+                    stored_column_origin_hu: None,
                 },
             );
         }
@@ -4824,6 +4826,7 @@ impl TypesetEngine {
                     clearance: 0.0,
                     advance_end: Some(end),
                     stored_horizontal_pen: None,
+                    stored_column_origin_hu: None,
                 },
             );
             Some(end)
