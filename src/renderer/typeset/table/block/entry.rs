@@ -1912,6 +1912,42 @@ impl TypesetEngine {
                 Some(placement)
             })
             .or_else(|| {
+                // 단 앞의 독립 장식과 별개로, 실제 직전 글줄·표·뒤 글줄이
+                // 닫는 로컬 프레임을 쓴다. 빈 호스트 줄도 표 뒤 공간을 점유한다.
+                if st.col_count != 1
+                    || st.vpos_ladder_dirty
+                    || st.current_endnote_flow
+                    || st.profile.session_edited()
+                    || !(st.profile.hwp5_stored_pagination_layout() || st.profile.hwpx_stored_layout())
+                    || self.render_normalization.table_text_reflowed(table)
+                    || fmt.computed_host_lines.is_some()
+                {
+                    return None;
+                }
+                let previous = para_idx.checked_sub(1)?;
+                if !matches!(st.current_items.last(), Some(PageItem::FullParagraph { para_index })
+                    if *para_index == previous)
+                {
+                    return None;
+                }
+                let outer = hwpunit_to_px(signed_hwpunit(table.common.vertical_offset), self.dpi)
+                    + hwpunit_to_px(i32::from(table.outer_margin_top), self.dpi)
+                    + ft.effective_height
+                    + hwpunit_to_px(i32::from(table.outer_margin_bottom), self.dpi);
+                let mut placement = crate::renderer::float_placement::stored_table_before_host_frame(
+                    paragraphs_all.get(previous..)?, 1, table, ctrl_idx,
+                    placement_para_start_height + outer, ft.effective_height, styles, self.dpi,
+                )?;
+                let [host] = para.line_segs.as_slice() else { return None; };
+                let end = placement.occupied_bottom
+                    + hwpunit_to_px(host.line_height.checked_add(host.line_spacing)?, self.dpi)
+                    + fmt.spacing_after;
+                if end > available { return None; }
+                placement.stored_host_origin = Some(placement.occupied_bottom);
+                placement.stored_successor_line_origin = Some(end);
+                Some(placement)
+            })
+            .or_else(|| {
                 // 저장 사다리가 빈 host 의 앞·뒤 간격과 줄 상자를 싣지 않았다고 증언하면
                 // 그 상자로 수용·전진하고, 렌더도 같은 원점을 소비한다.
                 ((st.profile.hwp5_stored_pagination_layout() || st.profile.hwpx_stored_layout())

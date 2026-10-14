@@ -3782,6 +3782,14 @@ impl ParagraphFloatPlacement {
             ParagraphFloatFlow::Exclusion | ParagraphFloatFlow::StoredSquareWrap => text_flow_end,
             ParagraphFloatFlow::EmptyHost => self.occupied_bottom,
             ParagraphFloatFlow::NextLine => {
+                // 실제 저장 호스트 줄은 개체 뒤에서도 자기 줄 상자를 점유한다.
+                // 인증된 뒤 줄 원점에 포함된 간격을 다시 더하지 않는다.
+                if let Some(end) = self
+                    .stored_successor_line_origin
+                    .filter(|end| end.is_finite() && *end >= self.occupied_bottom)
+                {
+                    return text_flow_end.max(end);
+                }
                 // A certified successor at the accepted frame bottom already
                 // closes this paragraph. Adding the host's trailing space
                 // again would move that same successor beyond its source box.

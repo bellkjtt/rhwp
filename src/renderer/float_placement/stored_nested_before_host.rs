@@ -87,7 +87,10 @@ pub(crate) fn stored_table_before_host_frame(
         || control_index != 0
         || !matches!(para.controls.as_slice(), [Control::Table(_)])
         || !previous.controls.is_empty()
-        || !next.controls.is_empty()
+        || !(next.controls.is_empty()
+            || (next.line_segs.len() == 1
+                && matches!(next.controls.as_slice(), [Control::Table(_)])
+                && crate::renderer::composer::stored_first_tac_line(next).is_some()))
         || !original_lines(para)
         || !original_lines(previous)
         || !original_lines(next)

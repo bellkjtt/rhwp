@@ -2,6 +2,7 @@
 
 use super::metrics::FormattedParagraph;
 use super::{Paragraph, ResolvedStyleSet, TypesetState};
+use crate::model::control::Control;
 use crate::model::paragraph::LineSeg;
 use crate::renderer::{hwpunit_to_px, pagination::PageItem};
 
@@ -28,8 +29,12 @@ pub(super) fn stored_content_bottom(
     {
         return None;
     }
+    let recovered_frame = (st.vpos_page_base.is_none() && st.vpos_lazy_base.is_none())
+        .then(|| accepted_tac_column_frame(st, paragraphs, styles, dpi))
+        .flatten();
     let (first_owner, first_line) = match st.current_items.first()? {
         PageItem::FullParagraph { para_index } => (*para_index, 0),
+        PageItem::Table { para_index, .. } if recovered_frame.is_some() => (*para_index, 0),
         PageItem::PartialParagraph {
             para_index,
             start_line,
@@ -55,7 +60,7 @@ pub(super) fn stored_content_bottom(
     // 같은 쪽 상대 여백 축을 쓴다. 단 초기화와 paint가 사용하는 인증을
     // 그대로 소비하며, 프레임 기록 유무를 물리 여백 유무로 대신하지 않는다.
     let page_relative_margin = first_line == 0
-        && st.vpos_page_base == Some(0)
+        && (st.vpos_page_base == Some(0) || recovered_frame.is_some_and(|(base, _)| base == 0))
         && crate::renderer::layout::stored_first_margin_is_page_relative(
             first,
             paragraphs.get(first_owner.checked_add(1)?),
@@ -64,7 +69,9 @@ pub(super) fn stored_content_bottom(
         );
     // 표의 확정 원점이 인증한 축도 실제 단 시작 높이를 소유한다.
     // 저장 좌표의 기준과 물리 앵커를 분리하여 시작 밴드를 두 번 더하지 않는다.
-    let (source_base, anchor) = if st.vpos_page_base_stored {
+    let (source_base, anchor) = if let Some(frame) = recovered_frame {
+        frame
+    } else if st.vpos_page_base_stored {
         let base = st.vpos_page_base?;
         if first_seg.vertical_pos != base
             && !retained_frame.is_some_and(|frame| frame.source_origin_hu == base)
@@ -89,7 +96,8 @@ pub(super) fn stored_content_bottom(
     if first.stored_text_partition_is_dirty()
         || first.cell_format_vpos_dirty
         || first_seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
-        || (retained_frame.is_none()
+        || (recovered_frame.is_none()
+            && retained_frame.is_none()
             && !page_relative_margin
             && styles
                 .para_styles
@@ -120,6 +128,102 @@ pub(super) fn stored_content_bottom(
     bottom
         .and_then(|end| end.checked_sub(source_base))
         .map(|end| anchor + hwpunit_to_px(end, dpi))
+}
+
+/// 같은 단의 저장 TAC 계획이 실제로 보존한 축만 본문 내용 하단에 이어준다.
+/// 표 뒤의 단순 cursor 추정이나 선언 높이만으로 초기 축을 되살리지 않는다.
+fn accepted_tac_column_frame(
+    st: &TypesetState,
+    paragraphs: &[Paragraph],
+    styles: &ResolvedStyleSet,
+    dpi: f64,
+) -> Option<(i32, f64)> {
+    let anchor = st.current_start_height;
+    let tolerance = hwpunit_to_px(1, dpi);
+    let first_item = st.current_items.first()?;
+    let first_owner = first_item.para_index();
+    let first = paragraphs.get(first_owner)?;
+    let first_line = first.line_segs.first()?;
+    let base = match first_item {
+        PageItem::FullParagraph { .. } => {
+            if let Some(frame) = st.stored_column_top_spacings.get(&first_owner) {
+                frame.source_origin_hu
+            } else if first_line.vertical_pos == 0
+                || crate::renderer::layout::stored_first_margin_is_page_relative(
+                    first,
+                    paragraphs.get(first_owner.checked_add(1)?),
+                    styles,
+                    dpi,
+                )
+            {
+                0
+            } else {
+                return None;
+            }
+        }
+        PageItem::Table { control_index, .. } => {
+            let placement = st.inline_placements.get(&(first_owner, *control_index))?;
+            let before = styles
+                .para_styles
+                .get(first.para_shape_id as usize)?
+                .spacing_before;
+            if first.line_segs.len() != 1 || (placement.y - anchor - before).abs() > tolerance {
+                return None;
+            }
+            first_line
+                .vertical_pos
+                .checked_sub(crate::renderer::px_to_hwpunit(before, dpi))?
+        }
+        _ => return None,
+    };
+    let mut saw_tac = false;
+    let mut previous_vpos = None;
+    for item in &st.current_items {
+        let owner = item.para_index();
+        let para = paragraphs.get(owner)?;
+        if para.stored_text_partition_is_dirty()
+            || para.cell_format_vpos_dirty
+            || para.line_segs.is_empty()
+        {
+            return None;
+        }
+        for line in &para.line_segs {
+            if line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+                || line.line_height <= 0
+                || line.line_spacing < 0
+                || previous_vpos.is_some_and(|previous| line.vertical_pos < previous)
+            {
+                return None;
+            }
+            previous_vpos = Some(line.vertical_pos);
+        }
+        match item {
+            PageItem::FullParagraph { .. }
+                if super::super::controls::stored_tac::text_controls_share_line(para) => {}
+            PageItem::Table { control_index, .. } => {
+                let [line] = para.line_segs.as_slice() else {
+                    return None;
+                };
+                let Control::Table(table) = para.controls.get(*control_index)? else {
+                    return None;
+                };
+                let placement = st.inline_placements.get(&(owner, *control_index))?;
+                let source_top = anchor + hwpunit_to_px(line.vertical_pos.checked_sub(base)?, dpi);
+                if !table.common.treat_as_char
+                    || !placement.advance_end.is_some_and(|end| {
+                        end.is_finite()
+                            && end + tolerance >= source_top + hwpunit_to_px(line.line_height, dpi)
+                    })
+                    || (placement.y - source_top).abs() > tolerance
+                {
+                    return None;
+                }
+                saw_tac = true;
+            }
+            _ => return None,
+        }
+    }
+    saw_tac.then_some((base, anchor))
 }
 
 /// A certified source guide owns its whole empty line band, including trailing
