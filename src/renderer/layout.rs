@@ -10363,7 +10363,7 @@ impl LayoutEngine {
             if let Some(origin) = accepted_tac_origin {
                 hcursor.vpos_page_base = Some(origin);
                 hcursor.vpos_lazy_base = None;
-                hcursor.stored_column_origin = Some((origin, hcursor.vpos_col_anchor));
+                hcursor.stored_column_origin = Some((origin, hcursor.col_anchor_y));
             }
             if !heading_shape_keeps_page_base
                 && !stored_overlay_host_keeps_page_base
