@@ -82,3 +82,22 @@ ignored `output/pr-review/visual-sweep-direct-png-20261014/`:
 원격 PR·CI·merge는 이 문서 작성 시 아직 수행하지 않았다. PR 생성 후 정확한 head의 CI를
 확인하고 개별 PR review·오늘할일을 trailing commit으로 반영한다. #7902의 화학제품 쪽번호,
 행 나눔 HWPX 및 giant overfill 보정과 전체19문서 재검증은 다음 단계다.
+
+### PR #7903 CI 분류 검사 보완
+
+제출 head `35f7ad287162ac27b80f6c8844f6f75037bfcf29`의
+[Lint 작업](https://github.com/edwardkim/rhwp/actions/runs/38542913652/job/115782479679)은
+Rust fmt 뒤 `Validate CI impact classifier`에서 실패했다. 로컬 Rust lint 묶음은 통과했으나
+이 별도 Node/Python 묶음은 PR 전 검증에서 빠졌다.
+
+원인은 PNG 호출을 `NativePngExporter::new/system_defaults`와 `render_page`로 옮긴 뒤
+기존 직접 `render_page_png_native` 정규식이 CLI raster 소비자를 찾지 못한 것이다.
+실제 CI 분류의 Native Skia 필요 판정은 유지한다. 탐지 검사를 새 snapshot replay까지
+포함하도록 보완하고 생성만 하는 코드·다른 exporter의 호출을 구분하는 검사를 추가했다.
+CI의 해당 단계8개 명령을 같은 순서로 로컬 실행해 Node 219개·Python 38개 검사 모두
+통과했다. 결과는
+`output/pr-review/visual-sweep-direct-png-20261014/ci-impact-bundle-result.json`에 기록했다.
+이번 보완은 호출 탐지 검사와 작업 기록만 변경한다. Rust source·실제 CI 분류·렌더 결과가
+같으므로 기존 Rust lint와 Native/fresh WASM 증거를 재사용하며 전체 Rust 회귀는 재수행하지 않았다.
+사용자 지시에 따라 보완 결과를 같은 PR의 추가 commit으로 반영한다. 원격 CI 성공·merge는
+최신 head에서 따로 확인한다.
