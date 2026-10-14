@@ -9,6 +9,7 @@ fn parse_arrow(name: &str) -> ArrowStyle {
         "diamond" => ArrowStyle::Diamond,
         "circle" => ArrowStyle::Circle,
         "square" => ArrowStyle::Square,
+        "openArrow" => ArrowStyle::OpenArrow,
         other => panic!("unknown arrow {other}"),
     }
 }

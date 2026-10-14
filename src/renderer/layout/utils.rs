@@ -511,7 +511,7 @@ fn arrow_type_from_hwp(hwp_type: u32, fill: bool) -> ArrowStyle {
     match hwp_type {
         0 => ArrowStyle::None,
         1 => ArrowStyle::Arrow,
-        2 => ArrowStyle::Arrow, // LinedArrow (선형 화살표) → Arrow로 근사
+        2 => ArrowStyle::OpenArrow, // SPEAR는 두 사선으로 된 열린 화살촉이다.
         3 => ArrowStyle::ConcaveArrow,
         4 => {
             if fill {

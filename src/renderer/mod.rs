@@ -1046,6 +1046,8 @@ pub enum ArrowStyle {
     Circle,
     /// 속이 채운 사각
     Square,
+    /// 선형 화살촉(SPEAR): 두 사선을 잇고 바닥은 닫지 않는다.
+    OpenArrow,
 }
 
 /// 패스 커맨드 (벡터 도형용)

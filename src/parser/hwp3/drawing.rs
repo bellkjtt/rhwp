@@ -627,8 +627,6 @@ use std::collections::HashMap;
 const HWP3_UNIT_SCALE: i32 = 4;
 mod shape_mapping;
 use shape_mapping::map_to_shape_object;
-#[cfg(test)]
-use shape_mapping::{hwp3_rectangle_uses_no_fill_marker, hwp3_uses_no_line_marker};
 
 pub fn parse_drawing_object_tree(
     cursor: &mut std::io::Cursor<&[u8]>,
@@ -820,7 +818,9 @@ mod modified_arc_overread_tests {
             },
             ..Default::default()
         };
-        assert!(hwp3_rectangle_uses_no_fill_marker(&rectangle));
+        assert!(super::shape_mapping::hwp3_rectangle_uses_no_fill_marker(
+            &rectangle
+        ));
 
         let text_box = Hwp3DrawingObjectCommonHeader {
             object_type: 6,
@@ -831,7 +831,7 @@ mod modified_arc_overread_tests {
             ..Default::default()
         };
         assert!(
-            !hwp3_rectangle_uses_no_fill_marker(&text_box),
+            !super::shape_mapping::hwp3_rectangle_uses_no_fill_marker(&text_box),
             "글상자의 동일 marker는 기본 스타일이지 사각형 no-fill이 아님"
         );
     }
@@ -845,7 +845,7 @@ mod modified_arc_overread_tests {
             },
             ..Default::default()
         };
-        assert!(hwp3_uses_no_line_marker(&no_line));
+        assert!(super::shape_mapping::hwp3_uses_no_line_marker(&no_line));
 
         let black_line = Hwp3DrawingObjectCommonHeader {
             basic_attr: Hwp3DrawingObjectBasicAttr {
@@ -855,7 +855,7 @@ mod modified_arc_overread_tests {
             ..Default::default()
         };
         assert!(
-            !hwp3_uses_no_line_marker(&black_line),
+            !super::shape_mapping::hwp3_uses_no_line_marker(&black_line),
             "실제 검정 선은 sentinel이 아니므로 기존 line-style 보정을 유지한다"
         );
     }

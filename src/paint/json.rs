@@ -3386,6 +3386,7 @@ fn arrow_style_str(value: ArrowStyle) -> &'static str {
         ArrowStyle::Diamond => "diamond",
         ArrowStyle::Circle => "circle",
         ArrowStyle::Square => "square",
+        ArrowStyle::OpenArrow => "openArrow",
     }
 }
 
