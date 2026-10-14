@@ -10963,11 +10963,10 @@ impl LayoutEngine {
                                     TextWrap::InFrontOfText | TextWrap::BehindText
                                 )
                         });
-                        // [#5809] Square 계열 확장 갈래는 다음 문단이 **가시 텍스트**를
-                        // 가질 때만 — 저장 사다리의 예약 증언은 다음 실내용의 저장
-                        // 위치가 근거다. 편집(Enter)으로 삽입된 빈 부호 문단(issue_2069
-                        // 한셀OLE)은 증언력이 없고 sequential 이 정답이다.
-                        let has_square_float_before_text = para.controls.iter().any(|c| {
+                        // 보이는 글자와 저장 글줄의 점유는 다르다. 빈 후속 줄도
+                        // 원본 사다리의 전진을 증언할 수 있다. 합성 태그·되감김·
+                        // 오래된 여러 줄 델타는 공통 사다리 질의에서 거절한다.
+                        let has_square_float = para.controls.iter().any(|c| {
                             let cm = match c {
                                 Control::Picture(pic) => &pic.common,
                                 Control::Shape(shape) => shape.common(),
@@ -10978,9 +10977,7 @@ impl LayoutEngine {
                                     cm.text_wrap,
                                     TextWrap::Square | TextWrap::Tight | TextWrap::Through
                                 )
-                        }) && paragraphs
-                            .get(*para_index + 1)
-                            .is_some_and(para_has_visible_text);
+                        });
                         // 저장된 TopAndBottom 그림/도형 host도 다음 문단까지의 줄
                         // 전진을 보존한다. 개체의 예약 높이와 앵커 문단의 줄은 별개다.
                         // 빈 후속 문단도 유효한 저장 LineSeg가 있으면 증거가 된다.
@@ -10992,9 +10989,8 @@ impl LayoutEngine {
                             };
                             !cm.treat_as_char && cm.text_wrap == TextWrap::TopAndBottom
                         });
-                        let has_ladder_float = has_overlay_float
-                            || has_square_float_before_text
-                            || has_top_bottom_float;
+                        let has_ladder_float =
+                            has_overlay_float || has_square_float || has_top_bottom_float;
                         let ladder_verdict = has_ladder_float
                             .then(|| {
                                 textless_host_ladder_line_advance(

@@ -5828,17 +5828,7 @@ impl LayoutEngine {
             }
             // 다단 필터링: segment_width가 현재 단 너비와 불일치하면 건너뜀
             if let Some(col_w) = multi_col_width_hu {
-                // 어울림 개체 옆의 좁은 저장 줄도 현재 단의 오른쪽 끝을 소유한다.
-                // 너비만으로 다른 단의 줄이라고 판정하면 그 줄의 점유까지 사라진다.
-                let owns_column_tail = comp_line.column_start >= 0
-                    && comp_line
-                        .segment_width
-                        .checked_add(comp_line.column_start)
-                        .is_some_and(|right| right == col_w);
-                if comp_line.segment_width > 0
-                    && (comp_line.segment_width - col_w).abs() > 200
-                    && !owns_column_tail
-                {
+                if comp_line.segment_width > 0 && (comp_line.segment_width - col_w).abs() > 200 {
                     // char_offset만 진행하고 렌더링 건너뜀
                     for run in &comp_line.runs {
                         char_offset += run.source_scalar_count();
