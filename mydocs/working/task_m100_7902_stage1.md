@@ -101,3 +101,18 @@ CI의 해당 단계8개 명령을 같은 순서로 로컬 실행해 Node 219개�
 같으므로 기존 Rust lint와 Native/fresh WASM 증거를 재사용하며 전체 Rust 회귀는 재수행하지 않았다.
 사용자 지시에 따라 보완 결과를 같은 PR의 추가 commit으로 반영한다. 원격 CI 성공·merge는
 최신 head에서 따로 확인한다.
+
+### CodeQL #277 — HTTP 오류 응답의 내부 정보 노출 보완
+
+`822ed2bf7`의 [CodeQL 지적](https://github.com/edwardkim/rhwp/security/code-scanning/277)은
+글꼴 읽기 실패의 `String(error)`를 HTTP 응답으로 보내는 경로다. 127.0.0.1 검증 서버여도
+파일 경로·예외 상세를 응답으로 공개할 필요가 없다. HTTP 500은 고정 문구로 응답하고
+상세 오류는 로컬 stderr에만 남긴다. 경로 allowlist와 글꼴 SHA 검사는 유지한다.
+
+실제 서버에 요청하는 검사에서 수정 전 누락 파일·SHA 불일치의 정보 비공개 계약 2개가
+실패했다. 수정 후 오류 응답 2개와 정상 바이트·경로 순회 차단 대조군 2개가 모두 통과했다.
+이 검사는 CI Lint의 별도 `Validate Visual Sweep PNG server` 단계에 연결했다.
+서버 검사 4개·Node CI 정책 검사 177개·Python workflow 검사 66개·Visual Sweep 검사 135개,
+수정한 CI YAML의 actionlint가 모두 통과했다. Rust source는 바꾸지 않았다.
+원시 기록: `security-server-before.log`, `security-server-after.log` 및
+`security-png-protocol.log` (위 ignored 결과 디렉터리).

@@ -17,6 +17,27 @@ const option = name => {
 };
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
+// 공급 목록만 공개하며 URL을 파일시스템 경로로 해석하지 않는다.
+export function createSweepServer(files, fontByUrl) {
+  return http.createServer((req, res) => {
+    if (req.url === '/') { res.end('<!doctype html><meta charset="utf-8"><canvas id="page"></canvas>'); return; }
+    const entry = files.get(req.url);
+    if (entry) { res.setHeader('Content-Type', entry[0]); res.end(entry[1]); return; }
+    const font = fontByUrl.get(req.url);
+    if (!font) { res.writeHead(404); res.end(); return; }
+    try {
+      const bytes = readFileSync(font.path);
+      if (sha(bytes) !== font.sha256) throw Error('공급 글꼴 바이트가 catalogue 작성 뒤 변경됐습니다.');
+      res.setHeader('Content-Type', 'application/octet-stream'); res.end(bytes);
+    } catch (error) {
+      // 상세 정보는 로컬 로그에만 남기고 HTTP 응답에 경로나 예외를 보내지 않는다.
+      console.error('Visual Sweep 글꼴 공급 실패:', error);
+      res.writeHead(500, {'Content-Type': 'text/plain; charset=utf-8'});
+      res.end('Font resource unavailable.');
+    }
+  });
+}
+
 async function main() {
   const pkg = option('--pkg'), input = option('--input'), output = option('--out');
   const settings = JSON.parse(readFileSync(option('--options'), 'utf8'));
@@ -35,18 +56,7 @@ async function main() {
   // 실제 공급 목록만 HTTP로 읽을 수 있다. 요청 URL을 파일시스템 경로로 변환하지 않는다.
   const fonts = catalogue.faces.map((face, index) => ({...face, url: `/font/${index}`}));
   const fontByUrl = new Map(fonts.map(face => [face.url, face]));
-  const server = http.createServer((req, res) => {
-    if (req.url === '/') { res.end('<!doctype html><meta charset="utf-8"><canvas id="page"></canvas>'); return; }
-    const entry = files.get(req.url);
-    if (entry) { res.setHeader('Content-Type', entry[0]); res.end(entry[1]); return; }
-    const font = fontByUrl.get(req.url);
-    if (!font) { res.writeHead(404); res.end(); return; }
-    try {
-      const bytes = readFileSync(font.path);
-      if (sha(bytes) !== font.sha256) throw Error('공급 글꼴 바이트가 catalogue 작성 뒤 변경됐습니다.');
-      res.setHeader('Content-Type', 'application/octet-stream'); res.end(bytes);
-    } catch (error) { res.writeHead(500); res.end(String(error)); }
-  });
+  const server = createSweepServer(files, fontByUrl);
   await new Promise((accept, reject) => {
     server.once('error', reject); server.listen(0, '127.0.0.1', accept);
   });
@@ -230,4 +240,6 @@ async function main() {
     await new Promise(resolve => server.close(resolve));
   }
 }
-main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });
+}
