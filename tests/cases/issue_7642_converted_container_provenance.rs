@@ -45,9 +45,10 @@ fn issue7642_converted_hwp3_keeps_lineage_and_uses_the_hwp5_container_contract()
 fn issue7642_hwp5_origin_export_keeps_the_source_layout_profile() {
     let path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("samples/hwp3-sample-hwp5.hwp");
-    let source =
-        parse_document(&std::fs::read(path).expect("한컴 HWP5 변환본")).expect("원본 파싱");
-    let bytes = rhwp::serializer::hwpx::serialize_hwpx(&source).expect("HWPX 저장");
+    let input = std::fs::read(path).expect("한컴 HWP5 변환본");
+    let source = parse_document(&input).expect("원본 파싱");
+    let core = rhwp::document_core::DocumentCore::from_bytes(&input).expect("공개 문서 열기");
+    let bytes = core.export_hwpx_native().expect("공개 HWPX 저장");
     let reopened = parse_document(&bytes).expect("HWPX 재파싱");
     assert_eq!(reopened.provenance.format, SourceFormat::Hwpx);
     assert_eq!(

@@ -401,8 +401,13 @@ impl Document {
         let native_hwp3_hwpx = self.provenance.format == SourceFormat::Hwpx
             && self.hwpx_aux_entry(HWP3_ORIGIN_HWPX_MARKER_PATH).is_some()
             && !hwp5_origin_hwpx;
+        // HWP5-origin HWPX는 같은 HWP5 문단 단위를 보존한다. 컨테이너 변경만으로
+        // HWP3 전용 본문 높이·저장 줄·문단 간격 분기를 다시 켜지 않는다.
         crate::model::provenance::LayoutCompatibilityProfile::new(
-            self.provenance.hwp3_lineage && !native_hwp3_hwpx && !hwp5_container,
+            self.provenance.hwp3_lineage
+                && !native_hwp3_hwpx
+                && !hwp5_container
+                && !hwp5_origin_hwpx,
             self.provenance.format == SourceFormat::Hwp3 || native_hwp3_hwpx,
             (self.provenance.format == SourceFormat::Hwpx
                 && !hwp5_origin_hwpx
