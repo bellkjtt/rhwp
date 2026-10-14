@@ -134,8 +134,7 @@ impl EqLayout {
         }
         match edge {
             EqNode::Symbol(text) | EqNode::MathSymbol(text) => {
-                source_font_symbol::operator_metrics(text, fs, self.dpi)
-                    .map_or(0.0, |(_, gap)| gap)
+                source_font_symbol::operator_metrics(text, fs, self.dpi).map_or(0.0, |(_, gap)| gap)
             }
             _ => 0.0,
         }
