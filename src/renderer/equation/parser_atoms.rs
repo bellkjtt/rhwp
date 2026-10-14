@@ -56,8 +56,10 @@ impl EqParser {
             TokenType::Whitespace => {
                 self.pos += 1;
                 match val.as_str() {
-                    "~" => EqNode::Space(SpaceKind::Normal),
-                    "`" => EqNode::Space(SpaceKind::Thin),
+                    // 한컴 Print의 명시적 공간은 첨자의 기저도 소유한다.
+                    // 공간 없는 orphan 첨자는 아래의 입력 중단 계약을 유지한다.
+                    "~" => self.try_parse_scripts(EqNode::Space(SpaceKind::Normal)),
+                    "`" => self.try_parse_scripts(EqNode::Space(SpaceKind::Thin)),
                     "#" => EqNode::Newline,
                     "&" => EqNode::Space(SpaceKind::Tab),
                     _ => EqNode::Empty,
