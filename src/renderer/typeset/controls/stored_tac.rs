@@ -724,20 +724,27 @@ pub(super) fn prepare(
                     <= available_height()
             });
             if measured_fits && fits {
-                let source_origin = single_saved_line.then(|| {
+                let source_origin = if single_saved_line {
                     if restarted_column_line {
-                        return 0;
-                    }
-                    let seg = &para.line_segs[0];
-                    // 저장 축은 단의 물리 앵커를 제외한 상대 원점에서 역산한다.
-                    // 시작 밴드를 기준축에도 넣으면 이후 표에 그 밴드가 중복된다.
-                    // 뒤 간격은 원점 이동량이 아니므로 이 환산에 포함하지 않는다.
-                    // 원본 정수 단위로 돌아갈 때 절삭하면 계산 오차가 1HU 이동을 만든다.
-                    let relative_origin =
-                        ((origin - page.vpos_col_anchor) * crate::renderer::HWPUNIT_PER_INCH / dpi)
+                        Some(0)
+                    } else {
+                        let seg = &para.line_segs[0];
+                        // 저장 축은 단의 물리 앵커를 제외한 상대 원점에서 역산한다.
+                        // 시작 밴드를 기준축에도 넣으면 이후 표에 그 밴드가 중복된다.
+                        // 뒤 간격은 원점 이동량이 아니므로 이 환산에 포함하지 않는다.
+                        // 원본 정수 단위로 돌아갈 때 절삭하면 계산 오차가 1HU 이동을 만든다.
+                        let relative_origin = ((origin - page.vpos_col_anchor)
+                            * crate::renderer::HWPUNIT_PER_INCH
+                            / dpi)
                             .round() as i32;
-                    seg.vertical_pos.saturating_sub(relative_origin)
-                });
+                        Some(seg.vertical_pos.saturating_sub(relative_origin))
+                    }
+                } else {
+                    // 줄 소속을 보존한 일반 저장 TAC 계획도 기존 단 축과 실제 pen이
+                    // 일치하면 그 축을 유지한다. 현재 흐름으로 밀린 계획은 인증하지 않는다.
+                    page.vpos_page_base
+                        .filter(|_| (origin - saved_origin).abs() <= dpi / 7200.0)
+                };
                 return Some(StoredTacPlan {
                     lines,
                     origin,

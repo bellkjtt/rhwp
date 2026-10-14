@@ -95,8 +95,9 @@ impl TypesetEngine {
             .get(para.para_shape_id as usize)?
             .spacing_before;
         let source_host_origin = st
-            .vpos_stored_column_origin
-            .or_else(|| st.vpos_page_base.map(|base| (base, st.vpos_col_anchor)))
+            .vpos_page_base
+            .map(|base| (base, st.vpos_col_anchor))
+            .or(st.vpos_stored_column_origin)
             .and_then(|(base, column_origin)| {
                 line.vertical_pos.checked_sub(base).map(|position| {
                     column_origin + crate::renderer::hwpunit_to_px(position, self.dpi)
