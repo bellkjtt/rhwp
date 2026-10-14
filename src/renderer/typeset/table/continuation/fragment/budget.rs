@@ -1156,7 +1156,16 @@ impl TypesetEngine {
                     ((bottom - frame).abs() <= 0.5).then_some(row + 1)
                 })
         })
-        .flatten();
+        .flatten()
+        .or_else(|| {
+            self.coanchored_closed_first_fragment_row_end(
+                st,
+                input,
+                fragment_placement,
+                host_before_overhead,
+                vert_offset_overhead,
+            )
+        });
         let scan_row_count =
             exact_source_row_end.map_or(scan_row_count, |end| scan_row_count.min(end));
         // [#6123] 저장 행 높이(행 안 row_span==1 셀의 최대 저장 높이). 프레임

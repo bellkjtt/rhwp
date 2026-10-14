@@ -574,18 +574,11 @@ impl TextStyle {
         }
     }
 
-    /// 글꼴 출처에 따른 장평의 그리기 변환. 배치 전진폭은 바꾸지 않는다.
-    ///
-    /// 한글 HFT의 한컴 Print Type3 출력은 선언 크기를 유지하고 Tz로 가로만
-    /// 압축한다. TrueType 출력에서 확인한 √r 세로 압축을 HFT 대체 face에도
-    /// 적용하면 같은 선언 크기의 글자가 작아진다. SVG·Canvas·Skia·glyph
-    /// lowering이 동일한 출처 판정을 소비한다.
+    /// 장평은 가로 그리기 축만 바꾸며 선언 크기와 배치 전진폭은 보존한다.
+    /// 한컴 Print의 Tf·세로 CTM과 Tz를 각각 대조한 계약이다.
+    /// PDF 추출기가 행렬 행렬식의 제곱근으로 보고한 크기를 세로 크기로 쓰지 않는다.
     pub fn ratio_draw_params(&self, font_size: f64) -> (f64, f64) {
-        if self.hft_font_face {
-            (font_size, if self.ratio > 0.0 { self.ratio } else { 1.0 })
-        } else {
-            condensed_ratio_draw_params(font_size, self.ratio)
-        }
+        condensed_ratio_draw_params(font_size, self.ratio)
     }
 
     /// 시각적 bold 여부.

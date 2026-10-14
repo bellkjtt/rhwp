@@ -709,11 +709,17 @@ pub(super) fn prepare(
                             crate::renderer::composer::caption_height_px(&table.caption, dpi)
                                 + hwpunit_to_px(i32::from(caption.spacing), dpi)
                         });
-                        (physical_height
+                        let residual = physical_height
                             - hwpunit_to_px(table.common.height as i32, dpi)
-                            - caption_extent)
-                            .abs()
-                            <= 0.5
+                            - caption_extent;
+                        if std::env::var("RHWP_DIAG_FLOW").is_ok() {
+                            eprintln!(
+                                "DIAG_STORED_TAC_FIT pi={para_idx} control={} measured={} physical={} declared={} caption={} residual={}",
+                                line.control, m.total_height, physical_height,
+                                table.common.height, caption_extent, residual,
+                            );
+                        }
+                        residual.abs() <= 0.5
                     })
             });
             // Fit the occupied line box. Its trailing gap advances the next
