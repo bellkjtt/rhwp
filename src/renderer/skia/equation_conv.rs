@@ -609,6 +609,20 @@ fn render_box(
                 draw_decoration(canvas, *kind, mid_x, deco_y, body.width, color, fs);
             }
         }
+        LayoutKind::Color { rgb, body } => {
+            // RGB 범위는 해당 하위 수식에만 적용하며 형제의 원래 색상은 보존한다.
+            render_box(
+                canvas,
+                fonts,
+                body,
+                x,
+                y,
+                Color::from_rgb(rgb[0], rgb[1], rgb[2]),
+                fs,
+                italic,
+                bold,
+            );
+        }
         LayoutKind::FontStyle { style, body } => {
             let (new_italic, new_bold) = match style {
                 FontStyleKind::Roman | FontStyleKind::SansSerif | FontStyleKind::Monospace => {
