@@ -17,6 +17,16 @@ const option = name => {
 };
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 
+// 실제 Canvas가 요청한 family에 공급 program을 등록한다. 별칭은 글리프를 바꾸지 않는다.
+export async function registerCanvasFont(family, bytes, weight, style) {
+  // FontFace에는 원본 이름을 전달한다. JSON 문자열의 따옴표나 CSS 식별자의
+  // 이스케이프를 붙이면 Canvas가 조회한 이름과 공급 이름이 달라질 수 있다.
+  const font = new FontFace(family, bytes, {weight: String(weight), style});
+  await font.load();
+  document.fonts.add(font);
+  return font;
+}
+
 // 공급 목록만 공개하며 URL을 파일시스템 경로로 해석하지 않는다.
 export function createSweepServer(files, fontByUrl) {
   return http.createServer((req, res) => {
@@ -56,6 +66,7 @@ async function main() {
       || new Set(wanted).size !== wanted.length)) throw Error('선택 쪽이 올바르지 않습니다.');
   const environmentJson = settings.fontEnvironment ? readFileSync(settings.fontEnvironment, 'utf8') : null;
   const files = new Map([
+    ['/font-supply.js', ['application/javascript', 'export ' + registerCanvasFont.toString()]],
     ['/rhwp.js', ['application/javascript', readFileSync(join(pkg, 'rhwp.js'))]],
     ['/rhwp_bg.wasm', ['application/wasm', readFileSync(join(pkg, 'rhwp_bg.wasm'))]],
     ['/source', ['application/octet-stream', readFileSync(input)]],
