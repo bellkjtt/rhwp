@@ -35,7 +35,11 @@ impl TypesetEngine {
             || table.common.allow_overlap
             || !table.common.flow_with_text
             || table.common.vert_align != VertAlign::Top
-            || table.caption.is_some()
+            // 아래 캡션은 마지막 조각의 종료 공간이며 문단 앵커를 바꾸지 않는다.
+            // 위·옆 캡션은 별도 시작 프레임이 필요하므로 이 조회에서 인증하지 않는다.
+            || table.caption.as_ref().is_some_and(|caption| {
+                caption.direction != crate::model::shape::CaptionDirection::Bottom
+            })
             || vertical_offset <= 0.0
             || self.render_normalization.table_text_reflowed(table)
             || input.prepared.host_frame
