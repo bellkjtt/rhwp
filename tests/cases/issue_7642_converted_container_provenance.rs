@@ -38,3 +38,32 @@ fn issue7642_converted_hwp3_keeps_lineage_and_uses_the_hwp5_container_contract()
     );
     assert!(!profile.hwpx_stored_layout());
 }
+
+/// HWP5 원본을 HWPX 컨테이너로 옮겨도 저장 조판의 단위와 계보 계약을 보존한다.
+/// 실제 렌더링 좌표나 쪽수 대신 공개 출처·프로필을 검사한다.
+#[test]
+fn issue7642_hwp5_origin_export_keeps_the_source_layout_profile() {
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("samples/hwp3-sample-hwp5.hwp");
+    let source =
+        parse_document(&std::fs::read(path).expect("한컴 HWP5 변환본")).expect("원본 파싱");
+    let bytes = rhwp::serializer::hwpx::serialize_hwpx(&source).expect("HWPX 저장");
+    let reopened = parse_document(&bytes).expect("HWPX 재파싱");
+    assert_eq!(reopened.provenance.format, SourceFormat::Hwpx);
+    assert_eq!(
+        reopened.provenance.hwp3_lineage,
+        source.provenance.hwp3_lineage
+    );
+    assert!(reopened.layout_profile().hwp5_origin_hwpx());
+    assert!(reopened.layout_profile().hwp5_stored_pagination_layout());
+    assert_eq!(
+        reopened.layout_profile().hwp3_layout(),
+        source.layout_profile().hwp3_layout(),
+        "저장 컨테이너 변경만으로 HWP3 전용 좌표 계약을 켜지 않는다"
+    );
+    assert_eq!(
+        reopened.layout_profile().hwp3_origin_flow_spacing_before(),
+        source.layout_profile().hwp3_origin_flow_spacing_before(),
+        "직렬화한 원본 문단 간격을 재열람에서 다시 배율 변환하지 않는다"
+    );
+}
