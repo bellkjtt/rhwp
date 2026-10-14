@@ -1,5 +1,6 @@
 """직접 PNG 공급의 cmap 보존·부분 출력·이어받기 계약."""
 import json
+import hashlib
 import shutil
 import struct
 import tempfile
@@ -163,6 +164,53 @@ class RasterDispatchTests(unittest.TestCase):
 
 
 class EmbeddedFontCatalogueTests(unittest.TestCase):
+    def test_collection_cache_reuses_exact_programs_and_repairs_corruption(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            sources = root / 'fonts'
+            sources.mkdir()
+            source = sources / 'fixture.ttc'
+            shutil.copyfile(Path(__file__).parents[2] / 'tests/fixtures/fonts/RHWPExactFaceSmoke.ttc', source)
+            outputs = [root / name for name in ['first', 'second', 'third']]
+            for output in outputs:
+                output.mkdir()
+            adapter = SimpleNamespace(resolve_input_path=lambda root, path: Path(path),
+                                      sha256_file=lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest(),
+                                      write_json_atomic=lambda path, value: path.write_text(json.dumps(value)))
+            first = json.loads(png.font_catalog(adapter, root, [sources], outputs[0]).read_text())
+            with patch('fontTools.ttLib.TTCollection', side_effect=AssertionError('원본 컬렉션을 다시 파싱함')):
+                second = json.loads(png.font_catalog(adapter, root, [sources], outputs[1]).read_text())
+            self.assertEqual(first, second)
+            metadata = png.font_cache_directory(root) / f"{first['faces'][0]['sourceSha256']}.json"
+            partial = json.loads(metadata.read_text())
+            partial['faces'].pop()
+            metadata.write_text(json.dumps(partial))
+            repaired = json.loads(png.font_catalog(adapter, root, [sources], outputs[1]).read_text())
+            self.assertEqual(first, repaired, '부분 캐시로 컬렉션 face를 누락하지 않는다')
+            Path(first['faces'][0]['path']).write_bytes(b'corrupt')
+            third = json.loads(png.font_catalog(adapter, root, [sources], outputs[2]).read_text())
+            self.assertEqual(first, third)
+
+    def test_source_font_change_does_not_reuse_previous_catalogue(self):
+        from fontTools.ttLib import TTCollection
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            sources = root / 'fonts'
+            sources.mkdir()
+            source = sources / 'fixture.ttc'
+            shutil.copyfile(Path(__file__).parents[2] / 'tests/fixtures/fonts/RHWPExactFaceSmoke.ttc', source)
+            adapter = SimpleNamespace(resolve_input_path=lambda root, path: Path(path),
+                                      sha256_file=lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest(),
+                                      write_json_atomic=lambda path, value: path.write_text(json.dumps(value)))
+            first = json.loads(png.font_catalog(adapter, root, [sources], root).read_text())
+            collection = TTCollection(source)
+            collection.fonts[0]['OS/2'].usWeightClass = 700
+            collection.save(source)
+            collection.close()
+            second = json.loads(png.font_catalog(adapter, root, [sources], root).read_text())
+            self.assertNotEqual(first['faces'][0]['sourceSha256'], second['faces'][0]['sourceSha256'])
+            self.assertEqual(second['faces'][0]['weight'], 700)
+
     def test_selected_ttc_face_keeps_document_family_alias(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

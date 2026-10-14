@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
 import struct
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -133,12 +135,67 @@ def export_native_png(vs, root, hwp, binary, base, selected, font_paths, environ
     })
 
 
+def font_cache_directory(root: Path) -> Path:
+    """생산 코드와 FontTools 버전이 같은 경우에만 공용 font program을 재사용한다."""
+    import fontTools
+    producer = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    key = hashlib.sha256(f'{producer}:{fontTools.__version__}'.encode()).hexdigest()
+    return root / 'output' / 'pr-review' / 'font-catalog-cache' / key
+
+
+def cached_font_faces(vs, directory: Path, source: Path, digest: str):
+    """원본과 파생 program의 SHA를 확인한다. 손상·누락 캐시는 다시 생산한다."""
+    metadata = directory / f'{digest}.json'
+    try:
+        value = json.loads(metadata.read_text(encoding='utf-8'))
+        if value.get('sourceSha256') != digest or value.get('schemaVersion') != 1:
+            return None
+        faces = value.get('faces')
+        count = value.get('faceCount')
+        if (not isinstance(faces, list) or not faces or type(count) is not int
+                or count != len(faces) or count < 1):
+            return None
+        result = []
+        indices = set()
+        for entry in faces:
+            index = entry.get('faceIndex')
+            if type(index) is not int or index < 0 or index in indices:
+                return None
+            indices.add(index)
+            names = entry.get('families')
+            if (not isinstance(names, list) or not names
+                    or any(not isinstance(name, str) or not name for name in names)
+                    or type(entry.get('weight')) is not int or not 1 <= entry['weight'] <= 1000
+                    or entry.get('style') not in {'normal', 'italic'}
+                    or entry.get('repairs') not in [[], ['cmap-format4-terminal-notdef']]):
+                return None
+            kind = entry.get('cacheKind')
+            if kind == 'source':
+                path = source
+                actual = digest
+            elif kind == 'derived':
+                path = directory / f'{digest}-{index}.ttf'
+                actual = vs.sha256_file(path)
+            else:
+                return None
+            if actual != entry.get('sha256'):
+                return None
+            face = {key: item for key, item in entry.items() if key != 'cacheKind'}
+            face.update(path=str(path.resolve()), source=str(source.resolve()), sourceSha256=digest)
+            result.append(face)
+        if indices != set(range(count)):
+            return None
+        return result
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+
+
 def font_catalog(vs, root: Path, font_paths, base: Path) -> Path:
     """실제 name/weight/face-index를 기록한다. 글꼴을 SVG마다 복제하지 않는다."""
     from fontTools.ttLib import TTFont, TTCollection
     records = []
     seen = set()
-    resource_dir = base / 'font_resources'
+    resource_dir = font_cache_directory(root)
     for directory in font_paths:
         directory = vs.resolve_input_path(root, directory)
         for source in sorted(directory.rglob('*')):
@@ -148,8 +205,13 @@ def font_catalog(vs, root: Path, font_paths, base: Path) -> Path:
             if digest in seen:
                 continue
             seen.add(digest)
+            cached = cached_font_faces(vs, resource_dir, source, digest)
+            if cached is not None:
+                records.extend(cached)
+                continue
             collection = TTCollection(source, lazy=True) if source.suffix.lower() == '.ttc' else None
             fonts = collection.fonts if collection else [TTFont(source, lazy=True)]
+            cached_records = []
             try:
                 for index, font in enumerate(fonts):
                     names, name_errors = font_family_names(font)
@@ -158,15 +220,27 @@ def font_catalog(vs, root: Path, font_paths, base: Path) -> Path:
                     path = source
                     repaired_cmap = repair_terminal_cmap(font.reader['cmap'], font['maxp'].numGlyphs) if 'cmap' in font else None
                     if collection or repaired_cmap is not None:
-                        resource_dir.mkdir(exist_ok=True)
+                        resource_dir.mkdir(parents=True, exist_ok=True)
                         path = resource_dir / f'{digest}-{index}.ttf'
-                        write_font_face(font, path, repaired_cmap)
-                    records.append({'path': str(path.resolve()), 'source': str(source.resolve()),
+                        temporary = resource_dir / f'.{digest}-{index}-{os.getpid()}-{uuid.uuid4().hex}.ttf'
+                        try:
+                            # 원본 SFNT 테이블을 보존하고 완성한 face만 원자적으로 공개한다.
+                            write_font_face(font, temporary, repaired_cmap)
+                            os.replace(temporary, path)
+                        finally:
+                            temporary.unlink(missing_ok=True)
+                    face = {'path': str(path.resolve()), 'source': str(source.resolve()),
                                     'sourceSha256': digest, 'sha256': vs.sha256_file(path),
                                     'faceIndex': index, 'families': names, 'weight': weight,
                                     'style': 'italic' if italic else 'normal',
                                     'nameRecordErrors': name_errors,
-                                    'repairs': ['cmap-format4-terminal-notdef'] if repaired_cmap is not None else []})
+                                    'repairs': ['cmap-format4-terminal-notdef'] if repaired_cmap is not None else []}
+                    records.append(face)
+                    cached_records.append({**face, 'cacheKind': 'derived' if collection or repaired_cmap is not None else 'source'})
+                resource_dir.mkdir(parents=True, exist_ok=True)
+                vs.write_json_atomic(resource_dir / f'{digest}.json',
+                                     {'schemaVersion': 1, 'sourceSha256': digest,
+                                      'faceCount': len(cached_records), 'faces': cached_records})
             finally:
                 if collection:
                     collection.close()
