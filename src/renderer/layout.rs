@@ -7723,7 +7723,8 @@ impl LayoutEngine {
             col_content.items.first(),
             Some(PageItem::FullParagraph { para_index })
                 if (self.profile.get().hwpx_stored_layout()
-                    || self.profile.get().hwp5_stored_pagination_layout())
+                    || self.profile.get().hwp5_stored_pagination_layout()
+                    || self.profile.get().hwp3_native_layout())
                     && !self.profile.get().session_edited()
                     && paragraphs.get(*para_index).is_some_and(|first| {
                         stored_first_margin_is_page_relative(

@@ -3769,7 +3769,9 @@ fn parse_paragraph_list_inner(
             && hwp3_is_treat_as_char_visual_control(&para.controls[0])
         {
             for seg in para.line_segs.iter_mut() {
-                seg.line_spacing = 0;
+                // 개체의 높이와 호스트 글꼴의 줄 여유는 서로 다른 점유다.
+                // 개체만 있는 줄도 원본 문단의 줄간격 계약을 보존한다.
+                seg.line_spacing = fallback_line_spacing;
             }
         }
 
@@ -3977,8 +3979,7 @@ fn parse_paragraph_list_inner(
             // `spacing_after`로 이미 반영된다. 둘을 누적하면 같은 문서의 HWP5 변환본과
             // 한컴 PDF보다 표가 아래로 한 번 더 밀린다. 일반 HWP3의 before/after
             // 계약은 유지한다.
-            if !starts_new_page
-                && !para.line_segs.is_empty()
+            if !para.line_segs.is_empty()
                 && !(use_password_layout_contract && hwp3_paragraph_has_treat_as_char_table(&para))
             {
                 acc_section_vpos = acc_section_vpos.saturating_add(para_flow_spacing.0);

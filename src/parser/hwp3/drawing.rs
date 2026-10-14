@@ -965,12 +965,8 @@ fn map_to_shape_object(
         // 렌더러 [renderer/layout/utils.rs:163] 의 `attr & 0x3F == 0` 시 외곽선 미표시
         // 규칙에 맞추기 위해 bit 0..5 = 1 (Solid LineType) 보강.
         //
-        // [Task #1008 격차 B] HWP3 raw line_style 의 LineType=2~7 (점선/일점쇄선
-        // 등) 도 한컴 viewer 는 실선으로 렌더 (sample16 pi=71 사업개요 박스 raw
-        // line_style=2 → 한컴 정답 = 실선). HWP3 native LineType 변형은 spec
-        // 상 존재하나 한컴 동작은 일관 solid — 작업지시자 한컴 한글 정답지 시각
-        // 정답 단언. HWP3 sample 분포 sweep: line_style=2 는 sample16 한정 (다른
-        // fixture: 0/1 만), narrow fix 회귀 risk 0. HWP3 한정 (HWP5/HWPX 무영향).
+        // 독립 한컴 Print와 같은 원본의 저장본에서 HWP3 스타일 2는
+        // HWP5 Dot(3)이다. 다른 선 종류까지 실선으로 지우지 않는다.
         attr: if hwp3_uses_no_line_marker(&header) {
             // line_width가 남아 있어도 HWP3 무색 sentinel은 선을 그리지 않는다.
             0
@@ -979,9 +975,8 @@ fn map_to_shape_object(
             let line_type = raw_attr & 0x3F;
             if line_type == 0 && header.basic_attr.line_width > 0 {
                 raw_attr | 0x01
-            } else if (2..=7).contains(&line_type) {
-                // HWP3 의 LineType 2~7 을 1 (Solid) 로 normalize
-                (raw_attr & !0x3F) | 0x01
+            } else if line_type == 2 {
+                (raw_attr & !0x3F) | 0x03
             } else {
                 raw_attr
             }
@@ -1082,6 +1077,15 @@ fn map_to_shape_object(
         ShapeObject::Rectangle(ref mut s) => {
             s.common = common;
             s.drawing = drawing_attr;
+            // HWP3 기본 속성의 모서리 옵션을 공통 사각형 계약에 보존한다.
+            // 둥근 모서리의 정상 저장본은 10%, 반원 모서리는 50%다.
+            s.round_rate = if header.basic_attr.options & (1 << 2) != 0 {
+                50
+            } else if header.basic_attr.options & 1 != 0 {
+                10
+            } else {
+                0
+            };
         }
         ShapeObject::Ellipse(ref mut s) => {
             s.common = common;
