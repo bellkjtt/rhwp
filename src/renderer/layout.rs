@@ -6607,7 +6607,12 @@ impl LayoutEngine {
                 } else if column_break_new_band && prev_zone_was_multi && new_band_is_multicol {
                     super::multicol_band_break_pad_px(self.dpi)
                 } else if new_zone_is_solo_zero || prev_zone_is_solo_zero || column_break_new_band {
-                    super::solo_zone_pad_px(new_zone_is_solo_zero, prev_zone_was_multi, self.dpi)
+                    super::solo_zone_pad_px(
+                        new_zone_is_solo_zero,
+                        prev_zone_was_multi,
+                        self.section_column_spacing_hu.get(),
+                        self.dpi,
+                    )
                 } else {
                     0.0
                 };

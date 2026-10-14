@@ -192,7 +192,12 @@ impl TypesetEngine {
         } else if column_break_new_band && st.col_count > 1 && new_band_is_multicol {
             crate::renderer::multicol_band_break_pad_px(self.dpi)
         } else if entering_solo_zero || leaving_solo_zero || column_break_new_band {
-            crate::renderer::solo_zone_pad_px(entering_solo_zero, st.col_count > 1, self.dpi)
+            crate::renderer::solo_zone_pad_px(
+                entering_solo_zero,
+                st.col_count > 1,
+                self.section_column_spacing_hu.get(),
+                self.dpi,
+            )
         } else {
             0.0
         };

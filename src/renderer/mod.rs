@@ -2205,17 +2205,22 @@ pub fn hwpunit_to_px(hwpunit: i32, dpi: f64) -> f64 {
     hwpunit as f64 * dpi / HWPUNIT_PER_INCH
 }
 
-/// 다단 뒤의 단일 단 제목은 저장 한 줄 여백을 온전히 보존한다.
-/// 다른 단 전환은 기존 1200HU 간격을 따른다.
-pub(crate) fn solo_zone_pad_px(entering_solo: bool, prior_multicol: bool, dpi: f64) -> f64 {
-    hwpunit_to_px(
-        if entering_solo && prior_multicol {
+/// 같은 쪽의 단일 단 밴드 사이에는 구역에 저장된 단 사이 간격을 쓴다.
+/// 구역 정보 없는 직접 호출과 다단 전환은 기존 별도 간격 계약을 유지한다.
+pub(crate) fn solo_zone_pad_px(
+    entering_solo: bool,
+    prior_multicol: bool,
+    section_spacing_hu: Option<i32>,
+    dpi: f64,
+) -> f64 {
+    let spacing = section_spacing_hu
+        .filter(|spacing| entering_solo && !prior_multicol && *spacing >= 0)
+        .unwrap_or(if entering_solo && prior_multicol {
             1500
         } else {
             1200
-        },
-        dpi,
-    )
+        });
+    hwpunit_to_px(spacing, dpi)
 }
 
 /// 명시 단나누기가 다단에서 다음 다단 밴드를 시작할 때 저장 한 줄 간격.
