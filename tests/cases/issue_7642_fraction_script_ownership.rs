@@ -76,6 +76,20 @@ fn script_box(
 fn scalar_baselines(value: &LayoutBox, parent_y: f64, text: &str, out: &mut Vec<f64>) {
     let y = parent_y + value.y;
     match &value.kind {
+        LayoutKind::HancomGlyphs(run) => {
+            // 독립 Print에서 읽은 원문 숫자·첨자와 HYhwpEQ cmap를 대응한다.
+            let glyph = match text {
+                "i" => '\u{e0ed}',
+                "2" => '\u{e035}',
+                "3" => '\u{e036}',
+                "5" => '\u{e038}',
+                _ => return,
+            };
+            if run.glyphs.chars().eq(std::iter::once(glyph)) {
+                assert_eq!(run.positions.len(), 1, "원본 단일 문자의 표시 보존");
+                out.push(y + value.baseline + run.baseline_shift);
+            }
+        }
         LayoutKind::Text(value_text)
         | LayoutKind::Number(value_text)
         | LayoutKind::FontGlyph {

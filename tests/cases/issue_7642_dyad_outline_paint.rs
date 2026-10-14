@@ -31,6 +31,15 @@ fn equation<'a>(nodes: &[&'a RenderNode], script: &str) -> (&'a RenderNode, &'a 
 fn roman_letters(layout: &LayoutBox, parent_x: f64, roman: bool, out: &mut Vec<(String, f64)>) {
     let x = parent_x + layout.x;
     match &layout.kind {
+        LayoutKind::HancomGlyphs(run) => {
+            assert!(roman, "독립 Print의 rm AB는 정체다");
+            assert_eq!(run.glyphs, "AB", "원본 두 문자의 표시 보존");
+            assert_eq!(run.positions.len(), 2);
+            assert_eq!(run.shears, [0.0, 0.0], "정체를 기울임으로 바꾸면 안 된다");
+            for (letter, offset) in run.glyphs.chars().zip(&run.positions) {
+                out.push((letter.to_string(), x + offset));
+            }
+        }
         LayoutKind::Row(children) => {
             for child in children {
                 roman_letters(child, x, roman, out);
@@ -109,7 +118,11 @@ fn print_svg(core: &DocumentCore) -> usvg::Tree {
     let svg = core
         .render_page_svg_layer_with_profile_native(0, rhwp::paint::RenderProfile::Print)
         .unwrap();
-    usvg::Tree::from_str(&svg, &usvg::Options::default()).expect("실제 최종 Print SVG")
+    // text를 방출하는 backend도 실제 glyph 윤곽을 만든다. 빈 fontdb로
+    // 문자를 누락한 결과를 path backend의 표시 잉크와 비교하지 않는다.
+    let mut options = usvg::Options::default();
+    options.fontdb_mut().load_system_fonts();
+    usvg::Tree::from_str(&svg, &options).expect("실제 최종 Print SVG")
 }
 
 #[test]

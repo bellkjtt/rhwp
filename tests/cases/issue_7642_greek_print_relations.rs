@@ -39,6 +39,22 @@ fn leaves<'a>(
     let x = parent_x + value.x;
     let y = parent_y + value.y;
     match &value.kind {
+        LayoutKind::HancomGlyphs(run) => {
+            assert_eq!(run.glyphs.chars().count(), 1, "붙인 단일 X의 표시 소유");
+            assert_eq!(run.positions.len(), 1);
+            let text = match run.glyphs.as_str() {
+                "\u{e017}" => "𝑋",
+                "X" => "X",
+                other => panic!("원본 X와 다른 표시 문자: {other:?}"),
+            };
+            out.push((
+                value,
+                x + run.positions[0],
+                y + run.baseline_shift,
+                text.to_owned(),
+                "HyhwpEQ".to_owned(),
+            ));
+        }
         LayoutKind::Row(items) => {
             for item in items {
                 leaves(item, x, y, out);
