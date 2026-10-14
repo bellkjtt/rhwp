@@ -79,6 +79,8 @@ fn paint_paths(svg: &usvg::Tree, owner: &RenderNode) -> Vec<usvg::Rect> {
         for node in group.children() {
             match node {
                 usvg::Node::Group(group) => collect(group, out),
+                // text backend의 실제 글자 윤곽도 장식 path와 함께 검사한다.
+                usvg::Node::Text(text) => collect(text.flattened(), out),
                 usvg::Node::Path(path) => out.push(path.abs_bounding_box()),
                 _ => {}
             }

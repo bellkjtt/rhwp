@@ -141,6 +141,8 @@ fn paint_paths(group: &usvg::Group, out: &mut Vec<usvg::Rect>) {
     for node in group.children() {
         match node {
             usvg::Node::Group(group) => paint_paths(group, out),
+            // usvg는 text를 Node::Text로 유지하며 실제 윤곽은 flattened에 둔다.
+            usvg::Node::Text(text) => paint_paths(text.flattened(), out),
             usvg::Node::Path(path) => out.push(path.abs_bounding_box()),
             _ => {}
         }
