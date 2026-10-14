@@ -30,6 +30,10 @@ impl EqParser {
                 ty,
                 TokenType::RBrace | TokenType::RParen | TokenType::RBracket | TokenType::Whitespace
             ) || (!items.is_empty() && self.tokens[self.pos].space_before)
+                // 문서의 무브레이스 첨자 뒤 새 그룹은 다음 본체다.
+                // `_3{rmC}_1`의 C를 앞 첨자 크기로 축소하지 않는다.
+                // 처음부터 braced인 인자는 위 parse_group 경로가 끝까지 소유한다.
+                || (self.document_terms && !items.is_empty() && ty == TokenType::LBrace)
                 || (ty == TokenType::Command && Self::cmd_eq(self.current_value(), "RIGHT"))
                 || (ty == opposite && !occupied)
             {
