@@ -205,6 +205,18 @@ impl TypesetEngine {
                             if !t.common.treat_as_char
                                 && matches!(t.common.text_wrap, crate::model::shape::TextWrap::TopAndBottom)
                                 && matches!(t.common.vert_rel_to, crate::model::shape::VertRelTo::Para))));
+                    // 저장 TAC의 수용 계획이 발행한 축을 paint와 같은 후처리에서 보존한다.
+                    // 일반 표의 선언 높이만으로 축을 추측하지 않는다.
+                    let accepted_tac_origin = match last {
+                        Some(PageItem::Table {
+                            para_index,
+                            control_index,
+                        }) => st
+                            .inline_placements
+                            .get(&(*para_index, *control_index))
+                            .and_then(|placement| placement.stored_column_origin_hu),
+                        _ => None,
+                    };
                     let opening_tac_origin = (st.current_start_height == 0.0
                         && !st.current_endnote_flow
                         && !st.profile.session_edited()
@@ -233,12 +245,19 @@ impl TypesetEngine {
                     if para_float_table {
                         st.seed_whole_table_column_origin(para_idx, paragraphs);
                     }
+                    if let Some(origin) = accepted_tac_origin {
+                        st.record_vpos_page_origin(Some(origin));
+                        st.record_vpos_lazy_origin(None);
+                        st.record_vpos_origin_provenance(true);
+                        st.record_stored_column_origin(Some((origin, st.vpos_col_anchor)));
+                    }
                     if !host_line_covers_object
                         && !resolved_inline_end
                         && !resolved_stored_wrap_fragment
                         && !resolved_stored_page_frame
                         && !para_float_table
                         && opening_tac_origin.is_none()
+                        && accepted_tac_origin.is_none()
                     {
                         st.record_vpos_page_origin(None);
                         st.record_vpos_lazy_origin(None);

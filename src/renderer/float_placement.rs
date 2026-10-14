@@ -1505,13 +1505,63 @@ pub(crate) fn block_table_caption_host_spacing_px(
     table: &Table,
     dpi: f64,
 ) -> f64 {
-    if object_only_saved_table_anchor(para, table) {
+    if object_only_saved_table_anchor(para, table)
+        || saved_inline_sibling_owns_caption_host_line(para, table, dpi)
+    {
         0.0
     } else {
         para.line_segs
             .first()
             .map_or(0.0, |line| hwpunit_to_px(line.line_spacing, dpi))
     }
+}
+
+/// 원본 한 줄의 높이와 캡션·여백이 인라인 형제의 상자를 정확히 닫으면
+/// 그 줄의 후행 간격은 형제의 흐름에 속한다. 같은 앵커의 부동 캡션에 다시 붙이지 않는다.
+fn saved_inline_sibling_owns_caption_host_line(para: &Paragraph, table: &Table, dpi: f64) -> bool {
+    if table.common.treat_as_char
+        || !is_para_topbottom_float(&table.common)
+        || !para.text.is_empty()
+        || para.stored_text_partition_is_dirty()
+        || para.cell_format_vpos_dirty
+    {
+        return false;
+    }
+    let [line] = para.line_segs.as_slice() else {
+        return false;
+    };
+    if line.line_height <= 0
+        || line.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+    {
+        return false;
+    }
+    let Some(owner) = para.controls.iter().position(|control| {
+        matches!(control, Control::Table(candidate) if std::ptr::eq(candidate.as_ref(), table))
+    }) else { return false; };
+    let Some(owner_line) = crate::renderer::layout::control_line_seg_index(para, owner) else {
+        return false;
+    };
+    para.controls.iter().enumerate().any(|(index, control)| {
+        let Control::Table(sibling) = control else {
+            return false;
+        };
+        if !sibling.common.treat_as_char
+            || crate::renderer::layout::control_line_seg_index(para, index) != Some(owner_line)
+        {
+            return false;
+        }
+        let caption_hu = sibling.caption.as_ref().map_or(0_i64, |caption| {
+            i64::from(crate::renderer::px_to_hwpunit(
+                crate::renderer::composer::caption_height_px(&sibling.caption, dpi),
+                dpi,
+            )) + i64::from(caption.spacing)
+        });
+        i64::from(line.line_height)
+            == i64::from(sibling.common.height)
+                + caption_hu
+                + i64::from(sibling.outer_margin_top)
+                + i64::from(sibling.outer_margin_bottom)
+    })
 }
 
 /// 선언 개체 높이와 바깥 위·아래 여백이 본문을 닫는 원본 표 프레임.

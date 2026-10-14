@@ -164,6 +164,26 @@ class RasterDispatchTests(unittest.TestCase):
 
 
 class EmbeddedFontCatalogueTests(unittest.TestCase):
+    def test_registered_symlink_directory_supplies_fonts_without_following_cycles(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            installed = root / 'installed'
+            installed.mkdir()
+            source = installed / 'fixture.ttc'
+            shutil.copyfile(Path(__file__).parents[2] / 'tests/fixtures/fonts/RHWPExactFaceSmoke.ttc', source)
+            system = root / 'system-fonts'
+            system.mkdir()
+            (system / 'registered').symlink_to(installed, target_is_directory=True)
+            (installed / 'cycle').symlink_to(system, target_is_directory=True)
+            output = root / 'result'
+            output.mkdir()
+            adapter = SimpleNamespace(resolve_input_path=lambda root, path: Path(path),
+                                      sha256_file=lambda path: hashlib.sha256(Path(path).read_bytes()).hexdigest(),
+                                      write_json_atomic=lambda path, value: path.write_text(json.dumps(value)))
+            catalogue = json.loads(png.font_catalog(adapter, root, [system], output).read_text())
+            self.assertEqual(len(catalogue['faces']), 2, '등록된 원본 컬렉션의 두 face가 모두 필요하다')
+            self.assertEqual({face['source'] for face in catalogue['faces']}, {str(source.resolve())})
+
     def test_collection_cache_reuses_exact_programs_and_repairs_corruption(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

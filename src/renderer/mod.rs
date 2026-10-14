@@ -2787,7 +2787,13 @@ fn installed_render_font_aliases(font_family: &str) -> &'static [&'static str] {
             "HCR Batang",
             "함초롬바탕",
         ],
-        "HY헤드라인M" => &["HYHeadLine", "HYHeadLine-Medium", "HCR Dotum", "함초롬돋움"],
+        "HY헤드라인M" => &[
+            "HYHeadLine",
+            "HYHeadLine M",
+            "HYHeadLine-Medium",
+            "HCR Dotum",
+            "함초롬돋움",
+        ],
         "HY그래픽M" => &["HYGraphic", "HYGraphic-Medium", "HCR Dotum", "함초롬돋움"],
         // #4739: 구형 정부상징 부처명 face가 없을 때 현재 공식 배포 face를 찾는다.
         // 동일 alias가 아니라 availability 기반 successor이므로 exact legacy 뒤에만 둔다.

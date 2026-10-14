@@ -190,6 +190,30 @@ def cached_font_faces(vs, directory: Path, source: Path, digest: str):
         return None
 
 
+def font_source_files(directory: Path):
+    """등록된 디렉터리 링크를 따라가되 같은 물리 디렉터리를 반복하지 않는다."""
+    pending = [directory]
+    visited = set()
+    while pending:
+        current = pending.pop()
+        try:
+            stat = current.stat()
+            identity = (stat.st_dev, stat.st_ino)
+            if identity in visited:
+                continue
+            visited.add(identity)
+            entries = sorted(current.iterdir())
+        except OSError:
+            continue
+        children = []
+        for source in entries:
+            if source.is_dir():
+                children.append(source)
+            elif source.is_file() and source.suffix.lower() in {'.ttf', '.otf', '.ttc', '.woff', '.woff2'}:
+                yield source
+        pending.extend(reversed(children))
+
+
 def font_catalog(vs, root: Path, font_paths, base: Path) -> Path:
     """실제 name/weight/face-index를 기록한다. 글꼴을 SVG마다 복제하지 않는다."""
     from fontTools.ttLib import TTFont, TTCollection
@@ -198,9 +222,7 @@ def font_catalog(vs, root: Path, font_paths, base: Path) -> Path:
     resource_dir = font_cache_directory(root)
     for directory in font_paths:
         directory = vs.resolve_input_path(root, directory)
-        for source in sorted(directory.rglob('*')):
-            if not source.is_file() or source.suffix.lower() not in {'.ttf', '.otf', '.ttc', '.woff', '.woff2'}:
-                continue
+        for source in font_source_files(directory):
             digest = vs.sha256_file(source)
             if digest in seen:
                 continue
