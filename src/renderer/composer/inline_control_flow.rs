@@ -1,6 +1,9 @@
 //! 실제 텍스트 경계에 속한 인라인 개체의 흐름 메트릭 목록.
 
-use super::{flow_inline_baseline_hwp, inline_control_size_hwp, Control, FlowInlineControl, LineBreakResult, Paragraph};
+use super::{
+    flow_inline_baseline_hwp, inline_control_size_hwp, Control, FlowInlineControl, LineBreakResult,
+    Paragraph,
+};
 
 pub(super) fn flow_inline_controls(para: &Paragraph) -> Vec<FlowInlineControl> {
     let text_len = para.text.chars().count();
