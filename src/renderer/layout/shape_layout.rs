@@ -1,5 +1,7 @@
 //! 도형/글상자/그룹 개체 레이아웃
 
+mod affine_line;
+
 use super::super::composer::{
     compose_paragraph, reflow_line_segs, ComposedParagraph, ParagraphBox,
 };
@@ -1247,18 +1249,17 @@ impl LayoutEngine {
                 parent.children.push(node);
             }
             ShapeObject::Line(line) => {
-                let (style, gradient) = drawing_to_shape_style(&line.drawing, self.dpi);
                 let (x1, y1) = transform_pt(line.start.x as f64, line.start.y as f64);
                 let (x2, y2) = transform_pt(line.end.x as f64, line.end.y as f64);
-                let min_x = x1.min(x2);
-                let min_y = y1.min(y2);
-                let commands = vec![PathCommand::MoveTo(x1, y1), PathCommand::LineTo(x2, y2)];
                 let node_id = tree.next_id();
-                let node = RenderNode::new(
-                    node_id,
-                    RenderNodeType::Path(PathNode::new(commands, style, gradient)),
-                    BoundingBox::new(min_x, min_y, (x2 - x1).abs(), (y2 - y1).abs()),
-                );
+                let (mut kind, bbox) =
+                    affine_line::rendered_line(line, (x1, y1), (x2, y2), self.dpi);
+                if let RenderNodeType::Line(rendered) = &mut kind {
+                    rendered.section_index = Some(section_index);
+                    rendered.para_index = Some(para_index);
+                    rendered.control_index = Some(control_index);
+                }
+                let node = RenderNode::new(node_id, kind, bbox);
                 parent.children.push(node);
             }
             ShapeObject::Curve(curve) => {
