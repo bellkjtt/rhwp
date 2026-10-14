@@ -1,4 +1,3 @@
-
 /// 저장된 서로 다른 물리 줄을 소유한 빈/공백 캐리어 TAC 표의 흐름.
 /// top/end는 첫 저장 줄 원점 기준 HU이며, 테두리가 아닌 바깥여백 포함 pen이다.
 #[derive(Debug, Clone, Copy)]
@@ -97,9 +96,35 @@ pub(crate) fn stored_tac_lines(para: &Paragraph) -> Option<Vec<StoredTacLine>> {
         };
         let owner = control_line_seg_index(para, ci)?;
         let seg = para.line_segs.get(owner)?;
+        // 저장 줄은 아래 캡션까지 포함한 온전한 객체 상자를 소유한다.
+        // 실제 원본 줄이 있는 캡션만 인증하며 위·옆 캡션은 별도 경로에 둔다.
+        let caption_extent = match &table.caption {
+            None => 0,
+            Some(caption) => {
+                if caption.direction != crate::model::shape::CaptionDirection::Bottom
+                    || caption.paragraphs.is_empty()
+                    || caption.paragraphs.iter().any(|paragraph| {
+                        paragraph.stored_text_partition_is_dirty()
+                            || paragraph.cell_format_vpos_dirty
+                            || paragraph.line_segs.is_empty()
+                            || paragraph.line_segs.iter().any(|line| {
+                                line.line_height <= 0
+                                    || line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+                            })
+                    })
+                {
+                    return None;
+                }
+                i64::from(crate::renderer::px_to_hwpunit(
+                    caption_height_px(&table.caption, crate::renderer::DEFAULT_DPI),
+                    crate::renderer::DEFAULT_DPI,
+                )) + i64::from(caption.spacing)
+            }
+        };
         let outer_height = i64::from(table.common.height)
             + i64::from(table.outer_margin_top)
-            + i64::from(table.outer_margin_bottom);
+            + i64::from(table.outer_margin_bottom)
+            + caption_extent;
         // 여기서 높이가 같다는 것은 baseline 정렬된 객체의 전체 점유 줄을 뜻한다.
         // 텍스트와 같은 줄, 더 큰 이웃 객체, 쪽 리셋은 기존 분할/재조판이 처리한다.
         if previous_owner.is_some_and(|previous| previous >= owner)
