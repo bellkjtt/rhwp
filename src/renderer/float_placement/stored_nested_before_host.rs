@@ -10,8 +10,11 @@ use crate::model::table::{Cell, Table};
 use crate::renderer::style_resolver::ResolvedStyleSet;
 
 pub(super) fn original_lines(para: &Paragraph) -> bool {
-    para.raw_break_type == 0
-        && !para.stored_text_partition_is_dirty()
+    para.raw_break_type == 0 && original_line_metrics(para)
+}
+
+fn original_line_metrics(para: &Paragraph) -> bool {
+    !para.stored_text_partition_is_dirty()
         && !para.cell_format_vpos_dirty
         && !para.line_segs.is_empty()
         && para.line_segs.iter().all(|line| {
@@ -175,7 +178,13 @@ pub(crate) fn stored_opening_table_before_host_frame(
             .chars()
             .any(|ch| !ch.is_whitespace() && !ch.is_control())
         || para.control_text_positions().get(control_index).copied() != Some(0)
-        || !original_lines(para)
+        || para.raw_break_type & !0x01 != 0
+        || !matches!(
+            para.column_type,
+            crate::model::paragraph::ColumnBreakType::None
+                | crate::model::paragraph::ColumnBreakType::Section
+        )
+        || !original_line_metrics(para)
         || !original_lines(next)
         || para.cell_format_vpos_dirty
         || next.cell_format_vpos_dirty
@@ -189,6 +198,7 @@ pub(crate) fn stored_opening_table_before_host_frame(
                 control,
                 Control::SectionDef(_)
                     | Control::ColumnDef(_)
+                    | Control::PageNumberPos(_)
                     | Control::Header(_)
                     | Control::Footer(_)
             )

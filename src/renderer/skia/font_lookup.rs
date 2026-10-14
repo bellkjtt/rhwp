@@ -5,7 +5,8 @@ use skia_safe::{FontMgr, FontStyle, Typeface};
 
 use super::font_catalog::TypefaceCatalog;
 use crate::renderer::{
-    base_family_without_weight_suffix, installed_render_font_aliases, internal_font_family_members,
+    base_family_without_weight_suffix, generic_fallback_for_weight, installed_render_font_aliases,
+    internal_font_family_members,
 };
 
 pub(super) type SystemFontFamilies = HashSet<String>;
@@ -35,24 +36,6 @@ pub(super) fn match_supplied_family(
 ) -> Option<Typeface> {
     families.candidates(family, requested).into_iter().next()
 }
-
-const TEXT_FALLBACK_FAMILIES: &[&str] = &[
-    "Noto Sans KR",
-    "Noto Serif KR",
-    "Noto Sans CJK KR",
-    "Noto Serif CJK KR",
-    "Nanum Gothic",
-    "Nanum Myeongjo",
-    "Malgun Gothic",
-    "맑은 고딕",
-    "Batang",
-    "바탕",
-    "Apple SD Gothic Neo",
-    "AppleMyungjo",
-    "DejaVu Sans",
-    "Arial",
-    "sans-serif",
-];
 
 #[derive(Clone)]
 pub(super) struct TypefaceCandidate {
@@ -88,10 +71,16 @@ pub(super) fn supplied_family_names(data: &[u8], face_index: u32, primary: &str)
 }
 
 pub(super) fn text_family_candidates(requested: &str) -> Vec<String> {
+    text_family_candidates_for_weight(requested, false)
+}
+
+fn text_family_candidates_for_weight(requested: &str, bold: bool) -> Vec<String> {
     let mut families = Vec::new();
     // CSS 체인을 하나의 family 이름으로 조회하면 설치된 첫 face도 놓친다.
     // SVG/Canvas와 같은 원본 순서·설치 별칭·굵기 접미사 해소를 소비한다.
-    for requested_family in internal_font_family_members(requested) {
+    let requested_members = internal_font_family_members(requested);
+    for requested_family in &requested_members {
+        let requested_family = *requested_family;
         if !families.iter().any(|family| family == requested_family) {
             families.push(requested_family.to_string());
         }
@@ -106,9 +95,17 @@ pub(super) fn text_family_candidates(requested: &str) -> Vec<String> {
             }
         }
     }
-    for family in TEXT_FALLBACK_FAMILIES {
+    // SVG/Canvas와 같은 서체 분류·굵기 계약을 소비한다. 원 바탕 face가
+    // 없다는 이유로 고딕을 우선하거나 굵은 본문에 ExtraLight를 고르지 않는다.
+    // 공통 정책의 정적 CSS 이름만 해제하며 사용자 요청 이름은 위에서 보존한다.
+    let fallback =
+        generic_fallback_for_weight(requested_members.first().copied().unwrap_or(""), bold);
+    for family in fallback
+        .split(',')
+        .map(|name| name.trim().trim_matches('\''))
+    {
         if !families.iter().any(|candidate| candidate == family) {
-            families.push((*family).to_string());
+            families.push(family.to_string());
         }
     }
     families
@@ -122,7 +119,7 @@ pub(super) fn text_typeface_candidates(
     requested: &str,
     style: FontStyle,
 ) -> (Vec<String>, Vec<TypefaceCandidate>) {
-    let families = text_family_candidates(requested);
+    let families = text_family_candidates_for_weight(requested, *style.weight() >= 600);
     let chain = typeface_candidates_for_families(
         font_mgr,
         system_families,
