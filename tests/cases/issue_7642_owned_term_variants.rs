@@ -28,6 +28,19 @@ fn glyphs(value: &LayoutBox, parent_x: f64, parent_y: f64, output: &mut Vec<Glyp
     let x = parent_x + value.x;
     let y = parent_y + value.y;
     match &value.kind {
+        LayoutKind::HancomGlyphs(run) => {
+            // 그룹 경계 비교는 실제 표시 글리프의 순서와 전진을 보존한다.
+            // 한컴 PUA를 임의 문자열로 치환하지 않고 같은 glyph id를 대조한다.
+            assert_eq!(run.glyphs.chars().count(), run.positions.len());
+            for (glyph, advance) in run.glyphs.chars().zip(&run.positions) {
+                output.push(Glyph {
+                    text: glyph.to_string(),
+                    x: x + advance,
+                    baseline: y + value.baseline + run.baseline_shift,
+                    font_size: value.font_size,
+                });
+            }
+        }
         LayoutKind::Row(children) => {
             for child in children {
                 glyphs(child, x, y, output);
