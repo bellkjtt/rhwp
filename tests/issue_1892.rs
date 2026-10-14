@@ -282,7 +282,12 @@ fn issue_1892_group_roundtrip_preserves_source_offsets_and_group_hierarchy() {
     fn groups(doc: &rhwp::model::document::Document) -> Vec<&ShapeObject> {
         fn shape_text<'a>(shape: &'a ShapeObject, out: &mut Vec<&'a ShapeObject>) {
             if let Some(drawing) = shape.drawing() {
-                paragraphs(&drawing.paragraphs, out);
+                if let Some(text_box) = &drawing.text_box {
+                    paragraphs(&text_box.paragraphs, out);
+                }
+                if let Some(caption) = &drawing.caption {
+                    paragraphs(&caption.paragraphs, out);
+                }
             }
             if let ShapeObject::Group(group) = shape {
                 for child in &group.children {
