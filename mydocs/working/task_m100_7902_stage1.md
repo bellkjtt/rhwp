@@ -79,8 +79,9 @@ ignored `output/pr-review/visual-sweep-direct-png-20261014/`:
 - `final-required-lint-result.json`, `python-tests-final-135.log`,
   `png-compat-focused.log`, `cli-json-focused-fixed.log`: 실행 결과.
 
-원격 PR·CI·merge는 이 문서 작성 시 아직 수행하지 않았다. PR 생성 후 정확한 head의 CI를
-확인하고 개별 PR review·오늘할일을 trailing commit으로 반영한다. #7902의 화학제품 쪽번호,
+원격 PR #7903을 생성했고 정확한 head의 CI를 검증 중이다. 사용자 선택 옵션 2에 따라
+CI 성공 확인 후 merge하고, 개별 PR review·오늘할일은 새 문서 전용 PR로 반영한다.
+#7902의 화학제품 쪽번호,
 행 나눔 HWPX 및 giant overfill 보정과 전체19문서 재검증은 다음 단계다.
 
 ### PR #7903 CI 분류 검사 보완
@@ -116,3 +117,45 @@ CI의 해당 단계8개 명령을 같은 순서로 로컬 실행해 Node 219개�
 수정한 CI YAML의 actionlint가 모두 통과했다. Rust source는 바꾸지 않았다.
 원시 기록: `security-server-before.log`, `security-server-after.log` 및
 `security-png-protocol.log` (위 ignored 결과 디렉터리).
+
+### 전체 회귀에서 확인한 PNG 자기서술 계약 보완
+
+사용자 지시에 따라 수정 전 head `b5040558942a4ed4e22deb2c643a6df87d71e5f7`에서
+공용 `target/pr-review`, Cargo jobs8, release-test, test-threads12, no-fail-fast로
+전체 회귀를 수행했다. 컴파일23분37초·검사1640.684초:
+**10,285개 실행 / 10,280 통과 / 5 실패 / 45 제외**.
+
+| 실패 검사 | 보완 |
+| --- | --- |
+| `mcp_schema_matches_live_manifest_output` | 선택적인 MCP `available`·`requiresFeature` 타입 선언 |
+| `every_stateless_tool_belongs_to_some_specific_profile` | PNG를 콘텐츠제작·품질검증 업무에 연결 |
+| `every_declared_record_field_is_in_the_dictionary` | 출력 프로필·조판 세대 등재, 실제333개 선언/341개 사전으로 개수 정합 |
+| `provenance_map_covers_every_json_command` | PNG 매니페스트의 문서 값 없음 근거를 공통 출처 지도에 등록 |
+| `every_text_bearing_command_declares_untrusted_fields` | Native PNG 실제 호출 레시피 추가, 실행 불가능한 빌드는 명시적 feature 근거로 호출만 제외 |
+
+출처 지도 선언 검사는 비가용 명령까지 유지한다. 문서 입력 명령을 면제 목록에 넣지 않았고,
+Native Skia에서는 PNG 레시피를 실제로 실행한다. PNG metadata-only와 렌더 JSON 모두
+공통 출처 표지와 표준 `schemaVersion: "1.0"`을 출력하도록 보완했다. PNG 자체의 paint와
+레이아웃은 변경하지 않는다.
+
+CI에 이미 연결된 `cli_exit_codes_native`에 실제 PNG 계약 검사를 보완했다.
+수정 전과 실행 Rust 코드가 같은 고정 CLI에서 새 검사는 표지 누락으로 FAIL했고,
+보완 CLI의 metadata-only/실제 PNG·feature/MCP 계약2개와 Native 출처 검사10개가 PASS했다.
+수정 후 첫 전체 실행은 컴파일16분48초·검사1084.262초로
+**10,285개 실행 / 10,283 통과 / 2 실패 / 45 제외**였다. 위5개는 모두 통과했고,
+공통 출처 지도에 PNG를 추가하면서 스킬 카탈로그·fixture의 명령 정합성 검사2개가
+누락을 검출했다. `.claude/skills/rhwp-provenance`의 두 자료에 같은 PNG 봉투 계약과
+산출 PNG·render tree를 재소비할 때의 미신뢰 데이터 경계를 추가했다. 검사 자체는 유지한다.
+Rust 소스는 첫 수정 후 실행과 동일하게 고정하고, 최종 전체 회귀와 필수 Rust lint/정책을
+공용 캐시에서 순차 실행했다. **최종 전체10,285개 통과 / 실패0 / 제외45**, exit0이다.
+최종 컴파일5분13초·검사1129.782초였다. 스킬 계약12개도 별도로 통과했다.
+fmt·Native Skia Clippy·기본 Clippy·WASM Clippy·workspace build·workspace all-targets
+Clippy·고정 base manifest 비교가 모두 통과했고 검증 중 추적 변경 파일의 내용은 고정했다.
+문서 링크 검사에서 기존 카탈로그의 `failed[](...)`가 링크로 해석되는 오류1건을 발견해
+필드명을 코드 표기로 교정했다. 이후 변경 문서의 링크와 공백을 다시 검사한다.
+파생 suite 준비가 같은 내용도 다시 쓰는 동작을 확인했다. 이미 현재 소스의 suite를
+준비한 검증에서는 그 준비를 불필요하게 반복하지 않아 재컴파일을 피한다.
+원시 로그: `full-regression-before-fix.log`, `full-regression-before-fix-result.json`,
+`png-provenance-before-native.log`, `post-fix-native-png-contract.log`, `post-fix-native-provenance.log`.
+최종 기록: `final-full-regression.log`, `final-complete-validation-result.json`,
+`final-{native,default,wasm,workspace}-clippy.log`, `png-skill-contract-after-fix.log`.

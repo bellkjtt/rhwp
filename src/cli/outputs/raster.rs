@@ -340,16 +340,19 @@ pub(crate) fn export_png(args: &[String]) -> i32 {
     if metadata_only {
         println!(
             "{}",
-            serde_json::json!({
-                "schemaVersion": 1,
-                "tool": "export-png",
-                "backend": "native-skia",
-                "source": file_path,
-                "pageCount": page_count,
-                "renderedCount": 0,
-                "metadataOnly": true,
-                "pages": [],
-            })
+            rhwp::provenance::marked(
+                serde_json::json!({
+                    "schemaVersion": rhwp::schema_registry::ENVELOPE_SCHEMA_VERSION,
+                    "tool": "export-png",
+                    "backend": "native-skia",
+                    "source": file_path,
+                    "pageCount": page_count,
+                    "renderedCount": 0,
+                    "metadataOnly": true,
+                    "pages": [],
+                }),
+                "export-png"
+            )
         );
         return EXIT_OK;
     }
@@ -443,18 +446,21 @@ pub(crate) fn export_png(args: &[String]) -> i32 {
         };
         println!(
             "{}",
-            serde_json::json!({
-                "schemaVersion": 1,
-                "tool": "export-png",
-                "source": file_path,
-                "backend": "native-skia",
-                "comparisonProfile": profile,
-                "layoutGeneration": if hangul2024_compat { "2024" } else { "2022" },
-                "outputDir": output_dir,
-                "pageCount": page_count,
-                "renderedCount": success,
-                "pages": exported_pages,
-            })
+            rhwp::provenance::marked(
+                serde_json::json!({
+                    "schemaVersion": rhwp::schema_registry::ENVELOPE_SCHEMA_VERSION,
+                    "tool": "export-png",
+                    "source": file_path,
+                    "backend": "native-skia",
+                    "comparisonProfile": profile,
+                    "layoutGeneration": if hangul2024_compat { "2024" } else { "2022" },
+                    "outputDir": output_dir,
+                    "pageCount": page_count,
+                    "renderedCount": success,
+                    "pages": exported_pages,
+                }),
+                "export-png"
+            )
         );
     } else {
         println!(
