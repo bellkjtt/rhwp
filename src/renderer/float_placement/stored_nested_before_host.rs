@@ -178,11 +178,14 @@ pub(crate) fn stored_opening_table_before_host_frame(
             .chars()
             .any(|ch| !ch.is_whitespace() && !ch.is_control())
         || para.control_text_positions().get(control_index).copied() != Some(0)
-        || para.raw_break_type & !0x01 != 0
+        // 구역·다단 정의는 새 단의 메타데이터다. 쪽/단 강제 나눔과
+        // 구별하며, 호출자가 확인한 빈 단의 원본 프레임을 보존한다.
+        || para.raw_break_type & !0x03 != 0
         || !matches!(
             para.column_type,
             crate::model::paragraph::ColumnBreakType::None
                 | crate::model::paragraph::ColumnBreakType::Section
+                | crate::model::paragraph::ColumnBreakType::MultiColumn
         )
         || !original_line_metrics(para)
         || !original_lines(next)
