@@ -159,7 +159,11 @@ fn fraction_subscript_keeps_its_source_owner_and_paints_below_the_denominator() 
     let svg = core
         .render_page_svg_layer_with_profile_native(0, rhwp::paint::RenderProfile::Print)
         .unwrap();
-    let painted = usvg::Tree::from_str(&svg, &usvg::Options::default()).unwrap();
+    // text backend의 실제 글리프도 윤곽으로 대조한다. 빈 fontdb는
+    // 아래첨자 자체를 누락하므로 표시 잉크의 검사 근거가 될 수 없다.
+    let mut options = usvg::Options::default();
+    options.fontdb_mut().load_system_fonts();
+    let painted = usvg::Tree::from_str(&svg, &options).unwrap();
     let mut paths = Vec::new();
     paint_paths(painted.root(), &mut paths);
     for &(section, paragraph, control, _) in &addresses {
