@@ -75,19 +75,27 @@ fn assert_ab_order(eq: &EquationNode) {
 }
 
 fn paint_paths(svg: &usvg::Tree, owner: &RenderNode) -> Vec<usvg::Rect> {
-    fn collect(group: &usvg::Group, out: &mut Vec<usvg::Rect>) {
+    fn collect(group: &usvg::Group, canvas: usvg::Transform, out: &mut Vec<usvg::Rect>) {
         for node in group.children() {
             match node {
-                usvg::Node::Group(group) => collect(group, out),
-                // text backend의 실제 글자 윤곽도 장식 path와 함께 검사한다.
-                usvg::Node::Text(text) => collect(text.flattened(), out),
-                usvg::Node::Path(path) => out.push(path.abs_bounding_box()),
+                usvg::Node::Group(group) => collect(group, canvas, out),
+                // text 로컬 윤곽에 실제 SVG 변환을 적용해 장식과 같은 좌표로 검사한다.
+                usvg::Node::Text(text) => collect(
+                    text.flattened(),
+                    canvas.pre_concat(text.abs_transform()),
+                    out,
+                ),
+                usvg::Node::Path(path) => out.push(
+                    path.abs_bounding_box()
+                        .transform(canvas)
+                        .expect("최종 표시 윤곽의 유효한 좌표 변환"),
+                ),
                 _ => {}
             }
         }
     }
     let mut paths = Vec::new();
-    collect(svg.root(), &mut paths);
+    collect(svg.root(), usvg::Transform::default(), &mut paths);
     paths.retain(|path| {
         let x = f64::from(path.x() + path.width() / 2.0);
         let y = f64::from(path.y() + path.height() / 2.0);

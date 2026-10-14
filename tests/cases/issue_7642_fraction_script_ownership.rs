@@ -137,13 +137,21 @@ fn radical_indexes<'a>(value: &'a LayoutBox, out: &mut Vec<&'a LayoutBox>) {
     }
 }
 
-fn paint_paths(group: &usvg::Group, out: &mut Vec<usvg::Rect>) {
+fn paint_paths(group: &usvg::Group, canvas: usvg::Transform, out: &mut Vec<usvg::Rect>) {
     for node in group.children() {
         match node {
-            usvg::Node::Group(group) => paint_paths(group, out),
-            // usvg는 text를 Node::Text로 유지하며 실제 윤곽은 flattened에 둔다.
-            usvg::Node::Text(text) => paint_paths(text.flattened(), out),
-            usvg::Node::Path(path) => out.push(path.abs_bounding_box()),
+            usvg::Node::Group(group) => paint_paths(group, canvas, out),
+            // flattened의 윤곽은 text 로컬 좌표다. 실제 SVG의 변환을 적용한다.
+            usvg::Node::Text(text) => paint_paths(
+                text.flattened(),
+                canvas.pre_concat(text.abs_transform()),
+                out,
+            ),
+            usvg::Node::Path(path) => out.push(
+                path.abs_bounding_box()
+                    .transform(canvas)
+                    .expect("최종 표시 윤곽의 유효한 좌표 변환"),
+            ),
             _ => {}
         }
     }
@@ -167,7 +175,7 @@ fn fraction_subscript_keeps_its_source_owner_and_paints_below_the_denominator() 
     options.fontdb_mut().load_system_fonts();
     let painted = usvg::Tree::from_str(&svg, &options).unwrap();
     let mut paths = Vec::new();
-    paint_paths(painted.root(), &mut paths);
+    paint_paths(painted.root(), usvg::Transform::default(), &mut paths);
     for &(section, paragraph, control, _) in &addresses {
         let found: Vec<_> = nodes
             .iter()
