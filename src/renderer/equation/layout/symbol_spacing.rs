@@ -234,11 +234,10 @@ impl EqLayout {
                     },
                     _ => return result,
                 };
-                let source_metrics = if matches!(result.kind, LayoutKind::HancomGlyphs(_)) {
-                    None
-                } else {
-                    source_font_symbol::operator_metrics(text, fs, self.dpi)
-                };
+                // 자동 간격은 원본 연산자의 계약을 소비한다. 표시 글리프 런의
+                // 종류로 바꾸면 같은 연산자가 그룹 안팎에서 다른 여백을 갖는다.
+                // HancomGlyphs의 실제 전진폭은 아래에서 그대로 보존한다.
+                let source_metrics = source_font_symbol::operator_metrics(text, fs, self.dpi);
                 let padding = source_metrics.map_or(fs * 0.15, |(_, padding)| padding);
                 let left = if position == 0 {
                     0.0
