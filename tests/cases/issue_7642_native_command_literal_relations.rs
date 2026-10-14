@@ -55,6 +55,28 @@ fn find<'a>(equations: &'a [EquationNode], script: &str) -> &'a EquationNode {
 
 fn literal(value: &LayoutBox, out: &mut String) {
     match &value.kind {
+        LayoutKind::HancomGlyphs(run) => {
+            assert_eq!(run.glyphs.chars().count(), run.positions.len());
+            assert_eq!(run.positions.len(), run.shears.len());
+            // HYhwpEQ cmap의 표시 글리프를 독립 Print에서 판독한 문자와 대응시킨다.
+            // 출력 backend가 바뀌어도 원문 내용·정체/이탤릭 검사는 유지한다.
+            for glyph in run.glyphs.chars() {
+                let scalar = match glyph {
+                    '\u{e000}'..='\u{e019}' => 0x1d434 + glyph as u32 - 0xe000,
+                    '\u{e0ec}' => 0x210e,
+                    '\u{e0e5}'..='\u{e0fe}' => 0x1d44e + glyph as u32 - 0xe0e5,
+                    '\u{e034}'..='\u{e03c}' => '1' as u32 + glyph as u32 - 0xe034,
+                    '\u{e03d}' => '0' as u32,
+                    '\u{e048}' => '+' as u32,
+                    '\u{e046}' => '-' as u32,
+                    '\u{e047}' => '=' as u32,
+                    '\u{e055}' => '<' as u32,
+                    '\u{e056}' => '>' as u32,
+                    _ => glyph as u32,
+                };
+                out.push(char::from_u32(scalar).expect("독립 글리프의 문자 대응"));
+            }
+        }
         LayoutKind::Row(children) => {
             for child in children {
                 literal(child, out);
@@ -130,6 +152,7 @@ fn decoration_count(value: &LayoutBox) -> usize {
         | LayoutKind::MathSymbol(_)
         | LayoutKind::Function(_)
         | LayoutKind::FontGlyph { .. }
+        | LayoutKind::HancomGlyphs(_)
         | LayoutKind::Space(_)
         | LayoutKind::Empty => 0,
         kind => panic!("장식 최장 명령을 분수 등 다른 구조로 소비함: {kind:?}"),

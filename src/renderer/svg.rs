@@ -57,7 +57,9 @@ mod system_fonts;
 #[cfg(all(test, not(target_arch = "wasm32")))]
 use font_file_lookup::FontFileName;
 #[cfg(not(target_arch = "wasm32"))]
-use font_file_lookup::{find_font_file, plan_svg_font_file_lookup, FontFileLookupPlan};
+use font_file_lookup::{
+    find_font_file, find_font_file_for_chars, plan_svg_font_file_lookup, FontFileLookupPlan,
+};
 
 const TEXT_MARK_CLIP_RIGHT_PAD: f64 = 48.0;
 
@@ -4828,7 +4830,9 @@ pub fn generate_font_style(
                     continue;
                 }
                 let regular_lookup = plan_svg_font_file_lookup(font_name, font_paths, false);
-                if let Some(font_path) = find_font_file(&regular_lookup) {
+                if let Some(font_path) =
+                    find_font_file_for_chars(&regular_lookup, &codepoints[font_name])
+                {
                     if let Ok(font_data) = std::fs::read(&font_path) {
                         let outline_data = svg_outline_font_data(&font_data, chars);
                         if matches!(outline_data, std::borrow::Cow::Owned(_)) {
@@ -4930,7 +4934,9 @@ pub fn generate_font_style(
                     continue;
                 }
                 let regular_lookup = plan_svg_font_file_lookup(font_name, font_paths, false);
-                if let Some(font_path) = find_font_file(&regular_lookup) {
+                if let Some(font_path) =
+                    find_font_file_for_chars(&regular_lookup, &codepoints[font_name])
+                {
                     if let Ok(font_data) = std::fs::read(&font_path) {
                         let font_data = svg_outline_font_data(&font_data, &codepoints[font_name]);
                         let b64 = base64::engine::general_purpose::STANDARD.encode(&font_data);

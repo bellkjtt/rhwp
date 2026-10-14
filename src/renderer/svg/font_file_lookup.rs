@@ -171,3 +171,23 @@ pub(super) fn find_font_file(plan: &FontFileLookupPlan) -> Option<std::path::Pat
     }
     None
 }
+
+/// 이름이 같은 설치 부분 글꼴에 없는 표시 문자는 같은 face의 완전한 파일로 공급한다.
+pub(super) fn find_font_file_for_chars(
+    plan: &FontFileLookupPlan,
+    chars: &std::collections::HashSet<char>,
+) -> Option<std::path::PathBuf> {
+    let preferred = find_font_file(plan)?;
+    let covered = std::fs::read(&preferred).ok().is_some_and(|bytes| {
+        ttf_parser::Face::parse(&bytes, 0).is_ok_and(|face| {
+            chars
+                .iter()
+                .filter(|ch| !ch.is_whitespace() && !ch.is_control())
+                .all(|ch| face.glyph_index(*ch).is_some_and(|glyph| glyph.0 != 0))
+        })
+    });
+    if covered {
+        return Some(preferred);
+    }
+    super::system_fonts::family_file_for_chars(&plan.families, plan.bold, chars).or(Some(preferred))
+}
