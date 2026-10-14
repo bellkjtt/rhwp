@@ -115,21 +115,18 @@ impl TypesetEngine {
                 // 그려지고 이어지는 본문은 다음 쪽으로 넘어간다.
                 let native_inline_shape_reset = !hwp3_origin_page_tolerance
                     && profile.hwp5_stored_pagination_layout()
+                    && !profile.session_edited()
                     && shape_only_para
                     && para.controls.len() == 1
                     && matches!(&para.controls[0], Control::Shape(shape) if shape.common().treat_as_char)
-                    && para.line_segs.len() == 1
                     && cv > 0
-                    && cv <= 2500
-                    && prev_vpos_end > 60_000
-                    && paragraphs.get(para_idx + 1).is_some_and(|next| {
-                        next.line_segs
-                            .first()
-                            .filter(|seg| !is_synthetic_line_seg(seg))
-                            .is_some_and(|seg| {
-                                seg.vertical_pos > cv && seg.vertical_pos < prev_vpos_end / 2
-                            })
-                    })
+                    && cv == para_sb_hu_for_reset
+                    && stored_inline_shape_restarts_column(
+                        prev_para,
+                        para,
+                        paragraphs.get(para_idx + 1),
+                        crate::renderer::px_to_hwpunit(st.layout.body_area.height, self.dpi),
+                    )
                     && !para_is_page_bottom_fixed_table_anchor(para)
                     && !para_hosts_page_anchored_block(para);
                 // [#1921 d=-1] 네이티브 HWP5/HWPX 의 비영 near-top reset:
@@ -408,4 +405,43 @@ impl TypesetEngine {
             }
         }
     }
+}
+
+/// 인라인 도형은 자기 저장 줄 상자를 소유한다. 이전 쪽의 남은 물리 높이에
+/// 그 상자가 들어가지 않고 뒤 줄이 새 축에서 이어질 때 저장 재시작을 보존한다.
+fn stored_inline_shape_restarts_column(
+    previous: &Paragraph,
+    current: &Paragraph,
+    next: Option<&Paragraph>,
+    body_height_hu: i32,
+) -> bool {
+    let Some(next) = next else {
+        return false;
+    };
+    let (Some(last), [line], Some(after)) = (
+        previous.line_segs.last(),
+        current.line_segs.as_slice(),
+        next.line_segs.first(),
+    ) else {
+        return false;
+    };
+    if [previous, current, next]
+        .iter()
+        .any(|para| para.stored_text_partition_is_dirty() || para.cell_format_vpos_dirty)
+        || [last, line, after]
+            .iter()
+            .any(|seg| is_synthetic_line_seg(seg) || seg.line_height <= 0 || seg.line_spacing < 0)
+        || body_height_hu <= 0
+    {
+        return false;
+    }
+    let previous_end =
+        i64::from(last.vertical_pos) + i64::from(last.line_height) + i64::from(last.line_spacing);
+    let current_end =
+        i64::from(line.vertical_pos) + i64::from(line.line_height) + i64::from(line.line_spacing);
+    line.vertical_pos < last.vertical_pos
+        && i64::from(after.vertical_pos) >= current_end
+        && i64::from(after.vertical_pos) < previous_end
+        && previous_end + i64::from(line.line_height) + i64::from(line.line_spacing)
+            > i64::from(body_height_hu)
 }

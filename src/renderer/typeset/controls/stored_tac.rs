@@ -36,6 +36,7 @@ pub(in crate::renderer::typeset) fn inline_text_control(control: &Control) -> bo
 pub(in crate::renderer::typeset) struct StoredTacPage {
     pub profile: LayoutCompatibilityProfile,
     pub current_height: f64,
+    pub empty_column: bool,
     pub vpos_col_anchor: f64,
     pub vpos_page_base: Option<i32>,
     pub vpos_lazy_base: Option<i32>,
@@ -580,6 +581,34 @@ pub(super) fn prepare(
                     },
                     dpi,
                 );
+            let restarted_column_line = single_saved_line
+                && page.empty_column
+                && page.current_height == 0.0
+                && page.vpos_col_anchor == 0.0
+                && fmt.spacing_before == 0.0
+                && fmt.spacing_after == 0.0
+                && next_para.is_some_and(|next| {
+                    !next.stored_text_partition_is_dirty()
+                        && !next.cell_format_vpos_dirty
+                        && next.controls.is_empty()
+                        && next.column_type == crate::model::paragraph::ColumnBreakType::None
+                        && next.line_segs.first().is_some_and(|after| {
+                            !crate::renderer::typeset::is_synthetic_line_seg(after)
+                                && after.vertical_pos < para.line_segs[0].vertical_pos
+                                && i64::from(after.vertical_pos)
+                                    == i64::from(para.line_segs[0].line_height)
+                                        + i64::from(para.line_segs[0].line_spacing)
+                                        + i64::from(crate::renderer::px_to_hwpunit(
+                                            next_spacing_before,
+                                            dpi,
+                                        ))
+                        })
+                });
+            if restarted_column_line {
+                // 원본에 남은 옛 host vpos는 새 쪽 개체의 출력 원점이 아니다.
+                // 뒤 저장 줄이 새 개체 줄의 전체 전진과 일치하는 0축을 소유한다.
+                saved_origin = flow_origin;
+            }
             // A complete object height authenticates the local line, not the
             // page-relative origin. A single-line shortcut may only reuse a
             // source origin which agrees with the current physical flow: its
@@ -694,6 +723,9 @@ pub(super) fn prepare(
             });
             if measured_fits && fits {
                 let source_origin = single_saved_line.then(|| {
+                    if restarted_column_line {
+                        return 0;
+                    }
                     let seg = &para.line_segs[0];
                     // 저장 축은 단의 물리 앵커를 제외한 상대 원점에서 역산한다.
                     // 시작 밴드를 기준축에도 넣으면 이후 표에 그 밴드가 중복된다.

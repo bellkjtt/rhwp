@@ -93,6 +93,7 @@ impl TypesetState {
         StoredTacPage {
             profile: self.data.profile,
             current_height: self.data.current_height,
+            empty_column: self.data.current_items.is_empty(),
             vpos_col_anchor: self.data.vpos_col_anchor,
             vpos_page_base: self.data.vpos_page_base,
             vpos_lazy_base: self.data.vpos_lazy_base,

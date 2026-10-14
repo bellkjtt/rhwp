@@ -1,6 +1,9 @@
 //! 원본의 빈 호스트 줄 앞에 저장된 표 상자를 측정·배치에서 공유한다.
 
-use super::{hwpunit_to_px, is_para_topbottom_float, ParagraphFloatFlow, ParagraphFloatPlacement};
+use super::{
+    hwpunit_to_px, is_para_topbottom_float, signed_hwpunit, ParagraphFloatFlow,
+    ParagraphFloatPlacement,
+};
 use crate::model::control::Control;
 use crate::model::paragraph::{LineSeg, Paragraph};
 use crate::model::table::{Cell, Table};
@@ -139,5 +142,82 @@ pub(crate) fn stored_table_before_host_frame(
         table_left: None,
         table_top: anchor_y + offset + lead,
         occupied_bottom: host_origin,
+    })
+}
+
+/// 단을 여는 표의 끝과 첫 호스트 줄·다음 줄이 원본 단 축을 닫는다.
+/// 첫 줄의 절대 vpos만으로 축을 만들지 않고 측정한 표 상자도 대조한다.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn stored_opening_table_before_host_frame(
+    para: &Paragraph,
+    next: &Paragraph,
+    table: &Table,
+    control_index: usize,
+    table_height: f64,
+    dpi: f64,
+) -> Option<ParagraphFloatPlacement> {
+    let [host] = para.line_segs.as_slice() else {
+        return None;
+    };
+    let after = next.line_segs.first()?;
+    if !dpi.is_finite()
+        || dpi <= 0.0
+        || !table_height.is_finite()
+        || !is_para_topbottom_float(&table.common)
+        || !table.common.flow_with_text
+        || table.common.treat_as_char
+        || table.caption.is_some()
+        || table.common.vert_align != crate::model::shape::VertAlign::Top
+        || signed_hwpunit(table.common.vertical_offset) < 0
+        || table.common.height > i32::MAX as u32
+        || !para
+            .text
+            .chars()
+            .any(|ch| !ch.is_whitespace() && !ch.is_control())
+        || para.control_text_positions().get(control_index).copied() != Some(0)
+        || !original_lines(para)
+        || !original_lines(next)
+        || para.cell_format_vpos_dirty
+        || next.cell_format_vpos_dirty
+        || !next.controls.is_empty()
+    {
+        return None;
+    }
+    if para.controls.iter().enumerate().any(|(index, control)| {
+        index != control_index
+            && !matches!(
+                control,
+                Control::SectionDef(_)
+                    | Control::ColumnDef(_)
+                    | Control::Header(_)
+                    | Control::Footer(_)
+            )
+    }) {
+        return None;
+    }
+    let top = hwpunit_to_px(signed_hwpunit(table.common.vertical_offset), dpi)
+        + hwpunit_to_px(i32::from(table.outer_margin_top), dpi);
+    let bottom = top + table_height + hwpunit_to_px(i32::from(table.outer_margin_bottom), dpi);
+    let source_host = hwpunit_to_px(host.vertical_pos, dpi);
+    if (table_height - hwpunit_to_px(table.common.height as i32, dpi)).abs() > hwpunit_to_px(1, dpi)
+        || (source_host - bottom).abs() > hwpunit_to_px(1, dpi)
+        || host.line_height <= 0
+        || host.line_spacing < 0
+        || host
+            .vertical_pos
+            .checked_add(host.line_height)?
+            .checked_add(host.line_spacing)?
+            != after.vertical_pos
+    {
+        return None;
+    }
+    Some(ParagraphFloatPlacement {
+        flow: ParagraphFloatFlow::NextLine,
+        anchor_y: 0.0,
+        stored_host_origin: Some(source_host),
+        stored_successor_line_origin: None,
+        table_left: None,
+        table_top: top,
+        occupied_bottom: bottom,
     })
 }
