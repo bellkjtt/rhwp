@@ -3132,7 +3132,7 @@ mod tests {
     fn renders_gradient_and_fallback_fills_for_pattern_ellipse_path_and_line() {
         let gradient = GradientFillInfo {
             gradient_type: 1,
-            angle: 0,
+            angle: 90,
             center_x: 0,
             center_y: 0,
             colors: vec![0x00ff0000, 0x000000ff],
