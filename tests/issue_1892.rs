@@ -318,9 +318,8 @@ fn issue_1892_group_roundtrip_preserves_source_offsets_and_group_hierarchy() {
                         }
                         Control::Header(header) => paragraphs(&header.paragraphs, out),
                         Control::Footer(footer) => paragraphs(&footer.paragraphs, out),
-                        Control::Footnote(note) | Control::Endnote(note) => {
-                            paragraphs(&note.paragraphs, out)
-                        }
+                        Control::Footnote(note) => paragraphs(&note.paragraphs, out),
+                        Control::Endnote(note) => paragraphs(&note.paragraphs, out),
                         _ => {}
                     }
                 }
