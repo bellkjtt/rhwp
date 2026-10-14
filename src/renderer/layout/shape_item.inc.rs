@@ -629,7 +629,10 @@ impl LayoutEngine {
                                 .first()
                                 .map(|ls| hwpunit_to_px(ls.line_height + ls.line_spacing, self.dpi))
                                 .unwrap_or(0.0);
-                            result_y = result_y.max(y_offset + line_advance);
+                            // FullParagraph와 OLE는 같은 호스트 줄의 점유 끝을 소비한다.
+                            // 이미 전진한 커서에 피치를 다시 더하면 Enter 줄이 두 줄 아래로 간다.
+                            let host_y = para_start_y.get(&para_index).copied().unwrap_or(y_offset);
+                            result_y = result_y.max(host_y + line_advance);
                         }
                     } else if !common.treat_as_char
                         && matches!(
