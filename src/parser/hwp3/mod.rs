@@ -3427,7 +3427,14 @@ fn parse_paragraph_list_inner(
         let mut line_spacing_ratio = 160;
         let mut fixed_line_spacing = None;
 
-        if let Some(char_shape) = doc_char_shapes.get(rep_char_shape_id as usize) {
+        // 대표 모양은 문단 끝의 기본 글꼴일 수 있다. 실제 첫 글자·개체
+        // 마커의 모양이 있으면 그 호스트 글꼴에서 줄 여유를 계산한다.
+        if let Some(char_shape) = para
+            .char_shapes
+            .first()
+            .and_then(|shape| doc_char_shapes.get(shape.char_shape_id as usize))
+            .or_else(|| doc_char_shapes.get(rep_char_shape_id as usize))
+        {
             base_size = char_shape.base_size;
         }
         if let Some(para_shape) = doc_para_shapes.get(para_shape_id as usize) {
@@ -3639,7 +3646,13 @@ fn parse_paragraph_list_inner(
                             || (!use_password_layout_contract && has_tac_shape)
                             || has_marker_only_tac_shape
                         {
-                            HWP3_TAC_OBJECT_LINE_SPACING_HU
+                            if use_password_layout_contract {
+                                HWP3_TAC_OBJECT_LINE_SPACING_HU
+                            } else {
+                                // 줄 여유는 개체 높이가 아니라 원본 호스트 글꼴에서 나온다.
+                                // 공백+개체인 줄도 정상 저장본의 문단 간격을 보존한다.
+                                fallback_line_spacing
+                            }
                         } else {
                             hwp3_percent_line_spacing(th, line_spacing_ratio)
                         };
@@ -3857,14 +3870,15 @@ fn parse_paragraph_list_inner(
         // para_info.flags bit 1은 명시적 쪽나누기이고, pgy/break_flag는 선별된
         // 자연 페이지 경계이다. 표 셀/미주 등 nested paragraph list에서는
         // body_height_hu=0 이므로 자연 페이지 승격이 일어나지 않는다.
-        // [Task #724] 한컴 IR 정합: 빈 paragraph (text_len=0 + controls=0) 인 경우
-        // column_type=Page 설정 안 함 (HWP5 변환본 paragraph 171 column_type=Normal 정합).
-        // 단, vpos reset 은 강제 (force_vpos_reset) — page break 시점 acc_section_vpos=0
-        // 정합 (HWP5 변환본 vpos=0 페이지 시작 정합 보존).
+        // 보이는 글자와 저장 글줄의 점유는 다른 상태다. 유효한 빈 줄도
+        // 실제 쪽 시작을 소유한다. 좌표만 리셋하고 소속을 버리면 빈 줄은
+        // 앞 쪽에서 숨겨지고 뒤 표가 그 줄 높이만큼 위로 이동한다.
         let mut force_vpos_reset = false;
         if prev_para_had_flags_break || pgy_page_break || first_line_page_break {
             let is_empty_no_ctrl = para.text.is_empty() && para.controls.is_empty();
-            if !is_empty_no_ctrl {
+            let owns_stored_empty_line =
+                line_infos.first().is_some_and(|line| line.line_height > 0);
+            if !is_empty_no_ctrl || owns_stored_empty_line {
                 para.column_type = crate::model::paragraph::ColumnBreakType::Page;
                 // pgy/break_flag 승격은 저장 당시 자연 쪽 경계일 뿐 사용자의 명시적
                 // 쪽나눔이 아니다. 합성 표시를 남겨 저장 포맷 방출에서 제외한다

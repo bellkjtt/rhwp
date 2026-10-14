@@ -2,6 +2,7 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 #[path = "../../src/renderer/svg/system_fonts.rs"]
+#[allow(dead_code)]
 mod system_fonts;
 
 use std::path::PathBuf;
