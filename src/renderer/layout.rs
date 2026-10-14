@@ -8369,8 +8369,11 @@ impl LayoutEngine {
                         })
                         .flatten()
                 });
-            hcursor.owned_paragraph_origin =
-                owned_paragraph_origin.or(stored_table_successor_origin);
+            hcursor.owned_origin = owned_paragraph_origin
+                .map(super::height_cursor::FlowOrigin::Paragraph)
+                .or_else(|| {
+                    stored_table_successor_origin.map(super::height_cursor::FlowOrigin::Line)
+                });
             // [#4613 · #4599 밴드-플로우] 전방 스냅 기각 판정용 — vpos_adjust 이전의 순차 흐름 위치.
             let y_before_vpos_adjust = y_offset;
             // [#4639 · #4599 ⑧] TAC-직후 보정 스킵의 예외 — 직전 TAC host 문단이 비-TAC

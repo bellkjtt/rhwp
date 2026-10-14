@@ -15,6 +15,10 @@
 //!
 //! 기하 상수: `dpi`, `col_area_y/height`, `col_anchor_y`.
 
+#[path = "height_cursor_origin.rs"]
+mod origin;
+pub(crate) use origin::FlowOrigin;
+
 use super::layout::{para_has_overlay_shape, vpos_corrected_end_y};
 use super::style_resolver::ResolvedStyleSet;
 use crate::model::control::Control;
@@ -190,7 +194,7 @@ pub(crate) struct HeightCursor {
     pub prev_item_flow_line_bottom_y: Option<f64>,
     /// 같은 단의 실제 점유·간격 또는 확정 개체 프레임이 소유한 후속 문단 원점.
     /// 측정과 배치의 공통 결과이며 낡은 저장 사다리보다 우선한다.
-    pub(crate) owned_paragraph_origin: Option<f64>,
+    pub(crate) owned_origin: Option<FlowOrigin>,
     /// 직전 `vpos_adjust`에서 새 미주 제목 gap을 저장 end_y보다 위로 compact했는지.
     pub(crate) last_compacted_endnote_title_gap: bool,
     /// [#5699 H1] 저장 사다리가 자리차지 표 밴드를 계상하지 않은 문서에서, 흐름이
@@ -274,7 +278,7 @@ impl HeightCursor {
             endnote_between_notes_hu: 0,
             prev_item_content_bottom_y: None,
             prev_item_flow_line_bottom_y: None,
-            owned_paragraph_origin: None,
+            owned_origin: None,
             last_compacted_endnote_title_gap: false,
             min_flow_floor: f64::MIN,
             trimmed_prev_spacing_before_px: 0.0,
@@ -310,7 +314,8 @@ impl HeightCursor {
         styles: &ResolvedStyleSet,
     ) -> f64 {
         self.last_compacted_endnote_title_gap = false;
-        if let Some(origin) = self.owned_paragraph_origin.take() {
+        if let Some(owned) = self.owned_origin.take() {
+            let origin = owned.y();
             // 측정과 배치가 확인한 점유 경계에는 임의 완충을 추가하지 않는다.
             // 뒤 문단도 이 실제 원점을 이어받도록 현재 저장 기준을 함께 연결한다.
             if let Some(first) = paragraphs.get(item_para).and_then(|p| p.line_segs.first()) {
@@ -324,7 +329,10 @@ impl HeightCursor {
                     self.col_area_y
                 };
                 let base = first.vertical_pos
-                    - crate::renderer::px_to_hwpunit(origin + spacing_before - anchor, self.dpi);
+                    - crate::renderer::px_to_hwpunit(
+                        owned.first_line_y(spacing_before) - anchor,
+                        self.dpi,
+                    );
                 if self.vpos_page_base.is_some() {
                     self.vpos_page_base = Some(base);
                 } else {
