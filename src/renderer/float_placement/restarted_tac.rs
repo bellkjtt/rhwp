@@ -60,13 +60,10 @@ pub(crate) fn accepted_opening_origin(
     dpi: f64,
 ) -> Option<i32> {
     let end = restarted_tac_line_advance(para, next, spacing_after, next_spacing_before, dpi)?;
-    let [Control::Table(table)] = para.controls.as_slice() else {
-        return None;
-    };
-    let leading = hwpunit_to_px(i32::from(table.outer_margin_top), dpi);
     let tolerance = hwpunit_to_px(1, dpi);
-    ((placement.y - leading).abs() <= tolerance
-        && (placement.advance_end? - end).abs() <= tolerance)
+    // StoredTacPlan은 바깥여백을 포함한 줄 원점을 발행한다.
+    // 테두리 원점의 위 여백은 paint가 소비하므로 여기서 다시 더하지 않는다.
+    (placement.y.abs() <= tolerance && (placement.advance_end? - end).abs() <= tolerance)
         .then_some(0)
 }
 
