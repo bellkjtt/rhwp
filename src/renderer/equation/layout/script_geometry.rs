@@ -24,11 +24,13 @@ impl EqLayout {
     /// 빈 본체도 첨자의 기준선 프레임을 소유한다. 잉크와 전진폭은 없다.
     /// 일반 Empty나 공개 LaTeX의 배치를 빈 글줄로 바꾸지 않는다.
     pub(super) fn layout_script_base(&self, base: &EqNode, fs: f64) -> LayoutBox {
-        if self.hancom_math_face && matches!(base, EqNode::Empty) {
+        let mut value = if self.hancom_math_face && matches!(base, EqNode::Empty) {
             self.layout_row(&[], fs)
         } else {
             self.layout_node(base, fs)
-        }
+        };
+        value.width += self.script_base_operator_gap(base, fs);
+        value
     }
 
     fn script_uppercase_gap(&self, base: &EqNode, fs: f64) -> f64 {

@@ -90,6 +90,13 @@ fn boundary_element(node: &EqNode, first: bool) -> &EqNode {
         EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => {
             boundary_element(body, first)
         }
+        EqNode::Superscript { base, .. }
+        | EqNode::Subscript { base, .. }
+        | EqNode::SubSup { base, .. }
+            if first =>
+        {
+            boundary_element(base, true)
+        }
         _ => node,
     }
 }
@@ -115,6 +122,25 @@ fn before_operator_gap(
 }
 
 impl EqLayout {
+    /// 연산자 기저의 오른쪽 자동 간격은 부착 첨자 앞에서 한 번 예약한다.
+    /// 바깥 행은 왼쪽 경계만 연산자로 읽고 첨자 끝을 다시 연산자로 읽지 않는다.
+    pub(super) fn script_base_operator_gap(&self, base: &EqNode, fs: f64) -> f64 {
+        if !self.hancom_math_face {
+            return 0.0;
+        }
+        let edge = boundary_element(base, false);
+        if !operator(edge) {
+            return 0.0;
+        }
+        match edge {
+            EqNode::Symbol(text) | EqNode::MathSymbol(text) => {
+                source_font_symbol::operator_metrics(text, fs, self.dpi)
+                    .map_or(0.0, |(_, gap)| gap)
+            }
+            _ => 0.0,
+        }
+    }
+
     /// & 칸 경계의 여유는 같은 행 내부의 연산자 간격과 구분한다.
     /// 분수·근호 뒤의 일반 행 여유를 억제하는 조건으로 열 사이 간격을 지우지 않는다.
     pub(super) fn alignment_boundary_gap(&self, right: &EqNode, fs: f64) -> f64 {
