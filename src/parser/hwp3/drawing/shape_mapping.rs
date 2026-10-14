@@ -89,11 +89,11 @@ pub(super) fn map_to_shape_object(
             let flip_x = details.shape_info & 1 != 0;
             let flip_y = details.shape_info & 2 != 0;
             let line = LineShape {
-                start: crate::model::shape::Point {
+                start: crate::model::Point {
                     x: if flip_x { width } else { 0 },
                     y: if flip_y { height } else { 0 },
                 },
-                end: crate::model::shape::Point {
+                end: crate::model::Point {
                     x: if flip_x { 0 } else { width },
                     y: if flip_y { 0 } else { height },
                 },
