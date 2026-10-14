@@ -452,6 +452,10 @@ pub fn detect_lang_category(ch: char) -> usize {
         // 근거가 있는 네 글자만 옮긴다.
         0x2018 | 0x2019 | 0x201C | 0x201D => 1,
 
+        // 한점 리더는 앞 한글의 face가 아닌 원본 기호 슬롯을 소비한다.
+        // 독립 한컴 Print의 HFT 전각 전진과 같은 슬롯의 측정·표시를 유지한다.
+        0x2024 => 5,
+
         // 한국어: Hangul Jamo, Compatibility Jamo, Syllables
         0x1100..=0x11FF | 0x3130..=0x318F | 0xAC00..=0xD7AF |
         // Hangul Jamo Extended-A/B
