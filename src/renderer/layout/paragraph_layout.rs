@@ -33,6 +33,7 @@ use crate::model::control::Control;
 use crate::model::paragraph::{LineSeg, MarkerHead, NumberingMarker, Paragraph};
 
 mod leading_justification;
+mod picture_bullet;
 mod right_tab_fields;
 use crate::model::shape::{
     Caption, CaptionDirection, CommonObjAttr, HorzAlign, HorzRelTo, ShapeObject, TextWrap,
@@ -561,12 +562,17 @@ fn bullet_marker_text(
     }
     let bullet = styles.bullets.get((bullet_id - 1) as usize)?;
     // U+FFFF는 이미지 글머리표 표시자 — 문자 렌더링 불가, 건너뜀
-    if bullet.bullet_char == '\u{FFFF}' {
+    if bullet.bullet_char == '\u{FFFF}' && bullet.image_bullet <= 0 {
         return None;
     }
     // PUA 문자(0xF000~0xF0FF)를 표준 Unicode로 매핑
     // HWP는 Symbol 폰트 문자를 PUA(0xF000+code)로 저장
-    let bullet_ch = match map_pua_bullet_char(bullet.bullet_char) {
+    let bullet_ch = match if bullet.image_bullet > 0 {
+        // 그림도 기존 비 ASCII 글머리표의 1em 칸과 원본 거리를 점유한다.
+        '●'
+    } else {
+        map_pua_bullet_char(bullet.bullet_char)
+    } {
         // [#7418] 글머리표 자리의 soft hyphen(U+00AD)은 한/글이 반각 하이픈으로 그린다
         // (`footnote-01-hwp-2020.pdf` 1쪽: 마커 8673 → 본문 10079, 14pt 에서 마커+공백
         // 1406 HWPUNIT). 본문의 soft hyphen 은 보이지 않아야 하므로 `map_pua_bullet_char`
@@ -7164,30 +7170,50 @@ impl LayoutEngine {
                         });
                     let num_width = estimate_text_width(num_text, &num_style);
                     let num_id = tree.next_id();
-                    let num_node = RenderNode::new(
-                        num_id,
-                        RenderNodeType::TextRun(TextRunNode {
-                            text: num_text.clone(),
-                            style: num_style,
-                            char_shape_id: None,
-                            para_shape_id: Some(composed.para_style_id),
-                            section_index: Some(section_index),
-                            para_index: Some(para_index),
-                            char_start: None, // 문서 좌표에 포함되지 않음
-                            cell_context: cell_ctx.clone(),
-                            is_para_end: false,
-                            is_line_break_end: false,
-                            rotation: 0.0,
-                            is_vertical: false,
-                            char_overlap: None,
-                            border_fill_id: 0,
-                            baseline,
-                            field_marker: FieldMarkerType::None,
-                            layout_positions: None,
-                            display_text: None,
-                        }),
-                        BoundingBox::new(x + geometry.marker_dx_px, y, num_width, line_height),
-                    );
+                    let num_node = if let Some(image) = picture_bullet::image(
+                        styles,
+                        composed.para_style_id as usize,
+                        bin_data_content,
+                        section_index,
+                        para_index,
+                        cell_ctx.as_ref(),
+                    ) {
+                        RenderNode::new(
+                            num_id,
+                            RenderNodeType::Image(image),
+                            BoundingBox::new(
+                                x + geometry.marker_dx_px,
+                                y,
+                                num_style.font_size,
+                                num_style.font_size,
+                            ),
+                        )
+                    } else {
+                        RenderNode::new(
+                            num_id,
+                            RenderNodeType::TextRun(TextRunNode {
+                                text: num_text.clone(),
+                                style: num_style,
+                                char_shape_id: None,
+                                para_shape_id: Some(composed.para_style_id),
+                                section_index: Some(section_index),
+                                para_index: Some(para_index),
+                                char_start: None, // 문서 좌표에 포함되지 않음
+                                cell_context: cell_ctx.clone(),
+                                is_para_end: false,
+                                is_line_break_end: false,
+                                rotation: 0.0,
+                                is_vertical: false,
+                                char_overlap: None,
+                                border_fill_id: 0,
+                                baseline,
+                                field_marker: FieldMarkerType::None,
+                                layout_positions: None,
+                                display_text: None,
+                            }),
+                            BoundingBox::new(x + geometry.marker_dx_px, y, num_width, line_height),
+                        )
+                    };
                     line_node.children.push(num_node);
                 }
             }
