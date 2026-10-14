@@ -239,17 +239,17 @@ fn issue_1892_hwp3_tab_roundtrip_render_is_self_consistent() {
     assert_roundtrip_render_self_consistent(SAMPLE_TAB);
 }
 
-/// 자식의 원본 상대 오프셋은 상위 묶음 원점에 누적된다. 빈 묶음과
+/// 자식의 원본 상대 오프셋은 상위 묶음 원점에 누적된다. 중첩 묶음과
 /// Absolute 크기 기준을 보존하며 메타데이터 오프셋을 행렬에 두 번 더하지 않는다.
 #[test]
-fn issue_1892_group_roundtrip_preserves_source_offsets_and_empty_children() {
+fn issue_1892_group_roundtrip_preserves_source_offsets_and_group_hierarchy() {
     let doc_a = parse_document(&read_sample(SAMPLE_GROUP)).expect("원본 파싱");
     let doc_b = parse_document(&serialize_document(&doc_a).expect("저장")).expect("재파싱");
     fn verify(
         node: &ShapeObject,
         parent: (f64, f64),
         depth: u16,
-        empty: &mut usize,
+        nested: &mut usize,
         moved: &mut usize,
     ) {
         let attr = node.shape_attr();
@@ -271,40 +271,77 @@ fn issue_1892_group_roundtrip_preserves_source_offsets_and_empty_children() {
             *moved += 1;
         }
         if let ShapeObject::Group(group) = node {
-            if group.children.is_empty() {
-                *empty += 1;
+            if depth > 0 {
+                *nested += 1;
             }
             for child in &group.children {
-                verify(child, origin, depth + 1, empty, moved);
+                verify(child, origin, depth + 1, nested, moved);
             }
         }
     }
     fn groups(doc: &rhwp::model::document::Document) -> Vec<&ShapeObject> {
-        doc.sections
-            .iter()
-            .flat_map(|section| &section.paragraphs)
-            .flat_map(|para| &para.controls)
-            .filter_map(|control| match control {
-                Control::Shape(shape) if matches!(**shape, ShapeObject::Group(_)) => Some(&**shape),
-                _ => None,
-            })
-            .collect()
+        fn shape_text<'a>(shape: &'a ShapeObject, out: &mut Vec<&'a ShapeObject>) {
+            if let Some(drawing) = shape.drawing() {
+                paragraphs(&drawing.paragraphs, out);
+            }
+            if let ShapeObject::Group(group) = shape {
+                for child in &group.children {
+                    shape_text(child, out);
+                }
+            }
+        }
+        fn paragraphs<'a>(
+            source: &'a [rhwp::model::paragraph::Paragraph],
+            out: &mut Vec<&'a ShapeObject>,
+        ) {
+            for para in source {
+                for control in &para.controls {
+                    match control {
+                        Control::Shape(shape) => {
+                            if matches!(**shape, ShapeObject::Group(_)) {
+                                out.push(shape);
+                            }
+                            shape_text(shape, out);
+                        }
+                        Control::Table(table) => {
+                            for cell in &table.cells {
+                                paragraphs(&cell.paragraphs, out);
+                            }
+                            if let Some(caption) = &table.caption {
+                                paragraphs(&caption.paragraphs, out);
+                            }
+                        }
+                        Control::Header(header) => paragraphs(&header.paragraphs, out),
+                        Control::Footer(footer) => paragraphs(&footer.paragraphs, out),
+                        Control::Footnote(note) | Control::Endnote(note) => {
+                            paragraphs(&note.paragraphs, out)
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+        let mut out = Vec::new();
+        for section in &doc.sections {
+            paragraphs(&section.paragraphs, &mut out);
+        }
+        out
     }
     let original = groups(&doc_a);
     let saved = groups(&doc_b);
     assert!(!original.is_empty());
     assert_eq!(original.len(), saved.len(), "최상위 묶음 보존");
-    let mut total_empty = 0;
+    let mut total_nested = 0;
     for (a, b) in original.into_iter().zip(saved) {
-        let mut original_empty = 0;
-        let mut saved_empty = 0;
+        let mut original_nested = 0;
+        let mut saved_nested = 0;
         let mut original_moved = 0;
         let mut saved_moved = 0;
-        verify(a, (0.0, 0.0), 0, &mut original_empty, &mut original_moved);
-        verify(b, (0.0, 0.0), 0, &mut saved_empty, &mut saved_moved);
-        assert_eq!(original_empty, saved_empty, "빈 묶음 소유 보존");
+        verify(a, (0.0, 0.0), 0, &mut original_nested, &mut original_moved);
+        verify(b, (0.0, 0.0), 0, &mut saved_nested, &mut saved_moved);
+        assert_eq!(original_nested, saved_nested, "중첩 묶음 소유 보존");
         assert_eq!(original_moved, saved_moved, "비영 상대 오프셋 보존");
-        total_empty += original_empty;
+        total_nested += original_nested;
         assert_eq!(
             (a.common().width, a.common().height),
             (b.common().width, b.common().height),
@@ -316,7 +353,7 @@ fn issue_1892_group_roundtrip_preserves_source_offsets_and_empty_children() {
             "용지 퍼센트 크기로 바뀌지 않는다"
         );
     }
-    assert!(total_empty > 0, "빈 묶음이 있는 원본");
+    assert!(total_nested > 0, "중첩 묶음이 있는 원본");
 }
 
 /// IR 핀: tab_extended 없는 탭이 직렬화→재파스 후에도 tab_extended 를 만들지

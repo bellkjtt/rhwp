@@ -103,7 +103,11 @@ impl TypesetEngine {
                     column_origin + crate::renderer::hwpunit_to_px(position, self.dpi)
                 })
             })
-            .filter(|origin| (origin - anchor - spacing_before).abs() <= self.dpi / 7200.0);
+            .filter(|origin| (origin - anchor - spacing_before).abs() <= self.dpi / 7200.0)
+            // 단 중간의 같은 원본 줄은 앞 TAC가 소비한 문단 앞 간격을 소유한다.
+            // 전역 축이 닫혀 있어도 이 실제 호스트 위치를 선언 프레임과 대조한다.
+            // 단 맨 위의 앞 간격 수용은 별도 계약이므로 여기서 추정하지 않는다.
+            .or_else(|| (anchor > 0.0).then_some(anchor + spacing_before));
         if std::env::var("RHWP_TABLE_DRIFT").is_ok() {
             eprintln!(
                 "COANCHORED_FIRST_FRAME: pi={} ci={} anchor={:.3} flow={:.3} top={:.3}",
