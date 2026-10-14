@@ -13,6 +13,20 @@ impl TypesetEngine {
         page_def: &PageDef,
     ) {
         st.flush_column();
+        let blank_tail_spacing = (st.col_count == 1)
+            .then(|| {
+                let column = st.pages.last()?.column_contents.last()?;
+                crate::renderer::blank_band::stored_blank_tail_spacing(
+                    st.profile,
+                    &column.items,
+                    paragraphs,
+                    self.dpi,
+                )
+            })
+            .flatten()
+            .filter(|spacing| *spacing <= st.current_height)
+            .unwrap_or(0.0);
+        let closing_content_height = st.current_height - blank_tail_spacing;
 
         // [Task #874 Case 5] leaving zone 의 height 계산 시 마지막 라인의 trailing
         // line_spacing 을 제외한다. zone 간 gap 은 design_spacing/2 + solo_zone_pad 가
@@ -56,12 +70,12 @@ impl TypesetEngine {
                 // vs 실소비 867.4px — zone 두 개가 1657.3px 로 본문 876.9px 에 겹쳐
                 // 745.7px 이 쪽 밖으로 나갔다). 흐름 누적은 이 쪽에 실제로 놓인 양이므로
                 // 둘 중 큰 값이 이 쪽의 소비량이다.
-                max_vpos_px.max(st.current_height)
+                max_vpos_px.max(closing_content_height)
             } else {
-                st.current_height
+                closing_content_height
             }
         } else {
-            st.current_height
+            closing_content_height
         };
         // [Task #853] zone 전환 시 디자인 spacing(1단 ColumnDef 의 `간격`)을 세로 간격으로:
         // (이전 zone 디자인 spacing /2) + (새 zone 디자인 spacing /2) 를 더한다.

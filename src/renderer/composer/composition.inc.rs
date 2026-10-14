@@ -531,7 +531,10 @@ pub(crate) fn tac_successor_uses_reflow_spacing(
         && !profile.session_edited()
         && !para.stored_text_partition_is_dirty()
         && seg.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
-        && para.line_segs.last().is_some_and(|last| std::ptr::eq(last, seg))
+        && para
+            .line_segs
+            .last()
+            .is_some_and(|last| std::ptr::eq(last, seg))
         && next_para.is_some_and(|next| {
             next.controls.is_empty()
                 && !next.stored_text_partition_is_dirty()
@@ -583,7 +586,7 @@ pub(crate) fn tac_next_line_full_spacing(
                 && (next.line_segs.is_empty()
                     || next.line_segs.first().is_some_and(|first| {
                         (current_owned_row || first.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0)
-                            && stored_tac_successor_delta_hu(
+                            && (stored_tac_successor_delta_hu(
                                 para,
                                 seg,
                                 first,
@@ -598,6 +601,13 @@ pub(crate) fn tac_next_line_full_spacing(
                                     .and_then(|advance| advance.checked_add(next_spacing_before_hu))
                                     == Some(delta)
                             })
+                                || crate::renderer::float_placement::restarted_tac::restarted_tac_line_advance(
+                                    para,
+                                    next,
+                                    current_spacing_after_px,
+                                    next_spacing_before_px,
+                                    dpi,
+                                ).is_some())
                     }))
         })
 }

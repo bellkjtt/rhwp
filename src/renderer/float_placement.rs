@@ -1,6 +1,7 @@
 //! 부동 개체의 흐름 예약과 실제 배치가 함께 쓰는 프레임.
 
 mod column_ole;
+pub(crate) mod restarted_tac;
 mod stored_column_spacing;
 pub(crate) use column_ole::column_ole_placement;
 mod overlay_outer_frame;

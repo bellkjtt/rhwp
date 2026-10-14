@@ -205,6 +205,31 @@ impl TypesetEngine {
                             if !t.common.treat_as_char
                                 && matches!(t.common.text_wrap, crate::model::shape::TextWrap::TopAndBottom)
                                 && matches!(t.common.vert_rel_to, crate::model::shape::VertRelTo::Para))));
+                    let opening_tac_origin = (st.current_start_height == 0.0
+                        && !st.current_endnote_flow
+                        && !st.profile.session_edited()
+                        && (st.profile.hwp5_stored_pagination_layout()
+                            || st.profile.hwpx_stored_layout())
+                        && st.page_start_square_pictures.is_empty()
+                        && st.page_start_stored_frames.is_empty())
+                    .then(|| {
+                        crate::renderer::float_placement::restarted_tac::accepted_column_origin(
+                            &st.current_items,
+                            &st.inline_placements,
+                            paragraphs,
+                            styles,
+                            self.dpi,
+                        )
+                    })
+                    .flatten()
+                    .filter(|(owner, _)| *owner == para_idx);
+                    if let Some((_, origin)) = opening_tac_origin {
+                        // 옛 host vpos는 새 단에서 직전 본문 줄이 아니다.
+                        st.record_previous_layout_paragraph(None);
+                        st.record_vpos_page_origin(Some(origin));
+                        st.record_vpos_lazy_origin(None);
+                        st.record_stored_column_origin(Some((origin, 0.0)));
+                    }
                     if para_float_table {
                         st.seed_whole_table_column_origin(para_idx, paragraphs);
                     }
@@ -213,6 +238,7 @@ impl TypesetEngine {
                         && !resolved_stored_wrap_fragment
                         && !resolved_stored_page_frame
                         && !para_float_table
+                        && opening_tac_origin.is_none()
                     {
                         st.record_vpos_page_origin(None);
                         st.record_vpos_lazy_origin(None);

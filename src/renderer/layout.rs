@@ -6716,7 +6716,19 @@ impl LayoutEngine {
                 .unwrap_or(false);
             let apply_trailing_ls_subtract =
                 prev_zone_was_solo && !last_is_tac_band && !last_is_solo_text;
-            let last_para_trailing_ls = if apply_trailing_ls_subtract {
+            let blank_band_tail = (zone_layout.column_areas.len() == 1)
+                .then(|| {
+                    super::blank_band::stored_blank_tail_spacing(
+                        self.profile.get(),
+                        &col_content.items,
+                        paragraphs,
+                        self.dpi,
+                    )
+                })
+                .flatten();
+            let last_para_trailing_ls = if let Some(spacing) = blank_band_tail {
+                spacing
+            } else if apply_trailing_ls_subtract {
                 last_para
                     .and_then(|p| p.line_segs.last())
                     .map(|ls| hwpunit_to_px(ls.line_spacing, self.dpi))
@@ -7732,7 +7744,24 @@ impl LayoutEngine {
                         )
                     })
         );
-        let vpos_page_base_init: Option<i32> = col_content
+        let opening_tac_origin = (col_content.start_height == 0.0
+            && !col_content.endnote_flow
+            && !self.profile.get().session_edited()
+            && (self.profile.get().hwp5_stored_pagination_layout()
+                || self.profile.get().hwpx_stored_layout()))
+        .then(|| {
+            super::float_placement::restarted_tac::accepted_column_origin(
+                &col_content.items,
+                &col_content.inline_placements,
+                paragraphs,
+                styles,
+                self.dpi,
+            )
+        })
+        .flatten();
+        let vpos_page_base_init: Option<i32> = opening_tac_origin
+            .map(|(_, origin)| origin)
+            .or_else(|| col_content
             .items
             .first()
             .and_then(|item| {
@@ -7785,6 +7814,7 @@ impl LayoutEngine {
                     _ => None,
                 }
             })
+            )
             .map(|base| {
                 // 저장 HWP5의 새 쪽을 인라인 도형 제목이 열면 그 제목 자체의
                 // vpos(예: 1000HU)는 쪽 원점이 아니다. 도형은 자체 좌표로 그려지고
@@ -10310,10 +10340,20 @@ impl LayoutEngine {
                         )
                         .is_some()
                     });
+            let opening_tac_keeps_page_base = opening_tac_origin.is_some_and(|(owner, _)| {
+                matches!(item, PageItem::Table { para_index, .. } if *para_index == owner)
+            });
+            if let Some((_, origin)) = opening_tac_origin.filter(|_| opening_tac_keeps_page_base) {
+                hcursor.prev_layout_para = None;
+                hcursor.vpos_page_base = Some(origin);
+                hcursor.vpos_lazy_base = None;
+                hcursor.stored_column_origin = Some((origin, 0.0));
+            }
             if !heading_shape_keeps_page_base
                 && !stored_overlay_host_keeps_page_base
                 && !shape_keeps_host_line_base
                 && !resolved_stored_wrap_fragment
+                && !opening_tac_keeps_page_base
                 && (was_tac || (is_table_or_shape && !is_para_float_table && !is_inline_tac_object))
             {
                 hcursor.vpos_page_base = None;
