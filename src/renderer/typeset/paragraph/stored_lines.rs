@@ -136,6 +136,7 @@ pub(in crate::renderer::typeset) fn stored_page_boundary_invalidated_by_reflow(
                     && crate::renderer::typeset::stored_rewind_boundary_matches_current_flow(
                         paragraphs,
                         para_idx,
+                        current_items,
                         current_height_px,
                         dpi,
                     )

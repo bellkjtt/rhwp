@@ -2534,16 +2534,28 @@ fn stored_vpos_restarts_near_body_top(para: &Paragraph) -> bool {
 fn stored_rewind_boundary_matches_current_flow(
     paragraphs: &[Paragraph],
     para_idx: usize,
+    current_items: &[PageItem],
     current_height_px: f64,
     dpi: f64,
 ) -> bool {
-    let Some((stored_end_hu, advance_hu)) = paragraphs[..para_idx.min(paragraphs.len())]
+    let Some((owner, (stored_end_hu, advance_hu))) = paragraphs[..para_idx.min(paragraphs.len())]
         .iter()
+        .enumerate()
         .rev()
-        .find_map(paragraph::stored_lines::stored_tail_end_and_advance_hu)
+        .find_map(|(owner, para)| {
+            paragraph::stored_lines::stored_tail_end_and_advance_hu(para).map(|tail| (owner, tail))
+        })
     else {
         return false;
     };
+    // 이전 물리 쪽의 저장 끝과 현재 쪽의 재조판 끝은 숫자가 같아도 같은 경계가 아니다.
+    // 저장 끝을 제공한 실제 소유자가 현재 frame에서 소비됐는지 먼저 확인한다.
+    if !current_items
+        .iter()
+        .any(|item| page_item_para_index(item) == Some(owner))
+    {
+        return false;
+    }
     let stored_end_px = hwpunit_to_px(stored_end_hu, dpi);
     // 저장 줄과 실제 글꼴 측정의 차이가 한 줄보다 약간 커질 수 있다. #7333의
     // 38→39쪽 경계는 20.8px 차이로, 한 줄 공차 16px만으로는 실제 저장 쪽 경계를 놓쳤다.

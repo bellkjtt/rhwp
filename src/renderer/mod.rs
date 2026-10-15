@@ -2718,7 +2718,7 @@ pub fn base_family_without_weight_suffix(font_family: &str) -> Option<String> {
 ///
 /// 다만 이름을 그대로 넣는 것만으로는 Windows(DirectWrite/Chrome)에서 안 잡히는
 /// face 가 있다. 아래 중고딕 arm 의 주석을 볼 것.
-fn installed_render_font_aliases(font_family: &str) -> &'static [&'static str] {
+pub(crate) fn installed_render_font_aliases(font_family: &str) -> &'static [&'static str] {
     match font_family {
         // 공식 설치 글꼴의 한국어 이름과 영문 family 이름을 함께 조회한다.
         "굴림" => &["Gulim"],

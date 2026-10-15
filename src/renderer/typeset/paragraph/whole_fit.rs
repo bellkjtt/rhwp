@@ -209,6 +209,7 @@ pub(super) fn inspect(
         && stored_rewind_boundary_matches_current_flow(
             paragraphs,
             para_idx,
+            page.current_items,
             page_occupied_height,
             dpi,
         );

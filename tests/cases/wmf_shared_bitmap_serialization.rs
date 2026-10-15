@@ -9,7 +9,7 @@ fn record(function: u16, parameters: &[u8], output: &mut Vec<u8>) {
     output.extend_from_slice(parameters);
 }
 
-fn diagram(items: &[(i16, i16, [u8; 3])]) -> String {
+fn header() -> Vec<u8> {
     // WMF placeable header와 표준 메타파일 헤더. 좌표는 화면 핀이 아닌 생성 입력의 계약이다.
     let mut bytes = 0x9AC6_CDD7u32.to_le_bytes().to_vec();
     bytes.extend_from_slice(&0u16.to_le_bytes());
@@ -26,6 +26,11 @@ fn diagram(items: &[(i16, i16, [u8; 3])]) -> String {
     bytes.extend_from_slice(&4u16.to_le_bytes());
     bytes.extend_from_slice(&0u32.to_le_bytes());
     bytes.extend_from_slice(&0u16.to_le_bytes());
+    bytes
+}
+
+fn diagram(items: &[(i16, i16, [u8; 3])]) -> String {
+    let mut bytes = header();
     let pair = [100i16.to_le_bytes(), 100i16.to_le_bytes()].concat();
     record(0x020C, &pair, &mut bytes);
     // 같은 clip을 가진 두 그림도 각각의 표시 위치와 순서를 보존한다.
@@ -145,4 +150,57 @@ fn wmf_png_serialization_keeps_distinct_size_and_bitmap_payloads() {
         3
     );
     assert!(!doc.descendants().any(|n| n.has_tag_name("use")));
+}
+
+
+fn font_diagram(face: &[u8], charset: u8) -> String {
+    let mut bytes = header();
+    let mut font = Vec::new();
+    for value in [-12i16, 0, 0, 0, 400] {
+        font.extend_from_slice(&value.to_le_bytes());
+    }
+    font.extend_from_slice(&[0, 0, 0, charset, 0, 0, 0, 0]);
+    let mut name = [0; 32];
+    name[..face.len()].copy_from_slice(face);
+    font.extend_from_slice(&name);
+    record(0x02FB, &font, &mut bytes);
+    record(0x012D, &0u16.to_le_bytes(), &mut bytes);
+    let mut text = 3u16.to_le_bytes().to_vec();
+    text.extend_from_slice(b"ABC\0");
+    for value in [20i16, 10] {
+        text.extend_from_slice(&value.to_le_bytes());
+    }
+    record(0x0521, &text, &mut bytes);
+    record(0, &[], &mut bytes);
+    String::from_utf8(
+        WMFConverter::new(bytes.as_slice(), SVGPlayer::new())
+            .run()
+            .unwrap(),
+    )
+    .unwrap()
+}
+
+#[test]
+fn wmf_korean_font_keeps_installed_family_before_generic_fallback() {
+    // 굴림체의 CP949 이름과 설치 글꼴의 영문 family는 같은 face의 이름이다.
+    let svg = font_diagram(&[0xB1, 0xBC, 0xB8, 0xB2, 0xC3, 0xBC], 129);
+    let doc = roxmltree::Document::parse(&svg).unwrap();
+    let text = doc.descendants().find(|n| n.has_tag_name("text")).unwrap();
+    let families: Vec<_> = text.attribute("font-family").unwrap().split(',').collect();
+    let original = families.iter().position(|f| *f == "'굴림체'").unwrap();
+    let installed = families.iter().position(|f| *f == "'GulimChe'").unwrap();
+    let fallback = families.iter().position(|f| *f == "'Malgun Gothic'").unwrap();
+    assert!(original < installed && installed < fallback);
+    assert_eq!(text.text(), Some("ABC"));
+    assert_eq!(text.attribute("font-size"), Some("12"));
+    assert_eq!(text.attribute("font-weight"), Some("400"));
+}
+
+#[test]
+fn wmf_font_without_alias_keeps_its_original_family_and_text() {
+    let svg = font_diagram(b"Arial", 0);
+    let doc = roxmltree::Document::parse(&svg).unwrap();
+    let text = doc.descendants().find(|n| n.has_tag_name("text")).unwrap();
+    assert_eq!(text.attribute("font-family"), Some("'Arial'"));
+    assert_eq!(text.text(), Some("ABC"));
 }
