@@ -21,6 +21,7 @@ use super::font_lookup::{
     SystemFontFamilies,
 };
 use super::renderer::colorref_to_skia;
+use super::synthetic_typeface::unemboldened_typeface;
 
 pub(super) struct SkiaTextReplay<'a> {
     pub(super) canvas: &'a Canvas,
@@ -686,10 +687,12 @@ impl SkiaTextReplay<'_> {
                         if let Some(mut font) = font_for_text(cluster, font_size) {
                             // 독립 Print의 regular 프로그램 합성 굵기는 같은 윤곽선의
                             // fill+stroke(0.02em)다. 실제 bold face와 outline pass는 보존한다.
-                            let synthetic_bold = style.bold
-                                && *font.typeface().font_style().weight() < 600
-                                && stroke_width == 0.0;
-                            let bold_paint = synthetic_bold.then(|| {
+                            let regular = (style.bold && stroke_width == 0.0)
+                                .then(|| unemboldened_typeface(self.font_mgr, &font.typeface()))
+                                .flatten();
+                            let synthetic_bold = regular.is_some();
+                            let bold_paint = regular.map(|typeface| {
+                                font.set_typeface(typeface);
                                 font.set_embolden(false);
                                 let mut paint = text_paint.clone();
                                 paint.set_style(paint::Style::StrokeAndFill);
