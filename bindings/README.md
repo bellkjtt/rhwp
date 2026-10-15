@@ -251,3 +251,12 @@ P61의 텍스트 편집·clipboard는 전체 대상 문단에 floating object나
 `autosave(directory)`는 revision/시간 간격을 확인하여 별도 recovery artifact를 쓰고 save token은 취소하므로 원본과 dirty를 유지합니다. `read_recovery(path)`로 길이·버전·digest를 검증한 바이트를 읽어 별도 문서로 열 수 있습니다. 문서 128 MiB, recovery JSON header 64 KiB로 제한합니다. recovery 삭제·목록·사용자 확인 정책은 앱에서 결정합니다.
 
 `PublicationError`의 `published=True`와 `path`는 완성된 파일을 게시한 뒤 directory flush/정리/ack 등이 실패했음을 뜻합니다. 게시된 파일을 삭제하거나 저장 성공으로 표시하지 않고 확인해야 합니다. 외부 변경 검사는 다른 프로세스와의 원자적 compare-and-swap이 아니므로 앱 내부 저장을 직렬화해야 하며 Windows directory durability와 네트워크 파일시스템 보장은 별도 검증 대상입니다.
+
+
+### Native 접근성 snapshot (P64)
+
+session의 `accessibility` 요청은 `request:{}`를 기본으로 본문·표 셀 문단의 구조 순서 텍스트와 scalar 주소를 반환합니다. `selection`을 명시하면 조회에만 사용하고, 생략/null이면 editor의 현재 선택을 사용합니다. worker는 `accessibility {target,request}`를 받아 현재 선택의 snapshot을 `kind:"accessibility"`로 반환하며 revision을 검사합니다. capability는 `accessibilitySnapshots:true`입니다.
+
+요청은 최대 1000 nodes/UTF-8 text 1 MiB/깊이 32/방문 10000개로 제한합니다. `geometry:true`는 기존 core caret/selection query를 사용하며 최대 128 query/256 selection rect와 개별 문단 64 KiB 등 추가 상한을 적용합니다. `complete`, `truncated`, `limitations`를 확인해야 합니다. 노드 key는 revision+주소로 구성되며 revision 사이 identity를 보장하지 않습니다. worker는 완료를 읽을 때까지 snapshot에 8 MiB byte credit을 예약하며 이는 layout/Skia 전체 RSS 상한이 아닙니다.
+
+`native_scalar_to_utf16`/`native_utf16_to_scalar`는 OS adapter offset 변환을 지원하고 surrogate 내부 주소는 거절합니다. 이 API는 OS 접근성 등록이나 screen reader 지원의 증거가 아닙니다. header/footer·notes·shape text·읽기 순서 추론과 OS adapter 연결은 후속입니다.
