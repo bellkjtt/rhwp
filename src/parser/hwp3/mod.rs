@@ -1732,9 +1732,7 @@ fn parse_hwp3_object_dispatch(
         }
 
         if obj_type == 2 {
-            let baseline_1800dpi = (&info_buf[76..78])
-                .read_u16::<LittleEndian>()
-                .unwrap_or(0);
+            let baseline_1800dpi = (&info_buf[76..78]).read_u16::<LittleEndian>().unwrap_or(0);
             **parsed_equation = Some(equation::from_box(table, baseline_1800dpi));
         } else {
             **parsed_table = Some(table);
