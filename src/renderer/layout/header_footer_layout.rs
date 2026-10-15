@@ -25,6 +25,7 @@ impl LayoutEngine {
         // 머리말·꼬리말의 문단 장식은 본문/부모 셀의 수집 큐와 다른 소유다.
         let parent_border_ranges = std::mem::take(&mut *self.para_border_ranges.borrow_mut());
         let parent_border_override = self.border_box_override.replace(None);
+        let paragraph_background_index = area_node.children.len();
         // [#6186] 머리말/꼬리말 subList 의 `vertAlign`(HWPX) = LIST_HEADER list_attr
         // 비트 21~22 (0=TOP, 1=CENTER, 2=BOTTOM). 파서는 이미 값을 싣는데
         // 레이아웃이 읽지 않아 늘 밴드 맨 위에 놓였다 — 156755659 는 BOTTOM 이라
@@ -413,7 +414,15 @@ impl LayoutEngine {
                 range.9 = index;
             }
         }
-        self.render_para_border_groups(tree, &local_composed, area_node, styles, area);
+        self.render_para_border_groups(
+            tree,
+            &local_composed,
+            area_node,
+            styles,
+            area,
+            bin_data_content,
+            paragraph_background_index,
+        );
         *self.para_border_ranges.borrow_mut() = parent_border_ranges;
         self.border_box_override.set(parent_border_override);
     }
