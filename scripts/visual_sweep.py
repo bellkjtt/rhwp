@@ -67,6 +67,8 @@ FRAME_OVERFLOW_TOLERATED_BLEED_PX = 12
 FRAME_BOTTOM_GLYPH_BLEED_TOLERANCE_PX = 6
 FRAME_INTERIOR_DECORATION_MIN_BOTTOM_MARGIN_PX = 16
 DEFAULT_RHWP_BIN = "target/pr-review/debug/rhwp"
+# 명령과 provenance는 같은 기본 정책으로 PDF의 실제 채우기를 보존한다.
+PDF_THIN_LINE_MODE = "none"
 # 가운데 정렬 미주 구분선은 Chrome 페이지 래스터 폭의 거의 절반을 차지할 수 있다.
 # 페이지 경계선이 아니므로 더 엄격한 선 길이 기준은
 # 아래쪽 테두리 선을 선택할 때만 적용한다.
@@ -270,14 +272,13 @@ def raster_paths_for_selected_pages(
 def pdf_raster_commands(
     pdf: Path, dpi: int, pdf_prefix: Path, selected_pages: list[int] | None
 ) -> list[list[str]]:
-    """선 너비에 비례한 coverage를 보존하며 요청한 PDF 쪽을 래스터화한다.
+    """얇은 선 보정을 끄고 원본 PDF의 채우기를 보존해 요청 쪽을 래스터화한다.
 
-    1px보다 얇은 회색 선을 한 픽셀 전체 농도로 그리면 같은 SVG 선이
-    이진화 경계 반대편에 놓인다. shape는 원래 선 너비에 비례해 그리며
-    비교 임계값이나 원본 PDF/SVG의 두께·색상은 바꾸지 않는다.
+    shape/solid는 한컴 Print의 그라데이션 채우기를 지울 수 있다.
+    문서별 예외 없이 기본 none을 사용하며 비교 임계값·공차는 바꾸지 않는다.
     """
     if not selected_pages:
-        return [["pdftoppm", "-r", str(dpi), "-thinlinemode", "shape", "-png", str(pdf), str(pdf_prefix)]]
+        return [["pdftoppm", "-r", str(dpi), "-thinlinemode", PDF_THIN_LINE_MODE, "-png", str(pdf), str(pdf_prefix)]]
     return [
         [
             "pdftoppm",
@@ -288,7 +289,7 @@ def pdf_raster_commands(
             "-r",
             str(dpi),
             "-thinlinemode",
-            "shape",
+            PDF_THIN_LINE_MODE,
             "-png",
             str(pdf),
             str(pdf_prefix),
@@ -585,7 +586,7 @@ def sweep_provenance(
         },
         "image_decoding": image_decoding_provenance(),
         "svg_rasterizer": svg_rasterizer,
-        "pdf_rasterizer": {"program": "pdftoppm", "thin_line_mode": "shape"},
+        "pdf_rasterizer": {"program": "pdftoppm", "thin_line_mode": PDF_THIN_LINE_MODE},
         "comparison_profile": "print",
         "rhwp_binary": rhwp_binary_identifier(root, rhwp_bin),
     }
