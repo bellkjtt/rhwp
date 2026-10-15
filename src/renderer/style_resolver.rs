@@ -333,7 +333,9 @@ fn resolve_single_char_style(cs: &CharShape, doc_info: &DocInfo, dpi: f64) -> Re
                             .requested_face
                             .as_deref()
                             .filter(|face| has_own_metric_table(face, cs.bold, cs.italic))
-                            .filter(|face| decision.alt_type == Some(2) || !hft_program_metric_face(face))
+                            .filter(|face| {
+                                decision.alt_type == Some(2) || !hft_program_metric_face(face)
+                            })
                     })
                     .flatten()
                     .map(str::to_string)

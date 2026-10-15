@@ -616,10 +616,12 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                 // 묶어 잰다.
                 let cluster_end = hangul_jamo_cluster_end(text_chars, i);
                 let cluster: String = text_chars[i..cluster_end].iter().collect();
-                let mut w = estimate_text_width_unrounded(&super::one_to_one_pua_replay_text(&cluster), &ts)
-                    + (i..cluster_end)
-                        .map(|idx| inline_width_px_at(inline_controls, idx, styles))
-                        .sum::<f64>();
+                let mut w = estimate_text_width_unrounded(
+                    &super::one_to_one_pua_replay_text(&cluster),
+                    &ts,
+                ) + (i..cluster_end)
+                    .map(|idx| inline_width_px_at(inline_controls, idx, styles))
+                    .sum::<f64>();
                 // 글자 모드에서도 **줄 머리 금칙**을 지킨다.
                 //
                 // 어절 모드(위 분기)만 후행 금칙 문자를 앞 토큰에 흡수하고 있어, 글자 모드
@@ -932,7 +934,7 @@ fn measure_token_char_widths(
         total += width;
         char_widths.push(width);
         for tail in offset + 1..cluster_end {
-            let tail_width = inline_width_px_at(inline_controls, start_char_idx + tail);
+            let tail_width = inline_width_px_at(inline_controls, start_char_idx + tail, styles);
             total += tail_width;
             char_widths.push(tail_width);
         }
@@ -1489,7 +1491,7 @@ fn resolved_letter_spacing_px(
     styles: &ResolvedStyleSet,
 ) -> Vec<f64> {
     let mut lang = 0usize;
-    let metric_scope = ParagraphMetricScope::new(text_chars, styles).with_reflow_slots(text_chars);
+    let metric_scope = ParagraphMetricScope::new(text_chars, styles);
     text_chars
         .iter()
         .enumerate()
@@ -1498,9 +1500,8 @@ fn resolved_letter_spacing_px(
             let style_id = find_active_char_shape(char_shapes, utf16_pos);
             // [#7418] 영문 슬롯으로 재는 구두점은 자간도 영문 슬롯 값이다(`char_width_decision`).
             let char_lang = char_lang_slot(*ch, &mut lang, punct_latin_slot(styles, style_id));
-            let metric_lang = metric_scope.scalar_slot(styles, style_id, char_lang, idx);
             // 자간이 없는 대부분의 문자에서는 스타일 복제와 재측정을 피한다.
-            if resolved_letter_spacing(styles, style_id, metric_lang) == 0.0 {
+            if resolved_letter_spacing(styles, style_id, char_lang) == 0.0 {
                 return 0.0;
             }
             let style = metric_scope.style(styles, style_id, char_lang, idx);

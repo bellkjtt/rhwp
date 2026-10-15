@@ -656,13 +656,15 @@ pub(crate) fn split_runs_by_lang(runs: Vec<ComposedTextRun>) -> Vec<ComposedText
 /// `76076` 한컴 2024 PDF의 가운뎃점·작은따옴표도 Palatino Linotype 슬롯이다.
 /// 한글 face 자체의 가운뎃점 폭과 HFT 한점 리더는 이 슬롯 조건 밖이다.
 pub(crate) fn is_latin_slot_punct(ch: char) -> bool {
-    ch.is_ascii_punctuation() || matches!(ch, '\u{00B7}' | '\u{2018}' | '\u{2019}')
+    ch.is_ascii_punctuation()
 }
 
 /// Newly composed neutral punctuation shares one explicit slot between width and paint.
 /// Stored runs retain their own inherited face; ASCII keeps its existing metric rule.
 pub(crate) fn reflow_punctuation_slot(ch: char, inherited: usize, punct_latin: bool) -> usize {
-    if punct_latin && !ch.is_ascii() && is_latin_slot_punct(ch) {
+    if crate::renderer::style_resolver::is_latin_slot_symbol(ch)
+        || (punct_latin && !ch.is_ascii() && is_latin_slot_punct(ch))
+    {
         1
     } else {
         inherited
@@ -693,7 +695,7 @@ pub(crate) fn is_lang_neutral(ch: char) -> bool {
         // ASCII 구두점/기호 (영문자/숫자 제외)
         0x0021..=0x002F | 0x003A..=0x0040 | 0x005B..=0x0060 | 0x007B..=0x007F |
         // Latin-1 Supplement 구두점 (문자 제외)
-        0x00A0..=0x00BF
+        0x00A0..=0x00AF | 0x00B1..=0x00B6 | 0x00B8..=0x00BF
     )
 }
 

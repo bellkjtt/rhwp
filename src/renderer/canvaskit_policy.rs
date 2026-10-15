@@ -2328,6 +2328,7 @@ fn image_has_replayable_payload(
 fn resolved_image_kind_detail(value: ResolvedImageKind) -> &'static str {
     match value {
         ResolvedImageKind::FormatConverted => "formatConverted",
+        ResolvedImageKind::OutputDevice => "outputDevice",
         ResolvedImageKind::BakedWatermark => "bakedWatermark",
     }
 }

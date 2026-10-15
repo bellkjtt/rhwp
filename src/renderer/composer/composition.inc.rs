@@ -360,6 +360,7 @@ fn compose_paragraph_scoped(
             para.tab_extended.clone()
         },
         horizontal_shaping: None,
+        frame_geometry: None,
     };
 
     if let Some(styles) = metric_styles {
@@ -380,6 +381,7 @@ fn compose_paragraph_scoped(
         supplemental_clusters::preserve_boundaries(&mut composed, &para.text, metric_styles);
     }
 
+    mapped_symbol_fonts::split_mapped_symbol_font_runs(&mut composed);
     resolved_fields::apply(para, &mut composed);
 
     composed

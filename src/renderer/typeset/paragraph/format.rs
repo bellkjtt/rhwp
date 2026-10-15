@@ -108,7 +108,9 @@ pub(in crate::renderer::typeset) fn format_paragraph_for_flow(
         let authored_line_segs = para.line_segs.iter().all(|seg| {
             seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY == 0
         });
-        let vpos_metric = if recomposed.is_none() && para.controls.is_empty() && authored_line_segs
+        let vpos_metric = if recomposed.is_none()
+            && para.controls.is_empty()
+            && authored_line_segs
             && !crate::renderer::para_has_no_stored_line_segs(para)
         {
             para.line_segs

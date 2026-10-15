@@ -6,8 +6,8 @@ use crate::renderer::typeset::notes::endnotes::profile::{
 use crate::renderer::typeset::{
     compose_paragraph, endnote_first_local_paras, first_text_line, hwpunit_to_px,
     page_item_para_index, para_has_treat_as_char_picture_or_shape, paragraph_by_global_index,
-    ComposedParagraph, HeightCursor, MeasuredTable, PageItem, Paragraph, ResolvedStyleSet, TypesetEngine,
-    TypesetState,
+    ComposedParagraph, HeightCursor, MeasuredTable, PageItem, Paragraph, ResolvedStyleSet,
+    TypesetEngine, TypesetState,
 };
 
 /// 같은 단 배치에서 생산한 흐름 예약 끝과 실제 줄·내용의 점유 끝이다.

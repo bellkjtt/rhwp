@@ -773,5 +773,6 @@ pub(crate) fn recompose_stored_lines_in_frame(
         float_carve_evidence,
         false,
         false,
+        false,
     )
 }

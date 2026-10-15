@@ -6940,18 +6940,6 @@ impl LayoutEngine {
                     .map(|(pos, _, _)| *pos)
                     .max(),
             );
-            let first_inline_object = line_tac_offsets_for_width
-                .iter()
-                .map(|(position, _, _)| *position)
-                .chain(
-                    composed
-                        .footnote_positions
-                        .iter()
-                        .map(|(position, _, _)| *position)
-                        .filter(|position| *position >= comp_line.char_start),
-                )
-                .min();
-            let leading_spaces = LeadingSpaces::new(comp_line, first_inline_object);
             let (extra_word_sp, extra_char_sp, extra_dash_sp) = if is_hancom_company_pua_logo_line {
                 // 이 줄의 trailing space는 뒤의 treat-as-char logo 그림 앞 공백이다.
                 // 회사명 자체에는 자간을 추가하지 않고 이 공백 하나가 남는 폭을 전부
@@ -6972,7 +6960,7 @@ impl LayoutEngine {
             } else {
                 compute_line_extra_spacing(
                     comp_line,
-                    leading_spaces.total,
+                    leading_space_plan.leading_spaces,
                     trailing_space_limit,
                     &leading_space_plan,
                     terminal_tracking_for_alignment(
@@ -7314,15 +7302,18 @@ impl LayoutEngine {
             let mut shape_marker_inserted = vec![false; shape_markers.len()];
             // cross-run 탭 감지용 inline_tabs(composed.tab_extended) 커서 — Task #290
             let mut inline_tab_cursor_render = stored_tab_index_before_line(composed, comp_line);
+            // 측정에 사용한 줄과 같은 run 분할로 선두 공백의 소유를 재생한다.
+            let emit_line = if extra_word_sp == 0.0 && extra_char_sp == 0.0 {
+                comp_line
+            } else {
+                leading_space_plan.line.as_ref()
+            };
+            let leading_spaces = LeadingSpaces::new(emit_line, first_inline_pos);
             let emit_state = self.emit_line_runs(
                 tree,
                 &mut line_node,
                 col_node,
-                if extra_word_sp == 0.0 && extra_char_sp == 0.0 {
-                    comp_line
-                } else {
-                    leading_space_plan.line.as_ref()
-                },
+                emit_line,
                 composed,
                 para,
                 bin_data_content,
@@ -7997,20 +7988,15 @@ impl LayoutEngine {
                 y_start,
                 first_line_box_top.unwrap_or(y_start),
                 last_line_box_bottom.unwrap_or(y),
-                if cell_ctx.is_none()
-                    && !crate::renderer::paragraph_outline_reserves_line_spacing(
-                        para_border_fill_id,
-                        styles,
-                    )
-                {
-                    last_line_border_bottom
-                        .or(last_line_box_bottom)
-                        .unwrap_or(y)
-                } else {
-                    last_line_border_bottom
-                        .unwrap_or(y)
-                        .max(paragraph_flow_bottom)
-                },
+                // 채움 여부가 아니라 ignoreMargin이 실제 줄과 문단 흐름 범위를 정한다.
+                last_line_border_bottom
+                    .or(last_line_box_bottom)
+                    .unwrap_or(y)
+                    .max(if cell_ctx.is_none() {
+                        paragraph_flow_bottom
+                    } else {
+                        y
+                    }),
                 self.border_box_override.get(),
             );
             if border_box.height > 0.0 && border_box.width > 0.0 {

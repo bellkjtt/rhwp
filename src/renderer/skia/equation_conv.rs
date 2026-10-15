@@ -1,5 +1,7 @@
+use skia_safe::{
+    font, paint, Canvas, Color, Font, FontMgr, FontStyle, Paint, PathBuilder, Typeface,
+};
 use std::collections::HashMap;
-use skia_safe::{font, paint, Canvas, Color, Font, FontMgr, FontStyle, Paint, PathBuilder, Typeface};
 
 use super::font_catalog::TypefaceCatalog;
 use super::font_lookup::{
