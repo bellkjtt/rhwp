@@ -92,3 +92,16 @@ scratch N32와 출력 RGBA의 합계는 128 MiB 이하다. 초과하면 할당 �
 따라서 큰 페이지의 작은 영역도 scratch 상한 때문에 거절될 수 있다. 전체 페이지와 겹치지 않는
 요청은 scratch 없이 배경색만 반환하지만, 먼저 geometry·출력 한도를 검증하고 출력 바이트에도
 128 MiB 상한을 적용한다. 화면 밖 subtree의 replay 생략이나 GPU 렌더링은 하지 않는다.
+
+## 폰트와 frame 유효성 (P53)
+
+`setFonts`는 `paths`의 TTF/OTF/TTC 파일과 선택적 `environment` 선언을 함께 교체한다.
+파일당 32 MiB, 입력 합계·보관 복사본 각각 64 MiB, 256파일/collection당 64 face로 제한한다.
+검증한 바이트를 직접 renderer에 전달하고 실패하면 이전 설정을 보존한다. 경로가 달라도 같은
+바이트·순서·선언이면 no-op이다. `fontState`는 내용 fingerprint와 공급 source metadata를 반환한다.
+이는 시스템 fallback 설치·실제 글리프 coverage를 증명하지 않는다.
+
+frame의 `revision`과 `fontGeneration`을 함께 보관하고 `isFrameCurrent`에 전달해 폐기 여부를 판단한다.
+폰트 변경은 문서 revision을 올리지 않고 fontGeneration을 올린다. `clearCaches`는 보관한 Skia
+리소스와 통계를 비우며 `cacheStats`는 picture/glyph/image별 사용량을 반환한다. 각 cache는
+64항목/8 MiB 한도이며 전체 process 메모리 상한은 아니다.
