@@ -5198,16 +5198,16 @@ export class CanvasKitLayerRenderer {
     paint: SkPaint,
     draw: () => void,
   ): void {
-    const patterns: Partial<Record<LayerStrokeDash, number[]>> = {
+    const patterns: Partial<Record<Exclude<LayerStrokeDash, number[]>, number[]>> = {
       dash: [6, 3], dot: [2, 2], dashDot: [6, 3, 2, 3], dashDotDot: [6, 3, 2, 3, 2, 3],
       hwpDash: [7.5, 4.5], hwpDot: [1.5, 2.25], hwpDashDot: [15, 4.5, 1.5, 4.5],
       hwpDashDotDot: [15, 4.5, 1.5, 4.5, 1.5, 4.5], hwpLongDash: [15, 4.5], hwpCircle: [0, 2.25],
     };
     // 도형 스타일은 96dpi 좌표이며 pen 외곽은 한컴 Print의 600dpi 물리 단위다.
-    const hwpPattern = dash?.startsWith('hwp') ?? false;
+    const hwpPattern = typeof dash === 'string' && dash.startsWith('hwp');
     const outline = 96 / 600;
     const scale = hwpPattern ? Math.max(paint.getStrokeWidth() - outline, outline) : 1;
-    const intervals = dash === undefined || dash === 'solid'
+    const intervals = Array.isArray(dash) ? dash : dash === undefined || dash === 'solid'
       ? null
       : patterns[dash]?.map((value, index) => {
         const edge = hwpPattern && dash !== 'hwpCircle' ? (index % 2 === 0 ? outline : -outline) : 0;

@@ -1061,7 +1061,7 @@ pub(crate) fn create_border_line_nodes(
 
         // 단일선 타입들
         _ => {
-            if let Some(dash) = border_line_type_to_dash(border.line_type) {
+            if let Some(dash) = border_line_type_to_dash(border.line_type, border.width) {
                 create_single_line(tree, border.color, base_width, dash, x1, y1, x2, y2)
             } else {
                 vec![]
@@ -1315,7 +1315,7 @@ fn create_diagonal_line_nodes(
             )
         }
         _ => {
-            if let Some(dash) = border_line_type_to_dash(line_type) {
+            if let Some(dash) = border_line_type_to_dash(line_type, width_index) {
                 create_single_line(tree, color, base_width, dash, x1, y1, x2, y2)
             } else {
                 vec![]
@@ -1429,7 +1429,10 @@ pub(crate) fn border_width_to_px(width: u8) -> f64 {
 }
 
 /// BorderLineType → StrokeDash 변환 (None이면 None 반환)
-fn border_line_type_to_dash(lt: BorderLineType) -> Option<StrokeDash> {
+fn border_line_type_to_dash(lt: BorderLineType, width: u8) -> Option<StrokeDash> {
+    if let Some(dash) = crate::renderer::stroke_pattern::border_dash(lt, width) {
+        return Some(dash);
+    }
     match lt {
         BorderLineType::None => None,
         BorderLineType::Solid => Some(StrokeDash::Solid),

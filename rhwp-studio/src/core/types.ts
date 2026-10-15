@@ -1260,7 +1260,8 @@ export interface LayerFootnoteMarkerOp {
 }
 
 export type LayerStrokeDash = 'solid' | 'dash' | 'dot' | 'dashDot' | 'dashDotDot'
-  | 'hwpDash' | 'hwpDot' | 'hwpDashDot' | 'hwpDashDotDot' | 'hwpLongDash' | 'hwpCircle';
+  | 'hwpDash' | 'hwpDot' | 'hwpDashDot' | 'hwpDashDotDot' | 'hwpLongDash' | 'hwpCircle'
+  | number[];
 
 export interface LayerShadowStyle {
   shadowType?: number;

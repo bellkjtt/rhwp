@@ -1140,7 +1140,7 @@ impl SkiaLayerRenderer {
         let apply_dash = |paint: &mut Paint, dash: StrokeDash| {
             let mut intervals = dash.intervals(f64::from(paint.stroke_width()));
             // 기존 범용 Skia 패턴은 종전 선 굵기 배율을 유지한다.
-            if !dash.is_hwp_pattern() {
+            if !dash.is_absolute_pattern() {
                 for value in &mut intervals {
                     *value *= f64::from(paint.stroke_width().max(1.0));
                 }

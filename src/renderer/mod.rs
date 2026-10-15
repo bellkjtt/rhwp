@@ -1003,6 +1003,8 @@ pub enum StrokeDash {
     HwpDashDotDot,
     HwpLongDash,
     HwpCircle,
+    /// 생산 단계에서 확정한 출력 좌표의 반복 구간. 끝의 0은 미사용 구간이다.
+    Explicit([f64; 6]),
 }
 
 /// 선 렌더링 종류 (이중선/삼중선)

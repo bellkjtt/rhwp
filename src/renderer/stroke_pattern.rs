@@ -2,6 +2,9 @@
 
 use super::StrokeDash;
 
+mod border;
+pub(crate) use border::border_dash;
+
 // 독립 한컴 Print의 pen 해상도. HWPUNIT에서 반올림한 뒤 출력 좌표로 변환한다.
 const HANCOM_PRINT_PEN_DPI: f64 = 600.0;
 const STYLE_DPI: f64 = 96.0;
@@ -20,6 +23,10 @@ pub(crate) fn shape_pen_width_to_px(width_hu: i32, line_type: u8) -> f64 {
 }
 
 impl StrokeDash {
+    pub(crate) fn is_absolute_pattern(self) -> bool {
+        self.is_hwp_pattern() || matches!(self, Self::Explicit(_))
+    }
+
     pub(crate) fn is_hwp_pattern(self) -> bool {
         matches!(
             self,
@@ -38,7 +45,14 @@ impl StrokeDash {
 
     /// 기존 범용 선은 종전 구간을 유지한다. 한컴 도형은 선 굵기의 배수다.
     pub(crate) fn intervals(self, width: f64) -> Vec<f64> {
+        if let Self::Explicit(values) = self {
+            return values
+                .into_iter()
+                .take_while(|value| *value > 0.0)
+                .collect();
+        }
         let values: &[f64] = match self {
+            Self::Explicit(_) => unreachable!(),
             Self::Solid => &[],
             Self::Dash => &[6.0, 3.0],
             Self::Dot => &[2.0, 2.0],
@@ -77,7 +91,7 @@ impl StrokeDash {
     }
 
     pub(crate) fn canvas_width(self, width: f64) -> f64 {
-        if self.is_hwp_pattern() && width > 0.0 {
+        if self.is_absolute_pattern() && width > 0.0 {
             width
         } else {
             width.max(0.5)

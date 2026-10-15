@@ -2838,7 +2838,7 @@ fn write_shape_style(buf: &mut String, style: &ShapeStyle) {
         buf,
         ",\"strokeWidth\":{:.3},\"strokeDash\":{},\"opacity\":{:.3}",
         style.stroke_width,
-        json_escape(stroke_dash_str(style.stroke_dash)),
+        stroke_dash_json(style.stroke_dash),
         style.opacity,
     );
     if let Some(shadow) = &style.shadow {
@@ -2901,7 +2901,7 @@ fn write_line_style(buf: &mut String, style: &LineStyle) {
         "{{\"color\":{},\"width\":{:.3},\"dash\":{},\"lineType\":{},\"startArrow\":{},\"endArrow\":{},\"startArrowSize\":{},\"endArrowSize\":{}",
         json_escape(&color_ref_to_css(style.color)),
         style.width,
-        json_escape(stroke_dash_str(style.dash)),
+        stroke_dash_json(style.dash),
         json_escape(line_render_type_str(style.line_type)),
         json_escape(arrow_style_str(style.start_arrow)),
         json_escape(arrow_style_str(style.end_arrow)),
@@ -3349,8 +3349,12 @@ fn underline_type_str(value: UnderlineType) -> &'static str {
     }
 }
 
-fn stroke_dash_str(value: StrokeDash) -> &'static str {
-    match value {
+fn stroke_dash_json(value: StrokeDash) -> String {
+    let name = match value {
+        StrokeDash::Explicit(_) => {
+            return serde_json::to_string(&value.intervals(0.0))
+                .expect("확정한 선 반복 구간은 유한한 양수다");
+        }
         StrokeDash::Solid => "solid",
         StrokeDash::Dash => "dash",
         StrokeDash::Dot => "dot",
@@ -3362,7 +3366,8 @@ fn stroke_dash_str(value: StrokeDash) -> &'static str {
         StrokeDash::HwpDashDotDot => "hwpDashDotDot",
         StrokeDash::HwpLongDash => "hwpLongDash",
         StrokeDash::HwpCircle => "hwpCircle",
-    }
+    };
+    json_escape(name)
 }
 
 fn line_render_type_str(value: LineRenderType) -> &'static str {
