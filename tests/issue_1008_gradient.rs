@@ -101,8 +101,8 @@ fn hwpx_sample16_business_box_gradient_colors_materialized() {
     );
 }
 
-/// 격차 C: HWP3 heading decoration ("═══■ 1.추진목적 ■═══") strip 회귀 가드.
-/// fixup_hwp3_heading_decoration 후 paragraph.text 가 decoration 제거된 상태인지 단언.
+/// 제목 장식 제거로 알려진 기존 검사: 원본에 없는 합성 장식이 남지 않는지 확인한다.
+/// 원문 공백·문자 위치의 상세 검사는 독립 Print 대조 뒤 새 이름으로 등록한다.
 #[test]
 fn hwp3_sample16_heading_decoration_stripped() {
     let bytes = std::fs::read("samples/hwp3-sample16.hwp").expect("read hwp3-sample16.hwp");

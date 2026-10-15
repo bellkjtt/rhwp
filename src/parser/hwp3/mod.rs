@@ -3258,75 +3258,8 @@ fn parse_paragraph_list_inner(
             }
         }
 
-        // [Task #741 Stage 7] 제목차례 type paragraph 자동 장식 inject (한컴 viewer 정합).
-        // 본질: HWP3 → HWP5 변환 시 한컴이 특정 paragraph 에 ═══ ■ ... ■ ═══ 장식 inject.
-        // HWP3 spec 외 한컴 사적 로직. 한컴 변환본 cross-ref 영역에서 도출:
-        //   - hwp3-sample10 paragraph 26 (cc=8, "￼￼ 제목차례 ") → HWP5 p.26 ("════...■ 제목차례 ■═════")
-        //   - hwp3-sample10 paragraph 340 (cc=30, "￼        ￼-EXPORT/...") → HWP5 p.340 단순 본문 (장식 없음)
-        // 차이: visible text 길이 — 짧은 (~5 chars) 제목 인 경우 한컴이 장식 inject.
-        //
-        // 본 환경 trigger 영역:
-        //   - 새번호 + 쪽번호위치 controls 조합 (section start marker)
-        //   - visible text (object marker + whitespace 제외) ≤ 6 chars (짧은 제목)
-        let has_new_num = controls
-            .iter()
-            .any(|c| matches!(c, crate::model::control::Control::NewNumber(_)));
-        let has_page_pos = controls
-            .iter()
-            .any(|c| matches!(c, crate::model::control::Control::PageNumberPos(_)));
-        let mut title_bold_shape_id: Option<u16> = None;
-        if has_new_num && has_page_pos {
-            let visible_text: String = text_string
-                .chars()
-                .filter(|c| !c.is_whitespace() && *c != '\u{FFFC}')
-                .collect();
-            if !visible_text.is_empty() && visible_text.chars().count() <= 6 {
-                // 원본 visible 영역 (제목차례) 의 char_shape 찾기 — hwp3_inline_shapes 의
-                // 가장 큰 idx 가 마지막 ' ' 직전 visible char 위치.
-                // sample10 p.26: hwp3_inline_shapes [(0,76), (0,77), (3,78), (8,79), (8,80)]
-                // 제목차례 위치 (3) 의 shape id (78=bold) 를 추출.
-                title_bold_shape_id = hwp3_inline_shapes
-                    .iter()
-                    .find(|(idx, _)| {
-                        *idx > 0 && *idx < (para_info.char_count as usize).saturating_sub(1)
-                    })
-                    .map(|(_, sid)| *sid);
-
-                // ═ ■ 제목 ■ ═ 패턴 inject. HWP5 변환본 p.26 영역 정합:
-                //   "═ × 20 + ■ + ' ' + 제목 + ' ' + ■ + ═ × 22"
-                let visible_char_count = visible_text.chars().count();
-                let new_text = format!(
-                    "════════════════════■ {} ■══════════════════════",
-                    visible_text
-                );
-                // char_offsets 재구성 (각 char 1 utf16 unit 가정 — BMP 영역 만)
-                let new_char_count = new_text.chars().count() as u32;
-                let new_offsets: Vec<u32> = (0..new_char_count).collect();
-                text_string = new_text;
-                char_offsets = new_offsets;
-                utf16_len = new_char_count;
-
-                // 기존 hwp3_inline_shapes 는 원본 char index 기반 — 재구성 시 무효.
-                // 제목 bold 영역만 새 위치 (22 ~ 22+visible_char_count) 로 재등록.
-                // 제목 visible 위치: 20 ═ + ■ + ' ' = 22
-                hwp3_inline_shapes.clear();
-                if let Some(bold_id) = title_bold_shape_id {
-                    hwp3_inline_shapes.push((22usize, bold_id));
-                    // 제목 끝 + ' ' 직후 ■ 부터 rep_char_shape (regular) 로 복귀
-                    let after_title = 22 + visible_char_count + 1; // +1 for ' '
-                    hwp3_inline_shapes.push((after_title, rep_char_shape_id as u16));
-                }
-                // hwp3_char_to_utf16_pos 는 하단 char_shapes 빌드 시 idx → utf16_pos 변환에 사용.
-                // 신규 위치 22, after_title 도 직접 utf16 pos 이므로 1:1 매핑 추가.
-                if hwp3_char_to_utf16_pos.len() < new_char_count as usize {
-                    hwp3_char_to_utf16_pos.resize(new_char_count as usize, 0);
-                }
-                for i in 0..(new_char_count as usize) {
-                    hwp3_char_to_utf16_pos[i] = i as u32;
-                }
-            }
-        }
-
+        // 원문 제목의 공백·문자/제어 슬롯·글자모양 축을 함께 보존한다.
+        // 컨트롤 조합만으로 원문에 없는 장식을 합성하지 않는다.
         let mut para = Paragraph::default();
         // [#3494, #3510] 공통 IR 의 char_count 는 **문단 종결자를 포함**한다
         // (model/paragraph.rs:1042 `+1 for paragraph end marker`, HWP5 PARA_HEADER.nChars 와 동일).
@@ -4661,7 +4594,6 @@ fn parse_hwp3_inner(
     fixup_hwp3_outline_fields(&mut doc);
     fixup_hwp3_picture_numbers(&mut doc);
     fixup_hwp3_outline_bullets(&mut doc);
-    fixup_hwp3_heading_decoration(&mut doc);
 
     Ok(doc)
 }
@@ -5214,21 +5146,6 @@ fn hwp3_outline_command_level(command: &str) -> Option<u8> {
     Some(level.unwrap_or(0).min(6))
 }
 
-/// [Task #1008 격차 C] HWP3 의 heading decoration text strip.
-///
-/// HWP3 raw 의 일부 paragraph 는 "═════■ NUM.title ■═════" 형태 decoration text
-/// 를 plain text 로 저장 (sample16 pi=70: "════...■ 1.추진목적 ■════..." 52자).
-/// 한컴 변환기 HWP3→HWP5 는 decoration 을 strip 하여 clean text 만 보존 (HWP5
-/// pi=70: "1. 추진목적" 7자). 한컴 한글 viewer 의 HWP3 rendering 도 동일 strip
-/// 으로 추정 — HWP3 spec 미명문화이나 작업지시자 시각 판정 권위.
-///
-/// 휴리스틱 detection:
-/// - 텍스트가 `═{5+}` 로 시작 + `═{5+}` 로 종료
-/// - 중간에 `■` 가 시작 + 종료에 등장 (decoration marker)
-/// - 두 `■` 사이의 텍스트가 실제 heading 내용
-///
-/// 회귀 risk: 의도된 `═` 사용 사례. 단언: 다른 HWP3 sample sweep 시 회귀 0.
-//
 // HWP3 legacy 글꼴 이름 → 한/글 변환기(HWP3 → HWP5/HWPX)가 쓰는 이름.
 //
 // 한/글은 HWP3 의 한양 글꼴을 `한양*` HFT 로 옮긴다. `HY*` 는 이름이 비슷한 별개의
@@ -5245,70 +5162,6 @@ fn hwp3_font_name_to_hwp5(name: &str) -> String {
         "궁서" => "한양궁서".to_string(),
         _ => name.to_string(),
     }
-}
-
-fn fixup_hwp3_heading_decoration(doc: &mut crate::model::document::Document) {
-    for section in &mut doc.sections {
-        for paragraph in &mut section.paragraphs {
-            if let Some(cleaned) = strip_heading_decoration(&paragraph.text) {
-                paragraph.text = cleaned;
-            }
-        }
-    }
-}
-
-/// HWP3 heading decoration pattern detection + strip.
-/// Returns Some(stripped_text) 시 매치, None 시 패턴 비매치 (원본 유지).
-fn strip_heading_decoration(text: &str) -> Option<String> {
-    const DECORATION_CHAR: char = '═';
-    const MARKER_CHAR: char = '■';
-    const MIN_DECORATION: usize = 5;
-
-    let chars: Vec<char> = text.chars().collect();
-    let len = chars.len();
-    if len < MIN_DECORATION * 2 + 2 {
-        return None;
-    }
-
-    // Leading ═ count
-    let mut leading = 0;
-    while leading < len && chars[leading] == DECORATION_CHAR {
-        leading += 1;
-    }
-    if leading < MIN_DECORATION {
-        return None;
-    }
-
-    // Trailing ═ count
-    let mut trailing_end = len;
-    while trailing_end > 0 && chars[trailing_end - 1] == DECORATION_CHAR {
-        trailing_end -= 1;
-    }
-    if len - trailing_end < MIN_DECORATION {
-        return None;
-    }
-
-    // Middle slice (between leading and trailing ═ runs)
-    let mid: String = chars[leading..trailing_end].iter().collect();
-    let mid = mid.trim();
-    let mid_chars: Vec<char> = mid.chars().collect();
-    if mid_chars.len() < 3 {
-        return None;
-    }
-
-    // Must start AND end with ■
-    if mid_chars[0] != MARKER_CHAR || mid_chars[mid_chars.len() - 1] != MARKER_CHAR {
-        return None;
-    }
-
-    // Extract content between ■...■
-    let core: String = mid_chars[1..mid_chars.len() - 1].iter().collect();
-    let core = core.trim();
-    if core.is_empty() {
-        return None;
-    }
-
-    Some(core.to_string())
 }
 
 /// [Task #877 Stage 4] HWP3 → IR 변환 후 outline list 글머리 자동 prefix.
