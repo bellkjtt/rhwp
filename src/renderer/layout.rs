@@ -6610,7 +6610,10 @@ impl LayoutEngine {
                     super::solo_zone_pad_px(
                         new_zone_is_solo_zero,
                         prev_zone_was_multi,
-                        self.section_column_spacing_hu.get(),
+                        (self.profile.get().hwp5_container()
+                            || self.profile.get().hwpx_container())
+                        .then(|| self.section_column_spacing_hu.get())
+                        .flatten(),
                         self.dpi,
                     )
                 } else {
