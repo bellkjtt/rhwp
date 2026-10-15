@@ -1,7 +1,8 @@
 //! Opt-in native editor state. The document engine itself remains history-free.
 //!
 //! This first surface edits body text only. Offsets are Unicode scalar indices;
-//! cell editing, inline-control affinity and tabs are rejected explicitly.
+//! cell editing, object-bearing paragraph mutations, inline-control affinity and
+//! tabs are rejected explicitly. Read-only selection may span floating objects.
 //! Paragraph split/join and grapheme navigation live in `commands`. OS IME events
 //! and screen coordinates belong to the host, not to this session.
 
@@ -584,10 +585,11 @@ impl NativeEditor {
         }
     }
 
-    /// Scalar body edits cannot preserve semantic controls when removing a
-    /// paragraph. Check the full validated span, including middle paragraphs
-    /// and floating objects that read-only interaction queries may traverse.
-    /// Selection changes and identical-text no-ops do not mutate those controls.
+    /// The scalar body-edit surface cannot preserve/export semantic controls
+    /// when removing a paragraph. Inspect the entire validated span, including
+    /// middle paragraphs and floating objects the interaction query can traverse.
+    /// Keep this separate from selection validation: read-only navigation and
+    /// identical-text no-ops do not need to modify an object's paragraph.
     pub(super) fn check_body_text_span(
         core: &DocumentCore,
         selection: &NativeTextSelection,
@@ -597,12 +599,14 @@ impl NativeEditor {
             [start.paragraph as usize..=end.paragraph as usize]
         {
             if paragraph.controls.iter().any(|control| {
-                // Core text editing preserves the section/column definitions
-                // carried by blank documents. Other controls are not plain text.
+                // Blank documents carry these section/column definitions; core
+                // text editing preserves them. Other controls (including fields,
+                // bookmarks, headers and unknown controls) are not plain text.
                 !matches!(control, Control::SectionDef(_) | Control::ColumnDef(_))
             }) {
                 return Err(NativeHostError::Unsupported(
-                    "body text edits cannot include semantic-control paragraphs".into(),
+                    "body text edits and clipboard export cannot include semantic-control paragraphs"
+                        .into(),
                 ));
             }
         }
@@ -654,9 +658,9 @@ impl NativeEditor {
         selection: &NativeTextSelection,
         text: &str,
     ) -> Result<(), NativeHostError> {
-        // IME previews reach this path independently of replace_selection.
-        // Reject unsupported spans before either core replacement primitive.
-        Self::check_body_text_span(&self.session.core, selection)?;
+        // Also covers IME previews and command edit ranges distinct from the
+        // editor's current selection. This check precedes all core mutations.
+        Self::check_body_text_span(core, selection)?;
         let (start, end) = Self::ordered(selection);
         if start.paragraph == end.paragraph
             && end.scalar_offset - start.scalar_offset <= 8
