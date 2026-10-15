@@ -6288,14 +6288,13 @@ impl LayoutEngine {
                     (col_area.x + om_l, col_area.width)
                 }
             };
-            match horz_align {
-                HorzAlign::Left | HorzAlign::Inside => ref_x + h_offset,
-                HorzAlign::Center => ref_x + (ref_w - table_width).max(0.0) / 2.0 + h_offset,
-                // Task #347: picture_footnote.rs:185와 동일하게 - h_offset (오른쪽 끝에서 안쪽으로 오프셋).
-                HorzAlign::Right | HorzAlign::Outside => {
-                    ref_x + (ref_w - table_width).max(0.0) - h_offset
-                }
-            }
+            crate::renderer::object_alignment::aligned_horizontal_origin(
+                ref_x,
+                ref_w,
+                table_width,
+                horz_align,
+                h_offset,
+            )
         } else {
             // 중첩 표: outer_margin_left 적용 + host_alignment에 따라 셀 내에서 정렬
             let om_left = hwpunit_to_px(table.outer_margin_left as i32, self.dpi);

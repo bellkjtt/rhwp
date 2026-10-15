@@ -6581,11 +6581,13 @@ pub(crate) fn horizontal_range(
         HorzRelTo::Column => (col_area.x, col_area.width),
     };
 
-    let x = match common.horz_align {
-        HorzAlign::Left | HorzAlign::Inside => ref_x + h_offset,
-        HorzAlign::Center => ref_x + (ref_w - width_px).max(0.0) / 2.0 + h_offset,
-        HorzAlign::Right | HorzAlign::Outside => ref_x + (ref_w - width_px).max(0.0) - h_offset,
-    };
+    let x = crate::renderer::object_alignment::aligned_horizontal_origin(
+        ref_x,
+        ref_w,
+        width_px,
+        common.horz_align,
+        h_offset,
+    );
     (x, x + width_px.max(0.0))
 }
 

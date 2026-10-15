@@ -21,6 +21,7 @@ pub(crate) mod endnote_spacing;
 pub mod equation;
 pub(crate) mod equation_tac_flow;
 pub mod float_placement;
+pub(crate) mod object_alignment;
 pub(crate) mod font_decision;
 pub mod font_environment;
 pub mod font_metrics_data;
