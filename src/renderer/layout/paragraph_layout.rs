@@ -2248,6 +2248,7 @@ fn compute_line_extra_spacing(
     leading_space_count: usize,
     trailing_space_limit: usize,
     leading_space_plan: &LeadingSpacePlan<'_>,
+    terminal_tracking: f64,
     styles: &ResolvedStyleSet,
     centered_measure: Option<&CenteredTextLineMeasure>,
     alignment: Alignment,
@@ -2439,8 +2440,12 @@ fn compute_line_extra_spacing(
             if spacing_char_count == 0 {
                 return (0.0, 0.0, 0.0);
             }
-            let split_ink_overhang = if alignment == Alignment::Split {
+            let terminal_ink_overhang = if alignment == Alignment::Split {
                 trailing_glyph_ink_overhang()
+            } else if alignment == Alignment::Justify && !renders_synthetic_wrap_trailing_space {
+                // 마지막 가시 글자 뒤에는 다음 글자와의 음수 자간이 없다.
+                // 개체 소유까지 확인한 공통 정렬 측정값을 사용한다.
+                (-terminal_tracking).max(0.0)
             } else {
                 0.0
             };
@@ -2449,7 +2454,7 @@ fn compute_line_extra_spacing(
             // 같은 내부 공백 수·말미 공백 제외 폭을 사용한다. 별도 합성 분기는
             // 한컴 Print의 같은 줄을 마지막 공백 한 칸만큼 왼쪽으로 압축했다.
             let rendered_space_slots = interior_spaces;
-            let effective_used = total_text_width - trailing_width + split_ink_overhang;
+            let effective_used = total_text_width - trailing_width + terminal_ink_overhang;
             let slack = available_width - effective_used;
             if leader_dashes > 0 && slack > 0.0 {
                 // Task #352: 라인에 dash leader 가 있고 슬랙이 양수면
@@ -6971,6 +6976,12 @@ impl LayoutEngine {
                     leading_spaces.total,
                     trailing_space_limit,
                     &leading_space_plan,
+                    terminal_tracking_for_alignment(
+                        comp_line,
+                        styles,
+                        &line_tac_offsets_for_width,
+                        true,
+                    ),
                     styles,
                     centered_measure.as_ref(),
                     alignment,
@@ -11167,6 +11178,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
+            0.0,
             &ResolvedStyleSet::default(),
             None,
             Alignment::Split,
@@ -11206,6 +11218,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&trailing_line, None),
+            0.0,
             &styles,
             None,
             Alignment::Justify,
@@ -11248,6 +11261,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
+            0.0,
             &styles,
             None,
             Alignment::Split,
@@ -11300,6 +11314,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
+            0.0,
             &ResolvedStyleSet::default(),
             None,
             Alignment::Justify,
@@ -11325,6 +11340,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
+            0.0,
             &ResolvedStyleSet::default(),
             None,
             Alignment::Justify,
@@ -11374,6 +11390,7 @@ mod issue_4657_distribute_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line(text), None),
+            0.0,
             &ResolvedStyleSet::default(),
             None,
             Alignment::Distribute,
