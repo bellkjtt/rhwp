@@ -263,7 +263,8 @@ fn inline_caption_preserves_the_following_table_paragraphs_own_spacing() {
 #[test]
 fn legacy_hwp3_font_declaration_preserves_its_source_program_kind() {
     for (source, name, expected_type) in [
-        (&b"\xaf\xa5\xa1\x77\xb9\xa1"[..], "HY신명조", 2),
+        // 원본 조합형 선언 '신명조'의 기존 표시 이름 정규화는 '한양신명조'다.
+        (&b"\xaf\xa5\xa1\x77\xb9\xa1"[..], "한양신명조", 2),
         (&b"\xa4\x61\xc8\x77"[..], "바탕", 0),
     ] {
         let mut body = hwp3_body(&object_paragraph(0, "SOURCE"));
