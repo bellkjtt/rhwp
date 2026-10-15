@@ -94,8 +94,11 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
             .unwrap_or(0),
     );
     frame.kopub_justified_space = justified_kopub_picture;
-    // 재조판 규칙은 글꼴 이름이 아니라 원본 저장 줄과 현재 프레임의 소유로 결정한다.
+    // 정상 저장 본문은 새 폭으로 줄 수를 줄일 수 있다는 이유만으로 stale가 아니다.
+    // 본문의 캐시 기하·편집 여부는 아래 resolver가 판정한다. 저장 셀의 별도
+    // 재조판 정책에서만 기존 어절 꼬리 재검토와 공통 기하 전달을 유지한다.
     let rejoinable_word_tail = !stored_geometry_policy.preserve_hwp3_origins
+        && miss_policy == line_breaking::StoredRowMissPolicy::UnmodelledUnlessStale
         && stored_word_tail::can_rejoin_stored_word_tail(
             para, &frame, styles, dpi, justified_kopub_picture,
         );
