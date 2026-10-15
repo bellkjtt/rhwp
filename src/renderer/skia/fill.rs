@@ -22,6 +22,7 @@ pub(super) fn gradient_paint(
         || gradient.colors.len() > 4096
         || !replay_bounds.is_finite()
         || replay_bounds.is_empty()
+        || !opacity.is_finite()
     {
         return None;
     }
