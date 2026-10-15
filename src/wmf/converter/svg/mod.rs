@@ -8,7 +8,7 @@ use crate::wmf::{
     converter::{
         svg::{
             device_context::DeviceContext,
-            node::{Data, Node},
+            node::{share_repeated_bitmaps, Data, Node},
             ternary_raster_operator::{BrushOnlyRopSequence, TernaryRasterOperator},
             util::{as_point_string, url_string, Fill, Stroke},
         },
@@ -118,6 +118,10 @@ impl crate::wmf::converter::Player for SVGPlayer {
             .set("width", vb_w_i32)
             .set("height", vb_h_i32)
             .set("viewBox", format!("{vb_x} {vb_y} {vb_w_i32} {vb_h_i32}"));
+
+        // 외곽 계산은 원래 image 좌표를 소비한 뒤 끝낸다. 반복 비트맵의
+        // 바이트만 공유하고 실제 요소의 순서·좌표·클립은 그대로 유지한다.
+        let (definitions, elements) = share_repeated_bitmaps(definitions, elements);
 
         if !definitions.is_empty() {
             let mut defs = Node::new("defs");

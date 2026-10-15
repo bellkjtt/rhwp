@@ -164,6 +164,42 @@ class RasterDispatchTests(unittest.TestCase):
 
 
 class EmbeddedFontCatalogueTests(unittest.TestCase):
+    def test_empty_vtt_source_is_removed_without_changing_render_tables(self):
+        from fontTools.ttLib import TTCollection, TTFont
+        from fontTools.ttLib.sfnt import SFNTWriter
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            inputs = root / 'inputs'
+            inputs.mkdir()
+            source = inputs / 'font.ttf'
+            fixture = Path(__file__).parents[2] / 'tests/fixtures/fonts/RHWPExactFaceSmoke.ttc'
+            with TTCollection(fixture, lazy=True) as collection:
+                original = collection.fonts[0]
+                tags = sorted(original.reader.keys())
+                with source.open('wb') as stream:
+                    writer = SFNTWriter(stream, len(tags) + 2, original.sfntVersion)
+                    for tag in tags:
+                        writer[tag] = original.reader[tag]
+                    writer['TSI3'] = b''
+                    writer['TSI5'] = b'nonempty-editor-data'
+                    writer.close()
+            adapter = SimpleNamespace(resolve_input_path=lambda root, path: Path(path),
+                sha256_file=lambda p: hashlib.sha256(Path(p).read_bytes()).hexdigest(),
+                write_json_atomic=lambda p, v: p.write_text(json.dumps(v)))
+            records = json.loads(png.font_catalog(adapter, root, [inputs], root).read_text())['faces']
+            self.assertEqual(len(records), 1)
+            record = records[0]
+            self.assertEqual(record['repairs'], ['empty-vtt-source-table:TSI3'])
+            with TTFont(source, lazy=True) as before, TTFont(record['path'], lazy=True) as after:
+                self.assertEqual(set(after.reader.keys()), set(before.reader.keys()) - {'TSI3'})
+                for tag in after.reader.keys():
+                    a, b = before.reader[tag], after.reader[tag]
+                    if tag == 'head':
+                        a, b = a[:8] + a[12:], b[:8] + b[12:]
+                    self.assertEqual(a, b, tag)
+            self.assertEqual(png.font_catalog(adapter, root, [inputs], root).read_text(),
+                             json.dumps({'faces': records}))
+
     def test_registered_symlink_directory_supplies_fonts_without_following_cycles(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
