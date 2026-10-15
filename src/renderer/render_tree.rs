@@ -482,6 +482,9 @@ impl ObjectControlRef {
 /// 미리 렌더된 SVG 조각 (Task #195 단계 8)
 #[derive(Debug, Clone, Serialize)]
 pub struct RawSvgNode {
+    /// 장치에 맞춘 재생에 필요한 EMF 원문. 표시/선택용 JSON에는 싣지 않는다.
+    #[serde(skip)]
+    pub emf_source: Option<crate::emf::EmfReplaySource>,
     /// 삽입할 SVG 조각 (유효한 `<g>...</g>` 또는 개별 요소)
     pub svg: String,
     /// 원본 개체 참조. OLE RawSvg 선택/속성 진입에 사용한다.
@@ -497,6 +500,7 @@ pub struct RawSvgNode {
 impl RawSvgNode {
     pub fn new(svg: String) -> Self {
         Self {
+            emf_source: None,
             svg,
             control_ref: None,
             cell_context: None,
@@ -511,6 +515,7 @@ impl RawSvgNode {
         cell_context: Option<crate::renderer::layout::CellContext>,
     ) -> Self {
         Self {
+            emf_source: None,
             svg,
             control_ref: Some(ObjectControlRef::ole(
                 section_index,

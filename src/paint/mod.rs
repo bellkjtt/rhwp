@@ -15,6 +15,7 @@ mod font_size;
 mod json;
 pub mod layer_tree;
 mod paint_bounds;
+pub(crate) mod metafile;
 pub mod paint_op;
 mod paper_viewport;
 pub mod profile;

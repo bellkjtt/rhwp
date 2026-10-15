@@ -1063,7 +1063,16 @@ impl PaintOp {
                 // [#3315] 키가 있는 op 만 base64 를 생략할 수 있다 — 소비자가 그 키로
                 // `getSourceImageBytes` 를 불러 같은 바이트를 받는다. 키를 낼 수 없는 합성
                 // 그림(`bin_data_id == 0`)은 되찾을 길이 없으므로 종전대로 싣는다.
-                let source_image_key = crate::paint::source_image_key(ctx.bin_data_epoch, image);
+                // 배치·장치에 맞춘 바이트는 원본 bin 키로 다시 얻을 수 없다.
+                // 이 op은 실제 출력 바이트를 싣고 내용 기반 이미지 캐시가 이를 구분한다.
+                let source_image_key = if resolved
+                    .as_deref()
+                    .is_some_and(|p| p.kind == ResolvedImageKind::OutputDevice)
+                {
+                    None
+                } else {
+                    crate::paint::source_image_key(ctx.bin_data_epoch, image)
+                };
                 let omit_bytes = ctx.options.omit_image_bytes && source_image_key.is_some();
                 if let Some(payload) = resolved {
                     if omit_bytes {

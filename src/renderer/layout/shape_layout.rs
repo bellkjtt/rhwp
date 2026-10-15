@@ -2507,6 +2507,18 @@ impl LayoutEngine {
                                             control_index,
                                             &ole_container_path,
                                         );
+                                        if let Some(node) = parent.children.last_mut() {
+                                            if let RenderNodeType::RawSvg(raw) = &mut node.node_type
+                                            {
+                                                raw.emf_source =
+                                                    Some(crate::emf::EmfReplaySource {
+                                                        data: std::sync::Arc::from(
+                                                            emf_bytes.as_slice(),
+                                                        ),
+                                                        render_rect,
+                                                    });
+                                            }
+                                        }
                                         rendered = true;
                                     }
                                 }
@@ -2710,6 +2722,19 @@ impl LayoutEngine {
                                                 control_index,
                                                 &ole_container_path,
                                             );
+                                            if let Some(node) = parent.children.last_mut() {
+                                                if let RenderNodeType::RawSvg(raw) =
+                                                    &mut node.node_type
+                                                {
+                                                    raw.emf_source =
+                                                        Some(crate::emf::EmfReplaySource {
+                                                            data: std::sync::Arc::from(
+                                                                contents_emf,
+                                                            ),
+                                                            render_rect,
+                                                        });
+                                                }
+                                            }
                                             rendered = true;
                                         }
                                     } else if let Some((kind, bytes)) =

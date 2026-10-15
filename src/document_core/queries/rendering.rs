@@ -1500,7 +1500,18 @@ impl DocumentCore {
                     },
                 )
                 .collect::<Vec<_>>();
+            // 2020 호환 경로는 참조 장치를 보존한다. 2024 Print는 EMF를
+            // 래스터 장치에서 재생하므로 최종 레이아웃 단위의 픽셀을 전달한다.
+            let metafile_pixel = self.hangul2024_compat.then_some(
+                self.dpi
+                    / if profile == RenderProfile::Print {
+                        crate::paint::metafile::HANCOM_2024_PRINT_DEVICE_DPI
+                    } else {
+                        crate::renderer::DEFAULT_DPI
+                    },
+            );
             let mut builder = LayerBuilder::new(profile)
+                .with_metafile_device_pixel_width(metafile_pixel)
                 .with_output_options(output_options)
                 .with_bin_data_epoch(self.bin_data_epoch);
             Ok(builder.build_with_embedded_fonts(tree, &embedded_fonts))

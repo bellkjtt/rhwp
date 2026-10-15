@@ -30,6 +30,8 @@ impl TextDecorationKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolvedImageKind {
     FormatConverted,
+    /// 출력 크기·장치에 따라 바이트가 달라지는 변환. 원본 bin 키와 구분한다.
+    OutputDevice,
     BakedWatermark,
 }
 

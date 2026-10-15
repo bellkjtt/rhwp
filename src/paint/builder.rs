@@ -19,6 +19,7 @@ pub struct LayerBuilder {
     output_options: LayerOutputOptions,
     bin_data_epoch: u32,
     page_context: Option<PagePaintContext>,
+    metafile_device_pixel_width: Option<f64>,
 }
 
 impl LayerBuilder {
@@ -28,7 +29,14 @@ impl LayerBuilder {
             output_options: LayerOutputOptions::default(),
             bin_data_epoch: 0,
             page_context: None,
+            metafile_device_pixel_width: None,
         }
+    }
+
+    /// 원본 형식과 분리된 출력 장치 픽셀의 레이아웃 단위 크기다.
+    pub fn with_metafile_device_pixel_width(mut self, width: Option<f64>) -> Self {
+        self.metafile_device_pixel_width = width.filter(|v| v.is_finite() && *v > 0.0);
+        self
     }
 
     pub fn with_output_options(mut self, output_options: LayerOutputOptions) -> Self {
@@ -169,7 +177,11 @@ impl LayerBuilder {
                 let mut ops = vec![PaintOp::image(
                     frame,
                     image.clone(),
-                    crate::renderer::image_resolver::resolve_image_payload(image),
+                    crate::paint::metafile::image_payload(
+                        image,
+                        node.bbox,
+                        self.metafile_device_pixel_width,
+                    ),
                 )];
                 if self.output_options.show_control_codes {
                     ops.push(PaintOp::control_label(frame, "[그림]"));
@@ -189,7 +201,10 @@ impl LayerBuilder {
             RenderNodeType::Placeholder(placeholder) => {
                 Some(vec![PaintOp::placeholder(node.bbox, placeholder.clone())])
             }
-            RenderNodeType::RawSvg(raw) => Some(vec![PaintOp::raw_svg(node.bbox, raw.clone())]),
+            RenderNodeType::RawSvg(raw) => Some(vec![PaintOp::raw_svg(
+                node.bbox,
+                crate::paint::metafile::raw_svg(raw, self.metafile_device_pixel_width),
+            )]),
             _ => None,
         };
 
