@@ -8056,7 +8056,7 @@ impl LayoutEngine {
         tab_stops: &[TabStop],
         tac_offsets_px: &[(usize, f64, usize)],
         line_tac_offsets: &[(usize, f64, usize)],
-        leading_spaces: &LeadingSpaces,
+        leading_space_ownership: &LeadingSpaces,
         shape_markers: &[(usize, String)],
         fn_positions: &[(usize, u16, usize)],
         fn_marker_inserted: &mut [bool],
@@ -8510,7 +8510,7 @@ impl LayoutEngine {
                     &text_style,
                     full_width,
                     line_trailing_space_by_run[run_idx],
-                    leading_spaces.in_fragment(
+                    leading_space_ownership.in_fragment(
                         run_idx,
                         0,
                         effective_text_for_metrics(run).chars().count(),
@@ -8829,7 +8829,8 @@ impl LayoutEngine {
                                     &text_style,
                                     seg_w,
                                     0,
-                                    leading_spaces.in_fragment(run_idx, seg_start, rel_pos),
+                                    leading_space_ownership
+                                        .in_fragment(run_idx, seg_start, rel_pos),
                                     run.char_overlap.is_none()
                                         && seg_display.is_none()
                                         && !seg_text.chars().any(|character| {
@@ -8923,7 +8924,11 @@ impl LayoutEngine {
                                 &text_style,
                                 seg_w - extra_word_sp * trailing_space_count as f64,
                                 trailing_space_count,
-                                leading_spaces.in_fragment(run_idx, seg_start, run_chars.len()),
+                                leading_space_ownership.in_fragment(
+                                    run_idx,
+                                    seg_start,
+                                    run_chars.len(),
+                                ),
                                 run.char_overlap.is_none()
                                     && seg_display.is_none()
                                     && !seg_text
@@ -9047,7 +9052,7 @@ impl LayoutEngine {
                             &seg_style,
                             seg_w,
                             0,
-                            leading_spaces.in_fragment(run_idx, seg_start, tac_rel),
+                            leading_space_ownership.in_fragment(run_idx, seg_start, tac_rel),
                             run.char_overlap.is_none()
                                 && seg_display.is_none()
                                 && !seg_text
@@ -9569,7 +9574,7 @@ impl LayoutEngine {
                         &seg_style,
                         seg_w - extra_word_sp * trailing_space_count as f64,
                         trailing_space_count,
-                        leading_spaces.in_fragment(run_idx, seg_start, run_chars.len()),
+                        leading_space_ownership.in_fragment(run_idx, seg_start, run_chars.len()),
                         run.char_overlap.is_none()
                             && seg_display.is_none()
                             && !remaining
