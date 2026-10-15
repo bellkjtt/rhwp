@@ -4090,6 +4090,17 @@ pub(crate) fn resolve_stored_line_segs_in_frame(
         return None;
     }
 
+    // 한 프레임은 다른 단·쪽의 시작을 소유하지 않는다. 저장 분할이 유효한
+    // 문단의 전체 사다리를 이 프레임의 캐시와 비교해 거절한 뒤 다시 채우면,
+    // 원래 단 경계와 후속 문단의 원점까지 사라진다. 편집·명시적 stale 경로는
+    // 현재 프레임의 재조판 계약을 유지한다.
+    if !stale
+        && !para.stored_text_partition_is_dirty()
+        && super::stored_row_fragments::crosses_physical_frame(para)
+    {
+        return None;
+    }
+
     // #4755 §1 recomputes a FIRST..LAST split row as one physical row, and the
     // picture-band frame does exactly that because it holds the exclusion that
     // split it. A frame with no exclusions cannot: it carves one full-width

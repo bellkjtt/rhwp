@@ -1320,7 +1320,9 @@ fn measure_char_width_embedded_decision_for_font<'a>(
             character_match: "hit",
         };
     }
-    let Some(mm) = font_metrics_data::find_metric_decision(primary_name, bold, italic) else {
+    let Some(mm) =
+        font_metrics_data::find_metric_decision_for_character(primary_name, bold, italic, c)
+    else {
         return EmbeddedWidthDecision {
             width_px: None,
             em_fraction: None,

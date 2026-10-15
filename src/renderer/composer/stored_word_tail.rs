@@ -19,6 +19,7 @@ pub(super) fn can_rejoin_stored_word_tail(
         || (!para.controls.is_empty() && !supported_inline_picture)
         || para.text.contains('\n')
         || para.stored_text_partition_is_dirty()
+        || super::stored_row_fragments::crosses_physical_frame(para)
         || frame.models_exclusions()
         || para
             .line_segs

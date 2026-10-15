@@ -252,6 +252,40 @@ pub(crate) fn find_metric_decision<'a>(
     })
 }
 
+/// 원본 프로그램에서 확인한 문자 폭은 표시 대체 글꼴의 완전한 표보다 우선한다.
+/// 부분 표의 미측정 문자·확인하지 않은 정체는 기존 색인 선택을 그대로 쓴다.
+pub(crate) fn find_metric_decision_for_character<'a>(
+    name: &'a str,
+    bold: bool,
+    italic: bool,
+    character: char,
+) -> Option<MetricLookupDecision<'a>> {
+    let mut decision = find_metric_decision(name, bold, italic)?;
+    let source = &hci_poppy::METRICS[0];
+    if decision.alias_resolved_name != source.name
+        || bold != source.bold
+        || italic != source.italic
+        || character.is_whitespace()
+        || source.get_width(character).is_none()
+    {
+        return Some(decision);
+    }
+    static SOURCE_INDEX: OnceLock<Option<usize>> = OnceLock::new();
+    if let Some(index) = *SOURCE_INDEX.get_or_init(|| {
+        FONT_METRICS
+            .iter()
+            .position(|entry| std::ptr::eq(entry, source))
+    }) {
+        // 각 표가 가진 em을 함께 선택한다. em=1000의 폭을 em=2048 표에
+        // 정수 반올림해 섞지 않으며 가운뎃점 등 기존 독립 측정도 보존한다.
+        decision.metric = source;
+        decision.entry_index = index;
+        decision.match_kind = MetricMatchKind::Exact;
+        decision.bold_fallback = false;
+    }
+    Some(decision)
+}
+
 /// [#4709] 이 스타일의 글자폭 배치에 실제로 쓰인 내장 메트릭 face 이름.
 ///
 /// `measure_char_width_embedded`(text_measurement.rs)의 해석 순서를 따른다:

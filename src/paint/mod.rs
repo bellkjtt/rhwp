@@ -16,6 +16,7 @@ mod json;
 pub mod layer_tree;
 mod paint_bounds;
 pub(crate) mod metafile;
+mod metafile_print_coverage;
 pub mod paint_op;
 mod paper_viewport;
 pub mod profile;

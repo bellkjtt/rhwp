@@ -52,6 +52,7 @@ pub(super) fn image_payload(
         }
     };
     let data = crate::emf::convert_to_sized_svg(data, width, height, pixel)?;
+    let data = super::metafile_print_coverage::apply(&data).unwrap_or(data);
     Some(ResolvedImagePayload {
         data,
         mime: "image/svg+xml",
@@ -66,7 +67,9 @@ pub(super) fn raw_svg(raw: &RawSvgNode, device_pixel_width: Option<f64>) -> RawS
         if let Ok(svg) =
             crate::emf::convert_to_svg_with_device(&source.data, source.render_rect, Some(pixel))
         {
-            output.svg = svg;
+            output.svg = super::metafile_print_coverage::apply(svg.as_bytes())
+                .and_then(|bytes| String::from_utf8(bytes).ok())
+                .unwrap_or(svg);
         }
     }
     output
