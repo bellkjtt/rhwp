@@ -1495,7 +1495,7 @@ impl TypesetEngine {
                     || st
                         .paragraph_fragment_content_bottoms
                         .get(&(previous_index, end_line))
-                        .is_some_and(|bottom| *bottom <= placement.table_top)
+                        .is_some_and(|bounds| bounds.content_bottom <= placement.table_top)
             });
             placement.table_top < st.current_height
                 && !preceding_host_tail_is_free

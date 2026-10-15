@@ -10359,27 +10359,30 @@ impl LayoutEngine {
                 hcursor.stored_column_origin = Some((origin, 0.0));
             }
             // 저장 TAC 줄의 fit이 인증한 원점을 뒤 본문 paint에도 그대로 전달한다.
-            let accepted_tac_origin = match item {
+            let accepted_tac_frame = match item {
                 PageItem::Table {
                     para_index,
                     control_index,
                 } => col_content
                     .inline_placements
                     .get(&(*para_index, *control_index))
-                    .and_then(|placement| placement.stored_column_origin_hu),
+                    .and_then(|placement| placement.stored_column_frame),
                 _ => None,
             };
-            if let Some(origin) = accepted_tac_origin {
-                hcursor.vpos_page_base = Some(origin);
+            if let Some(frame) = accepted_tac_frame {
+                hcursor.vpos_page_base = Some(frame.source_origin_hu);
                 hcursor.vpos_lazy_base = None;
-                hcursor.stored_column_origin = Some((origin, hcursor.col_anchor_y));
+                // 전폭 예약 뒤의 첫 글줄 앵커는 저장 축의 0점과 다를 수 있다.
+                // 수용한 쌍을 그대로 옮기며 paint의 옛 앵커와 다시 조합하지 않는다.
+                hcursor.col_anchor_y = col_area.y + frame.column_anchor_y;
+                hcursor.stored_column_origin = Some((frame.source_origin_hu, hcursor.col_anchor_y));
             }
             if !heading_shape_keeps_page_base
                 && !stored_overlay_host_keeps_page_base
                 && !shape_keeps_host_line_base
                 && !resolved_stored_wrap_fragment
                 && !opening_tac_keeps_page_base
-                && accepted_tac_origin.is_none()
+                && accepted_tac_frame.is_none()
                 && (was_tac || (is_table_or_shape && !is_para_float_table && !is_inline_tac_object))
             {
                 hcursor.vpos_page_base = None;

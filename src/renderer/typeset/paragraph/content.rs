@@ -29,11 +29,13 @@ pub(super) fn stored_content_bottom(
     {
         return None;
     }
-    let recovered_frame = accepted_preceding_tac_frame(st, para, paragraphs, dpi).or_else(|| {
-        (st.vpos_page_base.is_none() && st.vpos_lazy_base.is_none())
-            .then(|| accepted_tac_column_frame(st, paragraphs, styles, dpi))
-            .flatten()
-    });
+    let recovered_frame = accepted_preceding_tac_frame(st, para, paragraphs, dpi)
+        .or_else(|| accepted_first_text_frame(st, paragraphs))
+        .or_else(|| {
+            (st.vpos_page_base.is_none() && st.vpos_lazy_base.is_none())
+                .then(|| accepted_tac_column_frame(st, paragraphs, styles, dpi))
+                .flatten()
+        });
     let (first_owner, first_line) = match st.current_items.first()? {
         PageItem::FullParagraph { para_index } => (*para_index, 0),
         PageItem::Table { para_index, .. } if recovered_frame.is_some() => (*para_index, 0),
@@ -132,6 +134,34 @@ pub(super) fn stored_content_bottom(
         .map(|end| anchor + hwpunit_to_px(end, dpi))
 }
 
+/// 표와 별도로 수용한 첫 본문 조각도 자기 원점과 저장 축을 소유한다.
+/// 현재 단의 다른 축이나 재조판 결과로 이를 덮어쓰지 않는다.
+fn accepted_first_text_frame(st: &TypesetState, paragraphs: &[Paragraph]) -> Option<(i32, f64)> {
+    let (owner, end_line) = match st.current_items.first()? {
+        PageItem::FullParagraph { para_index } => {
+            (*para_index, paragraphs.get(*para_index)?.line_segs.len())
+        }
+        PageItem::PartialParagraph {
+            para_index,
+            end_line,
+            ..
+        } => (*para_index, *end_line),
+        _ => return None,
+    };
+    let bounds = st
+        .paragraph_fragment_content_bottoms
+        .get(&(owner, end_line))?;
+    let frame = bounds.stored_frame?;
+    let base = frame.source_origin_hu;
+    let anchor = frame.column_anchor_y;
+    (anchor == st.vpos_col_anchor
+        && st
+            .vpos_page_base
+            .or(st.vpos_lazy_base)
+            .is_none_or(|active| active == base))
+    .then_some((base, anchor))
+}
+
 /// 단 중간의 확정 TAC도 후속 글줄의 실제 좌표축을 소유할 수 있다.
 /// 흐름에서 트림한 앞 간격을 물리 내용 하단에서 다시 빼지 않는다.
 fn accepted_preceding_tac_frame(
@@ -164,10 +194,12 @@ fn accepted_preceding_tac_frame(
             return None;
         }
         let placement = st.inline_placements.get(&(owner, control))?;
-        let origin = placement.stored_column_origin_hu?;
-        let anchor = st.vpos_col_anchor;
+        let frame = placement.stored_column_frame?;
+        let origin = frame.source_origin_hu;
+        let anchor = frame.column_anchor_y;
         let expected = anchor + hwpunit_to_px(line.vertical_pos.checked_sub(origin)?, dpi);
         return (origin == active_origin
+            && anchor == st.vpos_col_anchor
             && (placement.y - expected).abs() <= hwpunit_to_px(1, dpi))
         .then_some((origin, anchor));
     }

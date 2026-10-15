@@ -12,7 +12,7 @@ impl TypesetState {
             self.data.vpos_prev_layout_para = Some(para_index);
             // 저장 줄 수용이 발행한 축은 표 뒤의 일반 앵커 초기화로 지우지 않는다.
             // 다른 줄·합성·분할 경로는 이 인증을 갖지 않는다.
-            let accepted_origin = match self.data.current_items.last() {
+            let accepted_frame = match self.data.current_items.last() {
                 Some(PageItem::Table {
                     para_index: owner,
                     control_index,
@@ -20,13 +20,14 @@ impl TypesetState {
                     .data
                     .inline_placements
                     .get(&(*owner, *control_index))
-                    .and_then(|placement| placement.stored_column_origin_hu),
+                    .and_then(|placement| placement.stored_column_frame),
                 _ => None,
             };
-            if let Some(origin) = accepted_origin {
-                self.record_vpos_page_origin(Some(origin));
+            if let Some(frame) = accepted_frame {
+                self.record_vpos_page_origin(Some(frame.source_origin_hu));
                 self.record_vpos_lazy_origin(None);
                 self.record_vpos_origin_provenance(true);
+                self.record_vpos_column_anchor(frame.column_anchor_y);
                 self.data.vpos_prev_partial_table = false;
                 return;
             }
@@ -156,13 +157,13 @@ impl TypesetState {
         }
     }
 
-    /// 텍스트 뒤에 방출한 같은 문단의 인라인 표시도 그 글줄의 소유를 유지한다.
-    /// 다른 문단의 표시·독립 float·표를 넘어 앞 문단을 조회하지 않는다.
+    /// 같은 문단의 인라인 표시와 흐름을 전진시키지 않은 표 뒤에서도 글줄 소유를 유지한다.
+    /// 공간을 소비한 표나 다른 문단을 넘어 앞 내용 하단을 조회하지 않는다.
     fn previous_text_content_bottom(
         &self,
         paragraphs: &[crate::model::paragraph::Paragraph],
     ) -> Option<(usize, usize, f64)> {
-        let mut inline_owner = None;
+        let mut following_owner = None;
         for item in self.data.current_items.iter().rev() {
             let (owner, end_line) = match item {
                 PageItem::Shape {
@@ -171,11 +172,32 @@ impl TypesetState {
                 } => {
                     let control = paragraphs.get(*para_index)?.controls.get(*control_index)?;
                     if !crate::renderer::typeset::controls::stored_tac::inline_text_control(control)
-                        || inline_owner.is_some_and(|owner| owner != *para_index)
+                        || following_owner.is_some_and(|owner| owner != *para_index)
                     {
                         return None;
                     }
-                    inline_owner = Some(*para_index);
+                    following_owner = Some(*para_index);
+                    continue;
+                }
+                PageItem::Table {
+                    para_index,
+                    control_index,
+                } => {
+                    let para = paragraphs.get(*para_index)?;
+                    let bounds = self
+                        .data
+                        .paragraph_fragment_content_bottoms
+                        .get(&(*para_index, para.line_segs.len()))?;
+                    // 표가 독립 배치되어도 글줄은 별도 소유다. 같은 완전한 본문 조각의
+                    // 실제 전진 끝이 현재 커서와 같을 때만 표가 흐름을 늘리지 않았음을 안다.
+                    if !matches!(para.controls.get(*control_index), Some(Control::Table(table))
+                        if !table.common.treat_as_char)
+                        || bounds.flow_end != self.data.current_height
+                        || following_owner.is_some_and(|owner| owner != *para_index)
+                    {
+                        return None;
+                    }
+                    following_owner = Some(*para_index);
                     continue;
                 }
                 PageItem::FullParagraph { para_index } => {
@@ -188,14 +210,14 @@ impl TypesetState {
                 } => (*para_index, *end_line),
                 _ => return None,
             };
-            if inline_owner.is_some_and(|inline_owner| inline_owner != owner) {
+            if following_owner.is_some_and(|following_owner| following_owner != owner) {
                 return None;
             }
             return self
                 .data
                 .paragraph_fragment_content_bottoms
                 .get(&(owner, end_line))
-                .map(|bottom| (owner, end_line, *bottom));
+                .map(|bounds| (owner, end_line, bounds.content_bottom));
         }
         None
     }

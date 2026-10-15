@@ -121,7 +121,7 @@ impl TypesetEngine {
                     .then(|| {
                         st.paragraph_fragment_content_bottoms
                             .get(&(previous, 1))
-                            .copied()
+                            .map(|bounds| bounds.content_bottom)
                     })
                     .flatten()
             }),

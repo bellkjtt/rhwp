@@ -10,9 +10,11 @@ pub(in crate::renderer::typeset) struct StateView {
     pub(in crate::renderer::typeset) pages: Vec<PageContent>,
     /// 현재 단에 쌓이는 항목
     pub(in crate::renderer::typeset) current_items: Vec<PageItem>,
-    /// 수용한 일반 전체/분할 본문의 (문단, 끝 줄)별 단 상대 점유 하단.
-    pub(in crate::renderer::typeset) paragraph_fragment_content_bottoms:
-        std::collections::HashMap<(usize, usize), f64>,
+    /// 수용한 본문 조각의 (문단, 끝 줄)별 점유 하단·흐름 끝·검증된 저장 축.
+    pub(in crate::renderer::typeset) paragraph_fragment_content_bottoms: std::collections::HashMap<
+        (usize, usize),
+        super::paragraph_fragment::ParagraphFragmentBounds,
+    >,
     /// 축소된 본문 프레임에서 실제 빈 줄을 이어받은 저장 쪽 경계.
     pub(in crate::renderer::typeset) saved_empty_run: Option<super::empty_run::SavedEmptyRun>,
     /// 현재 단에서 소비된 높이 (px)

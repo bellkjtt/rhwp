@@ -586,9 +586,10 @@ pub(super) fn try_place_stored_tac_paragraph(
         let placement = plan.placement(line, fmt.spacing_after, dpi);
         st.commit_stored_tac_control(para_idx, placement);
     }
-    if plan.source_origin.is_some() {
+    if let Some(frame) = plan.source_frame {
         st.commit_deferred_table_anchor(para_idx, paragraphs);
-        st.record_vpos_page_origin(plan.source_origin);
+        st.record_vpos_page_origin(Some(frame.source_origin_hu));
+        st.record_vpos_column_anchor(frame.column_anchor_y);
         st.record_vpos_origin_provenance(true);
         st.record_vpos_lazy_origin(None);
     }

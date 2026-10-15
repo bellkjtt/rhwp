@@ -207,14 +207,14 @@ impl TypesetEngine {
                                 && matches!(t.common.vert_rel_to, crate::model::shape::VertRelTo::Para))));
                     // 저장 TAC의 수용 계획이 발행한 축을 paint와 같은 후처리에서 보존한다.
                     // 일반 표의 선언 높이만으로 축을 추측하지 않는다.
-                    let accepted_tac_origin = match last {
+                    let accepted_tac_frame = match last {
                         Some(PageItem::Table {
                             para_index,
                             control_index,
                         }) => st
                             .inline_placements
                             .get(&(*para_index, *control_index))
-                            .and_then(|placement| placement.stored_column_origin_hu),
+                            .and_then(|placement| placement.stored_column_frame),
                         _ => None,
                     };
                     let opening_tac_origin = (st.current_start_height == 0.0
@@ -245,11 +245,15 @@ impl TypesetEngine {
                     if para_float_table {
                         st.seed_whole_table_column_origin(para_idx, paragraphs);
                     }
-                    if let Some(origin) = accepted_tac_origin {
-                        st.record_vpos_page_origin(Some(origin));
+                    if let Some(frame) = accepted_tac_frame {
+                        st.record_vpos_page_origin(Some(frame.source_origin_hu));
                         st.record_vpos_lazy_origin(None);
                         st.record_vpos_origin_provenance(true);
-                        st.record_stored_column_origin(Some((origin, st.vpos_col_anchor)));
+                        st.record_vpos_column_anchor(frame.column_anchor_y);
+                        st.record_stored_column_origin(Some((
+                            frame.source_origin_hu,
+                            frame.column_anchor_y,
+                        )));
                     }
                     if !host_line_covers_object
                         && !resolved_inline_end
@@ -257,7 +261,7 @@ impl TypesetEngine {
                         && !resolved_stored_page_frame
                         && !para_float_table
                         && opening_tac_origin.is_none()
-                        && accepted_tac_origin.is_none()
+                        && accepted_tac_frame.is_none()
                     {
                         st.record_vpos_page_origin(None);
                         st.record_vpos_lazy_origin(None);

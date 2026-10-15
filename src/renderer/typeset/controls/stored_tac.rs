@@ -8,7 +8,7 @@ use crate::model::{
     control::Control, paragraph::Paragraph, provenance::LayoutCompatibilityProfile,
 };
 use crate::renderer::composer::{stored_tac_lines, StoredTacLine};
-use crate::renderer::float_placement::InlineBoxPlacement;
+use crate::renderer::float_placement::{InlineBoxPlacement, StoredColumnFrame};
 use crate::renderer::height_measurer::MeasuredTable;
 use crate::renderer::hwpunit_to_px;
 
@@ -51,7 +51,7 @@ pub(in crate::renderer::typeset) struct StoredTacPage {
 pub(super) struct StoredTacPlan {
     pub lines: Vec<StoredTacLine>,
     origin: f64,
-    pub(super) source_origin: Option<i32>,
+    pub(super) source_frame: Option<StoredColumnFrame>,
 }
 
 pub(in crate::renderer::typeset) struct StoredTacControlPlacement {
@@ -213,7 +213,7 @@ pub(super) fn prepare_coanchored_first_line(
             clearance: 0.0,
             advance_end: Some(end),
             stored_horizontal_pen: None,
-            stored_column_origin_hu: None,
+            stored_column_frame: None,
         },
         end,
         rebase_line_origin: false,
@@ -421,7 +421,7 @@ pub(super) fn prepare_computed(
             clearance: 0.0,
             advance_end: Some(end),
             stored_horizontal_pen: None,
-            stored_column_origin_hu: None,
+            stored_column_frame: None,
         },
         end,
         rebase_line_origin: !closed_stored_line,
@@ -635,11 +635,7 @@ pub(super) fn prepare(
                 // 앞 저장 글줄의 후행 간격은 표의 진입 밴드다. 수용 커서가
                 // 그 글줄의 내용 끝에 있으면 같은 좌표축에서 표 원점까지 연결한다.
                 let inherited_origin = previous_para.and_then(|previous| {
-                    if previous.stored_text_partition_is_dirty()
-                        || previous.cell_format_vpos_dirty
-                        // 저장 글줄은 TAC 수식과 각주·미주 표시도 소유한다.
-                        // 독립 배치가 있는 float/개체는 이 진입 밴드의 근거가 아니다.
-                        || !text_controls_share_line(previous)
+                    if previous.stored_text_partition_is_dirty() || previous.cell_format_vpos_dirty
                     {
                         return None;
                     }
@@ -661,6 +657,8 @@ pub(super) fn prepare(
                             })
                             == Some(next.vertical_pos);
                     let (owner, end_line, content_end) = page.previous_content_bottom?;
+                    // 실제 수용한 완전한 글줄 조각이 소유를 인증한다. 같은 문단의
+                    // 독립 표가 있다는 사실로 그 본문 소유까지 거절하지 않는다.
                     if owner.checked_add(1) != Some(para_idx)
                         || end_line != previous.line_segs.len()
                     {
@@ -765,7 +763,10 @@ pub(super) fn prepare(
                 return Some(StoredTacPlan {
                     lines,
                     origin,
-                    source_origin,
+                    source_frame: source_origin.map(|source_origin_hu| StoredColumnFrame {
+                        source_origin_hu,
+                        column_anchor_y: page.vpos_col_anchor,
+                    }),
                 });
             }
         }
@@ -796,7 +797,7 @@ impl StoredTacPlan {
                 clearance: 0.0,
                 advance_end: Some(end),
                 stored_horizontal_pen: None,
-                stored_column_origin_hu: self.source_origin,
+                stored_column_frame: self.source_frame,
             },
             end,
             rebase_line_origin: false,

@@ -414,6 +414,7 @@ pub(super) fn place_fitted_paragraph(
                 },
                 |(bottom, _)| bottom - st.current_height,
             ),
+            advance,
         );
     }
     st.apply_full_paragraph_flow(

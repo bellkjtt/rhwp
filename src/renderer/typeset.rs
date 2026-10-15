@@ -4479,7 +4479,7 @@ impl TypesetEngine {
                     clearance: 0.0,
                     advance_end: None,
                     stored_horizontal_pen: None,
-                    stored_column_origin_hu: None,
+                    stored_column_frame: None,
                 }));
             }
         }
@@ -4506,7 +4506,7 @@ impl TypesetEngine {
                     clearance: 0.0,
                     advance_end: Some(st.current_height + table_height),
                     stored_horizontal_pen: Some(row.horizontal_pen),
-                    stored_column_origin_hu: None,
+                    stored_column_frame: None,
                 },
             );
         }
@@ -4766,6 +4766,7 @@ impl TypesetEngine {
         {
             let h = fmt.line_advances_sum(0..pre_table_end_line);
             if !defer_host_line {
+                st.record_host_text_fragment(para_idx, 0..pre_table_end_line, para, fmt, self.dpi);
                 st.append_item(PageItem::PartialParagraph {
                     para_index: para_idx,
                     start_line: 0,
@@ -4838,7 +4839,7 @@ impl TypesetEngine {
                     clearance: 0.0,
                     advance_end: Some(end),
                     stored_horizontal_pen: None,
-                    stored_column_origin_hu: None,
+                    stored_column_frame: None,
                 },
             );
             Some(end)
@@ -5350,6 +5351,13 @@ impl TypesetEngine {
                 );
                 st.consume_float_pushed_line_spacing(para_idx, spacing);
             }
+            st.record_host_text_fragment(
+                para_idx,
+                post_table_start..total_lines,
+                para,
+                fmt,
+                self.dpi,
+            );
             st.append_item(PageItem::PartialParagraph {
                 para_index: para_idx,
                 start_line: post_table_start,

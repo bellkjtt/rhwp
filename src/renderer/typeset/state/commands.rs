@@ -465,10 +465,16 @@ impl TypesetState {
         &mut self,
         key: (usize, usize),
         content_height: f64,
+        flow_advance: f64,
     ) {
-        self.data
-            .paragraph_fragment_content_bottoms
-            .insert(key, self.data.current_height + content_height);
+        self.data.paragraph_fragment_content_bottoms.insert(
+            key,
+            super::paragraph_fragment::ParagraphFragmentBounds {
+                content_bottom: self.data.current_height + content_height,
+                flow_end: self.data.current_height + flow_advance,
+                stored_frame: None,
+            },
+        );
     }
     pub(in crate::renderer::typeset) fn append_endnote_paragraph(
         &mut self,

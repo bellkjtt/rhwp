@@ -133,7 +133,7 @@ impl TypesetState {
         suffix_height: f64,
         content_height: f64,
     ) {
-        self.record_paragraph_content_bottom((para_idx, end_line), content_height);
+        self.record_paragraph_content_bottom((para_idx, end_line), content_height, suffix_height);
         self.data.current_items.push(PageItem::PartialParagraph {
             para_index: para_idx,
             start_line: wrap_prefix_len,
@@ -751,9 +751,7 @@ impl TypesetState {
             Some(height),
         ) = (&fragment.item, fragment.content_height)
         {
-            self.data
-                .paragraph_fragment_content_bottoms
-                .insert((*para_index, *end_line), self.data.current_height + height);
+            self.record_paragraph_content_bottom((*para_index, *end_line), height, fragment.height);
         }
         self.data.current_items.push(fragment.item);
         self.data.vpos_prev_trimmed_sb_px = 0.0;
@@ -988,6 +986,7 @@ mod data;
 mod empty_run;
 pub(super) mod finalize;
 mod notes;
+mod paragraph_fragment;
 mod stored_tac;
 mod transition;
 
