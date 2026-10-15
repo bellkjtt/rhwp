@@ -11397,12 +11397,14 @@ impl LayoutEngine {
                                     if (y_offset - t).abs() > 2.0 {
                                         y_offset = t;
                                     }
+                                    // 실제 저장 사다리로 다음 문단 앞 원점을 정한 경우다.
+                                    // 계산한 인라인 줄 끝만 소비한 경우와 구별한다.
+                                    applied_tac_segment = true;
                                 }
                             }
                         }
-                        // 이 경로도 표를 품은 줄의 간격까지 이미 소비했다.
-                        // 다음 문단에서 PageItem 종류만 보고 그 간격을 다시 붙이지 않는다.
-                        applied_tac_segment = true;
+                        // 인라인 줄의 끝은 다음 문단의 위 간격을 포함하지 않는다.
+                        // 저장 원점을 적용하지 않았다면 다음 항목이 자기 간격을 소비한다.
                     } else {
                         let comp = composed.get(*para_index);
                         let numbered_comp = self.apply_paragraph_numbering(

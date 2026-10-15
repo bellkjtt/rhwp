@@ -190,6 +190,66 @@ fn hwp3_inline_equation_keeps_host_font_leading_when_box_height_changes() {
     }
 }
 
+#[test]
+fn inline_caption_preserves_the_following_table_paragraphs_own_spacing() {
+    use rhwp::document_core::DocumentCore;
+    use rhwp::renderer::render_tree::{RenderNode, RenderNodeType};
+
+    fn text(node: &RenderNode, result: &mut String) {
+        if let RenderNodeType::TextRun(run) = &node.node_type {
+            result.push_str(&run.text);
+        }
+        for child in &node.children {
+            text(child, result);
+        }
+    }
+    fn tables(node: &RenderNode, result: &mut Vec<(String, f64, f64)>) {
+        if matches!(node.node_type, RenderNodeType::Table(_)) {
+            let mut content = String::new();
+            text(node, &mut content);
+            result.push((content, node.bbox.y, node.bbox.height));
+        }
+        for child in &node.children {
+            tables(child, result);
+        }
+    }
+    fn positions(before: u16) -> Vec<(String, f64, f64)> {
+        let mut paragraphs = object_paragraph(0, "CAPTION");
+        let mut following = object_paragraph(0, "BODY");
+        let header_len = para_header(5, 1).len();
+        // 원본 문단 위 간격은 1/1800인치 단위다. 표·셀 너비를 함께 보존한다.
+        let shape_start = header_len - para_shape187().len();
+        following[shape_start + 183..shape_start + 185].copy_from_slice(&u16le(before));
+        let box_start = header_len + line_info(100).len() + 8;
+        following[box_start + 42..box_start + 44].copy_from_slice(&u16le(13000));
+        following[box_start + 84 + 8..box_start + 84 + 10].copy_from_slice(&u16le(13000));
+        paragraphs.extend_from_slice(&following);
+        let core = DocumentCore::from_bytes(&hwp3_doc(&hwp3_body(&paragraphs)))
+            .expect("원본 단위로 구성한 인라인 캡션과 후속 블록 표");
+        let page = core.build_page_render_tree(0).expect("공개 배치 경로");
+        let mut result = Vec::new();
+        tables(&page.root, &mut result);
+        result
+    }
+    let ordinary = positions(0);
+    let spaced = positions(100);
+    assert_eq!(ordinary.len(), 2, "두 표를 같은 쪽에 한 번씩 보존");
+    assert_eq!(spaced.len(), ordinary.len());
+    assert_eq!(ordinary[0].0, "CAPTION");
+    assert_eq!(ordinary[1].0, "BODY");
+    assert_eq!(
+        spaced[0], ordinary[0],
+        "뒤 문단 간격은 앞 캡션을 옮기지 않는다"
+    );
+    assert_eq!(spaced[1].0, ordinary[1].0);
+    assert_eq!(spaced[1].2, ordinary[1].2, "문단 간격은 표 높이가 아니다");
+    let source_spacing = 100.0 * 96.0 / 1800.0;
+    assert!(
+        ((spaced[1].1 - ordinary[1].1) - source_spacing).abs() < 1e-6,
+        "뒤 표는 자기 문단 위 간격만큼 이동해야 한다: {ordinary:?} -> {spaced:?}"
+    );
+}
+
 fn controls(doc: &rhwp::model::document::Document) -> Vec<&Control> {
     doc.sections
         .iter()
