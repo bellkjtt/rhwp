@@ -24,7 +24,7 @@ pub(super) fn image_payload(
     let crop = image.crop.map(|crop| {
         crate::renderer::svg::compute_image_crop_src(
             crop,
-            image.crop_reference_size,
+            image.original_size_hu,
             natural_w,
             natural_h,
         )
