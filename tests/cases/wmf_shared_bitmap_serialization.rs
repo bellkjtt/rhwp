@@ -50,15 +50,26 @@ fn diagram(items: &[(i16, i16, [u8; 3])]) -> String {
         record(0x0B41, &parameters, &mut bytes);
     }
     record(0, &[], &mut bytes);
-    String::from_utf8(WMFConverter::new(bytes.as_slice(), SVGPlayer::new()).run().unwrap()).unwrap()
+    String::from_utf8(
+        WMFConverter::new(bytes.as_slice(), SVGPlayer::new())
+            .run()
+            .unwrap(),
+    )
+    .unwrap()
 }
 
 #[test]
 fn wmf_repeated_png_serialization_keeps_placement_order_clip_and_ids() {
     let svg = diagram(&[(11, 20, [20, 40, 80]), (31, 20, [20, 40, 80])]);
     let doc = roxmltree::Document::parse(&svg).unwrap();
-    let images: Vec<_> = doc.descendants().filter(|n| n.has_tag_name("image")).collect();
-    let uses: Vec<_> = doc.descendants().filter(|n| n.has_tag_name("use")).collect();
+    let images: Vec<_> = doc
+        .descendants()
+        .filter(|n| n.has_tag_name("image"))
+        .collect();
+    let uses: Vec<_> = doc
+        .descendants()
+        .filter(|n| n.has_tag_name("use"))
+        .collect();
     assert_eq!(images.len(), 1, "동일 PNG는 한 번만 직렬화한다");
     assert_eq!(uses.len(), 2, "각 원래 그림의 소유·순서는 보존한다");
     let source = images[0];
@@ -69,7 +80,10 @@ fn wmf_repeated_png_serialization_keeps_placement_order_clip_and_ids() {
     assert_eq!(uses[1].attribute("x"), Some("31"));
     assert_ne!(uses[0].attribute("id"), uses[1].attribute("id"));
     for item in uses {
-        assert_eq!(item.attribute("href").unwrap().strip_prefix('#'), source.attribute("id"));
+        assert_eq!(
+            item.attribute("href").unwrap().strip_prefix('#'),
+            source.attribute("id")
+        );
         assert!(item.attribute("clip-path").is_some());
         assert_eq!(item.attribute("y"), Some("7"));
     }
@@ -77,8 +91,17 @@ fn wmf_repeated_png_serialization_keeps_placement_order_clip_and_ids() {
 
 #[test]
 fn wmf_png_serialization_keeps_distinct_size_and_bitmap_payloads() {
-    let svg = diagram(&[(1, 20, [20, 40, 80]), (2, 40, [20, 40, 80]), (3, 20, [90, 60, 30])]);
+    let svg = diagram(&[
+        (1, 20, [20, 40, 80]),
+        (2, 40, [20, 40, 80]),
+        (3, 20, [90, 60, 30]),
+    ]);
     let doc = roxmltree::Document::parse(&svg).unwrap();
-    assert_eq!(doc.descendants().filter(|n| n.has_tag_name("image")).count(), 3);
+    assert_eq!(
+        doc.descendants()
+            .filter(|n| n.has_tag_name("image"))
+            .count(),
+        3
+    );
     assert!(!doc.descendants().any(|n| n.has_tag_name("use")));
 }
