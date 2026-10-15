@@ -595,3 +595,61 @@ fn verified_distribution_budget_table_preserves_unit_label_and_following_caption
         );
     }
 }
+
+#[test]
+fn verified_distribution_whitespace_rows_belong_to_the_budget_table() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("samples/task1768/distribution_doc.hwpx");
+    let bytes = std::fs::read(path).unwrap();
+    let source = rhwp::parser::parse_document(&bytes).unwrap();
+    let mut hosts = Vec::new();
+    for (section, s) in source.sections.iter().enumerate() {
+        for (paragraph, p) in s.paragraphs.iter().enumerate() {
+            if p.text.trim() == "(단위 : 천원)" {
+                for (control, c) in p.controls.iter().enumerate() {
+                    if matches!(c, Control::Table(t) if t.common.treat_as_char) {
+                        hosts.push((section, paragraph, control, p));
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(hosts.len(), 1, "원문의 단위 표시와 단일 예산 표");
+    let (section, paragraph, control, original) = hosts[0];
+    let core = DocumentCore::from_bytes(&bytes).unwrap();
+    let page = core.build_page_render_tree(2).unwrap();
+    let mut tables = Vec::new();
+    let mut rows = Vec::new();
+    owned(
+        &page.root,
+        (section, paragraph, control),
+        &mut tables,
+        &mut rows,
+    );
+    assert_eq!(tables.len(), 1, "독립 Print 3쪽에 한 번만 있는 예산 표");
+    let table = tables[0];
+    host_rows(&rows, original, (section, paragraph), table);
+    let mut labels = Vec::new();
+    let mut object_rows = Vec::new();
+    for row in rows {
+        let mut text = String::new();
+        rendered_text(row, &mut text);
+        if text.trim().is_empty() {
+            assert!(
+                row.bbox.y <= table.bbox.y
+                    && table.bbox.y + table.bbox.height <= row.bbox.y + row.bbox.height,
+                "가시 글자 없는 줄은 원문 개체를 포함해야 하며 별도 빈 줄을 만들지 않는다"
+            );
+            object_rows.push(row);
+        } else {
+            assert_eq!(text.trim(), "(단위 : 천원)", "단위 표시의 내용 보존");
+            labels.push(row);
+        }
+    }
+    assert_eq!(labels.len(), 1, "단위 표시의 누락·중복 방지");
+    assert_eq!(object_rows.len(), 1, "다음 줄을 점유하는 원문 표의 소유");
+    assert!(
+        labels[0].bbox.y + labels[0].bbox.height <= object_rows[0].bbox.y,
+        "단위 표시 뒤 표의 줄 순서·비겹침"
+    );
+}
