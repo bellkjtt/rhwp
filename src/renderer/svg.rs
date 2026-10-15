@@ -3421,7 +3421,7 @@ impl Renderer for SvgRenderer {
                         char_x + cx, y + cy, rx, ry, color,
                     ));
                     self.output.push_str(&format!(
-                        "<text x=\"{:.4}\" y=\"{:.4}\" fill-opacity=\"0\">∙</text>\n",
+                        "<text x=\"{:.4}\" y=\"{:.4}\" fill-opacity=\"0\">{cluster_str}</text>\n",
                         char_x, y,
                     ));
                     continue;

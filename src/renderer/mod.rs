@@ -1178,20 +1178,30 @@ pub fn svg_arc_to_beziers(
     result
 }
 
-/// 한양 HFT 불릿의 원 윤곽을 대체 TTF의 작은 수학 점과 구분한다.
+/// 한양 HFT 불릿과 비어 있는 대체 TTF 원 기호의 실제 원 윤곽을 보존한다.
 /// 한컴 PDF Type3 /HFT8: 중심 (500,352), 가로 반지름123.75, 세로123 /1000em.
+/// U+26AB는 한컴 Print의 SegoeUIEmoji: bbox (256,-431)..(2556,1869), 2048em.
 /// 명시적으로 검증된 TrueType face와 다른 기호·글꼴은 원 글리프를 유지한다.
 pub(crate) fn legacy_hft_bullet_geometry(
     text: &str,
     style: &TextStyle,
 ) -> Option<(f64, f64, f64, f64)> {
     let face = style.font_family.split(',').next().unwrap_or("").trim();
-    if text != "∙"
-        || style.font_metric_trusted
-        || !matches!(face, "한양신명조" | "HanyangSinMyeongJo")
-    {
+    if style.font_metric_trusted || !matches!(face, "한양신명조" | "HanyangSinMyeongJo") {
         return None;
     }
+    let (cx, cy, rx, ry) = match text {
+        "∙" => (0.5, -0.352, 0.12375, 0.123),
+        // HBATANG의 cmap hit는 있지만 uni26AB 윤곽은 비어 있다. 글자 전진·소유는
+        // 유지하고, 한컴이 선택한 실제 fallback의 원을 같은 em 좌표계로 그린다.
+        "⚫" => (
+            1406.0 / 2048.0,
+            -719.0 / 2048.0,
+            1150.0 / 2048.0,
+            1150.0 / 2048.0,
+        ),
+        _ => return None,
+    };
     let size = style.font_size
         * if style.superscript || style.subscript {
             SCRIPT_FONT_SCALE
@@ -1199,12 +1209,7 @@ pub(crate) fn legacy_hft_bullet_geometry(
             1.0
         };
     let ratio = if style.ratio > 0.0 { style.ratio } else { 1.0 };
-    Some((
-        size * ratio * 0.5,
-        -size * 0.352,
-        size * ratio * 0.12375,
-        size * 0.123,
-    ))
+    Some((size * ratio * cx, size * cy, size * ratio * rx, size * ry))
 }
 
 /// 렌더러 트레이트 (모든 백엔드가 구현)

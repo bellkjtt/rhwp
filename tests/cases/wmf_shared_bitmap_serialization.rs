@@ -29,8 +29,18 @@ fn diagram(items: &[(i16, i16, [u8; 3])]) -> String {
     let pair = [100i16.to_le_bytes(), 100i16.to_le_bytes()].concat();
     record(0x020C, &pair, &mut bytes);
     // 같은 clip을 가진 두 그림도 각각의 표시 위치와 순서를 보존한다.
-    let clip = [90i16, 90, 0, 0].map(i16::to_le_bytes).concat();
-    record(0x0416, &clip, &mut bytes);
+    // 실제 SVG clip을 발행하는 CreateRegion → SelectClipRegion 경로를 사용한다.
+    // IntersectClipRect의 DC 기록만으로 출력 clip까지 구현됐다고 추정하지 않는다.
+    let mut region = vec![];
+    for value in [0u16, 6] {
+        region.extend_from_slice(&value.to_le_bytes());
+    }
+    region.extend_from_slice(&1u32.to_le_bytes());
+    for value in [34i16, 1, 2, 0, 0, 90, 90, 2, 0, 90, 0, 90, 2] {
+        region.extend_from_slice(&value.to_le_bytes());
+    }
+    record(0x06FF, &region, &mut bytes);
+    record(0x012C, &0u16.to_le_bytes(), &mut bytes);
     for &(x, width, bgr) in items {
         let mut parameters = 0x00CC_0020u32.to_le_bytes().to_vec(); // SRCCOPY
         for value in [2i16, 2, 0, 0, 30, width, 7, x] {
@@ -101,13 +111,20 @@ fn wmf_shared_png_stays_inside_the_original_device_clip() {
     let tree = resvg::usvg::Tree::from_str(&svg, &resvg::usvg::Options::default()).unwrap();
     let size = tree.size().to_int_size();
     let mut pixmap = resvg::tiny_skia::Pixmap::new(size.width(), size.height()).unwrap();
-    resvg::render(&tree, resvg::tiny_skia::Transform::identity(), &mut pixmap.as_mut());
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::identity(),
+        &mut pixmap.as_mut(),
+    );
     let mut painted = 0;
     for (index, pixel) in pixmap.pixels().iter().enumerate() {
         if pixel.alpha() != 0 {
             painted += 1;
             let x = index % size.width() as usize;
-            assert!(x < 90, "그림 이동이 원래 clip 우단을 이동시키면 안 된다: {x}");
+            assert!(
+                x < 90,
+                "그림 이동이 원래 clip 우단을 이동시키면 안 된다: {x}"
+            );
         }
     }
     assert!(painted > 0, "전부 지워서 클립 관계를 통과시키면 안 된다");
