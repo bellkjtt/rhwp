@@ -221,10 +221,20 @@ fn inline_caption_preserves_the_following_table_paragraphs_own_spacing() {
         let shape_start = header_len - para_shape187().len();
         following[shape_start + 183..shape_start + 185].copy_from_slice(&u16le(before));
         let box_start = header_len + line_info(100).len() + 8;
-        following[box_start + 42..box_start + 44].copy_from_slice(&u16le(13000));
-        following[box_start + 84 + 8..box_start + 84 + 10].copy_from_slice(&u16le(13000));
+        following[box_start + 42..box_start + 44].copy_from_slice(&u16le(14500));
+        following[box_start + 84 + 8..box_start + 84 + 10].copy_from_slice(&u16le(14500));
         paragraphs.extend_from_slice(&following);
-        let core = DocumentCore::from_bytes(&hwp3_doc(&hwp3_body(&paragraphs)))
+        let mut bytes = hwp3_doc(&hwp3_body(&paragraphs));
+        bytes[36..38].copy_from_slice(&u16le(20000));
+        bytes[38..40].copy_from_slice(&u16le(15000));
+        let source = rhwp::parser::hwp3::parse_hwp3(&bytes).expect("원본 문단 간격 확인");
+        let host = &source.sections[0].paragraphs[1];
+        assert_eq!(
+            source.doc_info.para_shapes[host.para_shape_id as usize].spacing_before,
+            i32::from(before) * 8,
+            "위 간격을 가진 원본 문단을 실제로 구성한다"
+        );
+        let core = DocumentCore::from_bytes(&bytes)
             .expect("원본 단위로 구성한 인라인 캡션과 후속 블록 표");
         let page = core.build_page_render_tree(0).expect("공개 배치 경로");
         let mut result = Vec::new();
@@ -248,6 +258,32 @@ fn inline_caption_preserves_the_following_table_paragraphs_own_spacing() {
         ((spaced[1].1 - ordinary[1].1) - source_spacing).abs() < 1e-6,
         "뒤 표는 자기 문단 위 간격만큼 이동해야 한다: {ordinary:?} -> {spaced:?}"
     );
+}
+
+#[test]
+fn legacy_hwp3_font_declaration_preserves_its_source_program_kind() {
+    for (source, name, expected_type) in [
+        (&b"\xaf\xa5\xa1\x77\xb9\xa1"[..], "HY신명조", 2),
+        (&b"\xa4\x61\xc8\x77"[..], "바탕", 0),
+    ] {
+        let mut body = hwp3_body(&object_paragraph(0, "SOURCE"));
+        for language in 0..7 {
+            let start = language * 42 + 2;
+            body[start..start + 40].fill(0);
+            body[start..start + source.len()].copy_from_slice(source);
+        }
+        let doc = rhwp::parser::hwp3::parse_hwp3(&hwp3_doc(&body)).expect("글꼴 선언 파싱");
+        for faces in &doc.doc_info.font_faces {
+            assert_eq!(faces[0].name, name, "기존 표시 이름 보존");
+            assert_eq!(faces[0].alt_type, expected_type, "원본 HFT 종류 보존");
+        }
+        let styles = rhwp::renderer::style_resolver::resolve_styles(&doc.doc_info, 96.0);
+        assert_eq!(
+            styles.char_styles[0].hft_fullwidth_dot_for_lang(5),
+            expected_type == 2,
+            "기호 슬롯은 정규화한 표시 이름이 아닌 원본 프로그램 종류를 소비한다"
+        );
+    }
 }
 
 fn controls(doc: &rhwp::model::document::Document) -> Vec<&Control> {
