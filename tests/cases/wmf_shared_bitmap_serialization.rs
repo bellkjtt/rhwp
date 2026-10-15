@@ -152,7 +152,6 @@ fn wmf_png_serialization_keeps_distinct_size_and_bitmap_payloads() {
     assert!(!doc.descendants().any(|n| n.has_tag_name("use")));
 }
 
-
 fn font_diagram(face: &[u8], charset: u8) -> String {
     let mut bytes = header();
     let mut font = Vec::new();
@@ -189,7 +188,10 @@ fn wmf_korean_font_keeps_installed_family_before_generic_fallback() {
     let families: Vec<_> = text.attribute("font-family").unwrap().split(',').collect();
     let original = families.iter().position(|f| *f == "'굴림체'").unwrap();
     let installed = families.iter().position(|f| *f == "'GulimChe'").unwrap();
-    let fallback = families.iter().position(|f| *f == "'Malgun Gothic'").unwrap();
+    let fallback = families
+        .iter()
+        .position(|f| *f == "'Malgun Gothic'")
+        .unwrap();
     assert!(original < installed && installed < fallback);
     assert_eq!(text.text(), Some("ABC"));
     assert_eq!(text.attribute("font-size"), Some("12"));
