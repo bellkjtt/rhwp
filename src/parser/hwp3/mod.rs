@@ -9,6 +9,7 @@ use std::io::{self, Cursor, Read};
 pub mod crypto;
 pub mod drawing;
 pub mod encoding;
+mod equation;
 pub mod johab;
 pub mod johab_map;
 pub mod ole;
@@ -1731,25 +1732,10 @@ fn parse_hwp3_object_dispatch(
         }
 
         if obj_type == 2 {
-            let mut eq = crate::model::control::Equation::default();
-            // [#4367] 개체 공통 헤더의 크기 — 그림(ch==11) 경로와 같은 오프셋
-            // (42..46, HWP3 단위 ×4 = HWPUNIT). 종전 미적재로 수식이 크기 0 으로
-            // 저장됐고, 한글 2022 는 크기 0 수식 개체를 만나면 크래시했다
-            // (sample16 문단 이등분 COM 실측 — N=155 열림/156 크래시, 발동체 수식).
-            eq.common.width =
-                ((&info_buf[42..44]).read_u16::<LittleEndian>().unwrap_or(0) as u32) * 4;
-            eq.common.height =
-                ((&info_buf[44..46]).read_u16::<LittleEndian>().unwrap_or(0) as u32) * 4;
-            eq.baseline = (&info_buf[76..78]).read_i16::<LittleEndian>().unwrap_or(0);
-            if let Some(cell) = table.cells.first() {
-                let mut script_text = String::new();
-                for para in &cell.paragraphs {
-                    script_text.push_str(&para.text);
-                    script_text.push('\n');
-                }
-                eq.script = script_text.trim().to_string();
-            }
-            **parsed_equation = Some(eq);
+            let baseline_1800dpi = (&info_buf[76..78])
+                .read_u16::<LittleEndian>()
+                .unwrap_or(0);
+            **parsed_equation = Some(equation::from_box(table, baseline_1800dpi));
         } else {
             **parsed_table = Some(table);
         }
