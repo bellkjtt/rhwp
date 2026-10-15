@@ -3678,6 +3678,7 @@ pub(crate) use shape_layout::normalized_single_line_inline_textbox_host;
 pub(crate) use table_layout::border_style_has_diagonal;
 // [#4149] 셀 커서 fast path 프로브 (document_core::queries::cursor_rect 전용)
 pub(crate) use table_partial::{PartialTableCellProbe, ProbeCutPlan};
+pub(crate) use terminal_tracking::glyph_letter_spacing_advance;
 pub(crate) use text_measurement::{
     compute_char_positions, compute_glyph_fit_positions, estimate_text_width,
     estimate_text_width_exact, estimate_text_width_unrounded, extract_tab_leaders_with_extended,

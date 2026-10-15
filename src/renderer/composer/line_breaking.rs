@@ -11,8 +11,8 @@ use crate::model::paragraph::{CharShapeRef, ColumnBreakType, LineSeg, Paragraph,
 use crate::model::style::{Alignment, HeadType, LineSpacingType};
 use crate::renderer::equation_tac_flow::indent_leaves_line_room_hwp;
 use crate::renderer::layout::{
-    estimate_text_width, estimate_text_width_unrounded, hancom_regenerated_space_width,
-    is_cjk_char, kopub_space_advance_em, resolved_letter_spacing,
+    estimate_text_width, estimate_text_width_unrounded, glyph_letter_spacing_advance,
+    hancom_regenerated_space_width, is_cjk_char, kopub_space_advance_em, resolved_letter_spacing,
 };
 use crate::renderer::layout_frame::{FrameRowMetrics, LayoutFrame, ParagraphBox, RowSegment};
 use crate::renderer::style_resolver::{
@@ -917,9 +917,11 @@ fn measure_token_char_widths(
             detected
         };
         let ts = metric_scope.style(styles, style_id, lang, idx);
-        let cluster: String = chars[offset..cluster_end].iter().collect();
-        let width =
-            estimate_text_width_unrounded(&cluster, &ts) + inline_width_px_at(inline_controls, idx, styles);
+        // 원문과 언어 슬롯은 유지하고 paint와 같은 1:1 표시 글리프로 잰다.
+        let source: String = chars[offset..cluster_end].iter().collect();
+        let display = super::one_to_one_pua_replay_text(&source);
+        let width = estimate_text_width_unrounded(&display, &ts)
+            + inline_width_px_at(inline_controls, idx, styles);
         total += width;
         char_widths.push(width);
         for tail in offset + 1..cluster_end {
@@ -1471,11 +1473,8 @@ fn fit_test_letter_spacing_trim_hwp(letter_spacing_px: &[f64], token_end_idx: us
         .unwrap_or(0)
 }
 
-/// Resolved per-character letter spacing in px, indexed by character position.
-///
-/// The fill needs the candidate glyph's own spacing at the moment it tests a
-/// token, and the token carries only a total width, so it is resolved once for
-/// the paragraph rather than re-derived per test.
+/// 원문 문자별 실제 글리프 자간이다. 선언된 글꼴 크기 비율과 구분한다.
+/// 줄 채움과 최종 정렬이 동일한 표시 문자·슬롯·측정 함수를 소비한다.
 fn resolved_letter_spacing_px(
     text_chars: &[char],
     char_offsets: &[u32],
@@ -1483,6 +1482,7 @@ fn resolved_letter_spacing_px(
     styles: &ResolvedStyleSet,
 ) -> Vec<f64> {
     let mut lang = 0usize;
+    let metric_scope = ParagraphMetricScope::new(text_chars, styles).with_reflow_slots(text_chars);
     text_chars
         .iter()
         .enumerate()
@@ -1491,8 +1491,13 @@ fn resolved_letter_spacing_px(
             let style_id = find_active_char_shape(char_shapes, utf16_pos);
             // [#7418] 영문 슬롯으로 재는 구두점은 자간도 영문 슬롯 값이다(`char_width_decision`).
             let char_lang = char_lang_slot(*ch, &mut lang, punct_latin_slot(styles, style_id));
-            // [#5678] `TextStyle` 을 통째로 만들지 않고 자간만 읽는다.
-            resolved_letter_spacing(styles, style_id, char_lang)
+            let metric_lang = metric_scope.scalar_slot(styles, style_id, char_lang, idx);
+            // 자간이 없는 대부분의 문자에서는 스타일 복제와 재측정을 피한다.
+            if resolved_letter_spacing(styles, style_id, metric_lang) == 0.0 {
+                return 0.0;
+            }
+            let style = metric_scope.style(styles, style_id, char_lang, idx);
+            glyph_letter_spacing_advance(&ch.to_string(), &style)
         })
         .collect()
 }

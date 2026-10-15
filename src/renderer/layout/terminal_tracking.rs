@@ -2,7 +2,29 @@
 
 use super::super::composer::ComposedLine;
 use super::super::style_resolver::ResolvedStyleSet;
+use super::super::TextStyle;
 use super::text_measurement::estimate_text_width_unrounded;
+
+/// 같은 표시 글리프의 측정에서 실제 자간 기여만 분리한다.
+/// 글꼴 크기에 대한 선언 비율을 좁은 글리프의 끝 자간으로 대신하지 않는다.
+pub(crate) fn glyph_letter_spacing_advance(text: &str, style: &TextStyle) -> f64 {
+    if style.letter_spacing == 0.0
+        && style
+            .ascii_punct_latin
+            .as_ref()
+            .is_none_or(|latin| latin.letter_spacing == 0.0)
+    {
+        return 0.0;
+    }
+    let display = super::super::composer::one_to_one_pua_replay_text(text);
+    let tracked = estimate_text_width_unrounded(&display, style);
+    let mut natural = style.clone();
+    natural.letter_spacing = 0.0;
+    if let Some(latin) = natural.ascii_punct_latin.as_mut() {
+        latin.letter_spacing = 0.0;
+    }
+    tracked - estimate_text_width_unrounded(&display, &natural)
+}
 
 /// 마지막 가시 글자 뒤의 자간을 반환한다. 음수 자간도 부호를 보존한다.
 /// 공백과 개체의 전진량 자체는 바꾸지 않고 정렬 폭에서만 제외한다.
@@ -14,7 +36,10 @@ pub(super) fn terminal_tracking_for_alignment(
 ) -> f64 {
     if line.runs.iter().any(|run| {
         run.char_overlap.is_some()
-                || run.display_text.is_some()
+                || run.display_text.as_ref().is_some_and(|display| {
+                    super::super::composer::one_to_one_pua_replay_text(&run.text).as_ref()
+                        != display
+                })
                 // 컨트롤 표제는 표시 글자와 원문 scalar의 좌표가 다르다.
                 || run.inserted_control_text
     }) {
@@ -48,13 +73,11 @@ pub(super) fn terminal_tracking_for_alignment(
         if last.chars().any(char::is_whitespace) {
             return 0.0;
         }
-        let mut style = run.text_style(styles);
-        if style.letter_spacing == 0.0 || style.kerning {
+        let style = run.text_style(styles);
+        if style.kerning {
             return 0.0;
         }
-        let tracked = estimate_text_width_unrounded(last, &style);
-        style.letter_spacing = 0.0;
-        return tracked - estimate_text_width_unrounded(last, &style);
+        return glyph_letter_spacing_advance(last, &style);
     }
     0.0
 }
