@@ -289,31 +289,6 @@ fn sample16_hwp3_page3_latin_font_matches_legacy_hancom_mapping() {
 }
 
 #[test]
-fn sample16_hwp5_page3_heading_positions_follow_lineseg_vpos() {
-    let svg = render_svg("samples/hwp3-sample16-hwp5.hwp", 2);
-    let twos = extract_text_positions(&svg, "2");
-    let threes = extract_text_positions(&svg, "3");
-
-    let heading2 = twos
-        .iter()
-        .find(|(x, y)| (*x - 83.36).abs() < 1.0 && (*y - 337.2).abs() < 2.0)
-        .copied();
-    assert!(
-        heading2.is_some(),
-        "p3 `2. 추진방향` heading digit must match the 3mm-grid Hancom PDF y≈337.2: {twos:?}"
-    );
-
-    let heading3 = threes
-        .iter()
-        .find(|(x, y)| (*x - 83.36).abs() < 1.0 && (*y - 749.3).abs() < 2.0)
-        .copied();
-    assert!(
-        heading3.is_some(),
-        "p3 `3. 주요 추진내용` heading digit must match the 3mm-grid Hancom PDF y≈749.3: {threes:?}"
-    );
-}
-
-#[test]
 fn sample16_hwp3_page3_heading_positions_follow_hancom_grid() {
     let svg = render_svg("samples/hwp3-sample16.hwp", 2);
     let twos = extract_text_positions(&svg, "2");
@@ -356,45 +331,8 @@ fn sample16_hwp5_page3_dump_pages_reports_line_spacing_in_height() {
     );
 }
 
-#[test]
-fn sample16_hwp5_page3_dump_pages_summary_uses_lineseg_spacing() {
-    let doc = load_doc("samples/hwp3-sample16-hwp5.hwp");
-    let dump = doc.dump_page_items(Some(2));
-    // #1648 수정으로 페이지 하단 빈 문단(pi=87)이 한컴처럼 page3 에 배치(items 19→20).
-    // 단, pi=87은 가시 내용이 없는 trailing 빈 문단이므로 시각 사용 높이 used는
-    // 2022 변환본(items=19)과 같은 경계를 유지해야 한다.
-    let summary = dump
-        .lines()
-        .find(|line| line.contains("단 0 (items=20"))
-        .unwrap_or_else(|| panic!("p3 단 요약을 찾을 수 없음:\n{dump}"));
-
-    assert!(
-        summary.contains("used=874.5px")
-            && summary.contains("hwp_used≈841.6px")
-            && summary.contains("diff=+32.9px"),
-        "p3 단 요약은 trailing 빈 문단을 items에 유지하되 시각 사용 높이는 2022 기준과 같은 경계를 유지해야 함: {summary}"
-    );
-}
-
-#[test]
-fn sample16_hwp5_page3_bcp_tail_paragraph_stays_single_visual_line_for_pdf_oracle() {
-    let doc = load_doc("samples/hwp3-sample16-hwp5.hwp");
-    let dump = doc.dump_page_items(Some(2));
-    let p83 = dump
-        .lines()
-        .find(|line| line.contains("FullParagraph  pi=83"))
-        .unwrap_or_else(|| panic!("p3 pi=83 dump line not found:\n{dump}"));
-
-    // #4628: 프로덕션 format_paragraph total(sb + lines + sa). 2022 표본과
-    // 같이 HeightMeasurer 합 31.5 가 아니라 29.6 이다. 한 줄 접힘은 유지.
-    assert!(
-        p83.contains("h=29.6")
-            && p83.contains("lines=27.7")
-            && p83.contains("lh=17.3")
-            && p83.contains("ls=10.4"),
-        "p83 BCP 문단은 한컴 PDF 정답지처럼 단일 시각 줄로 유지되어야 함: {p83}"
-    );
-}
-
+// 2024 저장본의 제목·BCP 꼬리·후행 빈 문단은 전쪽 검증과 독립 Print 좌표를
+// 확인한 새 이름의 검사로 보호한다. 다른 원본의 검증 근거로 대신하지 않는다.
+// tests/cases/verified_sample16_2024_print_boundaries.rs
 // 2022 저장본의 꼬리·이어받기 배치는 새 이름의 관계 검사로 보호한다.
 // tests/cases/issue_7642_sample16_2022_paragraph_relations.rs
