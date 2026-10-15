@@ -195,7 +195,7 @@ impl TypesetEngine {
             crate::renderer::solo_zone_pad_px(
                 entering_solo_zero,
                 st.col_count > 1,
-                (self.profile.hwp5_container() || self.profile.hwpx_container())
+                (self.profile.get().hwp5_container() || self.profile.get().hwpx_container())
                     .then(|| self.section_column_spacing_hu.get())
                     .flatten(),
                 self.dpi,
