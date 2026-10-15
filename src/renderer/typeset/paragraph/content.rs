@@ -29,9 +29,11 @@ pub(super) fn stored_content_bottom(
     {
         return None;
     }
-    let recovered_frame = (st.vpos_page_base.is_none() && st.vpos_lazy_base.is_none())
-        .then(|| accepted_tac_column_frame(st, paragraphs, styles, dpi))
-        .flatten();
+    let recovered_frame = accepted_preceding_tac_frame(st, para, paragraphs, dpi).or_else(|| {
+        (st.vpos_page_base.is_none() && st.vpos_lazy_base.is_none())
+            .then(|| accepted_tac_column_frame(st, paragraphs, styles, dpi))
+            .flatten()
+    });
     let (first_owner, first_line) = match st.current_items.first()? {
         PageItem::FullParagraph { para_index } => (*para_index, 0),
         PageItem::Table { para_index, .. } if recovered_frame.is_some() => (*para_index, 0),
@@ -128,6 +130,48 @@ pub(super) fn stored_content_bottom(
     bottom
         .and_then(|end| end.checked_sub(source_base))
         .map(|end| anchor + hwpunit_to_px(end, dpi))
+}
+
+/// 단 중간의 확정 TAC도 후속 글줄의 실제 좌표축을 소유할 수 있다.
+/// 흐름에서 트림한 앞 간격을 물리 내용 하단에서 다시 빼지 않는다.
+fn accepted_preceding_tac_frame(
+    st: &TypesetState,
+    current: &Paragraph,
+    paragraphs: &[Paragraph],
+    dpi: f64,
+) -> Option<(i32, f64)> {
+    let current_top = current.line_segs.first()?.vertical_pos;
+    let active_origin = st.vpos_page_base.or(st.vpos_lazy_base)?;
+    for item in st.current_items.iter().rev() {
+        let (owner, control) = match item {
+            PageItem::FullParagraph { .. } | PageItem::PartialParagraph { .. } => continue,
+            PageItem::Table {
+                para_index,
+                control_index,
+            } => (*para_index, *control_index),
+            _ => return None,
+        };
+        let host = paragraphs.get(owner)?;
+        let [line] = host.line_segs.as_slice() else {
+            return None;
+        };
+        if host.stored_text_partition_is_dirty()
+            || host.cell_format_vpos_dirty
+            || line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
+            || current_top < line.vertical_pos.checked_add(line.line_height)?
+            || !matches!(host.controls.get(control), Some(Control::Table(table)) if table.common.treat_as_char)
+        {
+            return None;
+        }
+        let placement = st.inline_placements.get(&(owner, control))?;
+        let origin = placement.stored_column_origin_hu?;
+        let anchor = st.vpos_col_anchor;
+        let expected = anchor + hwpunit_to_px(line.vertical_pos.checked_sub(origin)?, dpi);
+        return (origin == active_origin
+            && (placement.y - expected).abs() <= hwpunit_to_px(1, dpi))
+        .then_some((origin, anchor));
+    }
+    None
 }
 
 /// 같은 단의 저장 TAC 계획이 실제로 보존한 축만 본문 내용 하단에 이어준다.

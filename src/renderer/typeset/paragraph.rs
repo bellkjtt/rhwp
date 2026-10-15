@@ -879,12 +879,31 @@ pub(super) fn decide_whole_fit(
     para: &Paragraph,
     fmt: &FormattedParagraph,
     paragraphs: &[Paragraph],
+    styles: &ResolvedStyleSet,
     strict_after_empty_host_float: bool,
     forced_page_break_line: Option<usize>,
     current_page_vpos_base: Option<i32>,
     available: f64,
     dpi: f64,
 ) -> WholeFitDecision {
+    // 같은 확정 placement를 paint도 사용한다. 옛 host 좌표의 경계를
+    // 이미 새 쪽에서 소비했다면 뒤 줄에 두 번째 경계를 강제하지 않는다.
+    let accepted_opening_owner = (st.current_start_height == 0.0
+        && !st.current_endnote_flow
+        && !st.profile.session_edited()
+        && (st.profile.hwp5_stored_pagination_layout() || st.profile.hwpx_stored_layout()))
+    .then(|| {
+        crate::renderer::float_placement::restarted_tac::accepted_column_origin(
+            &st.current_items,
+            &st.inline_placements,
+            paragraphs,
+            styles,
+            dpi,
+        )
+    })
+    .flatten()
+    .filter(|(_, origin)| current_page_vpos_base == Some(*origin))
+    .map(|(owner, _)| owner);
     let whole_fit::WholeFitEvidence {
         saved_single_line_bottom_fits,
         saved_list_tail_body_vpos_fits,
@@ -900,6 +919,7 @@ pub(super) fn decide_whole_fit(
         strict_after_empty_host_float,
         forced_page_break_line,
         current_page_vpos_base,
+        accepted_opening_owner,
         available,
         &st.paragraph_whole_fit_page(),
         dpi,

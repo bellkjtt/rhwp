@@ -150,6 +150,7 @@ pub(in crate::renderer::typeset) fn place(
         para,
         fmt,
         paragraphs,
+        styles,
         strict_after_empty_host_float,
         forced_page_break_line,
         current_page_vpos_base,

@@ -73,6 +73,7 @@ pub(super) fn inspect(
     strict_after_empty_host_float: bool,
     forced_page_break_line: Option<usize>,
     current_page_vpos_base: Option<i32>,
+    accepted_opening_owner: Option<usize>,
     available: f64,
     page: &WholeFitPage<'_>,
     dpi: f64,
@@ -185,7 +186,10 @@ pub(super) fn inspect(
         .map(|zone| zone.bottom)
         .fold(page.current_height, f64::max);
     // [#3837] 저장 vpos 가 되돌아가면 한글은 거기서 쪽을 끊었다.
-    let stored_vpos_rewind_base = page.col_count == 1
+    let boundary_already_consumed =
+        accepted_opening_owner.is_some() && accepted_opening_owner == para_idx.checked_sub(1);
+    let stored_vpos_rewind_base = !boundary_already_consumed
+        && page.col_count == 1
         && !super::stored_lines::stored_page_boundary_invalidated_by_reflow(
             page.profile, page.col_count, page.current_items, paragraphs,
             para_idx, page_occupied_height, dpi,
@@ -208,7 +212,8 @@ pub(super) fn inspect(
             page_occupied_height,
             dpi,
         );
-    let saved_object_frame_reset = page.col_count == 1
+    let saved_object_frame_reset = !boundary_already_consumed
+        && page.col_count == 1
         && (page.profile.hwpx_stored_layout() || page.profile.hwp5_stored_pagination_layout())
         && !page.current_items.is_empty()
         && !page
