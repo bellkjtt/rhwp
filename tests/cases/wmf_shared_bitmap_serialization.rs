@@ -78,15 +78,39 @@ fn wmf_repeated_png_serialization_keeps_placement_order_clip_and_ids() {
     assert_eq!(source.attribute("height"), Some("30"));
     assert_eq!(uses[0].attribute("x"), Some("11"));
     assert_eq!(uses[1].attribute("x"), Some("31"));
-    assert_ne!(uses[0].attribute("id"), uses[1].attribute("id"));
+    assert_ne!(
+        uses[0].parent().unwrap().attribute("id"),
+        uses[1].parent().unwrap().attribute("id")
+    );
     for item in uses {
         assert_eq!(
             item.attribute("href").unwrap().strip_prefix('#'),
             source.attribute("id")
         );
-        assert!(item.attribute("clip-path").is_some());
+        assert!(item.parent().unwrap().attribute("clip-path").is_some());
+        assert!(item.attribute("clip-path").is_none());
         assert_eq!(item.attribute("y"), Some("7"));
     }
+}
+
+#[cfg(feature = "native-skia")]
+#[test]
+fn wmf_shared_png_stays_inside_the_original_device_clip() {
+    // 90이라는 값은 위 생성 WMF의 clip 우단이다. 실물 문서 화면 좌표를 고정하지 않는다.
+    let svg = diagram(&[(80, 20, [20, 40, 80]), (85, 20, [20, 40, 80])]);
+    let tree = resvg::usvg::Tree::from_str(&svg, &resvg::usvg::Options::default()).unwrap();
+    let size = tree.size().to_int_size();
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(size.width(), size.height()).unwrap();
+    resvg::render(&tree, resvg::tiny_skia::Transform::identity(), &mut pixmap.as_mut());
+    let mut painted = 0;
+    for (index, pixel) in pixmap.pixels().iter().enumerate() {
+        if pixel.alpha() != 0 {
+            painted += 1;
+            let x = index % size.width() as usize;
+            assert!(x < 90, "그림 이동이 원래 clip 우단을 이동시키면 안 된다: {x}");
+        }
+    }
+    assert!(painted > 0, "전부 지워서 클립 관계를 통과시키면 안 된다");
 }
 
 #[test]

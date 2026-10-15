@@ -66,13 +66,20 @@ fn count_bitmaps(node: &Node, counts: &mut BTreeMap<BitmapKey, usize>) {
 
 fn replace_bitmaps(node: &mut Node, references: &BTreeMap<BitmapKey, String>) {
     if let Some(id) = BitmapKey::from_node(node).and_then(|key| references.get(&key)) {
-        // SVG2 5.5: image 참조에는 use의 width/height가 적용되지 않는다.
-        // 크기·종횡비는 정의에, 이동·변환·클립·식별자는 원래 자리에 둔다.
-        node.typ = NodeType::Node("use".into());
+        // use의 x/y는 변환이므로 같은 use에 클립을 붙이면 클립 원점도 이동한다.
+        // 원래 image의 x/y는 내용 위치만 바꾼다. 클립·기존 변환·소유 ID는
+        // 바깥 그룹에 유지하고, 내용 위치만 안쪽 참조에 두어 좌표계를 보존한다.
+        let mut reference = Node::new("use").set("href", format!("#{id}"));
+        for axis in ["x", "y"] {
+            if let Some(position) = node.attrs.remove(axis) {
+                reference = reference.set(axis, position);
+            }
+        }
+        node.typ = NodeType::Node("g".into());
         for name in ["href", "width", "height", "preserveAspectRatio"] {
             node.attrs.remove(name);
         }
-        node.attrs.insert("href".into(), format!("#{id}"));
+        node.inner = vec![reference];
     }
     for child in &mut node.inner {
         replace_bitmaps(child, references);
