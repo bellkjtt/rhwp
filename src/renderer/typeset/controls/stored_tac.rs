@@ -476,10 +476,19 @@ pub(super) fn prepare(
             let [seg] = para.line_segs.as_slice() else {
                 return None;
             };
-            let [Control::Table(table)] = para.controls.as_slice() else {
-                return None;
-            };
-            let control_index = 0;
+            // 머리말·꼬리말 정의는 구역 finalize가 따로 소비하며 본문 줄을
+            // 점유하지 않는다. 실제 표의 control slot과 저장 줄은 보존한다.
+            let mut owned_table = None;
+            for (index, control) in para.controls.iter().enumerate() {
+                match control {
+                    Control::Table(table) if owned_table.is_none() => {
+                        owned_table = Some((index, table));
+                    }
+                    Control::Header(_) | Control::Footer(_) => {}
+                    _ => return None,
+                }
+            }
+            let (control_index, table) = owned_table?;
             let caption_extent = if let Some(caption) = &table.caption {
                 if !matches!(
                     caption.direction,
@@ -496,6 +505,8 @@ pub(super) fn prepare(
             };
             if !table.common.treat_as_char
                 || table_has_notes(table)
+                || crate::renderer::composer::control_slot_line_index(para, control_index)
+                    != Some(0)
                 || seg.tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0
                 || seg.line_spacing < 0
                 || i64::from(seg.line_height)
