@@ -14,6 +14,9 @@ mod han_santteut;
 #[path = "font_metric_legacy_hft.rs"]
 mod legacy_hft;
 
+#[path = "font_metric_hci_poppy.rs"]
+mod hci_poppy;
+
 pub(crate) use legacy_hft::{
     is_metric_face as is_legacy_hft_metric_face, metric_face_name as legacy_hft_metric_face,
 };
@@ -324,6 +327,7 @@ impl FontMetrics {
             .chain(MEASURED_FONT_METRIC_OVERLAYS.iter())
             .chain(han_santteut::METRICS.iter())
             .chain(legacy_hft::METRICS.iter())
+            .chain(hci_poppy::METRICS.iter())
     }
 }
 

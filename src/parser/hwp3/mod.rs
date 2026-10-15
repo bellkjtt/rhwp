@@ -3528,13 +3528,22 @@ fn parse_paragraph_list_inner(
                 ..Default::default()
             });
         } else {
-            for linfo in &line_infos {
+            let inline_equation_positions = paragraph::inline_equation_positions(&para);
+            for (line_index, linfo) in line_infos.iter().enumerate() {
                 let char_idx = linfo.start_pos as usize;
                 let text_start = if char_idx < hwp3_char_to_utf16_pos.len() {
                     hwp3_char_to_utf16_pos[char_idx]
                 } else {
                     utf16_len
                 };
+                let text_end = line_infos
+                    .get(line_index + 1)
+                    .and_then(|line| hwp3_char_to_utf16_pos.get(line.start_pos as usize))
+                    .copied()
+                    .unwrap_or(u32::MAX);
+                let has_inline_equation = inline_equation_positions
+                    .iter()
+                    .any(|position| (text_start..text_end).contains(position));
 
                 let mut th = (linfo.line_height as i32) * 4;
                 // [#4680 실험] HWP3 저장 줄높이는 **줄 상자**(글자+여유)다. 그걸 그대로
@@ -3607,6 +3616,16 @@ fn parse_paragraph_list_inner(
                             && hwp3_is_password_toc_page_number_host(&para);
                         ls = if has_password_toc_page_number {
                             HWP3_PASSWORD_TOC_LINE_SPACING_HU
+                        } else if has_inline_equation {
+                            // 수식 상자 높이와 호스트 글꼴의 줄 여유는 별개다.
+                            // 같은 원본 줄에 속한 글자모양만 간격의 기준으로 쓴다.
+                            let host_height = paragraph::host_font_height_in_range(
+                                &para,
+                                doc_char_shapes,
+                                text_start..text_end,
+                                fallback_text_height,
+                            );
+                            hwp3_percent_line_spacing(host_height, line_spacing_ratio)
                         } else if has_tac_picture
                             || (!use_password_layout_contract && has_tac_shape)
                             || has_marker_only_tac_shape

@@ -162,6 +162,34 @@ fn parse(box_type: u16, cell_text: &str) -> rhwp::model::document::Document {
     rhwp::parser::hwp3::parse_hwp3(&bytes).expect("합성 HWP3 파싱 실패")
 }
 
+#[test]
+fn hwp3_inline_equation_keeps_host_font_leading_when_box_height_changes() {
+    for height in [400u16, 800] {
+        let mut paragraph = object_paragraph(2, "x");
+        let header_length = para_header(5, 1).len();
+        paragraph[header_length + 4..header_length + 6].copy_from_slice(&height.to_le_bytes());
+        let box_start = header_length + line_info(100).len() + 8;
+        paragraph[box_start + 44..box_start + 46].copy_from_slice(&height.to_le_bytes());
+        let doc = rhwp::parser::hwp3::parse_hwp3(&hwp3_doc(&hwp3_body(&paragraph)))
+            .expect("합성 수식 호스트");
+        let host = &doc.sections[0].paragraphs[0];
+        let equation = host
+            .controls
+            .iter()
+            .find_map(|control| match control {
+                Control::Equation(equation) => Some(equation),
+                _ => None,
+            })
+            .expect("수식 제어 보존");
+        assert!(equation.common.treat_as_char);
+        assert_eq!(equation.common.height, u32::from(height) * 4);
+        assert_eq!(host.line_segs[0].text_height, i32::from(height) * 4);
+        // 원본의 10pt 호스트와 160% 줄간격: 여유는 6pt=600HU다.
+        // 12pt 수식 기본 크기나 상자 높이에 비율을 곱하지 않는다.
+        assert_eq!(host.line_segs[0].line_spacing, 600);
+    }
+}
+
 fn controls(doc: &rhwp::model::document::Document) -> Vec<&Control> {
     doc.sections
         .iter()

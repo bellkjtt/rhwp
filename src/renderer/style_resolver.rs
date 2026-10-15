@@ -215,12 +215,17 @@ fn hft_program_metric_face(face: &&str) -> bool {
     *face == "HCI Poppy"
 }
 
-fn has_own_metric_table(face: &&str) -> bool {
+fn has_own_metric_table(face: &&str, bold: bool, italic: bool) -> bool {
     if *face == "HCI Tulip" {
         return true;
     }
-    crate::renderer::font_metrics_data::find_metric_decision(face, false, false)
-        .is_some_and(|decision| decision.alias_rule_id.is_none())
+    crate::renderer::font_metrics_data::find_metric_decision(face, bold, italic).is_some_and(
+        |decision| {
+            decision.alias_rule_id.is_none()
+                && decision.metric.bold == bold
+                && decision.metric.italic == italic
+        },
+    )
 }
 
 /// [#7387] CSS 체인의 첫 face 가 **선언한** 공백 글리프 전진폭(em).
@@ -327,7 +332,7 @@ fn resolve_single_char_style(cs: &CharShape, doc_info: &DocInfo, dpi: f64) -> Re
                         decision
                             .requested_face
                             .as_deref()
-                            .filter(has_own_metric_table)
+                            .filter(|face| has_own_metric_table(face, cs.bold, cs.italic))
                             .filter(|face| decision.alt_type == Some(2) || !hft_program_metric_face(face))
                     })
                     .flatten()

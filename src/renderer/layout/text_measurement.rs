@@ -1595,6 +1595,26 @@ fn char_width_decision_with_hft_tracking<'a>(
             latin.map_or(style.font_metric_trusted, |l| l.font_metric_trusted),
             latin.is_none() && style.hft_hangul_face,
         );
+        // 원본 HFT의 부분 측정 표는 미수집 ASCII를 glyph 결측으로 증명하지 않는다.
+        // 확인한 원본 폭을 우선하고, 그 밖에는 기존 표시 face의 폭을 보존한다.
+        if c.is_ascii_graphic()
+            && embedded.width_source == "metricCharacterMiss"
+            && measured_family != display_family
+        {
+            let display_metric = measure_char_width_embedded_decision_for_font(
+                display_family,
+                style.bold,
+                style.italic,
+                c,
+                font_size,
+                false,
+                false,
+            );
+            if display_metric.width_px.is_some() {
+                embedded = display_metric;
+                embedded.width_source = "unmeasuredSourceAsciiDisplayMetric";
+            }
+        }
         if let Some(width) = digit_width {
             embedded.width_px = Some(width);
             // 검증된 프로그램 폭을 선택했으면 장치 격자의 em 비율도 같은

@@ -7,6 +7,41 @@ use super::records::{Hwp3CharShape, Hwp3ParaShape};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{self, Read};
 
+pub(super) fn inline_equation_positions(para: &crate::model::paragraph::Paragraph) -> Vec<u32> {
+    para.controls
+        .iter()
+        .zip(para.control_utf16_positions())
+        .filter_map(|(control, position)| {
+            matches!(control, crate::model::control::Control::Equation(equation)
+                if equation.common.treat_as_char)
+            .then_some(position)
+        })
+        .collect()
+}
+
+/// 수식 상자가 속한 원본 줄의 글자모양으로 호스트의 줄 여유를 계산한다.
+pub(super) fn host_font_height_in_range(
+    para: &crate::model::paragraph::Paragraph,
+    char_shapes: &[crate::model::style::CharShape],
+    range: std::ops::Range<u32>,
+    fallback: i32,
+) -> i32 {
+    para.char_shapes
+        .iter()
+        .enumerate()
+        .filter(|(index, shape)| {
+            shape.start_pos < range.end
+                && para
+                    .char_shapes
+                    .get(index + 1)
+                    .is_none_or(|next| next.start_pos > range.start)
+        })
+        .filter_map(|(_, shape)| char_shapes.get(shape.char_shape_id as usize))
+        .map(|shape| shape.base_size)
+        .max()
+        .unwrap_or(fallback)
+}
+
 /// HWP3는 줄별 들여쓰기 비트 없이 문단의 부호 있는 들여쓰기만 저장한다.
 /// 공통 IR의 저장 줄 소비자가 비트 부재를 '적용 금지'로 읽지 않도록 정규화한다.
 pub(super) fn apply_line_indentation(lines: &mut [crate::model::paragraph::LineSeg], indent: i32) {
