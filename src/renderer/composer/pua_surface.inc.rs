@@ -1,4 +1,3 @@
-
 /// [Task #555] 폰트 매트릭스 (글자폭/줄간격) 계산용 effective text 반환.
 ///
 /// PUA 옛한글 변환 (Task #528) 후 `run.display_text` 가 자모 시퀀스를 보유하면
@@ -162,6 +161,24 @@ fn pua_plain_text_display(ch: char) -> Option<&'static str> {
     super::hancom_pua::verified_hancom_pua_display(ch)
 }
 
+/// 일반 텍스트 paint에서 표시하는 검증된 PUA 표면이다.
+fn pua_render_text_display(ch: char) -> Option<&'static str> {
+    if ch == '\u{F081C}' {
+        Some("")
+    } else {
+        pua_plain_text_display(ch)
+    }
+}
+
+/// 원본 한 문자와 표시 한 문자의 대응만 측정에 공유한다.
+/// 숨긴 filler·여러 글자 확장·미등록 PUA의 기존 계약은 바꾸지 않는다.
+pub(crate) fn verified_pua_metric_scalar(ch: char) -> Option<char> {
+    let display = pua_render_text_display(hancom_symbol_display_key(ch))?;
+    let mut scalars = display.chars();
+    let scalar = scalars.next()?;
+    (scalars.next().is_none() && scalar != ch).then_some(scalar)
+}
+
 /// [#5800] HWP5 원시 한컴 사용자 기호를 **표시 매핑 조회용 평면-15 키**로 정규화한다.
 ///
 /// 같은 글자를 HWP5 는 BMP 단일 유닛 `0xA000 | X` 로, HWPX 는 평면 15 보충 PUA
@@ -222,12 +239,9 @@ pub fn expand_pua_display_text(text: &str) -> String {
     for ch in text.chars() {
         // [#5800] HWP5 원시 기호값을 먼저 평면-15 키로 정규화한다.
         let ch = hancom_symbol_display_key(ch);
-        if ch == '\u{F081C}' {
-            continue;
-        }
         if let Some(dot) = tone_mark_display(ch) {
             out.push(dot);
-        } else if let Some(replacement) = pua_plain_text_display(ch) {
+        } else if let Some(replacement) = pua_render_text_display(ch) {
             out.push_str(replacement);
         } else if let Some(jamos) = map_pua_old_hangul(ch) {
             out.extend(jamos.iter().copied());
