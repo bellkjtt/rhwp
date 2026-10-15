@@ -45,7 +45,7 @@ const COLRV1_SUPPORTED_NODE_KINDS = new Set([
 
 function hasMonochromePaths(op: LayerGlyphOutlineOp): boolean {
   return Array.isArray(op.paths) && op.paths.length > 0 && op.paths.length <= 4096
-    && isOptionalFiniteAffine(op.placement?.runToPage)
+    && isFiniteAffine(op.placement?.runToPage)
     && op.paths.every(path => !!path && isValidPathCommands(path.commands)
       && (path.fillRule === undefined || isSupportedFillRule(path.fillRule)));
 }
@@ -71,13 +71,11 @@ export function glyphOutlinePayloadStatus(
   if (!hasExclusivePayloadFamily(op, payloadKind)) {
     return { payloadKind, supported: false, reason: 'unsupportedOutlinePayload', detail: 'mixedPayloadFamily' };
   }
-  if ((op.placement?.baselineY !== undefined && !isPortableGlyphScalar(op.placement.baselineY))
-    || !isOptionalFiniteAffine(op.placement?.runToPage)
-    || ((payloadKind === 'monochromeFill' || payloadKind === 'monochromeFillStroke')
-      && (!isFiniteAffine(op.placement?.runToPage)
-        || !Array.isArray(op.paths) || op.paths.length === 0
-        || !op.paths.every((path) => isValidPathCommands(path?.commands))))) {
-    return { payloadKind, supported: false, reason: 'unsupportedOutlinePayload' };
+  // Legacy non-monochrome payloads may omit placement; supplied values must
+  // fit the portable f32 scalar contract used by the producer and CanvasKit.
+  if (!isOptionalFiniteAffine(op.placement?.runToPage)
+    || (op.placement?.baselineY !== undefined && !isPortableGlyphScalar(op.placement.baselineY))) {
+    return { payloadKind, supported: false, reason: 'unsupportedOutlinePayload', detail: 'invalidPlacement' };
   }
   switch (payloadKind) {
     case 'monochromeFill':
