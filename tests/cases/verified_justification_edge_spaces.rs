@@ -4,7 +4,8 @@
 use rhwp::DocumentCore;
 use serde_json::Value;
 
-const INPUT: &[u8] = include_bytes!("../fixtures/justified_edge_spaces/leading-tracking-contract.hwpx");
+const INPUT: &[u8] =
+    include_bytes!("../fixtures/justified_edge_spaces/leading-tracking-contract.hwpx");
 
 struct FirstLine {
     characters: Vec<(char, f64)>,
