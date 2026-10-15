@@ -723,7 +723,7 @@ fn issue_4969_condensed_projection_preserves_declared_size_and_page_geometry() {
     // 이전 sqrt 장평에서 관측한 로컬 px 배열을 정답으로 고정하지 않는다.
     let expected_local_x = expected_page_x.map(|x| x / run.style.ratio);
     let expected_local_advance_x = expected_page_advance_x.map(|advance| advance / run.style.ratio);
-    let expected_draw_font_size = run.style.effective_font_size();
+    let expected_draw_font_size = run.style.font_size;
     let expected_draw_x_scale = run.style.ratio;
     assert_eq!(lowered.glyph_ids, expected_ids);
     assert_eq!(lowered.positions.len(), expected_local_x.len());

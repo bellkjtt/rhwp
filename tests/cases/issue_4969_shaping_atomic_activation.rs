@@ -964,10 +964,7 @@ fn issue_4969_common_alternative_preserves_declared_size_and_shared_page_geometr
     assert!((text_bbox.width - page_advance).abs() <= 1.0e-9);
     // The common replay preserves the declared vertical em; condensation is
     // carried once by the horizontal transform (independent Print: stage 910).
-    assert_eq!(
-        glyph_run.paint_style.font_size,
-        text_run.style.effective_font_size()
-    );
+    assert_eq!(glyph_run.paint_style.font_size, text_run.style.font_size);
     assert_eq!(glyph_run.placement.run_to_page.a, text_run.style.ratio);
     assert_eq!(glyph_run.paint_style.ratio, 1.0);
     assert!(glyph_run.diagnostics.strict_visual_eligible);
