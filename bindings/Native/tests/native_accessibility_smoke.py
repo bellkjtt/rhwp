@@ -100,9 +100,11 @@ class NativeAccessibilityContracts(unittest.TestCase):
                                                "request": {}})
             self.assertEqual(viewer["kind"], "accessibility")
             self.assertIsNone(viewer["snapshot"]["selection"])
-            edited = self.worker_call(worker, {"op": "beginEdit", "target": initial_target,
-                                               "selection": collapsed(body_position())})["outcome"]
-            target = {**initial_target, "revision": edited["revision"]}
+            begun = self.worker_call(worker, {"op": "beginEdit", "target": initial_target,
+                                              "selection": collapsed(body_position())})
+            self.assertEqual(begun["kind"], "info")
+            info = begun["info"]
+            target = {"documentId": info["documentId"], "revision": info["revision"]}
             edited = self.worker_call(worker, {"op": "replace", "target": target,
                                                "text": TEXT})["outcome"]
             target["revision"] = edited["revision"]
