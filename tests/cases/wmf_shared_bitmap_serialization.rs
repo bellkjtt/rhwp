@@ -1,61 +1,84 @@
-//! 그림의 시각 일치가 아닌 SVG 자원 직렬화 계약이다. 실제 문서는 별도 Print 대조한다.
+//! 실제 WMF 재생 경로의 SVG 자원 직렬화 계약이다. 문서 시각 일치는 별도 Print로 대조한다.
 #![cfg(not(target_arch = "wasm32"))]
 
-// 제품 API를 넓히지 않고 실제 직렬화 구현을 그대로 검사한다.
-#[allow(dead_code)]
-#[path = "../../src/wmf/converter/svg/node.rs"]
-mod node;
-mod wmf {
-    pub mod imports {
-        pub use std::collections::BTreeMap;
-    }
+use rhwp::wmf::converter::{SVGPlayer, WMFConverter};
+
+fn record(function: u16, parameters: &[u8], output: &mut Vec<u8>) {
+    output.extend_from_slice(&(3 + parameters.len() as u32 / 2).to_le_bytes());
+    output.extend_from_slice(&function.to_le_bytes());
+    output.extend_from_slice(parameters);
 }
 
-use node::{share_repeated_bitmaps, Node};
-
-fn image(x: i32, width: i32) -> Node {
-    Node::new("image")
-        .set("href", "data:image/png;base64,AQID")
-        .set("width", width)
-        .set("height", 30)
-        .set("x", x)
-        .set("y", 7)
+fn diagram(items: &[(i16, i16, [u8; 3])]) -> String {
+    // WMF placeable header와 표준 메타파일 헤더. 좌표는 화면 핀이 아닌 생성 입력의 계약이다.
+    let mut bytes = 0x9AC6_CDD7u32.to_le_bytes().to_vec();
+    bytes.extend_from_slice(&0u16.to_le_bytes());
+    for value in [0i16, 0, 100, 100] {
+        bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    bytes.extend_from_slice(&96u16.to_le_bytes());
+    bytes.extend_from_slice(&0u32.to_le_bytes());
+    bytes.extend_from_slice(&0u16.to_le_bytes());
+    for value in [1u16, 9, 0x0300] {
+        bytes.extend_from_slice(&value.to_le_bytes());
+    }
+    bytes.extend_from_slice(&0u32.to_le_bytes());
+    bytes.extend_from_slice(&4u16.to_le_bytes());
+    bytes.extend_from_slice(&0u32.to_le_bytes());
+    bytes.extend_from_slice(&0u16.to_le_bytes());
+    let pair = [100i16.to_le_bytes(), 100i16.to_le_bytes()].concat();
+    record(0x020C, &pair, &mut bytes);
+    // 같은 clip을 가진 두 그림도 각각의 표시 위치와 순서를 보존한다.
+    let clip = [90i16, 90, 0, 0].map(i16::to_le_bytes).concat();
+    record(0x0416, &clip, &mut bytes);
+    for &(x, width, bgr) in items {
+        let mut parameters = 0x00CC_0020u32.to_le_bytes().to_vec(); // SRCCOPY
+        for value in [2i16, 2, 0, 0, 30, width, 7, x] {
+            parameters.extend_from_slice(&value.to_le_bytes());
+        }
+        parameters.extend_from_slice(&40u32.to_le_bytes());
+        parameters.extend_from_slice(&2i32.to_le_bytes());
+        parameters.extend_from_slice(&2i32.to_le_bytes());
+        parameters.extend_from_slice(&1u16.to_le_bytes());
+        parameters.extend_from_slice(&24u16.to_le_bytes());
+        parameters.extend_from_slice(&[0; 24]);
+        for _ in 0..2 {
+            parameters.extend_from_slice(&bgr);
+            parameters.extend_from_slice(&bgr);
+            parameters.extend_from_slice(&[0; 2]);
+        }
+        record(0x0B41, &parameters, &mut bytes);
+    }
+    record(0, &[], &mut bytes);
+    String::from_utf8(WMFConverter::new(bytes.as_slice(), SVGPlayer::new()).run().unwrap()).unwrap()
 }
 
 #[test]
 fn wmf_repeated_png_serialization_keeps_placement_order_clip_and_ids() {
-    let first = image(11, 20).set("id", "elem1");
-    let second = image(31, 20)
-        .set("id", "elem2")
-        .set("transform", "scale(-1,1)")
-        .set("clip-path", "url(#defs0)");
-    let (defs, elements) = share_repeated_bitmaps(vec![], vec![first, second]);
-    assert_eq!(defs.len(), 1);
-    let definition = defs[0].to_string();
-    assert!(definition.contains("width=\"20\""));
-    assert!(definition.contains("height=\"30\""));
-    assert!(definition.contains("data:image/png;base64,AQID"));
-    let output: Vec<_> = elements.iter().map(ToString::to_string).collect();
-    assert!(output[0].contains("<use "));
-    assert!(output[0].contains("id=\"elem1\""));
-    assert!(output[0].contains("x=\"11\""));
-    assert!(output[1].contains("id=\"elem2\""));
-    assert!(output[1].contains("x=\"31\""));
-    assert!(output[1].contains("clip-path=\"url(#defs0)\""));
-    assert!(output[1].contains("transform=\"scale(-1,1)\""));
-    assert!(output.iter().all(|text| text.contains("href=\"#wmf-bitmap0\"")));
+    let svg = diagram(&[(11, 20, [20, 40, 80]), (31, 20, [20, 40, 80])]);
+    let doc = roxmltree::Document::parse(&svg).unwrap();
+    let images: Vec<_> = doc.descendants().filter(|n| n.has_tag_name("image")).collect();
+    let uses: Vec<_> = doc.descendants().filter(|n| n.has_tag_name("use")).collect();
+    assert_eq!(images.len(), 1, "동일 PNG는 한 번만 직렬화한다");
+    assert_eq!(uses.len(), 2, "각 원래 그림의 소유·순서는 보존한다");
+    let source = images[0];
+    assert!(source.parent().unwrap().has_tag_name("defs"));
+    assert_eq!(source.attribute("width"), Some("20"));
+    assert_eq!(source.attribute("height"), Some("30"));
+    assert_eq!(uses[0].attribute("x"), Some("11"));
+    assert_eq!(uses[1].attribute("x"), Some("31"));
+    assert_ne!(uses[0].attribute("id"), uses[1].attribute("id"));
+    for item in uses {
+        assert_eq!(item.attribute("href").unwrap().strip_prefix('#'), source.attribute("id"));
+        assert!(item.attribute("clip-path").is_some());
+        assert_eq!(item.attribute("y"), Some("7"));
+    }
 }
 
 #[test]
-fn wmf_png_serialization_does_not_merge_distinct_size_aspect_or_extra_attributes() {
-    let inputs = vec![
-        image(1, 20),
-        image(2, 40),
-        image(3, 20).set("preserveAspectRatio", "none"),
-        image(4, 20).set("opacity", "0.5"),
-    ];
-    let before: Vec<_> = inputs.iter().map(ToString::to_string).collect();
-    let (defs, after) = share_repeated_bitmaps(vec![], inputs);
-    assert!(defs.is_empty());
-    assert_eq!(before, after.iter().map(ToString::to_string).collect::<Vec<_>>());
+fn wmf_png_serialization_keeps_distinct_size_and_bitmap_payloads() {
+    let svg = diagram(&[(1, 20, [20, 40, 80]), (2, 40, [20, 40, 80]), (3, 20, [90, 60, 30])]);
+    let doc = roxmltree::Document::parse(&svg).unwrap();
+    assert_eq!(doc.descendants().filter(|n| n.has_tag_name("image")).count(), 3);
+    assert!(!doc.descendants().any(|n| n.has_tag_name("use")));
 }
