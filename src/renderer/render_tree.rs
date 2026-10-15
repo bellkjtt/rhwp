@@ -1073,8 +1073,9 @@ impl TextRunNode {
         &'a self,
         replay_text: &str,
     ) -> std::borrow::Cow<'a, [f64]> {
+        let replay_text = super::composer::one_to_one_pua_replay_text(replay_text);
         super::replay_positions_or_compute(
-            replay_text,
+            &replay_text,
             &self.style,
             self.layout_positions.as_deref(),
         )
@@ -1105,8 +1106,9 @@ impl TextRunNode {
             }
         }
 
+        let prefix_replay_text = super::composer::one_to_one_pua_replay_text(prefix_replay_text);
         std::borrow::Cow::Owned(super::layout::compute_char_positions(
-            prefix_replay_text,
+            &prefix_replay_text,
             &self.style,
         ))
     }

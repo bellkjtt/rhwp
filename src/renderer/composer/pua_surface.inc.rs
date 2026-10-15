@@ -170,13 +170,28 @@ fn pua_render_text_display(ch: char) -> Option<&'static str> {
     }
 }
 
-/// 원본 한 문자와 표시 한 문자의 대응만 측정에 공유한다.
+/// 원본 한 문자와 표시 한 문자의 대응만 replay 경계에 공유한다.
 /// 숨긴 filler·여러 글자 확장·미등록 PUA의 기존 계약은 바꾸지 않는다.
-pub(crate) fn verified_pua_metric_scalar(ch: char) -> Option<char> {
+fn verified_pua_replay_scalar(ch: char) -> Option<char> {
     let display = pua_render_text_display(hancom_symbol_display_key(ch))?;
     let mut scalars = display.chars();
     let scalar = scalars.next()?;
     (scalars.next().is_none() && scalar != ch).then_some(scalar)
+}
+
+/// 원문 scalar 수를 유지하는 표시 투영만 문자 경계 조회에 사용한다.
+pub(crate) fn one_to_one_pua_replay_text(text: &str) -> std::borrow::Cow<'_, str> {
+    if !text
+        .chars()
+        .any(|ch| verified_pua_replay_scalar(ch).is_some())
+    {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    std::borrow::Cow::Owned(
+        text.chars()
+            .map(|ch| verified_pua_replay_scalar(ch).unwrap_or(ch))
+            .collect(),
+    )
 }
 
 /// [#5800] HWP5 원시 한컴 사용자 기호를 **표시 매핑 조회용 평면-15 키**로 정규화한다.

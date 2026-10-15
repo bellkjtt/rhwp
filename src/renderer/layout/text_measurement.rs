@@ -1484,20 +1484,6 @@ fn char_width_decision_with_hft_tracking<'a>(
     allow_supplemental: bool,
     include_hft_bold_tracking: bool,
 ) -> CharWidthDecision<'a> {
-    if cluster_len[i] != 0 {
-        if let Some(display) = super::super::composer::verified_pua_metric_scalar(chars[i]) {
-            // 원본 scalar의 소유는 유지하고 paint와 같은 표시 글자를 잰다.
-            // 대체 표면은 표준 문자 하나이므로 이 호출에서 재확장하지 않는다.
-            return char_width_decision_with_hft_tracking(
-                &[display],
-                &[1],
-                0,
-                style,
-                allow_supplemental,
-                include_hft_bold_tracking,
-            );
-        }
-    }
     let (font_size, ratio, _) = style_params(style);
     let c = chars[i];
     // [#7418] 영문 슬롯으로 재는 구두점 — 글꼴·폭 표·자간·장평만 영문 슬롯 값이고, 배치가
