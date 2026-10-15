@@ -1,8 +1,9 @@
 //! #1880 12쪽 하단 문구: 독립 Print 좌표와 원본 소유·내용을 함께 보호한다.
 //! 독립 한컴 Print PDF: pdf/issue7642-roundtrip-contract-print-20261014/
 //! issue1880_anchor_stack_sb_convert-2020.pdf (96dpi, 12쪽).
-//! 소스 6bd7b8f90: 전쪽 최저 Native 94.40051%, WASM 94.85778%;
-//! 12쪽 Native 99.85548%, WASM 99.95048%. 단계 774의 직접 판독 기록 참조.
+//! 소스 810654da2: 전 13쪽 최저 Native 94.74646%, WASM 94.77676%;
+//! 12쪽 Native 99.89607%, WASM 100%. 단계 1331·1332의 직접 판독 기록 참조.
+//! 같은 비밀 표·하단 문구의 경계는 이 쪽에만 있어 다른 쪽 점수로 대체하지 않는다.
 
 use rhwp::document_core::DocumentCore;
 use rhwp::model::control::Control;

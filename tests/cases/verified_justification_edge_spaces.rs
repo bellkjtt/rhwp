@@ -169,23 +169,25 @@ fn print_verified_justification_distributes_only_between_visible_words() {
 }
 
 #[test]
-fn print_verified_page_two_keeps_the_first_visible_glyph_within_two_pixels() {
+fn print_verified_completed_pages_keep_leading_space_origins_within_two_pixels() {
     let (_, pages) = layouts();
-    // 독립 Print p2의 첫 'a' 원점 55.10205pt × 96/72. 두 정렬에서 같은 값이다.
-    // 전쪽 90% 이상에 더해 해당 쪽 Native/fresh WASM 각각 98% 이상과 확대 판독을 확인한다.
-    let expected_x = 73.4694;
-    for paragraph in [2, 3] {
-        let line = first_line(&pages[1], paragraph);
-        let first_visible = line
-            .characters
-            .iter()
-            .find(|value| !value.0.is_whitespace())
-            .unwrap();
-        assert_eq!(first_visible.0, 'a');
-        assert!(
-            (first_visible.1 - expected_x).abs() <= 2.0,
-            "독립 Print의 선두 공백 다음 글자 원점: paragraph={paragraph}, actual={}",
-            first_visible.1
-        );
+    // 독립 Print의 CTM × 텍스트 행렬에서 얻은 원점에 96/72를 곱한다.
+    // 99%대인 p5·p6을 우선하고, 자간 0% 경계는 기존 p2로 함께 보호한다.
+    // 전쪽 90% 이상, 선정 쪽 양쪽 98% 이상 및 확대 판독 근거는 fixture README 참조.
+    for (page_index, expected_x) in [(4, 72.669056), (5, 84.353728), (1, 73.469376)] {
+        for paragraph in page_index * 2..page_index * 2 + 2 {
+            let line = first_line(&pages[page_index], paragraph);
+            let first_visible = line
+                .characters
+                .iter()
+                .find(|value| !value.0.is_whitespace())
+                .unwrap();
+            assert_eq!(first_visible.0, 'a');
+            assert!(
+                (first_visible.1 - expected_x).abs() <= 2.0,
+                "독립 Print의 선두 공백 다음 글자 원점: paragraph={paragraph}, actual={}",
+                first_visible.1
+            );
+        }
     }
 }
