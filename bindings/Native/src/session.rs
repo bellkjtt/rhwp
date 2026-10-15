@@ -9,6 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use rhwp_core::document_core::native_interaction::{
     NativeTextPosition, NativeTextSelection, NativeVerticalDirection,
 };
+use rhwp_core::native_host::accessibility::NativeAccessibilityRequest;
 use rhwp_core::native_host::editor::{NativeCompositionFocusLoss, NativeEditOutcome, NativeEditor};
 use rhwp_core::native_host::runtime::{
     NativeRequestId, NativeRuntime, NativeRuntimeCommand, NativeRuntimeConfig, NativeRuntimeOutput,
@@ -186,6 +187,12 @@ enum Request {
         expected_revision: u64,
     },
     Info {},
+    /// Omitted/null selection uses the current editor selection (none for a
+    /// viewer). An explicit selection affects only this read-only snapshot.
+    Accessibility {
+        request: NativeAccessibilityRequest,
+        selection: Option<NativeTextSelection>,
+    },
     PrepareSave {
         format: NativeSaveFormat,
     },
@@ -511,6 +518,9 @@ fn worker_output(host: &mut Host, worker: u64, output: NativeRuntimeOutput) -> V
             NativeRuntimeOutput::Clipboard { payload, outcome } => {
                 json!({"ok":true,"kind":"clipboard","payload":payload,"outcome":outcome})
             }
+            NativeRuntimeOutput::Accessibility { target, snapshot } => {
+                json!({"ok":true,"kind":"accessibility","target":target,"snapshot":snapshot})
+            }
             NativeRuntimeOutput::Info(info) => {
                 let mut encoded = json!(info);
                 if let Some(fields) = encoded.as_object_mut() {
@@ -677,7 +687,7 @@ pub extern "C" fn rhwp_session_capabilities() -> *mut c_char {
     response(|| {
         Ok(
             json!({"ok":true,"abiVersion":1,"nativeSkia":cfg!(feature="native-skia"),
-        "worker":true,"maxWorkers":4,"hostRequests":true,"viewState":true,"threadAffine":true,"maxSessions":MAX_SESSIONS,"maxDocumentBytes":MAX_DOCUMENT_BYTES,
+        "worker":true,"maxWorkers":4,"hostRequests":true,"viewState":true,"accessibilitySnapshots":true,"threadAffine":true,"maxSessions":MAX_SESSIONS,"maxDocumentBytes":MAX_DOCUMENT_BYTES,
         "maxRequestBytes":MAX_REQUEST_BYTES,"maxBufferBytes":MAX_BUFFER_BYTES,
         "pixelFormat":"rgba8Premultiplied","colorSpace":"srgb"}),
         )
@@ -746,6 +756,13 @@ pub unsafe extern "C" fn rhwp_session_request(
             let record = host.sessions.get_mut(&handle).ok_or_else(invalid_handle)?;
             let session = record.session();
             match request {
+                Request::Accessibility { request, selection } => {
+                    let selection = selection.as_ref().or_else(|| match &*record {
+                        ManagedSession::Edit(editor) => Some(editor.selection()),
+                        ManagedSession::View(_) => None,
+                    });
+                    Ok(json!({"ok":true,"snapshot":session.accessibility_snapshot(&request, selection)?}))
+                }
                 Request::ExecuteCommand {command,expected_revision}=>{let result=record.editor_mut()?.execute_command(expected_revision,command)?;Ok(json!({"ok":true,"outcome":result.outcome,"preferredX":result.preferred_x}))},
                 Request::ImeContext {expected_revision}=>Ok(json!({"ok":true,"context":record.editor_mut()?.ime_context(expected_revision)?})),
                 Request::CopySelection {expected_revision}=>Ok(json!({"ok":true,"kind":"clipboard","payload":record.editor_mut()?.copy_selection(expected_revision)?,"outcome":null})),

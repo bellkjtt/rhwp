@@ -23,6 +23,7 @@ use std::thread::{self, JoinHandle};
 
 use serde::{Deserialize, Serialize};
 
+use super::accessibility::{NativeAccessibilityRequest, NativeAccessibilitySnapshot};
 use super::clipboard::{NativeClipboardPayload, MAX_CLIPBOARD_BYTES};
 use super::commands::{NativeCommandOutcome, NativeEditCommand, NativeImeContext};
 use super::editor::{NativeEditOutcome, NativeEditor};
@@ -39,6 +40,9 @@ use crate::renderer::raster_pixels::RasterRegion;
 use crate::serializer::ContentLossReport;
 
 const MAX_OUTSTANDING: usize = 16;
+// Reserve text, structural addresses/keys and optional geometry, including Vec
+// and String allocator slack. Actual retained allocations are checked below.
+const ACCESSIBILITY_RESERVATION_BYTES: usize = 8 * 1024 * 1024;
 const RUNNING: u8 = 0;
 const CLOSING: u8 = 1;
 const CLOSED: u8 = 2;
@@ -77,8 +81,9 @@ pub struct NativeRuntimeConfig {
     /// Includes queued, executing and completed-but-unread requests (1..=16).
     pub max_outstanding: usize,
     /// Aggregate buffer reservations (1..=128 MiB). A render reserves the existing
-    /// 64 MiB frame ceiling; a save reserves 128 MiB before it is accepted.
-    /// Copy/cut reserve the 1 MiB clipboard output ceiling before acceptance.
+    /// 64 MiB frame ceiling; a save reserves 128 MiB, copy/cut 1 MiB,
+    /// and accessibility 8 MiB before acceptance. Snapshot allocations are
+    /// measured after the bounded query, not transient layout memory or RSS.
     pub max_pending_bytes: usize,
 }
 
@@ -140,6 +145,13 @@ pub enum NativeRuntimeCommand {
     PasteHtml {
         target: NativeRuntimeTarget,
         html: String,
+    },
+    /// Read-only snapshot of this exact document revision. Selection comes from
+    /// the current editor at execution time; a viewer has no selection. No
+    /// command changes the editor selection to satisfy an accessibility query.
+    Accessibility {
+        target: NativeRuntimeTarget,
+        request: NativeAccessibilityRequest,
     },
     PageSize {
         target: NativeRuntimeTarget,
@@ -266,6 +278,7 @@ impl NativeRuntimeCommand {
             }
             Self::PrepareSave { .. } => Some(MAX_DOCUMENT_BYTES),
             Self::ImeContext { .. } => Some(64 * 1024),
+            Self::Accessibility { .. } => Some(ACCESSIBILITY_RESERVATION_BYTES),
             _ => Some(0),
         }
     }
@@ -340,6 +353,10 @@ pub enum NativeRuntimeOutput {
         payload: NativeClipboardPayload,
         outcome: Option<NativeEditOutcome>,
     },
+    Accessibility {
+        target: NativeRuntimeTarget,
+        snapshot: NativeAccessibilitySnapshot,
+    },
     DocumentClosed,
     PageSize {
         target: NativeRuntimeTarget,
@@ -382,6 +399,7 @@ impl fmt::Debug for NativeRuntimeOutput {
             Self::CommandExecuted(_) => "CommandExecuted",
             Self::ImeContext(_) => "ImeContext",
             Self::Clipboard { .. } => "Clipboard",
+            Self::Accessibility { .. } => "Accessibility",
             Self::DocumentClosed => "DocumentClosed",
             Self::PageSize { .. } => "PageSize",
             Self::CaretRect { .. } => "CaretRect",
@@ -975,6 +993,18 @@ fn execute(
             *owner = None;
             Ok(O::DocumentClosed)
         }
+        C::Accessibility { target, request } => {
+            let doc = document(owner)?;
+            doc.check(target)?;
+            let selection = match &doc.owner {
+                DocumentOwner::Editor(editor) => Some(editor.selection()),
+                DocumentOwner::Viewer(_) => None,
+            };
+            Ok(O::Accessibility {
+                target,
+                snapshot: doc.session().accessibility_snapshot(&request, selection)?,
+            })
+        }
         C::RenderRegion {
             target,
             font_generation,
@@ -1132,6 +1162,57 @@ fn execute(
     }
 }
 
+/// Snapshot nodes contain variable text, keys and nested structural addresses;
+/// counting only the outer node vector would leave queued completions uncharged.
+fn accessibility_retained_bytes(snapshot: &NativeAccessibilitySnapshot) -> usize {
+    let position_bytes = |position: &NativeTextPosition| {
+        position
+            .cell_path
+            .capacity()
+            .saturating_mul(std::mem::size_of::<
+                crate::document_core::native_interaction::NativeCellPathEntry,
+            >())
+    };
+    let mut bytes = std::mem::size_of::<NativeAccessibilitySnapshot>()
+        .saturating_add(
+            snapshot
+                .nodes
+                .capacity()
+                .saturating_mul(std::mem::size_of::<
+                    super::accessibility::NativeAccessibilityNode,
+                >()),
+        )
+        .saturating_add(
+            snapshot
+                .limitations
+                .capacity()
+                .saturating_mul(std::mem::size_of::<
+                    super::accessibility::NativeAccessibilityLimitation,
+                >()),
+        );
+    for node in &snapshot.nodes {
+        bytes = bytes
+            .saturating_add(node.key.capacity())
+            .saturating_add(node.text.capacity())
+            .saturating_add(position_bytes(&node.start))
+            .saturating_add(position_bytes(&node.end));
+    }
+    if let Some(selection) = &snapshot.selection {
+        bytes = bytes
+            .saturating_add(position_bytes(&selection.anchor))
+            .saturating_add(position_bytes(&selection.focus));
+    }
+    if let Some(geometry) = &snapshot.selection_geometry {
+        bytes = bytes.saturating_add(
+            geometry
+                .rectangles
+                .capacity()
+                .saturating_mul(std::mem::size_of::<NativeSelectionRect>()),
+        );
+    }
+    bytes
+}
+
 fn discard_prepared(
     owner: &mut Option<OwnedDocument>,
     result: &Result<NativeRuntimeOutput, NativeRuntimeFailure>,
@@ -1181,6 +1262,9 @@ fn worker_loop(
                 .capacity()
                 .checked_mul(std::mem::size_of::<NativeSelectionRect>())
                 .unwrap_or(usize::MAX),
+            Ok(NativeRuntimeOutput::Accessibility { snapshot, .. }) => {
+                accessibility_retained_bytes(snapshot)
+            }
             _ => 0,
         };
         if retained > request.reservation {

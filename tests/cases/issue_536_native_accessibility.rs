@@ -49,7 +49,7 @@ fn nested() -> NativeDocumentSession {
 #[test]
 fn issue_536_native_accessibility_fast_snapshot_is_read_only_and_scalar_addressed() {
     let session = NativeDocumentSession::from_core(core("A😀가"));
-    let before = serde_json::to_value(session.document().document()).unwrap();
+    let before = format!("{:?}", session.document().document());
     let selection = NativeTextSelection {
         anchor: body(0, 1),
         focus: body(0, 2),
@@ -73,10 +73,7 @@ fn issue_536_native_accessibility_fast_snapshot_is_read_only_and_scalar_addresse
     assert!(snapshot.nodes[0].geometry.is_none());
     assert_eq!(snapshot.selection.as_ref(), Some(&selection));
     assert!(snapshot.selection_geometry.is_none());
-    assert_eq!(
-        serde_json::to_value(session.document().document()).unwrap(),
-        before
-    );
+    assert_eq!(format!("{:?}", session.document().document()), before);
     assert_eq!(session.revision(), 0);
 }
 
@@ -259,7 +256,7 @@ fn issue_536_native_accessibility_omitted_header_note_and_inline_semantics_are_n
 #[test]
 fn issue_536_native_accessibility_geometry_reuses_core_and_zero_query_budget_stays_honest() {
     let session = NativeDocumentSession::from_core(core("A😀가"));
-    let before = serde_json::to_value(session.document().document()).unwrap();
+    let before = format!("{:?}", session.document().document());
     let selection = NativeTextSelection {
         anchor: body(0, 1),
         focus: body(0, 3),
@@ -290,10 +287,7 @@ fn issue_536_native_accessibility_geometry_reuses_core_and_zero_query_budget_sta
             .unwrap()
     );
     assert!(!selected.rectangles.is_empty());
-    assert_eq!(
-        serde_json::to_value(session.document().document()).unwrap(),
-        before
-    );
+    assert_eq!(format!("{:?}", session.document().document()), before);
     assert_eq!(session.revision(), 0);
     let limited = NativeAccessibilityRequest {
         max_geometry_queries: 0,
