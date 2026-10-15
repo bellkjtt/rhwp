@@ -94,7 +94,8 @@ fn emitted_run_layout_positions(
         && style.kerning
         && !replay_text.is_empty()
         && session.source_handle(slot).is_some();
-    if !can_kern && leading.is_none() {
+    let recover_trailing = trailing_space_count > 0 && style.extra_word_spacing != 0.0;
+    if !can_kern && leading.is_none() && !recover_trailing {
         return (fallback_width, None);
     }
     let mut base_positions = leading.as_ref().map_or_else(
@@ -127,7 +128,7 @@ fn emitted_run_layout_positions(
         base_font_size
     };
     let width_ratio = if style.ratio > 0.0 { style.ratio } else { 1.0 };
-    let ordinary_replay = leading.is_some().then(|| base_positions.clone());
+    let ordinary_replay = (leading.is_some() || recover_trailing).then(|| base_positions.clone());
     let fallback = || {
         if let Some(positions) = ordinary_replay {
             (
@@ -2442,17 +2443,15 @@ fn compute_line_extra_spacing(
             }
             let terminal_ink_overhang = if alignment == Alignment::Split {
                 trailing_glyph_ink_overhang()
-            } else if alignment == Alignment::Justify && !renders_synthetic_wrap_trailing_space {
+            } else if alignment == Alignment::Justify {
                 // 마지막 가시 글자 뒤에는 다음 글자와의 음수 자간이 없다.
                 // 개체 소유까지 확인한 공통 정렬 측정값을 사용한다.
                 (-terminal_tracking).max(0.0)
             } else {
                 0.0
             };
-            // 줄 나눔이 소비한 구분 공백은 다음 줄의 시작 오프셋과 소유를 보존하지만
-            // 가시 내용의 양쪽 정렬 폭에는 포함하지 않는다. 저장 줄과 합성 줄 모두
-            // 같은 내부 공백 수·말미 공백 제외 폭을 사용한다. 별도 합성 분기는
-            // 한컴 Print의 같은 줄을 마지막 공백 한 칸만큼 왼쪽으로 압축했다.
+            // 자동 줄바꿈에서 소비한 구분 공백도 원문에 남지만 낱말 사이의
+            // 배분 지점은 아니다. 방출은 그 공백의 자연 전진만 보존한다.
             let rendered_space_slots = interior_spaces;
             let effective_used = total_text_width - trailing_width + terminal_ink_overhang;
             let slack = available_width - effective_used;
@@ -8146,7 +8145,7 @@ impl LayoutEngine {
         // 말미 공백이 여분까지 얹어 그려져 run bbox 와 x 전진이 줄 상자를
         // 여분×말미공백수 만큼 넘는다(10857 p11: '외부 평가전문위원 ' 144.0 vs
         // 줄 122.1 — 가시 글리프는 정확히 줄 끝에서 끝나고 초과 전량이 부풀린
-        // 말미 공백). 저장 줄과 합성 줄 모두 이 회수 규칙을 사용한다.
+        // 말미 공백). 자동 줄바꿈의 소비 구분 공백도 같은 소유 계약을 따른다.
         let line_trailing_space_by_run: Vec<usize> = {
             let mut counts = vec![0usize; comp_line.runs.len()];
             if extra_word_sp != 0.0 {
