@@ -11198,9 +11198,9 @@ mod issue_2809_split_alignment_tests {
         assert_eq!(extra_char, 0.0);
         assert_eq!(extra_dash, 0.0);
 
-        // 독립 Print와 전쪽 Native/fresh WASM 대조는 마지막 보이는 글자가
-        // 문단 오른쪽 끝에 맞는다는 계약을 증명한다. 말미 구분 공백은 원문에
-        // 남지만 내부 공백의 정렬 배분에 참여하지 않는다.
+        // 자동 줄바꿈에서 소비한 말미 구분자는 원문과 자연 전진만 보존한다.
+        // 독립 한컴 Print와 같이 내부 공백 두 곳에만 남은 가시 폭을 배분한다.
+        // 런의 명목 끝에는 배분하지 않은 말미 공백의 자연 폭이 남는다.
         let trailing_line = ComposedLine {
             runs: vec![ComposedTextRun {
                 text: "다 같 이 ".to_string(),
@@ -11233,6 +11233,8 @@ mod issue_2809_split_alignment_tests {
             available_width,
             40.0,
         );
+        let consumed_separator = estimate_text_width(" ", &text_style);
+        assert!((extra_word * 2.0 - (60.0 + consumed_separator)).abs() < 0.001);
         let mut distributed_style = text_style;
         distributed_style.extra_word_spacing = extra_word;
         let visible_advance = estimate_text_width("다 같 이", &distributed_style);
