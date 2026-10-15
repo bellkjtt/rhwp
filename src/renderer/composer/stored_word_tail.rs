@@ -1,8 +1,35 @@
 //! 현재 프레임에서 이어 붙일 수 있는 저장된 마지막 자동 줄바꿈.
 
-use super::{line_breaking, utf16_range_to_text_range, ResolvedStyleSet};
+use super::{
+    line_breaking, utf16_range_to_text_range, ComposedParagraph, ResolvedStyleSet, SpaceMetric,
+};
 use crate::model::paragraph::{LineSeg, Paragraph};
 use crate::renderer::layout_frame::LayoutFrame;
+
+/// 저장 run과 현재 채움이 서로 다른 공백 전진을 사용하면 줄 분할도 재검토해야 한다.
+/// 같은 공백 메트릭의 정상 본문은 더 적은 줄로 들어간다는 이유만으로 무효화하지 않는다.
+pub(super) fn regenerated_spaces_change_metrics(
+    composed: &ComposedParagraph,
+    styles: &ResolvedStyleSet,
+    metric: SpaceMetric,
+) -> bool {
+    composed
+        .lines
+        .iter()
+        .flat_map(|line| &line.runs)
+        .any(|run| {
+            if !run.text.contains(' ') {
+                return false;
+            }
+            let stored = run.text_style(styles);
+            let mut regenerated = stored.clone();
+            metric.apply_to_style(&mut regenerated);
+            let advance = |style: &crate::renderer::TextStyle| {
+                crate::renderer::layout::estimate_text_width_unrounded(" ", style)
+            };
+            (advance(&stored) - advance(&regenerated)).abs() > f64::EPSILON
+        })
+}
 
 /// 저장된 마지막 줄이 앞줄과 같은 한글 어절의 일부인지 확인한다.
 /// 명시적 개행·실제 쪽/단 경계·어울림 상자의 경계는 재조판으로 합치지 않는다.

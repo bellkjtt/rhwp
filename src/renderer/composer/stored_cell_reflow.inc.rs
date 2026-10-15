@@ -94,11 +94,18 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
             .unwrap_or(0),
     );
     frame.kopub_justified_space = justified_kopub_picture;
-    // 정상 저장 본문은 새 폭으로 줄 수를 줄일 수 있다는 이유만으로 stale가 아니다.
-    // 본문의 캐시 기하·편집 여부는 아래 resolver가 판정한다. 저장 셀의 별도
-    // 재조판 정책에서만 기존 어절 꼬리 재검토와 공통 기하 전달을 유지한다.
+    // 같은 메트릭의 정상 본문은 줄 수 감소만으로 stale가 아니다. 다만 이 프레임이
+    // 저장 run과 다른 공백 전진으로 채우는 경우에는 이전 줄 분할을 그대로 재사용할
+    // 수 없다. 그림 존재나 글꼴 이름만으로 판단하지 않고 실제 공백 전진을 대조한다.
+    let regenerated_spaces_change_metrics = frame.kopub_justified_space
+        && stored_word_tail::regenerated_spaces_change_metrics(
+            composed,
+            styles,
+            SpaceMetric::KoPubJustified,
+        );
     let rejoinable_word_tail = !stored_geometry_policy.preserve_hwp3_origins
-        && miss_policy == line_breaking::StoredRowMissPolicy::UnmodelledUnlessStale
+        && (miss_policy == line_breaking::StoredRowMissPolicy::UnmodelledUnlessStale
+            || regenerated_spaces_change_metrics)
         && stored_word_tail::can_rejoin_stored_word_tail(
             para, &frame, styles, dpi, justified_kopub_picture,
         );
