@@ -238,3 +238,40 @@ fn hwp3_table_and_textbox_are_unchanged() {
         );
     }
 }
+
+/// HWP3 사양의 공통 상자와 기준선 단위를 수식 IR에서도 보존한다.
+#[test]
+fn hwp3_equation_box_keeps_source_flow_and_baseline_units() {
+    for reference in [0u8, 1] {
+        let mut paragraph = object_paragraph(2, "a over b");
+        // 43바이트 문단 header + 187바이트 문단 모양 + 14바이트 줄 + 8바이트 제어 식별자.
+        let info_start = 43 + 187 + 14 + 8;
+        assert_eq!(
+            u16::from_le_bytes(
+                paragraph[info_start + 78..info_start + 80]
+                    .try_into()
+                    .unwrap()
+            ),
+            2
+        );
+        paragraph[info_start + 8] = reference;
+        paragraph[info_start + 76..info_start + 78].copy_from_slice(&u16le(300));
+        let bytes = hwp3_doc(&hwp3_body(&paragraph));
+        let doc = rhwp::parser::hwp3::parse_hwp3(&bytes).expect("합성 수식 상자");
+        let values = controls(&doc);
+        let equation = values
+            .iter()
+            .find_map(|c| match c {
+                Control::Equation(eq) => Some(eq),
+                _ => None,
+            })
+            .expect("수식 하나");
+        assert_eq!(equation.script, "a over b");
+        assert_eq!(equation.common.treat_as_char, reference == 0);
+        assert_eq!(equation.common.width, 2000 * 4);
+        assert_eq!(equation.common.height, 400 * 4);
+        assert_eq!(equation.baseline, 75, "300/400 길이를 백분율로 변환한다");
+        assert_eq!(equation.font_size, 1200, "HWP3 독립 Print의 기본 12pt");
+        assert_eq!(equation.font_name, "HYhwpEQ");
+    }
+}
