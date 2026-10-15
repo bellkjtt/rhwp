@@ -76,30 +76,6 @@ fn extract_dotted_horizontal_lines(svg: &str) -> Vec<(f64, f64, f64)> {
     lines
 }
 
-fn extract_text_positions(svg: &str, wanted: &str) -> Vec<(f64, f64)> {
-    let mut positions = Vec::new();
-    let mut search_from = 0;
-    while let Some(rel) = svg[search_from..].find("<text ") {
-        let tag_start = search_from + rel;
-        search_from = tag_start + 6;
-        let Some(close_rel) = svg[tag_start..].find('>') else {
-            break;
-        };
-        let attrs = &svg[tag_start..tag_start + close_rel];
-        let content_start = tag_start + close_rel + 1;
-        let Some(end_rel) = svg[content_start..].find("</text>") else {
-            break;
-        };
-        let text = &svg[content_start..content_start + end_rel];
-        if text == wanted {
-            if let (Some(x), Some(y)) = (attr_f64(attrs, "x"), attr_f64(attrs, "y")) {
-                positions.push((x, y));
-            }
-        }
-    }
-    positions
-}
-
 fn toc_page_number_right_edges(svg: &str) -> Vec<f64> {
     let mut rows: std::collections::BTreeMap<i32, Vec<(f64, f64, String)>> =
         std::collections::BTreeMap::new();
@@ -210,21 +186,8 @@ fn sample16_hwp5_toc_page_numbers_share_right_edge() {
     );
 }
 
-#[test]
-fn sample16_hwp3_toc_page_numbers_share_right_edge() {
-    let svg = render_svg("samples/hwp3-sample16.hwp", 1);
-    let edges = toc_page_number_right_edges(&svg);
-    assert!(
-        edges.len() >= 25,
-        "원본 HWP3 목차 페이지 번호를 충분히 찾아야 함: {edges:?}"
-    );
-    let min = edges.iter().copied().fold(f64::INFINITY, f64::min);
-    let max = edges.iter().copied().fold(f64::NEG_INFINITY, f64::max);
-    assert!(
-        max - min <= 1.5,
-        "원본 HWP3 목차 페이지 번호 오른쪽 끝이 한컴처럼 같은 기준선에 정렬되어야 함: min={min:.2}, max={max:.2}, edges={edges:?}"
-    );
-}
+// HWP3 원본의 목차 번호는 고정 x 영역 대신 원문 문단과 끝 토큰으로 고르는
+// verified_hwp3_original_print_boundaries의 새 관계 검사에서 보호한다.
 
 #[test]
 fn sample16_hwp5_page3_svg_latin_glyphs_pin_browser_width() {
@@ -288,27 +251,8 @@ fn sample16_hwp3_page3_latin_font_matches_legacy_hancom_mapping() {
     assert_page3_latin_poppy_resolves_to_palatino("samples/hwp3-sample16.hwp");
 }
 
-#[test]
-fn sample16_hwp3_page3_heading_positions_follow_hancom_grid() {
-    let svg = render_svg("samples/hwp3-sample16.hwp", 2);
-    let twos = extract_text_positions(&svg, "2");
-    let threes = extract_text_positions(&svg, "3");
-
-    let heading2 = twos.iter().find(|(_, y)| (*y - 337.2).abs() < 2.0).copied();
-    assert!(
-        heading2.is_some(),
-        "HWP3 원본 p3 `2. 추진방향`도 한컴 3mm 격자 y≈337.2를 따라야 함: {twos:?}"
-    );
-
-    let heading3 = threes
-        .iter()
-        .find(|(_, y)| (*y - 749.2).abs() < 2.0)
-        .copied();
-    assert!(
-        heading3.is_some(),
-        "HWP3 원본 p3 `3. 주요 추진내용`도 한컴 3mm 격자 y≈749.2를 따라야 함: {threes:?}"
-    );
-}
+// HWP3 원본 제목의 독립 Print 기준선과 내용 소유는
+// verified_hwp3_original_print_boundaries에서 검증한다.
 
 #[test]
 fn sample16_hwp5_page3_dump_pages_reports_line_spacing_in_height() {
