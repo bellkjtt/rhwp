@@ -10,6 +10,7 @@ pub mod crypto;
 pub mod drawing;
 pub mod encoding;
 mod equation;
+mod font_program;
 pub mod johab;
 pub mod johab_map;
 pub mod ole;
@@ -4191,10 +4192,8 @@ fn parse_hwp3_inner(
             // HWP3 legacy 글꼴 이름을 한/글 변환기가 쓰는 이름으로 옮긴다
             // (`hwp3_font_name_to_hwp5`). alt_name 에 원본을 보존한다.
             let mapped_name = hwp3_font_name_to_hwp5(&font_name);
+            font_program::preserve_source_kind(&mut font, &font_name, &mapped_name);
             if mapped_name != font_name {
-                // 기존 명칭 정규화 대상은 원본 HFT 글꼴이다. 표시 이름을 바꿔도
-                // 기호 폭 소비자가 원본 프로그램 종류를 잃지 않도록 보존한다.
-                font.alt_type = 2;
                 font.alt_name = Some(font_name.clone());
             }
             font.name = mapped_name;
