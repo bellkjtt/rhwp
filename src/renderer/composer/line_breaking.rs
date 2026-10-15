@@ -614,7 +614,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                 // 묶어 잰다.
                 let cluster_end = hangul_jamo_cluster_end(text_chars, i);
                 let cluster: String = text_chars[i..cluster_end].iter().collect();
-                let mut w = estimate_text_width_unrounded(&cluster, &ts)
+                let mut w = estimate_text_width_unrounded(&super::one_to_one_pua_replay_text(&cluster), &ts)
                     + (i..cluster_end)
                         .map(|idx| inline_width_px_at(inline_controls, idx, styles))
                         .sum::<f64>();
@@ -654,7 +654,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                         detect_lang_category(text_chars[i])
                     };
                     let follow_ts = metric_scope.style(styles, follow_style, follow_lang, i);
-                    w += estimate_text_width_unrounded(&text_chars[i].to_string(), &follow_ts)
+                    w += reflow_scalar_width(text_chars[i], &follow_ts)
                         + inline_width_px_at(inline_controls, i, styles);
                     i += 1;
                 }
@@ -750,7 +750,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                             let sid = find_active_char_shape(char_shapes, u16p);
                             let lang = if is_lang_neutral(c) { current_lang } else { 1 };
                             let ts = metric_scope.style(styles, sid, lang, ci);
-                            estimate_text_width_unrounded(&c.to_string(), &ts)
+                            reflow_scalar_width(c, &ts)
                                 + inline_width_px_at(inline_controls, ci, styles)
                         })
                         .collect();
@@ -776,8 +776,8 @@ fn tokenize_paragraph_with_regenerated_space_metric(
                 current_lang = 1;
                 let ts = metric_scope.style(styles, style_id, current_lang, i);
                 let fs = token_line_font_size(styles, style_id);
-                let w = estimate_text_width_unrounded(&ch.to_string(), &ts)
-                    + inline_width_px_at(inline_controls, i, styles);
+                let w =
+                    reflow_scalar_width(ch, &ts) + inline_width_px_at(inline_controls, i, styles);
                 tokens.push(BreakToken::Text {
                     start_idx: i,
                     end_idx: i + 1,
@@ -803,8 +803,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
             current_lang = detect_lang_category(ch);
             let ts = metric_scope.style(styles, style_id, current_lang, i);
             let fs = token_line_font_size(styles, style_id);
-            let w = estimate_text_width_unrounded(&ch.to_string(), &ts)
-                + inline_width_px_at(inline_controls, i, styles);
+            let w = reflow_scalar_width(ch, &ts) + inline_width_px_at(inline_controls, i, styles);
             tokens.push(BreakToken::Text {
                 start_idx: i,
                 end_idx: i + 1,
@@ -835,8 +834,7 @@ fn tokenize_paragraph_with_regenerated_space_metric(
             };
             let ts = metric_scope.style(styles, style_id, lang, i);
             let fs = token_line_font_size(styles, style_id);
-            let w = estimate_text_width_unrounded(&ch.to_string(), &ts)
-                + inline_width_px_at(inline_controls, i, styles);
+            let w = reflow_scalar_width(ch, &ts) + inline_width_px_at(inline_controls, i, styles);
             tokens.push(BreakToken::Text {
                 start_idx: i,
                 end_idx: i + 1,
@@ -851,6 +849,13 @@ fn tokenize_paragraph_with_regenerated_space_metric(
     }
 
     tokens
+}
+
+/// 모든 토큰 분기가 원문 슬롯을 보존하며 동일한 표시 글리프를 측정한다.
+fn reflow_scalar_width(ch: char, style: &crate::renderer::TextStyle) -> f64 {
+    let source = ch.to_string();
+    let display = super::one_to_one_pua_replay_text(&source);
+    estimate_text_width_unrounded(&display, style)
 }
 
 /// 토큰 텍스트의 폭을 글자별 언어 인식 측정으로 합산한다.
@@ -1044,7 +1049,7 @@ fn prepare_paragraph_projection(
             '\u{FFFC}' if inline_width_px_at(inline_controls, index, styles) > 0.0 => 0.0,
             '\t' | '\n' | '\r' => 0.0,
             ' ' => space_metric.space_advance(&text_style),
-            _ => estimate_text_width_unrounded(&character.to_string(), &text_style),
+            _ => reflow_scalar_width(character, &text_style),
         } + inline_width_px_at(inline_controls, index, styles);
         pen += scalar_width.max(0.0);
         base_positions.push(pen);

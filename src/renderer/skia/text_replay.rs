@@ -683,7 +683,20 @@ impl SkiaTextReplay<'_> {
                                 continue;
                             }
                         }
-                        if let Some(font) = font_for_text(cluster, font_size) {
+                        if let Some(mut font) = font_for_text(cluster, font_size) {
+                            // 독립 Print의 regular 프로그램 합성 굵기는 같은 윤곽선의
+                            // fill+stroke(0.02em)다. 실제 bold face와 outline pass는 보존한다.
+                            let synthetic_bold = style.bold
+                                && *font.typeface().font_style().weight() < 600
+                                && stroke_width == 0.0;
+                            let bold_paint = synthetic_bold.then(|| {
+                                font.set_embolden(false);
+                                let mut paint = text_paint.clone();
+                                paint.set_style(paint::Style::StrokeAndFill);
+                                paint.set_stroke_width(font_size * 0.02);
+                                paint
+                            });
+                            let glyph_paint = bold_paint.as_ref().unwrap_or(&text_paint);
                             let char_x = bbox.x as f32
                                 + char_positions.get(*char_idx).copied().unwrap_or(0.0) as f32
                                 + dx;
@@ -707,7 +720,7 @@ impl SkiaTextReplay<'_> {
                                 canvas.save();
                                 canvas.translate((char_x, char_y));
                                 canvas.scale((0.5, 1.0));
-                                canvas.draw_str(cluster, (0.0, 0.0), &font, &text_paint);
+                                canvas.draw_str(cluster, (0.0, 0.0), &font, glyph_paint);
                                 canvas.restore();
                                 continue;
                             }
@@ -728,20 +741,28 @@ impl SkiaTextReplay<'_> {
                                     )
                                 })
                                 .unwrap_or(1.0) as f32;
+                            if synthetic_bold
+                                && (has_ratio || (fit_scale - 1.0).abs() > f32::EPSILON)
+                            {
+                                // 글리프의 장평·원본 폭만 맞추고 합성 획의 사용자 좌표 폭은 유지한다.
+                                font.set_scale_x(ratio * fit_scale);
+                                canvas.draw_str(cluster, (char_x, char_y), &font, glyph_paint);
+                                continue;
+                            }
                             if has_ratio || (fit_scale - 1.0).abs() > f32::EPSILON {
                                 canvas.save();
                                 canvas.translate((char_x, char_y));
                                 canvas.scale((ratio * fit_scale, 1.0));
                                 if !hft_outline.as_ref().is_some_and(|outline| {
-                                    outline.draw(canvas, cluster, &font, (0.0, 0.0), &text_paint)
+                                    outline.draw(canvas, cluster, &font, (0.0, 0.0), glyph_paint)
                                 }) {
-                                    canvas.draw_str(cluster, (0.0, 0.0), &font, &text_paint);
+                                    canvas.draw_str(cluster, (0.0, 0.0), &font, glyph_paint);
                                 }
                                 canvas.restore();
                             } else if !hft_outline.as_ref().is_some_and(|outline| {
-                                outline.draw(canvas, cluster, &font, (char_x, char_y), &text_paint)
+                                outline.draw(canvas, cluster, &font, (char_x, char_y), glyph_paint)
                             }) {
-                                canvas.draw_str(cluster, (char_x, char_y), &font, &text_paint);
+                                canvas.draw_str(cluster, (char_x, char_y), &font, glyph_paint);
                             }
                         }
                     }
