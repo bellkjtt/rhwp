@@ -2994,7 +2994,9 @@ impl LayoutEngine {
                 let y = col_area.y + item.y;
                 if let Some(previous) = line.children.last_mut() {
                     if let RenderNodeType::TextRun(run) = &mut previous.node_type {
-                        if run.style == text_style
+                        // 메트릭 전용 개행은 문자가 없으므로 가시 런의 원점 배열에 합치지 않는다.
+                        if !range.is_empty()
+                            && run.style == text_style
                             && run.char_shape_id == Some(*style)
                             && run.char_start.is_some_and(|start| {
                                 start + run.text.chars().count() == range.start

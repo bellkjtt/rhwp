@@ -586,14 +586,14 @@ fn finish_row(
     let baseline = row_metrics.baseline;
     let height = row_metrics.baseline + row_metrics.descent;
     if let Some(chars) = trim_separator_spaces {
-        // Spaces consumed before a soft wrap or authored break do not move
-        // the centered/right-aligned ink. Paragraph-end spaces remain authored.
+        // 개행 메트릭 상자는 폭 0이며 후행 공백 조회를 막지 않는다.
+        // 줄 경계에서 소비한 공백은 가운데·오른쪽 잉크 정렬을 밀지 않는다.
         row_metrics.width -= row
             .iter()
             .rev()
             .take_while(|item| {
                 matches!(&item.content, InlineFlowContent::Text { range, .. }
-                    if !range.is_empty() && chars[range.clone()].iter().all(|ch| *ch == ' '))
+                    if chars[range.clone()].iter().all(|ch| *ch == ' '))
             })
             .map(|item| item.width)
             .sum::<f64>();
