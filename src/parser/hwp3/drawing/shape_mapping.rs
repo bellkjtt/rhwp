@@ -291,7 +291,10 @@ pub(super) fn map_to_shape_object(
                 center_x: g.center_x as i16,
                 center_y: g.center_y as i16,
                 blur: g.step as i16,
-                step_center: 0,
+                // HWP3에는 추가 전이 중심 필드가 없다. 균등한 색상 띠의
+                // 중점을 보존한다. 명시적인 0%로 넣으면 공통 띠 확장에서
+                // 앞쪽 절반이 원점에 접혀 원래 중심색까지 옅어진다.
+                step_center: 50,
                 colors: vec![g.start_color, g.end_color],
                 positions: vec![],
             };

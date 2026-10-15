@@ -1697,6 +1697,13 @@ impl WebCanvasRenderer {
                 ) else {
                     return false;
                 };
+                // 원뿔/사각의 기존 원형 근사는 보존하고, 원형만 공통의
+                // 가장 먼 모서리 반경을 실제 Canvas gradient에 전달한다.
+                let r = if grad.gradient_type == 2 {
+                    r
+                } else {
+                    w.max(h) / 2.0
+                };
                 match self.ctx.create_radial_gradient(cx, cy, 0.0, cx, cy, r) {
                     Ok(g) => g,
                     Err(_) => return false,
