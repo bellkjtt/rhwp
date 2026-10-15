@@ -14,7 +14,13 @@ pub(super) fn has_flow_content(row: &[InlineFlowBox], chars: &[char]) -> bool {
     })
 }
 
-pub(super) fn classify(atoms: &[Atom], chars: &[char]) -> (BTreeSet<usize>, BTreeSet<usize>) {
+pub(super) struct SeparatorSpaces {
+    pub wrap: BTreeSet<usize>,
+    pub object: BTreeSet<usize>,
+    pub first_object: BTreeSet<usize>,
+}
+
+pub(super) fn classify(atoms: &[Atom], chars: &[char]) -> SeparatorSpaces {
     let mut separators = BTreeSet::new();
     let mut object_separators = BTreeSet::new();
     let mut followed_by_flow = false;
@@ -53,5 +59,25 @@ pub(super) fn classify(atoms: &[Atom], chars: &[char]) -> (BTreeSet<usize>, BTre
             }
         }
     }
-    (separators, object_separators)
+    let mut first_object = BTreeSet::new();
+    let mut previous_separator = false;
+    for atom in atoms {
+        let position = match atom {
+            Atom::Box(InlineFlowBox {
+                content: InlineFlowContent::Text { range, .. },
+                ..
+            }) if object_separators.contains(&range.start) => Some(range.start),
+            _ => None,
+        };
+        // 개체는 가시 문자 축을 소비하지 않아도 작성 공백 그룹을 끊는다.
+        if !previous_separator {
+            first_object.extend(position);
+        }
+        previous_separator = position.is_some();
+    }
+    SeparatorSpaces {
+        wrap: separators,
+        object: object_separators,
+        first_object,
+    }
 }

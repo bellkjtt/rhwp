@@ -334,7 +334,7 @@ pub(crate) fn plan(
     let mut words = word_ranges.iter().peekable();
     let mut word_metrics = std::collections::BTreeMap::new();
     let mut attached_word_metrics = std::collections::BTreeMap::new();
-    let (separator_spaces, object_separator_spaces) = separator_spaces::classify(&atoms, &chars);
+    let spaces = separator_spaces::classify(&atoms, &chars);
     let mut index = 0;
     while index < atoms.len() {
         let Atom::Box(first) = &atoms[index] else {
@@ -423,10 +423,9 @@ pub(crate) fn plan(
                 row_metrics = RowMetrics::default();
             }
             Atom::Break(empty_line) => {
-                // Consecutive authored breaks reserve real lines even without ink.
-                if row.is_empty() {
-                    row.push(empty_line);
-                }
+                // 작성 개행의 글자 크기도 현재 줄의 기준선·높이를 소유한다.
+                // 폭 0 상자로 빈 줄과 연속 개행의 공간도 같은 결과에 보존한다.
+                row.push(empty_line);
                 finish_row(
                     &mut result,
                     &mut row,
@@ -451,11 +450,12 @@ pub(crate) fn plan(
                 let row_horizontal =
                     paragraph_row_horizontal(&horizontal, style, result.boxes.is_empty());
                 let row_width = row_horizontal.end - row_horizontal.start;
-                // 공백의 끝과 다음 pen의 줄 소속을 구분한다. 아직 줄 안의
-                // pen에서 시작하는 구분 공백은 우단 밖으로 전진할 수 있다.
+                // 개체 앞 작성 공백 그룹의 첫 공백만 우단 밖으로 전진한다.
+                // 그룹의 후속 공백이 처음 넘쳤다는 이유로 hanging하지 않는다.
                 let object_separator = matches!(&item.content, InlineFlowContent::Text { range, .. }
-                    if object_separator_spaces.contains(&range.start));
-                let first_overhang_space = object_separator
+                    if spaces.object.contains(&range.start));
+                let first_overhang_space = matches!(&item.content, InlineFlowContent::Text { range, .. }
+                    if spaces.first_object.contains(&range.start))
                     && separator_spaces::has_flow_content(&row, &chars)
                     && row_metrics.width <= row_width + 0.01
                     && row_metrics.width + item.width > row_width + 0.01;
@@ -464,7 +464,7 @@ pub(crate) fn plan(
                 // next word/table. Space-only paragraphs and authored breaks
                 // retain their real line boxes.
                 if matches!(&item.content, InlineFlowContent::Text { range, .. }
-                    if separator_spaces.contains(&range.start))
+                    if spaces.wrap.contains(&range.start))
                     && row_metrics.width + item.width > row_width + 0.01
                     && !first_overhang_space
                     && separator_spaces::has_flow_content(&row, &chars)
