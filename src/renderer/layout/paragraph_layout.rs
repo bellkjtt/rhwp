@@ -33,6 +33,9 @@ use crate::model::control::Control;
 use crate::model::paragraph::{LineSeg, MarkerHead, NumberingMarker, Paragraph};
 
 mod leading_justification;
+mod leading_spaces;
+use leading_spaces::{natural_leading_positions, LeadingSpaces};
+
 mod picture_bullet;
 mod right_tab_fields;
 use crate::model::shape::{
@@ -80,17 +83,24 @@ fn emitted_run_layout_positions(
     style: &TextStyle,
     fallback_width: f64,
     trailing_space_count: usize,
+    leading_space_count: usize,
     eligible: bool,
 ) -> (f64, Option<Vec<f64>>) {
-    if !eligible
-        || !style.kerning
-        || replay_text.is_empty()
-        || session.source_handle(slot).is_none()
-    {
+    let leading = natural_leading_positions(replay_text, style, leading_space_count);
+    let corrected_width = leading
+        .as_ref()
+        .map_or(fallback_width, |(_, delta)| fallback_width - delta);
+    let can_kern = eligible
+        && style.kerning
+        && !replay_text.is_empty()
+        && session.source_handle(slot).is_some();
+    if !can_kern && leading.is_none() {
         return (fallback_width, None);
     }
-
-    let mut base_positions = compute_char_positions(replay_text, style);
+    let mut base_positions = leading.as_ref().map_or_else(
+        || compute_char_positions(replay_text, style),
+        |(positions, _)| positions.clone(),
+    );
     let scalar_count = replay_text.chars().count();
     let trailing_space_count = trailing_space_count.min(scalar_count);
     if trailing_space_count > 0 && style.extra_word_spacing != 0.0 {
@@ -103,6 +113,12 @@ fn emitted_run_layout_positions(
             *position -= style.extra_word_spacing * (index - trailing_start) as f64;
         }
     }
+    if !can_kern {
+        return (
+            base_positions.last().copied().unwrap_or(corrected_width),
+            Some(base_positions),
+        );
+    }
 
     let base_font_size = style.effective_font_size();
     let effective_font_size_px = if style.superscript || style.subscript {
@@ -111,6 +127,17 @@ fn emitted_run_layout_positions(
         base_font_size
     };
     let width_ratio = if style.ratio > 0.0 { style.ratio } else { 1.0 };
+    let ordinary_replay = leading.is_some().then(|| base_positions.clone());
+    let fallback = || {
+        if let Some(positions) = ordinary_replay {
+            (
+                positions.last().copied().unwrap_or(corrected_width),
+                Some(positions),
+            )
+        } else {
+            (fallback_width, None)
+        }
+    };
     let measurement = session.measure_run(
         slot,
         replay_text,
@@ -120,16 +147,16 @@ fn emitted_run_layout_positions(
         width_ratio,
     );
     if measurement.disposition != KerningRunMeasurementDisposition::PairAdjusted {
-        return (fallback_width, None);
+        return fallback();
     }
     let Some(positions) = measurement.pair_adjusted_positions else {
-        return (fallback_width, None);
+        return fallback();
     };
     let Some(width) = positions.last().copied() else {
-        return (fallback_width, None);
+        return fallback();
     };
     if !width.is_finite() || width < 0.0 {
-        return (fallback_width, None);
+        return fallback();
     }
     (width, Some(positions))
 }
@@ -2218,6 +2245,7 @@ fn converge_cell_overflow_char_spacing(
 #[allow(clippy::too_many_arguments)]
 fn compute_line_extra_spacing(
     comp_line: &ComposedLine,
+    leading_space_count: usize,
     trailing_space_limit: usize,
     leading_space_plan: &LeadingSpacePlan<'_>,
     styles: &ResolvedStyleSet,
@@ -2386,8 +2414,7 @@ fn compute_line_extra_spacing(
         {
             return (0.0, 0.0, 0.0);
         }
-        let interior_spaces = all_chars
-            [leading_space_plan.leading_spaces.min(visible_count)..visible_count]
+        let interior_spaces = all_chars[leading_space_count.min(visible_count)..visible_count]
             .iter()
             .filter(|c| **c == ' ')
             .count();
@@ -6909,6 +6936,18 @@ impl LayoutEngine {
                     .map(|(pos, _, _)| *pos)
                     .max(),
             );
+            let first_inline_object = line_tac_offsets_for_width
+                .iter()
+                .map(|(position, _, _)| *position)
+                .chain(
+                    composed
+                        .footnote_positions
+                        .iter()
+                        .map(|(position, _, _)| *position)
+                        .filter(|position| *position >= comp_line.char_start),
+                )
+                .min();
+            let leading_spaces = LeadingSpaces::new(comp_line, first_inline_object);
             let (extra_word_sp, extra_char_sp, extra_dash_sp) = if is_hancom_company_pua_logo_line {
                 // 이 줄의 trailing space는 뒤의 treat-as-char logo 그림 앞 공백이다.
                 // 회사명 자체에는 자간을 추가하지 않고 이 공백 하나가 남는 폭을 전부
@@ -6929,6 +6968,7 @@ impl LayoutEngine {
             } else {
                 compute_line_extra_spacing(
                     comp_line,
+                    leading_spaces.total,
                     trailing_space_limit,
                     &leading_space_plan,
                     styles,
@@ -7281,6 +7321,7 @@ impl LayoutEngine {
                 &tab_stops,
                 tac_offsets_px,
                 &line_tac_offsets_for_width,
+                &leading_spaces,
                 &shape_markers,
                 fn_positions,
                 &mut fn_marker_inserted,
@@ -8015,6 +8056,7 @@ impl LayoutEngine {
         tab_stops: &[TabStop],
         tac_offsets_px: &[(usize, f64, usize)],
         line_tac_offsets: &[(usize, f64, usize)],
+        leading_spaces: &LeadingSpaces,
         shape_markers: &[(usize, String)],
         fn_positions: &[(usize, u16, usize)],
         fn_marker_inserted: &mut [bool],
@@ -8468,6 +8510,11 @@ impl LayoutEngine {
                     &text_style,
                     full_width,
                     line_trailing_space_by_run[run_idx],
+                    leading_spaces.in_fragment(
+                        run_idx,
+                        0,
+                        effective_text_for_metrics(run).chars().count(),
+                    ),
                     exact_replay_eligible,
                 )
             };
@@ -8475,7 +8522,9 @@ impl LayoutEngine {
             // inline_tabs를 일시 제거하여 tab_stops 기반 위치 계산과 일관되게 함
             if has_tabs && run.text.contains('\t') {
                 let saved_inline_tabs = std::mem::take(&mut text_style.inline_tabs);
-                let positions = compute_char_positions(&run.text, &text_style);
+                let positions = layout_positions
+                    .clone()
+                    .unwrap_or_else(|| compute_char_positions(&run.text, &text_style));
                 text_style.inline_tabs = saved_inline_tabs;
                 text_style.tab_leaders = extract_tab_leaders_with_extended(
                     &run.text,
@@ -8780,6 +8829,7 @@ impl LayoutEngine {
                                     &text_style,
                                     seg_w,
                                     0,
+                                    leading_spaces.in_fragment(run_idx, seg_start, rel_pos),
                                     run.char_overlap.is_none()
                                         && seg_display.is_none()
                                         && !seg_text.chars().any(|character| {
@@ -8873,6 +8923,7 @@ impl LayoutEngine {
                                 &text_style,
                                 seg_w - extra_word_sp * trailing_space_count as f64,
                                 trailing_space_count,
+                                leading_spaces.in_fragment(run_idx, seg_start, run_chars.len()),
                                 run.char_overlap.is_none()
                                     && seg_display.is_none()
                                     && !seg_text
@@ -8996,6 +9047,7 @@ impl LayoutEngine {
                             &seg_style,
                             seg_w,
                             0,
+                            leading_spaces.in_fragment(run_idx, seg_start, tac_rel),
                             run.char_overlap.is_none()
                                 && seg_display.is_none()
                                 && !seg_text
@@ -9517,6 +9569,7 @@ impl LayoutEngine {
                         &seg_style,
                         seg_w - extra_word_sp * trailing_space_count as f64,
                         trailing_space_count,
+                        leading_spaces.in_fragment(run_idx, seg_start, run_chars.len()),
                         run.char_overlap.is_none()
                             && seg_display.is_none()
                             && !remaining
@@ -11106,6 +11159,7 @@ mod issue_2809_split_alignment_tests {
         let line = split_label_line();
         let (extra_word, extra_char, extra_dash) = compute_line_extra_spacing(
             &line,
+            0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
             &ResolvedStyleSet::default(),
@@ -11144,6 +11198,7 @@ mod issue_2809_split_alignment_tests {
         let available_width = natural_width + 60.0;
         let (extra_word, extra_char, extra_dash) = compute_line_extra_spacing(
             &trailing_line,
+            0,
             usize::MAX,
             &LeadingSpacePlan::new(&trailing_line, None),
             &styles,
@@ -11185,6 +11240,7 @@ mod issue_2809_split_alignment_tests {
         let total_text_width = estimate_text_width("다 같 이", &text_style);
         let (extra_word, extra_char, extra_dash) = compute_line_extra_spacing(
             &line,
+            0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
             &styles,
@@ -11236,6 +11292,7 @@ mod issue_2809_split_alignment_tests {
         // 꼬리말 마지막 줄 예외 (justify_spaces_only = true): 분배 없음
         let (extra_word, extra_char, extra_dash) = compute_line_extra_spacing(
             &line,
+            0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
             &ResolvedStyleSet::default(),
@@ -11260,6 +11317,7 @@ mod issue_2809_split_alignment_tests {
         // 본문 중간 줄 justify (justify_spaces_only = false): 기존 자간 분배 유지
         let (_, extra_char_mid, _) = compute_line_extra_spacing(
             &line,
+            0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
             &ResolvedStyleSet::default(),
@@ -11308,6 +11366,7 @@ mod issue_4657_distribute_alignment_tests {
     fn distribute_extra(text: &str, char_count: usize, text_width: f64, avail: f64) -> f64 {
         let (extra_word, extra_char, extra_dash) = compute_line_extra_spacing(
             &line(text),
+            0,
             usize::MAX,
             &LeadingSpacePlan::new(&line(text), None),
             &ResolvedStyleSet::default(),
