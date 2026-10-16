@@ -3400,8 +3400,13 @@ fn apply_resolved_field_tokens(
             _ => None,
         }
         .and_then(|position| {
-            super::resolved_fields::token_width(para, position, styles)
-                .map(|(width, size)| (position, width + inline_width_px_at(inline, position), size))
+            super::resolved_fields::token_width(para, position, styles).map(|(width, size)| {
+                (
+                    position,
+                    width + inline_width_px_at(inline, position, styles),
+                    size,
+                )
+            })
         });
         if let Some((position, width, size)) = field {
             resolved.push(BreakToken::Text {

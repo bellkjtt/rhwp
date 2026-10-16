@@ -112,8 +112,8 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
     // 원본의 재정렬 요청은 일반 저장 줄의 압축 허용치와 별개로 수용을 거부한다.
     let stale = stored_geometry_policy.requires_realign
         || (!para.layout_field_values.is_empty()
-        && (para.stored_text_partition_dirty
-            || crate::renderer::para_has_no_stored_line_segs(para)))
+            && (para.stored_text_partition_dirty
+                || crate::renderer::para_has_no_stored_line_segs(para)))
         || rejoinable_word_tail
         || (stored_rows_untrusted && !para.line_segs.is_empty())
         || stored_rows_are_stale(composed, para, inner_width_px, styles)

@@ -23,8 +23,8 @@ mod nested_table_frames;
 pub(crate) use nested_table_frames::{
     recompose_cell_lines_with_nested_tables, table_cells_have_no_stored_lines,
 };
-mod resolved_fields;
 mod inline_picture_metrics;
+mod resolved_fields;
 mod stored_word_tail;
 pub(crate) use inline_picture_metrics::{inline_picture_ascent_ratio, inline_picture_size_hu};
 mod punctuation_slots;
