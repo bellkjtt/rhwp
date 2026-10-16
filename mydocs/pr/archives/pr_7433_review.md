@@ -9,9 +9,30 @@ last_verified: 2026-10-16
 
 ## 판정
 
+**현재 판정: 머지 보류 — 0953598 대비3문서의 전쪽 일대일 TSV 대응 미검증.** 기준은
+`0953598d8e08af5e9149b3e4cdbbbf2f5f2bae64`, 검증 source는
+`f5a4774049fa10cc661f7220de0127d61fa081ba`다. 현재 Native/host fresh WASM 각각13문서19쪽의
+최저100%, Print 쪽수 일치와 같은19쪽의 직접 판독을 확인했다. 최신 PNG38개도7fe 검증본과
+바이트 동일하다. 비교 가능한10문서·backend별12쪽의0.01%p 이상 하락0이며, 기존3문서의
+기준 쪽수 오류와 전쪽 일대일 TSV 보류를 그대로 유지한다.
+
+새 source의 Studio TypeScript·의존성 계약은 exit0, 단위2,021 PASS·실패0·2 skipped다.
+실제 Studio15캡처의 backend/profile·초기 WASM 해시 일치와 실행 오류0, 내용 보존을 확인했다.
+엄격 backend 픽셀10건의 report-only 미달은 남는다. 정식 집중14개·Square5개는 모두 통과했고,
+현재 source의 전체 회귀도10,454 PASS·실패0·13 slow·45 skipped·exit0으로 끝났다.
+lint6종과 Native Skia library4,043 PASS·12 ignored·exit0까지 확인했다.
+Native 그림 placeholder2/2·직접 PDF4/4도 PASS·exit0이다. 승인된 로컬 검증은 완료했고,
+전쪽 일대일 TSV3문서 보류는 남았다. 표준 Docker WASM·GitHub CI는 통과로 표시하지 않는다.
+아래 cdef/7fe의 전체 통과는 이전 source의 완료 기록이며 새 실행으로
+간주하지 않는다. [Stage6](../../working/task_m100_7419_stage6.md)에 명령과 실제 종료 결과를
+연결한다. 사용자 답변에 따라 Docker는 설치하지 않고 표준 Docker
+WASM은 미검증으로 유지한다. 기존3문서의 일대일 TSV 보류와 PR/push 별도 승인 조건도 유지한다.
+
+### 직전 cdef source의 판정
+
 **머지 보류 — devel 대비3문서의 전쪽 일대일 TSV 대응 미검증. 전체 회귀·lint·Native 통과.**
 추가 devel `cdef0073bb24512daf0622dec5051ac62cb8d57e`(#7948) 위로 리베이스를 완료했다.
-현재 검증 source는 `7fe3b2ce45b996c550397ab588f4e3903cbd9508`이다. 새 source의
+당시 검증 source는 `7fe3b2ce45b996c550397ab588f4e3903cbd9508`이다. 새 source의
 13문서19쪽 Native/fresh WASM은 모두100%, 독립 Print 쪽수 일치와 전쪽 직접 판독을 확인했다.
 새 결과 PNG38개가 리베이스 전과 바이트 동일하다. 집중14+5개와 전체10,454개가 통과했고
 lint6종과 Native Skia3종도 모두 통과했다. 아래10,449건 성공은 리베이스 전 증거로 구분한다.
@@ -23,14 +44,19 @@ PR/push는 사용자의 별도 승인 전까지 수행하지 않는다.
 - 원 PR: #7433, `imsebeom`, 원 head `d895e51ac5fd1621abb99f0a20aa52034e01e083`.
 - 관련 이슈: #7419. GitHub 이슈 종료·원 PR 종료는 하지 않았다.
 - 기여자 기능 `52a51c0a97d0df7baab1e815ed820c6dff7ae2bb`, 검사/입력
-  `4905a31d0746fa86e23fe03655f4538079e2d0a1`을 순서대로 `-x` 체리픽했다.
+  `4905a31d0746fa86e23fe03655f4538079e2d0a1`을 순서대로 통합했다.
   과거 보류 문서만 담은 마지막 commit은 새 검토 기록과 섞지 않았다.
+  현재 대응 commit은 각각 `177650456abc896e11e1014bdaf0f88cdafcd595`,
+  `ae67b089c99febd1874ba839ec7ac5f51144592e`다. 두 commit 모두 원 author·author date를
+  보존하지만 출처 trailer는 없어 이전 `-x` 표기를 정정한다. 검사 commit의 stable patch-id는
+  원본과 같고, 기능 port는 당시 devel의 overlay 제외·stored_rows 우선 분기를 보존해
+  적용했으므로 원본 patch-id와 다르다. 실제 patch 대조는 Stage6에 연결한다.
 - 리베이스 전 기준: `4662c069e557e928ed7968d061121fde90b1f027`.
 - 리베이스 전 렌더링 code: `dca310c06036c7f3fa7ca30cce74c1704f1169f2`.
 - 리베이스 전 새 검사/입력 commit 및 전체 검증 시작 head: `9f464aa2c`.
 - branch: `review/imsebeom-7433-20261016`.
 - 최초 확인에서는 기준이 같아 rebase하지 않았고, 이후 devel이cdef로 바뀐 것을 확인해
-  실제 리베이스했다. 현재 검증 source는 위의7fe이며 과거4662 결과와 구분한다.
+  실제 리베이스했다. 당시 검증 source는 위의7fe이며 과거4662 결과와 구분한다.
 - collaborator 외부 PR 체리픽 통합 경로다. 원 fork를 rewrite하지 않으며, 원 contributor head를
   직접 merge 대상으로 삼지 않는다. 통합 PR 채번용 별도 review 또는 docs-only PR을 만들지 않는다.
 
@@ -116,6 +142,9 @@ partial eager/lazy paint가 같은 결과를 소비하며, 같은 줄과 여러 
 같은 줄/개행/폭 부족/문맥/여백/이월/조각 종료/저장 줄 혼재를 보호한다.
 완료 페이지18쪽의 핵심 제목·후속 본문 원점은 독립 PDF span.origin을96dpi로 환산한
 ±2px 검사1개로 함께 보호한다. 작은 용지1쪽은 제목만 있어 추가 위치 핀을 만들지 않았다.
+Rust 좌표 검사는 실루엣98% 유지 판정의 대체가 아니다. 위18쪽은 이후에도 Native와 fresh
+WASM 각각98% 이상이어야 하며, 좌표 검사가 통과해도 한쪽이 미달하면 회귀로 처리한다.
+현재f5a에서는 해당18쪽을 포함한 전19쪽의 양쪽 최저100%와 직접 판독을 다시 확인했다.
 
 | source/생산자 | 검사와 실제 결과 |
 | --- | --- |

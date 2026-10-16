@@ -1,16 +1,19 @@
 # PR #7433 메인터너 보정 시각 자산
 
-- 렌더링 source: `7fe3b2ce45b996c550397ab588f4e3903cbd9508`.
+- 렌더링 source: `f5a4774049fa10cc661f7220de0127d61fa081ba`.
 - 리베이스 후 위 source에서 실제 Native와 fresh WASM을 다시 빌드해 전쪽 재출력했다.
-- 기준 devel: `cdef0073bb24512daf0622dec5051ac62cb8d57e`.
+- 기준 devel: `0953598d8e08af5e9149b3e4cdbbbf2f5f2bae64`.
 - 13문서19쪽 Native/fresh WASM의2px 관용 실루엣 최저100%, 독립 Print 쪽수 일치.
   엄격 픽셀100%가 아니다. 여백·분할·wrapper·저장 줄 혼재·뒤 본문을 전쪽 직접 대조했다.
+- 사용자는 표준 Docker WASM을 미검증으로 유지하도록 선택했다. 현재 fresh WASM은
+  host `--dev --no-opt` 진단이며 Docker 통과로 표시하지 않는다.
 - Native/fresh WASM의 PNG는 같은96dpi·Print profile·compat2024와 같은 한컴 글꼴을 쓴다.
 - 기존 입력 출처는 [Stage1](../../../working/task_m100_7419_stage1.md),
   분할 경계는 [Stage3](../../../working/task_m100_7419_stage3.md),
   실제 저장 줄 혼재의 생성·수정 전후는 [Stage4](../../../working/task_m100_7419_stage4.md),
-  리베이스 후 재검증은 [Stage5](../../../working/task_m100_7419_stage5.md)에 있다.
-- 현재 원시 증거는 ignored `output/pr-review/pr7433-current-20261016/rebased-cdef/`다.
+  직전 재검증은 [Stage5](../../../working/task_m100_7419_stage5.md),
+  현재095 리베이스 후 재검증은 [Stage6](../../../working/task_m100_7419_stage6.md)에 있다.
+- 현재 원시 증거는 ignored `output/pr-review/pr7433-current-20261016/rebased-0953598/`다.
   `candidate-{native,wasm}-{sweep,review}/`, `direct-read.json`,
   `producer-builds.json`, `review-assets.json`에서 TSV·생산자·직접 판독·PNG SHA를 확인한다.
 - devel과 비교 가능한10문서·backend별12쪽에서0.01%p 이상 하락0이다. 나머지3문서는
@@ -19,8 +22,8 @@
 - `studio-source-direct.png`, `studio-nested-direct.png`는59d source의 과거 캡처다.
   당시 Canvas2D·CanvasKit compat/default software6캡처의 초기 WASM 응답 해시와
   replay hard violation0을 확인했다. 엄격 픽셀4건은 report-only 불일치(최대0.01088193)였다.
-  이 두 이미지를 현재7fe source의 Studio 재실행 또는 parity gate 통과로 표시하지 않는다.
-- 아래 현재26개 대표 이미지는7fe에서 새로 산출했다.26개 모두 리베이스 전 자산과 바이트도 같다.
+  이 두 이미지를 현재f5a source의 Studio 재실행 또는 parity gate 통과로 표시하지 않는다.
+- 아래 현재26개 대표 이미지는f5a에서 새로 산출했다.26개 모두 리베이스 전 자산과 바이트도 같다.
   Visual Sweep review와 standalone overlay를 함께 표시해 판독한다.
 - [개별 검토](../../archives/pr_7433_review.md). PR/push는 사용자의 별도 승인 전까지 보류한다.
 
@@ -89,7 +92,7 @@
 
 ## 리베이스 후 실제 Studio 혼재2쪽
 
-현재7fe source의 Canvas2D/CanvasKit software 캡처다.15캡처의 초기 WASM 해시 일치와
+현재f5a source의 Canvas2D/CanvasKit software 캡처다.15캡처의 초기 WASM 해시 일치와
 replay hard violation0 및 실제 내용을 확인했다. 보고용 엄격 픽셀 비교10건 미달은 남는다.
 이 두 이미지는 Visual Sweep review/overlay나 독립 Print gate의 대체 증거가 아니다.
 
