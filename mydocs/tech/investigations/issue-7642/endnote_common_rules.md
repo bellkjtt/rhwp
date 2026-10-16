@@ -127,3 +127,40 @@ TSV·원시 JSON·실행 파일은 Git에 추가하지 않는다.
 추가 원점 증거: `stage1625-endnote-coordinate-scope-audit.json`과
 `stage1625-endnote-saved-boundary-gap-audit.json`. 서로 다른 미주의 raw vpos를 바로 뺀
 음수 값은 물리 겹침 판정으로 사용하지 않는다.
+
+
+## 실제 fit·paint 연결의 추가 관측
+
+1629는 제품을 바꾸지 않고 기본 B 경로의 진단 로그만 활성화해 11월 0/7/8/20mm
+네 입력을 실제 Native Print로 출력했다. CLI가 초기 조판 뒤 compat를 설정해 다시 조판하는
+경우가 있어 최종 세대의 query만 현재 paint와 연결했다. 이전 세대의 좌표를 섞지 않았다.
+
+| 미주 사이 값 | 최종 미주 시작 query의 고유 소유 수 | 선택 10쪽의 실제 미주 제목 수 | Native 제목 y와 Print 최대 차이 |
+| --- | ---: | ---: | ---: |
+| 7mm | 46 | 10 | 0.07367 CSS px |
+| 0mm | 46 | 11 | 0.08632 CSS px |
+| 20mm | 43 | 8 | 0.07369 CSS px |
+| 8mm | 45 | 9 | 0.14633 CSS px |
+
+관측한 query는 `max(현재 flow 원점, 앞 점유 끝 + 간격)`과 최대 0.001 CSS px 차이다.
+이는 로그가 소수 셋째 자리로 출력되는 정밀도 안의 차이다. 같은 원본 소유의 실제 제목을
+단 원점으로 환산해 query와 연결한 차이는 최대 0.053 CSS px다. render tree debug JSON은
+상자 좌표를 소수 첫째 자리로 출력한다. 이 결과로 모든 소비 분기를 검증했다고 쓰지 않는다.
+
+20mm의 원본 미주 순서 9/24/39번과 8mm의 46번은 이 query를 통과하지 않았다.
+번호 23을 표시하는 원본 39번째 미주도 별도 소유로 추적했다. 실제 호출은
+`typeset/notes/endnotes/paragraph.rs`의 제목 꼬리 overflow 판정 뒤 단/쪽 전환이며,
+다음 항목은 해당 원본 미주의 내부 문단 0번으로 넘어간다. helper가 같다는 추정으로
+이 분기를 검증 완료 처리하지 않았다.
+
+이 네 경계의 독립 Print는 모두 새 쪽 왼쪽 단의 맨 위에서 제목을 시작한다. 20mm 변형의
+11/15/20쪽은 현재 전범위 Native의 실제 render tree에서도 해당 소유의 제목 y와 단의
+상단이 모두 90.7 CSS px이고 Print는 90.65370 CSS px다. **이 새 쪽 시작에서는 같은 단의
+미주 사이 20mm를 다시 앞에 예약하지 않는다.** 8mm 변형의 21쪽 Print도 같은 상단이지만
+해당 쪽의 현재 Native 전범위 대조는 이 기록 작성 시 아직 실행 전이다.
+
+따라서 같은 단의 완성 미주 경계와 새 단·쪽으로 넘긴 미주의 시작을 별도 조건으로 확인해야
+한다. 이어받는 미주 조각의 점유·마지막 유닛·다음 내용까지 이 결과로 대신하지 않는다.
+추가 증거는 `stage1629-endnote-flow-traces/fit-paint-head-audit.json`,
+`stage1629-new-column-actual-head-audit.json`, 각 변형의 실제 실행 명령·최종 pageCount·
+`flow-debug.log`에 있다. 새 미주 조판 구현이나 기대값 변경은 아직 하지 않았다.
