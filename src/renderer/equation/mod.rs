@@ -22,6 +22,7 @@ mod font_frame_22;
 mod font_frame_metrics;
 mod font_style_runs;
 mod fraction_sup_frame;
+mod hancom_eqn_metrics;
 pub mod hancom_glyphs;
 pub(crate) mod inline_box;
 pub(crate) mod integral_outline;

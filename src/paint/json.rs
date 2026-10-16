@@ -2995,7 +2995,8 @@ fn write_equation_layout_kind(buf: &mut String, layout: &LayoutBox) {
         LayoutKind::HancomGlyphs(run) => {
             let _ = write!(
                 buf,
-                "{{\"type\":\"hancomGlyphs\",\"glyphs\":{},\"positions\":[",
+                "{{\"type\":\"hancomGlyphs\",\"fontFamily\":{},\"glyphs\":{},\"positions\":[",
+                json_escape(run.font_family),
                 json_escape(&run.glyphs)
             );
             for (index, offset) in run.positions.iter().enumerate() {

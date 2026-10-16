@@ -47,11 +47,7 @@ fn render_box(
 
     match &lb.kind {
         LayoutKind::HancomGlyphs(run) => {
-            ctx.set_font(&format!(
-                "{:.2}px {}",
-                fs,
-                super::hancom_glyphs::FONT_FAMILY
-            ));
+            ctx.set_font(&format!("{:.2}px {}", fs, run.font_family));
             ctx.set_fill_style_str(color);
             for ((glyph, offset), shear) in run.glyphs.chars().zip(&run.positions).zip(&run.shears)
             {

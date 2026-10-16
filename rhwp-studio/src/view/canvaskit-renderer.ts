@@ -4315,7 +4315,7 @@ export class CanvasKitLayerRenderer {
     switch (layout.kind.type) {
       case 'hancomGlyphs': {
         const run = layout.kind;
-        const typeface = this.findPreparedTypeface('HyhwpEQ')?.typeface;
+        const typeface = this.findPreparedTypeface(run.fontFamily ?? 'HyhwpEQ')?.typeface;
         const glyphs = Array.from(run.glyphs);
         const shears = run.shears ?? glyphs.map(() => 0);
         if (!typeface || glyphs.length !== run.positions.length

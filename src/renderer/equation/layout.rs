@@ -29,6 +29,7 @@ mod script_geometry;
 mod source_font_advance;
 mod source_font_symbol;
 mod source_font_text;
+mod source_glyph_runs;
 mod source_greek_symbol;
 mod source_italic_advance;
 mod source_roman_advance;
@@ -50,6 +51,7 @@ pub struct EqLayout {
     hancom_latin: bool,
     latin_italic: bool,
     hancom_math_face: bool,
+    hancom_eqn: bool,
     math_digit_advance: Option<u16>,
     variable_italic: bool,
     variable_bold: bool,
@@ -129,6 +131,7 @@ impl EqLayout {
             hancom_latin: false,
             latin_italic: true,
             hancom_math_face: false,
+            hancom_eqn: false,
             math_digit_advance: None,
             variable_italic: true,
             variable_bold: false,
@@ -145,9 +148,11 @@ impl EqLayout {
             dpi,
             hancom_cjk_advance: equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
             hancom_latin: !equation.common.size_protect
-                && equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
+                && (equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
+                    || equation.font_name.eq_ignore_ascii_case("HancomEQN")),
             latin_italic: true,
             hancom_math_face: equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
+            hancom_eqn: equation.font_name.eq_ignore_ascii_case("HancomEQN"),
             // 두 face의 수학 PUA 숫자만 같은 512/1024 전진폭이다.
             // 영문·기호는 서로 다르므로 HancomEQN을 HYhwpEQ로 치환하지 않는다.
             math_digit_advance: (equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
@@ -160,10 +165,10 @@ impl EqLayout {
         }
     }
 
-    /// 독립 한컴 Print의 HYhwpEQ 첨자는 명목 글자 크기의 0.68배다.
-    /// 다른 face는 기존 계약을 사용하고 결과 글자 크기를 자식 상자에 보존한다.
+    /// 독립 Print의 HYhwpEQ·HancomEQN 첨자는 명목 크기의 0.68배다.
+    /// 다른 face의 계약과 실제 자식 상자의 글자 크기는 보존한다.
     fn script_font_size(&self, fs: f64) -> f64 {
-        fs * if self.hancom_math_face {
+        fs * if self.hancom_math_face || self.hancom_eqn {
             0.68
         } else {
             SCRIPT_SCALE
@@ -332,28 +337,6 @@ impl EqLayout {
         }
     }
 
-    fn layout_hancom_glyphs(
-        &self,
-        text: &str,
-        role: super::hancom_glyphs::Role,
-        fs: f64,
-        pad: f64,
-    ) -> Option<LayoutBox> {
-        if !self.hancom_latin {
-            return None;
-        }
-        let run = super::hancom_glyphs::measure(text, role, fs, self.dpi, pad)?;
-        Some(LayoutBox {
-            font_size: fs,
-            x: 0.0,
-            y: 0.0,
-            width: run.width,
-            height: fs,
-            baseline: fs * TEXT_BASELINE,
-            kind: LayoutKind::HancomGlyphs(run),
-        })
-    }
-
     fn layout_text(&self, text: &str, fs: f64) -> LayoutBox {
         if let Some(layout) = self.layout_hancom_glyphs(
             text,
@@ -518,6 +501,13 @@ impl EqLayout {
         {
             return layout;
         }
+        if self.hancom_eqn {
+            if let Some(value) =
+                self.layout_hancom_glyphs(text, super::hancom_glyphs::Role::Greek, fs, 0.0)
+            {
+                return value;
+            }
+        }
         // 독립 Print에서 그리스 기호는 라틴 rm/it/bold와 별도의 face 계약이다.
         if self.hancom_math_face {
             if let Some(result) = source_greek_symbol::command(text, fs, self.dpi) {
@@ -615,43 +605,6 @@ impl EqLayout {
             }
         } else {
             symbol
-        }
-    }
-
-    fn layout_function(&self, name: &str, fs: f64) -> LayoutBox {
-        if self.hancom_math_face && !self.variable_bold {
-            if let Some(body) = source_font_text::layout(
-                name,
-                fs,
-                self.dpi,
-                false,
-                false,
-                self.source_variable_glyphs,
-            ) {
-                return LayoutBox {
-                    font_size: fs,
-                    x: 0.0,
-                    y: 0.0,
-                    width: body.width,
-                    height: body.height,
-                    baseline: body.baseline,
-                    kind: LayoutKind::FontStyle {
-                        style: FontStyleKind::Roman,
-                        body: Box::new(body),
-                    },
-                };
-            }
-        }
-        let w = glyph_advances::text_width(name, fs)
-            .unwrap_or_else(|| estimate_text_width(name, fs, false));
-        LayoutBox {
-            font_size: fs,
-            x: 0.0,
-            y: 0.0,
-            width: w + fs * 0.02,
-            height: fs,
-            baseline: fs * 0.8,
-            kind: LayoutKind::Function(name.to_string()),
         }
     }
 

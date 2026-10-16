@@ -66,7 +66,7 @@ fn render_box(
 
     match &lb.kind {
         LayoutKind::HancomGlyphs(run) => {
-            let family = crate::renderer::equation::hancom_glyphs::FONT_FAMILY;
+            let family = run.font_family;
             let typeface =
                 match_supplied_family(fonts.custom_typefaces, family, FontStyle::normal())
                     .or_else(|| {

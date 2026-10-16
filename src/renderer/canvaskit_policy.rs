@@ -1451,9 +1451,11 @@ impl CanvasKitReplayPlanBuilder {
                 PaintOp::Equation { equation, .. }
                     if crate::renderer::equation::hancom_glyphs::is_used(&equation.layout_box) =>
                 {
-                    self.record_required_font_family(
-                        crate::renderer::equation::hancom_glyphs::FONT_FAMILY,
-                    );
+                    for family in crate::renderer::equation::hancom_glyphs::used_font_families(
+                        &equation.layout_box,
+                    ) {
+                        self.record_required_font_family(family);
+                    }
                 }
                 _ => {}
             }

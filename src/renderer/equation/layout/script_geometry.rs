@@ -62,6 +62,15 @@ impl EqLayout {
         sub: &LayoutBox,
         fs: f64,
     ) -> (f64, f64) {
+        if self.hancom_eqn
+            && super::super::logical_font_frame::font_line(base, fs)
+            && super::super::logical_font_frame::font_line(sub, sub.font_size)
+        {
+            // 두 face·네 크기의 독립 Print에서 아래첨자의 기준선은 본체보다
+            // 1/4em 낮다. 자식의 실제 글자 크기와 기준선을 그대로 소비한다.
+            let y = base.baseline + fs * 0.25 - sub.baseline;
+            return (y, base.height.max(y + sub.height));
+        }
         let source = self
             .hancom_math_face
             .then(|| super::super::logical_font_frame::subscript_geometry(base, sub, fs, self.dpi))

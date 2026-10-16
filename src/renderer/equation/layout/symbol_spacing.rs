@@ -190,7 +190,7 @@ impl EqLayout {
                         kind: LayoutKind::Row(vec![result]),
                     };
                 }
-                if !self.hancom_math_face {
+                if !self.hancom_math_face && !self.hancom_eqn {
                     return result;
                 }
                 // 항 묶음의 경계에도 바깥 피연산자의 연산자 문맥을 전달한다.

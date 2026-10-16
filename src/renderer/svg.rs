@@ -944,17 +944,22 @@ impl SvgRenderer {
                         if let Some(start) = segment.rfind('>') {
                             let text = &segment[start + 1..];
                             let header = &segment[..start];
-                            let family = if header
-                                .rsplit("<text ")
-                                .next()
-                                .is_some_and(|attrs| attrs.contains("font-family=\"HyhwpEQ\""))
-                            {
-                                super::equation::hancom_glyphs::FONT_FAMILY
-                            } else if super::equation::text_has_cjk(text) {
-                                "Haansoft Batang"
-                            } else {
-                                "Latin Modern Math"
-                            };
+                            let family =
+                                if header
+                                    .rsplit("<text ")
+                                    .next()
+                                    .is_some_and(|attrs| attrs.contains("font-family=\"HyhwpEQ\""))
+                                {
+                                    super::equation::hancom_glyphs::FONT_FAMILY
+                                } else if header.rsplit("<text ").next().is_some_and(|attrs| {
+                                    attrs.contains("font-family=\"HancomEQN\"")
+                                }) {
+                                    "HancomEQN"
+                                } else if super::equation::text_has_cjk(text) {
+                                    "Haansoft Batang"
+                                } else {
+                                    "Latin Modern Math"
+                                };
                             self.font_codepoints
                                 .entry(family.to_string())
                                 .or_default()
