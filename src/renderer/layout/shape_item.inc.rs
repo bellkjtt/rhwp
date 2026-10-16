@@ -56,8 +56,19 @@ impl LayoutEngine {
                 })
             })
             .unwrap_or(false);
-        if has_prior_non_picture_tac {
-            // 선행 TAC Table/Shape 가 있는 경우만 진행된 y_offset 으로 갱신.
+        let current_is_tac = paragraphs
+            .get(para_index)
+            .and_then(|para| para.controls.get(control_index))
+            .is_some_and(|control| match control {
+                Control::Table(table) => table.common.treat_as_char,
+                Control::Picture(picture) => picture.common.treat_as_char,
+                Control::Shape(shape) => shape.common().treat_as_char,
+                _ => false,
+            });
+        if has_prior_non_picture_tac && current_is_tac {
+            // 현재 개체와 선행 Table/Shape가 모두 TAC인 경우에만 진행된 흐름을 쓴다.
+            // 떠 있는 후속 개체는 이 흐름을 소비하지 않는다. 문단 원점을 뒤 줄 끝으로
+            // 덮으면 공유한 저장 앵커 delta를 올바르지 않은 기준에 더하게 된다.
             let needs_update = para_start_y
                 .get(&para_index)
                 .map(|&existing| y_offset > existing + 1.0)
@@ -383,7 +394,9 @@ impl LayoutEngine {
                             if !picture_outside_column && !vpos_accounts_for_height {
                                 let host_line_advance = hwpunit_to_px(
                                     crate::renderer::hwp3_caption_host::line_advance_hwp(
-                                        para, pic, self.profile.get(),
+                                        para,
+                                        pic,
+                                        self.profile.get(),
                                     ),
                                     self.dpi,
                                 );
@@ -392,11 +405,13 @@ impl LayoutEngine {
                                     // 콘텐츠 하단은 아니다. 기존 초과 판정에 그 점유 끝을
                                     // 공급하고 조판과 공유하는 다음 흐름 원점은 유지한다.
                                     let content_bottom = self.last_item_content_bottom.get();
-                                    self.last_item_content_bottom.set(if content_bottom.is_finite() {
-                                        content_bottom.max(result_y)
-                                    } else {
-                                        result_y
-                                    });
+                                    self.last_item_content_bottom.set(
+                                        if content_bottom.is_finite() {
+                                            content_bottom.max(result_y)
+                                        } else {
+                                            result_y
+                                        },
+                                    );
                                     result_y += host_line_advance;
                                 }
                             }
