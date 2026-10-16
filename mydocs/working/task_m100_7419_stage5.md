@@ -188,3 +188,22 @@ hash를 모두 대조했고 일치했다(`producer-sweep-link.json`). 첫 잘못
 Docker 미설치 호스트의 WASM은 `--dev --no-opt` 진단 결과다. 표준 Docker 최적화 빌드와
 최신 GitHub CI는 미검증이며 해당 성공으로 표시하지 않는다. PR/push는 별도 승인 전까지
 수행하지 않는다. `final-verification.json`에 완료한 명령과 이 남은 조건을 구분한다.
+
+## 완료 감사의 정상 대조군 확인
+
+원 이슈#7419의 재현 파일은8457바이트·MD5
+`0b1ccdfe0631e69d609d0431b73a13af`다. 현재 검증한 원본 일반 입력과 일치한다.
+이슈가 명시적으로 제외한 자기 모순 저장 LineSeg 문제#7416까지 해결했다고 주장하지 않는다.
+
+같은 한컴 저장 job에서 보존한 `hancom-saved.hwp`와 `.hwpx`를 cdef와7fe의 frozen
+Native CLI로 각각 `export-render-tree --compat 2024` 실행했다.4명령 모두exit0,
+각 입력2쪽 모두 base/candidate render tree가 바이트 동일하다. HWPX는 리베이스 전
+dca 결과와도 같다. 이는 실제 저장 host의 출력 보존 검사이며, 이 대조군의 독립 Print
+전쪽 일치율을 새로 검증했다는 뜻은 아니다.
+
+이전 실패3개도 현재 전체 로그에서 실제 PASS를 확인했다:
+`overflow_cell_lines_do_not_grow_partition_5`,
+`maintainer_nested_table_lines::missing_stored_rows_do_not_assume_one_inline_row`,
+`off_canvas_does_not_grow_partition_4`.
+입력 hash·명령·producer·쪽별 hash와 실제 PASS 행은
+`rebased-cdef/completion-control-audit.json`에 보존한다. 코드·검사·baseline 변경은 없다.

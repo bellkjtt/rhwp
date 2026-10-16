@@ -86,6 +86,10 @@ partial eager/lazy paint가 같은 결과를 소비하며, 같은 줄과 여러 
   hard violation·text fallback·unsupported0을 확인하고 실제 줄바꿈·소유·후속 본문을 직접 대조했다.
   backend 엄격 픽셀 비교10건은 report-only 미달(최대 차이율0.02082074)이다.
   이를 parity gate 또는 독립 Print 일치로 승격하지 않는다. Stage5와 자산 기록에 연결한다.
+- 완료 감사에서 원 이슈의8457바이트 재현 입력 MD5 일치를 확인했다. 실제 한컴 저장
+  HWP/HWPX 정상 대조군도 각각2쪽이 cdef/7fe에서 바이트 동일하며, 과거 실패3개가
+  현재 전체 로그에서 모두 PASS다. 독립 Print 정확도 주장과 저장 host 무변화를 구분한다.
+  Stage5의 `completion-control-audit.json`에 연결한다. #7416은 원 이슈의 제외 범위다.
 
 ## 리베이스 전 독립 출력과 직접 판독 기록
 
