@@ -1287,6 +1287,7 @@ impl LayoutEngine {
                                 RenderNodeType::Image(ImageNode {
                                     bin_data_id: bin_id,
                                     data: img_data,
+                                    hancom2024_print_bitmap: false,
                                     section_index: enclosing_ctx.map(|(s, _, _, _)| s),
                                     para_index: enclosing_ctx.map(|(_, p, _, _)| p),
                                     control_index: Some(ctrl_idx),
