@@ -54,15 +54,17 @@ pub(in crate::renderer::typeset) fn place(
                 // 인코딩하므로 layout 이 첫 줄을 표 옆에, 나머지를 표 아래에 렌더).
                 let profile = engine.profile.get();
                 if is_empty_para
+                    && st.square_band_top.is_none()
                     && (profile.hwp5_stored_pagination_layout() || profile.hwpx_stored_layout())
                     && !profile.session_edited()
                     && !engine.uniform_filler_ladder.get()
                     && !st.vpos_ladder_dirty
-                    && crate::renderer::float_placement::stored_empty_line_closes_flow(
+                    && crate::renderer::float_placement::stored_empty_line_has_closed_source_box(
                         paragraphs, para_idx,
                     )
                 {
-                    // 저장 사다리가 닫는 빈 줄은 정상 fit/paint로 한 번 소비한다.
+                    // 실제 예약된 Square 프레임의 안내 줄은 기존 흡수 경로에 남긴다.
+                    // 프레임이 없는 절대 위치 표 옆의 닫힌 빈 줄만 본문 fit/paint가 소비한다.
                     st.register_following_wrap_anchor(
                         para_idx,
                         wrap_match::picture_anchor(paragraphs, band),

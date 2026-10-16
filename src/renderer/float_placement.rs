@@ -48,7 +48,7 @@ use super::page_layout::LayoutRect;
 
 mod stored_square_top_band;
 pub(crate) use stored_square_top_band::{
-    stored_empty_line_closes_flow, stored_square_top_band, table_reserved_height_hu,
+    stored_empty_line_has_closed_source_box, stored_square_top_band, table_reserved_height_hu,
 };
 
 /// Required box for saved text in a cell. The declaration already owns its

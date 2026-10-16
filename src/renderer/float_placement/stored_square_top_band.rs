@@ -110,9 +110,13 @@ pub(crate) fn table_reserved_height_hu(table: &Table) -> u32 {
     total.max(table.common.height)
 }
 
-/// 저장된 빈 줄의 앞뒤가 줄 높이와 뒤 간격을 정확히 닫으면 그 줄은 안내용
-/// 좌표가 아니라 본문 흐름을 소유한다. 글자가 없다는 이유로 흡수하지 않는다.
-pub(crate) fn stored_empty_line_closes_flow(paragraphs: &[Paragraph], index: usize) -> bool {
+/// 저장된 빈 줄의 앞뒤가 줄 높이와 뒤 간격을 정확히 닫는지 확인한다.
+/// 이 관계만으로 본문 흐름의 소유를 판정하지 않는다. 표 프레임의 안내 줄도
+/// 같은 사다리를 가지므로 호출자가 이미 예약된 프레임의 소유를 보존해야 한다.
+pub(crate) fn stored_empty_line_has_closed_source_box(
+    paragraphs: &[Paragraph],
+    index: usize,
+) -> bool {
     let Some(current) = paragraphs.get(index) else {
         return false;
     };
