@@ -777,25 +777,7 @@ fn rasterize_svg_with_mask_coverage(
     // 투명 가장자리의 색 번짐을 막기 위해 premultiplied RGBA 상태에서 적분한다.
     // PNG 인코더가 마지막에만 알파를 되돌린다. Lanczos의 작은 overshoot도
     // premultiplied 불변식(R/G/B <= A) 안으로 제한한다.
-    let source = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
-        render_width,
-        render_height,
-        pixmap.data(),
-    )?;
-    let mut reduced = image::imageops::resize(
-        &source,
-        width,
-        height,
-        image::imageops::FilterType::Lanczos3,
-    );
-    for pixel in reduced.pixels_mut() {
-        for channel in 0..3 {
-            pixel[channel] = pixel[channel].min(pixel[3]);
-        }
-    }
-    let mut output = tiny_skia::Pixmap::new(width, height)?;
-    output.data_mut().copy_from_slice(reduced.as_raw());
-    output.encode_png().ok()
+    super::svg_bitmap_mask::encode_reduced(&pixmap, width, height)
 }
 
 fn svg_parse_options() -> usvg::Options<'static> {

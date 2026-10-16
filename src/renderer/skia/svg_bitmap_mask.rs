@@ -1,8 +1,5 @@
 //! 반복 비트맵의 마스크를 원래 표본 격자에서 합성한 뒤 축소한다.
 use resvg::{tiny_skia, usvg};
-use skia_safe::{
-    AlphaType, ColorType, Data, FilterMode, ImageInfo, MipmapMode, Paint, SamplingOptions,
-};
 
 fn contains_image(group: &usvg::Group) -> bool {
     group.children().iter().any(|node| match node {
@@ -57,34 +54,33 @@ pub(super) fn rasterize_before_reduction(
     // 반복 타일을 목적지의 작은 정수 격자로 먼저 뭉개지 않는다.
     // 흑백 마스크와 앞뒤 칠을 원래 표본에서 합성한 뒤에만 재표본한다.
     resvg::render(tree, transform, &mut pixmap.as_mut());
-    let info = ImageInfo::new(
-        (source_width as i32, source_height as i32),
-        ColorType::RGBA8888,
-        AlphaType::Premul,
-        None,
-    );
-    let image = skia_safe::images::raster_from_data(
-        &info,
-        Data::new_copy(pixmap.data()),
-        source_width as usize * 4,
+    encode_reduced(&pixmap, width, height)
+}
+
+/// 큰 격자의 합성 결과를 면적으로 저역 통과해 작은 글자 획과 premultiplied 색을 보존한다.
+pub(super) fn encode_reduced(
+    pixmap: &tiny_skia::Pixmap,
+    width: u32,
+    height: u32,
+) -> Option<Vec<u8>> {
+    let source = image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(
+        pixmap.width(),
+        pixmap.height(),
+        pixmap.data(),
     )?;
-    let mut surface = skia_safe::surfaces::raster_n32_premul((width as i32, height as i32))?;
-    surface.canvas().clear(skia_safe::Color::TRANSPARENT);
-    let mut paint = Paint::default();
-    paint.set_anti_alias(true);
-    surface.canvas().draw_image_rect_with_sampling_options(
-        &image,
-        None,
-        skia_safe::Rect::from_wh(width as f32, height as f32),
-        SamplingOptions::new(FilterMode::Linear, MipmapMode::None),
-        &paint,
+    let mut reduced = image::imageops::resize(
+        &source,
+        width,
+        height,
+        image::imageops::FilterType::Lanczos3,
     );
-    let mut options = skia_safe::png_encoder::Options::default();
-    options.z_lib_level = 1;
-    let png = skia_safe::png_encoder::encode_image(
-        None::<&mut skia_safe::gpu::DirectContext>,
-        &surface.image_snapshot(),
-        &options,
-    )?;
-    Some(png.as_bytes().to_vec())
+    // Lanczos의 작은 overshoot만 premultiplied RGBA 불변식 안으로 제한한다.
+    for pixel in reduced.pixels_mut() {
+        for channel in 0..3 {
+            pixel[channel] = pixel[channel].min(pixel[3]);
+        }
+    }
+    let mut output = tiny_skia::Pixmap::new(width, height)?;
+    output.data_mut().copy_from_slice(reduced.as_raw());
+    output.encode_png().ok()
 }
