@@ -19,6 +19,10 @@ use crate::renderer::layout_frame::LayoutFrame;
 pub use crate::renderer::layout_frame::ParagraphBox;
 
 mod frame_geometry;
+mod nested_table_frames;
+pub(crate) use nested_table_frames::{
+    recompose_cell_lines_with_nested_tables, table_cells_have_no_stored_lines,
+};
 mod resolved_fields;
 mod stored_word_tail;
 
@@ -3133,10 +3137,10 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
                     && picture.common.text_wrap == crate::model::shape::TextWrap::Square)
                 }))
             && line_breaking::supports_picture_band_frame_controls(para))
-        // [#7160] 글자처럼 취급 **표** host 도 프레임이 받는다 — `inline_control_size_hwp` 가
-        // 그 폭을 인라인 토큰으로 계상하므로 그림과 같은 축이다. 글자 없는 host 는 제외한다:
-        // 줄을 나눌 글자가 없고 표 자리 계약은 다른 경로가 갖는다.
-        || (para.text.chars().any(|c| !c.is_whitespace())
+        // 저장 줄 없는 host는 글자가 없어도 표 슬롯의 폭·높이로 줄을 구성한다.
+        // 저장 줄이 있는 host의 기존 텍스트·개체 수용 조건은 유지한다.
+        || ((para.text.chars().any(|c| !c.is_whitespace())
+            || crate::renderer::para_has_no_stored_line_segs(para))
             && line_breaking::supports_tac_table_band_frame_controls(para));
     if !paragraph_box.is_usable() || !frame_admits_controls {
         return None;
@@ -3210,11 +3214,15 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
             }
             let mut reconciled = composed.clone();
             reconciled.lines = reflowed.lines;
-            if rejoinable_word_tail {
+            if rejoinable_word_tail
+                || (crate::renderer::para_has_no_stored_line_segs(para)
+                    && line_breaking::supports_tac_table_band_frame_controls(para))
+            {
                 reconciled.frame_geometry =
                     Some(std::sync::Arc::new(frame_geometry::FrameGeometry {
                         line_segs: reflowed_para.line_segs,
                         space_metrics: reflowed_para.layout_space_metrics,
+                        inline_table_heights: Vec::new(),
                     }));
             }
             // Q2-D5-N1: source NO_LS has no usable width during the initial

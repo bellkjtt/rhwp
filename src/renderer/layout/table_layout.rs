@@ -5623,7 +5623,7 @@ impl LayoutEngine {
                 // [Task #671] line_segs 비어 있는 셀 paragraph 의 단일 ComposedLine
                 // 압축 결과를 셀 가용 너비에 맞춰 다중 ComposedLine 으로 재분할.
                 // 측정/렌더링 일관성 보장 (table_layout.rs:1226 의 렌더링 경로와 동일).
-                crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+                crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                     &mut comp,
                     p,
                     cell_inner_width_px,
@@ -5632,6 +5632,7 @@ impl LayoutEngine {
                     self.profile.get().legacy_hwp3_stored_geometry(),
                     self.profile.get().native_hwp5_layout(),
                     &self.single_line_overflow_cache,
+                    |nested| self.nested_table_body_height(nested, styles),
                 );
                 comp
             })
@@ -6900,6 +6901,8 @@ impl LayoutEngine {
             .zip(cell.paragraphs.iter())
             .enumerate()
         {
+            let frame_paragraph = composed.paragraph_with_frame_geometry(para);
+            let para = frame_paragraph.as_ref();
             if fragment_cut_units.is_none() {
                 if let Some(origins) = sequential_nested_layout
                     .as_ref()
@@ -7143,10 +7146,21 @@ impl LayoutEngine {
             let para_y_before_compose = para_y;
             let paragraph_children_start = cell_node.children.len();
 
-            // 측정의 nested_table_groups와 같은 저장 UTF-16 줄 소속을 소비한다.
-            // 빈 텍스트에도 여러 control의 서로 다른 저장 줄이 있을 수 있다.
+            // 저장 줄과 현재 프레임 모두 원시 UTF-16 슬롯으로 개체 소속을 정한다.
+            // 내용 성장으로 높이가 바뀌어도 같은 줄의 표를 세로로 합산하지 않는다.
             let stored_control_lines =
-                crate::renderer::float_placement::stored_control_line_indices(para);
+                crate::renderer::float_placement::stored_control_line_indices(para).or_else(|| {
+                    (composed.frame_geometry.is_some()
+                        && crate::renderer::para_has_no_stored_line_segs(para))
+                    .then(|| {
+                        (0..para.controls.len())
+                            .map(|index| {
+                                crate::renderer::composer::control_slot_line_index(para, index)
+                            })
+                            .collect::<Option<Vec<_>>>()
+                    })
+                    .flatten()
+                });
             // 줄별 TAC 컨트롤 너비 합산: 각 TAC가 속한 줄을 판별하여 줄별 최대 너비 계산
             let tac_line_widths: Vec<f64> = {
                 // 줄별 너비 합산 벡터
@@ -9923,7 +9937,7 @@ impl LayoutEngine {
             for (cpi, para) in cell.paragraphs.iter().enumerate() {
                 if let Some(comp) = composed_paras.get_mut(cpi) {
                     if cell.text_direction == 0 {
-                        crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+                        crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                             comp,
                             para,
                             inner_width,
@@ -9932,6 +9946,7 @@ impl LayoutEngine {
                             self.profile.get().legacy_hwp3_stored_geometry(),
                             self.profile.get().native_hwp5_layout(),
                             &self.single_line_overflow_cache,
+                            |nested| self.nested_table_body_height(nested, styles),
                         );
                     } else {
                         crate::renderer::composer::recompose_cell_lines_in_frame(
@@ -12066,7 +12081,7 @@ impl LayoutEngine {
                 let mut comp =
                     crate::renderer::composer::compose_paragraph_in_context(para, styles);
                 if cell.text_direction == 0 {
-                    crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+                    crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                         &mut comp,
                         para,
                         inner_width,
@@ -12075,6 +12090,7 @@ impl LayoutEngine {
                         self.profile.get().legacy_hwp3_stored_geometry(),
                         self.profile.get().native_hwp5_layout(),
                         &self.single_line_overflow_cache,
+                        |nested| self.nested_table_body_height(nested, styles),
                     );
                 } else {
                     crate::renderer::composer::recompose_cell_lines_in_frame(
@@ -12245,7 +12261,7 @@ impl LayoutEngine {
                         let mut comp =
                             crate::renderer::composer::compose_paragraph_in_context(para, styles);
                         if cell.text_direction == 0 {
-                            crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+                            crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                                 &mut comp,
                                 para,
                                 inner_width,
@@ -12254,6 +12270,7 @@ impl LayoutEngine {
                                 self.profile.get().legacy_hwp3_stored_geometry(),
                                 self.profile.get().native_hwp5_layout(),
                                 &self.single_line_overflow_cache,
+                                |nested| self.nested_table_body_height(nested, styles),
                             );
                         } else {
                             crate::renderer::composer::recompose_cell_lines_in_frame(
@@ -13106,7 +13123,7 @@ impl LayoutEngine {
     ) -> ComposedParagraph {
         let mut comp = crate::renderer::composer::compose_paragraph_in_context(p, styles);
         if text_direction == 0 {
-            crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+            crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                 &mut comp,
                 p,
                 inner_width,
@@ -13115,6 +13132,7 @@ impl LayoutEngine {
                 self.profile.get().legacy_hwp3_stored_geometry(),
                 self.profile.get().native_hwp5_layout(),
                 &self.single_line_overflow_cache,
+                |nested| self.nested_table_body_height(nested, styles),
             );
         } else {
             crate::renderer::composer::recompose_cell_lines_in_frame(

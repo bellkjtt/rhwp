@@ -3061,7 +3061,7 @@ impl HeightMeasurer {
                             // [Task #671] line_segs 비어 있는 셀 paragraph 의 단일 ComposedLine
                             // 압축 결과를 셀 가용 너비에 맞춰 다중 ComposedLine 으로 재분할.
                             // 측정/렌더링 일관성 (layout 의 같은 프레임 호출과 동일).
-                            crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+                            crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                                 &mut comp,
                                 p,
                                 cell_inner_width,
@@ -3070,6 +3070,11 @@ impl HeightMeasurer {
                                 self.legacy_hwp3_stored_geometry,
                                 self.is_native_hwp5,
                                 &self.single_line_overflow_cache,
+                                |nested| {
+                                    let stretch = self.render_normalization.nested_table_width_scale(nested);
+                                    let measured = self.measure_table_impl(nested, 0, 0, styles, depth + 1, stretch);
+                                    measured.total_height - measured.caption_height
+                                },
                             );
                             let frame_paragraph = comp.paragraph_with_frame_geometry(p);
                             if let std::borrow::Cow::Owned(ref paragraph) = frame_paragraph {
@@ -3935,7 +3940,7 @@ impl HeightMeasurer {
                             let mut comp = crate::renderer::composer::compose_paragraph_in_context(
                                 cell_para, styles,
                             );
-                            crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+                            crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                                 &mut comp,
                                 cell_para,
                                 cell_inner_width,
@@ -3944,6 +3949,19 @@ impl HeightMeasurer {
                                 self.legacy_hwp3_stored_geometry,
                                 self.is_native_hwp5,
                                 &self.single_line_overflow_cache,
+                                |nested| {
+                                    let stretch =
+                                        self.render_normalization.nested_table_width_scale(nested);
+                                    let measured = self.measure_table_impl(
+                                        nested,
+                                        0,
+                                        0,
+                                        styles,
+                                        depth + 1,
+                                        stretch,
+                                    );
+                                    measured.total_height - measured.caption_height
+                                },
                             );
                             let para_style =
                                 styles.para_styles.get(cell_para.para_shape_id as usize);
@@ -4136,7 +4154,7 @@ impl HeightMeasurer {
                             let mut comp = crate::renderer::composer::compose_paragraph_in_context(p, styles);
                             // [Task #671] line_segs 비어 있는 셀 paragraph 의 단일 ComposedLine
                             // 압축 결과를 셀 가용 너비에 맞춰 다중 ComposedLine 으로 재분할.
-                            crate::renderer::composer::recompose_horizontal_cell_lines_for_width(
+                            crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                                 &mut comp,
                                 p,
                                 cell_inner_width,
@@ -4145,6 +4163,11 @@ impl HeightMeasurer {
                                 self.legacy_hwp3_stored_geometry,
                                 self.is_native_hwp5,
                                 &self.single_line_overflow_cache,
+                                |nested| {
+                                    let stretch = self.render_normalization.nested_table_width_scale(nested);
+                                    let measured = self.measure_table_impl(nested, 0, 0, styles, depth + 1, stretch);
+                                    measured.total_height - measured.caption_height
+                                },
                             );
                             let frame_paragraph = comp.paragraph_with_frame_geometry(p);
                             if let std::borrow::Cow::Owned(ref paragraph) = frame_paragraph {
@@ -4541,25 +4564,15 @@ impl HeightMeasurer {
         // 편집으로 셀이 자란 성장분까지 선언높이로 눌러 다른 행의 몫을 잠식한다
         // (셀 Enter 재현: 표가 선언 높이에 고정된 채 행 경계만 위로 밀림).
         // 편집 세션은 실측을 신뢰한다.
-        let generator_restated_height = !self.is_native_hwp5
-            && table.cells.iter().all(|c| {
-                c.paragraphs
-                    .iter()
-                    .all(crate::renderer::para_has_no_stored_line_segs)
-            })
-            && {
-                let declared: f64 = (0..row_count)
-                    .map(|r| declared_row_height_px(table, r, self.dpi))
-                    .sum::<f64>()
-                    + cell_spacing * row_count.saturating_sub(1) as f64;
-                (0..row_count).all(|r| declared_row_height_px(table, r, self.dpi) > 0.0)
-                    && (declared - common_h).abs() <= 0.5
-            };
+        // 저장 글줄이 없는 셀은 현재 내용으로 재조판한다. 표/셀 선언의 수치 일치는
+        // 내용 높이를 줄일 근거가 아니며 선언이 조금 달라도 같은 규칙을 적용한다.
+        let reflowed_cell_rows = !self.is_native_hwp5
+            && crate::renderer::composer::table_cells_have_no_stored_lines(table);
         let table_height = if stored_rows.is_some() {
             raw_table_height
         } else if table.common.treat_as_char
             && !self.session_edited
-            && !generator_restated_height
+            && !reflowed_cell_rows
             && common_h > 0.0
             && raw_table_height > common_h + shrink_threshold
             && raw_table_height <= common_h * TAC_SHRINK_MAX_OVERFLOW_RATIO

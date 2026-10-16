@@ -3103,7 +3103,7 @@ pub(super) fn supports_tac_table_band_frame_controls(para: &Paragraph) -> bool {
             _ => return false,
         }
     }
-    tac_tables == 1
+    tac_tables == 1 || (tac_tables > 1 && crate::renderer::para_has_no_stored_line_segs(para))
 }
 
 pub(super) fn supports_picture_band_frame_controls(para: &Paragraph) -> bool {

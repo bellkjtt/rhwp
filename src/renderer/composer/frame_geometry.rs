@@ -8,6 +8,7 @@ use std::borrow::Cow;
 pub(crate) struct FrameGeometry {
     pub(super) line_segs: Vec<LineSeg>,
     pub(super) space_metrics: Vec<(u32, SpaceMetric)>,
+    pub(super) inline_table_heights: Vec<(usize, u32)>,
 }
 
 impl ComposedParagraph {
@@ -24,6 +25,13 @@ impl ComposedParagraph {
                     frame.line_segs.clone(),
                     frame.space_metrics.clone(),
                 );
+                for &(index, height) in &frame.inline_table_heights {
+                    if let Some(crate::model::control::Control::Table(table)) =
+                        paragraph.controls.get_mut(index)
+                    {
+                        table.common.height = height;
+                    }
+                }
                 Cow::Owned(paragraph)
             }
             None => Cow::Borrowed(source),
