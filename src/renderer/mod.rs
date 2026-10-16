@@ -20,6 +20,7 @@ pub mod composer;
 pub(crate) mod endnote_spacing;
 pub mod equation;
 pub(crate) mod equation_tac_flow;
+pub(crate) mod filled_path_bounds;
 pub mod float_placement;
 pub(crate) mod font_decision;
 pub mod font_environment;

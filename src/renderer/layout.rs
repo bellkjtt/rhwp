@@ -4749,7 +4749,8 @@ impl LayoutEngine {
                 node: &RenderNode,
                 float_subtree: bool,
             ) {
-                let cb = &node.bbox;
+                // 배치 bbox는 변환 원점을 소유한다. clip만 실제 채움 경로를 포함한다.
+                let cb = super::filled_path_bounds::including_filled_path(node);
                 let is_float = float_subtree || is_floating_object(node);
                 let target: &mut BoundingBox = if is_float { &mut *float } else { &mut *flow };
                 let child_bottom = cb.y + cb.height;
@@ -4771,7 +4772,7 @@ impl LayoutEngine {
                 let clips_descendants = matches!(
                     node.node_type,
                     RenderNodeType::TableCell(ref cell) if cell.clip
-                );
+                ) || matches!(node.node_type, RenderNodeType::TextBox);
                 if !clips_descendants {
                     for child in &node.children {
                         expand_clip(flow, float, child, is_float);
