@@ -1245,6 +1245,8 @@ struct EmptyRunsLineVars {
     line_char_end: usize,
     y: f64,
     baseline: f64,
+    /// 텍스트 표시용 축소 전 줄 상자의 개체 정렬 기준선.
+    object_baseline: f64,
     raw_lh: f64,
     runs_all_whitespace: bool,
     max_fs: f64,
@@ -1278,7 +1280,7 @@ struct TacPictureLineVars {
     run_char_pos: usize,
     x: f64,
     y: f64,
-    baseline: f64,
+    object_baseline: f64,
     raw_lh: f64,
     section_index: usize,
     para_index: usize,
@@ -1319,6 +1321,8 @@ struct RunEmitVars<'a> {
     natural_prefix_runs: usize,
     body_field_runs: &'a [bool],
     baseline: f64,
+    /// 같은 줄의 그림·도형이 공유하는 줄 상자 기준선.
+    object_baseline: f64,
     raw_lh: f64,
     alignment: crate::model::style::Alignment,
     auto_tab_right: bool,
@@ -4857,7 +4861,7 @@ impl LayoutEngine {
             run_char_pos,
             mut x,
             y,
-            baseline,
+            object_baseline,
             raw_lh,
             section_index,
             para_index,
@@ -4890,7 +4894,7 @@ impl LayoutEngine {
                                 styles,
                                 tac_offsets_px,
                                 y,
-                                baseline,
+                                object_baseline,
                                 pic,
                             ) + margin_top;
                             let bin_data_id = pic.image_attr.bin_data_id;
@@ -6061,6 +6065,23 @@ impl LayoutEngine {
                         })
                     })
                 });
+            // 저장·재조판으로 확정한 줄 상자의 기준선을 개체 정렬에 보존한다.
+            // 아래 본문 TAC 분기는 텍스트 표시만 축소하므로 그 결과를 큰 개체의
+            // 어센트와 비교하면 개체가 앞 문단으로 올라간다.
+            let stored_bl = hwpunit_to_px(comp_line.baseline_distance, self.dpi);
+            let stored_bl = if raw_text_height > 0.0 && stored_bl >= raw_text_height - 0.01 {
+                raw_text_height * 0.85
+            } else {
+                stored_bl
+            };
+            let object_baseline = ensure_min_baseline(
+                crate::renderer::corrected_line_baseline_for_source(
+                    stored_bl,
+                    max_fs,
+                    source_metrics_reflowed,
+                ),
+                max_fs,
+            );
             let (line_height, baseline) = if text_before_picture_line {
                 let font_lh = max_fs.max(1.0);
                 let font_bl = max_fs * 0.85;
@@ -6112,23 +6133,7 @@ impl LayoutEngine {
                 // 그린다(실측 12.62px = 0.86×; 같은 문서의 정상 표 저장값도
                 // 935 = 0.85×1100). 하강부가 0 인 baseline 만 0.85×textheight 로
                 // 되돌리고, 정상 저장 baseline(bl < th)은 그대로 둔다.
-                let stored_bl = hwpunit_to_px(comp_line.baseline_distance, self.dpi);
-                let stored_bl = if raw_text_height > 0.0 && stored_bl >= raw_text_height - 0.01 {
-                    raw_text_height * 0.85
-                } else {
-                    stored_bl
-                };
-                (
-                    line_height,
-                    ensure_min_baseline(
-                        crate::renderer::corrected_line_baseline_for_source(
-                            stored_bl,
-                            max_fs,
-                            source_metrics_reflowed,
-                        ),
-                        max_fs,
-                    ),
-                )
+                (line_height, object_baseline)
             };
             // 들여쓰기/내어쓰기: 문단 여백은 무조건 적용
             // - 보통(ind=0): 모든 줄 margin_left
@@ -7339,6 +7344,7 @@ impl LayoutEngine {
                     natural_prefix_runs: leading_space_plan.natural_prefix_runs,
                     body_field_runs: &leading_space_plan.body_field_runs,
                     baseline,
+                    object_baseline,
                     raw_lh,
                     alignment,
                     auto_tab_right,
@@ -7449,7 +7455,7 @@ impl LayoutEngine {
                     run_char_pos,
                     x,
                     y,
-                    baseline,
+                    object_baseline,
                     raw_lh,
                     section_index,
                     para_index,
@@ -7497,6 +7503,7 @@ impl LayoutEngine {
                         line_char_end: char_offset,
                         y,
                         baseline,
+                        object_baseline,
                         raw_lh,
                         runs_all_whitespace,
                         max_fs,
@@ -8072,6 +8079,7 @@ impl LayoutEngine {
             natural_prefix_runs,
             body_field_runs,
             baseline,
+            object_baseline,
             raw_lh,
             alignment,
             auto_tab_right,
@@ -9154,7 +9162,7 @@ impl LayoutEngine {
                                         styles,
                                         line_tac_offsets,
                                         y,
-                                        baseline,
+                                        object_baseline,
                                         pic,
                                     )
                                 };
@@ -9226,7 +9234,7 @@ impl LayoutEngine {
                                     styles,
                                     line_tac_offsets,
                                     y,
-                                    baseline,
+                                    object_baseline,
                                     shape,
                                 ) + margin_top
                             };
@@ -10496,8 +10504,8 @@ impl LayoutEngine {
                             // 접힌다 — TAC 개체는 글자처럼 baseline 에 앉아야 하므로
                             // 저장 줄의 baseline_distance 로 폴백한다 (3143955 이중선:
                             // 줄 상자 top 161.99 ↔ 한글 baseline 182.4, 20.4px 어긋남).
-                            let baseline = if vars.baseline > 0.01 {
-                                vars.baseline
+                            let baseline = if vars.object_baseline > 0.01 {
+                                vars.object_baseline
                             } else {
                                 hwpunit_to_px(comp_line.baseline_distance, self.dpi)
                             };
@@ -10660,7 +10668,7 @@ impl LayoutEngine {
                                     styles,
                                     line_tac_offsets,
                                     vars.y,
-                                    vars.baseline,
+                                    vars.object_baseline,
                                     pic,
                                 )
                             };
