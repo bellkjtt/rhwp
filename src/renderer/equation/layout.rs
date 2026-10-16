@@ -149,9 +149,9 @@ impl EqLayout {
             font_size: super::super::hwpunit_to_px(equation.font_size.max(1) as i32, dpi),
             dpi,
             hancom_cjk_advance: equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
-            hancom_latin: !equation.common.size_protect
-                && (equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
-                    || equation.font_name.eq_ignore_ascii_case("HancomEQN")),
+            // 크기 고정은 개체의 예약 크기 계약이며 표시 글꼴을 바꾸지 않는다.
+            hancom_latin: equation.font_name.eq_ignore_ascii_case("HYhwpEQ")
+                || equation.font_name.eq_ignore_ascii_case("HancomEQN"),
             latin_italic: true,
             hancom_math_face: equation.font_name.eq_ignore_ascii_case("HYhwpEQ"),
             hancom_eqn: equation.font_name.eq_ignore_ascii_case("HancomEQN"),
