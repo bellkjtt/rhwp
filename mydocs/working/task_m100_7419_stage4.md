@@ -131,3 +131,26 @@ exit130으로 정리했다. 해당 Cargo 명령의 개별 exit는 기록되지 �
 남은 workspace Clippy·suite 확인·Native Skia3종은 미실행이다. 새 base와 통합 head에서
 영향 경계·Native/fresh WASM·필수 게이트를 다시 판정하며 과거 성공을 소급 적용하지 않는다.
 증거는 `stop-for-rebase.json`, `full-summary.json`, `{lint,full}-validation.json`에 보존한다.
+
+
+## cdef 리베이스 완료와 후속 정리 지침
+
+13commit을 `cdef0073bb24512daf0622dec5051ac62cb8d57e` 위로 replay하여 통합 head
+`02dfe3a748258be5206cad2c7de96da6b822be4e`를 만들었다. 충돌은 오늘할일 한 파일뿐이며
+upstream #7699 기록과 이번 #7433 기록을 함께 보존했다. replay한 기존 변경 경로 중 오늘할일만
+바뀌었고, 기존 수정 source·검사·입력·Print·시각 자산의 바이트는 그대로다. 새 upstream의
+Square 배치 변경을 소비하는 영향 검증은 별도로 다시 수행한다.
+
+기본 작업공간 devel도375aff294→cdef로 fast-forward했다. upstream도 변경한 사용자 dirty
+`rhwp-studio/public/rhwp.js`는 stash와 `~/.cache/rhwp-pr7433-user-preservation/20261016T092233Z/`에
+임시 보존한 뒤 같은 바이트로 복원했다. SHA-256
+`fd499c9eb514018d2063c8eef1e58ec892c734d512cf5e88ab97bd9e5d47a0a3`가 일치하며
+사용자 보존 stash는 유지한다. 기본 devel은 upstream과 같고 검토 branch는0behind/13ahead다.
+`rebase-latest.log/json`, `rebase-range-diff.log`, `main-devel-sync.json`이 실제 실행 증거다.
+
+사용자의 리베이스 후 지시로 `post_merge.md`7번/7.7과 모 문서의 요약을 수정했다.
+필수 원본·Print·TSV·review/overlay·재현 증거를 output 밖에 보존한 뒤 저장소 루트의
+**output 디렉터리 자체를 통째로 제거**하고 부재를 확인해야 완료다. 다른 활성 작업 등으로
+전체 삭제가 안 되면 정리 미완료로 보고한다. 현재 진행 중인 output은 삭제하지 않았다.
+요청한 `/Users/tsjang/rhwp-7445-completed-20261009/` 경로는 이 Ubuntu 호스트에 없으므로
+현재 검토 worktree의 대응 canonical 문서에 반영했다.
