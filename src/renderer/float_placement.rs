@@ -2,6 +2,8 @@
 
 mod column_ole;
 pub(crate) use column_ole::column_ole_placement;
+mod overlay_outer_frame;
+pub(crate) use overlay_outer_frame::overlay_table_outer_margin_left_hu;
 
 mod stored_cell_flow_picture;
 pub(crate) use stored_cell_flow_picture::{

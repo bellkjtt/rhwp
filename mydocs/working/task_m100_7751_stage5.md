@@ -54,3 +54,43 @@
 raw 미달/보정값 통과·정확히90·raw 누락·쪽수 불일치 반례를 검사한다.
 기존 raw TSV는 방법을 바꾸지 않았으므로 재분류 근거로 쓰되, 원래 실행 당시의
 gate 결과와 새 기준 판정을 구분한다. 최종 출력·원점 보정의 검증은 계속 갱신한다.
+
+## 원점 보정의 중간 검증과 남은 조건
+
+`layout_table_control_block`이 호스트 본문을 그리지 않는 TAC에도 기존
+`stored_inline_control_pen`을 소비하게 했다. 이 helper의 줄 들여쓰기는
+`paragraph_line_indent_for_source`와 공유하고, 유효한 저장 줄 영역에 한 번만
+반영한다. 음수 문단 여백을0으로 자르던 가정도 제거했다. 첫 후보에서 하락한
+60·67·116·243쪽은 이 공통 계산을 바로잡은 두 번째 후보에서 해소됐다.
+
+글앞/글뒤 표의 Para/Column 왼쪽 앵커는 바깥여백 상자에서 괘선으로 한 번
+전진한다. Para 세로 앵커와 기존 본문 상단 제한도 같은 바깥 상자 좌표계를
+소비한다. 표시 층위로 본문 흐름을 전진시키거나 셀 크기를 바꾸지 않는다.
+
+생산 버전은 `30e91bf8e`와 ignored `form-origin-v2-source.patch` 및
+별도 보존한 `form-origin-v2-overlay_outer_frame.rs`의 조합이다.
+`form-origin-v2-{provenance,wasm-provenance}.json`에 변경 소스별 SHA와
+실행 파일·WASM SHA를 기록했다. 이후 `cargo fmt --all`만 적용했으며
+아직 이 커밋의 최종 전체 회귀·lint 완료를 주장하지 않는다.
+
+| 확인 범위 | Native raw | fresh WASM raw | 상태 |
+| --- | ---: | ---: | --- |
+| 375쪽 | 99.37858% | 99.42850% | 두 서식 외곽·제목·도장을 같은 배율로 직접 판독 |
+| 전383쪽 | 최저79.94718%(130쪽) | 전체 실행 대기 | 현재 PR gate 보류 |
+
+Native 전쪽 실행은257.99초, exit1이다. 산출 누락이 아니라130쪽 raw 미달을
+정상 검출한 종료다. 같은 기준 PDF의 baseline과 비교하면130쪽
+95.02336→79.94718%,224쪽99.14080→99.12204%,226쪽99.16137→99.14314%로,
+이 세 쪽의 원인 확인이 남았다. 평균값이나 색상 경계 보정값으로 상쇄하지 않는다.
+
+ignored `pending-form-origin-regressions.rs`의 진단5건은 두 번째 후보에
+수동 링크해5 PASS였다. 같은 파일의 서식 바깥여백 검사는 수정 전 라이브러리에서
+의도한 여백 assertion으로 FAIL(exit101)했다. 전체 raw 선행 조건 미충족이므로
+새 검사를 아직 정식 `tests/cases/`에 추가하지 않았다. 이 실행은 전체 Rust
+suite의 통과 증거가 아니다.
+
+증적은 `output/pr-review/pr7494-20261016/` 아래
+`form-origin-v2-native-all/handbook/silhouette.tsv`,
+`form-origin-v2-native-comparison.json`, `form-origin-v2-{native,wasm}-review/`,
+`logs/form-origin-pending-{red,tests}.log`에 보존한다.
+기존 독립383쪽 PDF를 유지하고, 다음 단계에서130쪽 색조 소비 경로를 조사한다.

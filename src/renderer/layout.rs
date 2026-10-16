@@ -12276,6 +12276,23 @@ impl LayoutEngine {
                     _ => area_x + om_l,
                 };
                 Some(x)
+            } else if let Some(pen) = is_tac
+                .then(|| {
+                    composed.get(para_index).and_then(|composed| {
+                        self.stored_inline_control_pen(
+                            para,
+                            composed,
+                            control_index,
+                            styles,
+                            col_area,
+                        )
+                    })
+                })
+                .flatten()
+            {
+                // 호스트 본문을 그리지 않아도 저장 줄 전체의 정렬 결과를 쓴다.
+                // pen은 바깥여백 전이므로 괘선 원점으로 한 번만 전진한다.
+                Some(pen + hwpunit_to_px(t.outer_margin_left as i32, self.dpi))
             } else if is_tac {
                 // TAC 문단에 PageItem::FullParagraph 가 발행되지 않아
                 // paragraph_layout 가 호출되지 않는 케이스(선행 공백만 있는 TAC 표 등):
