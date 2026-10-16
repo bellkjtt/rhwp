@@ -415,7 +415,7 @@ pub(crate) fn wmf_picture_parameters(image: &ImageNode) -> Option<(i8, i8, bool)
 ///
 /// mime 검사는 포함하지 않는다 — 호출부가 JPEG 분기 안에서 쓴다.
 pub(crate) fn is_watermark_image(image: &ImageNode) -> bool {
-    !matches!(image.effect, ImageEffect::RealPic) && (image.brightness != 0 || image.contrast != 0)
+    !matches!(image.effect, ImageEffect::RealPic) && image.is_watermark()
 }
 
 /// BMP 바이트를 PNG 바이트로 재인코딩한다. 실패 시 None 반환.
@@ -1745,9 +1745,10 @@ mod emitted_bytes_key_agreement_tests {
     }
 
     fn watermarked(mut image: ImageNode) -> ImageNode {
-        // `is_watermark_image` 가 참이 되는 최소 조건.
+        // 일반 색조와 구분되는 두 비영 값의 워터마크 대조군.
         image.effect = ImageEffect::GrayScale;
         image.brightness = 20;
+        image.contrast = -50;
         image
     }
 

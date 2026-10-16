@@ -2,7 +2,7 @@
 
 use super::{decode_image_with_format_limited, memoized, Conversion, Cursor, ImageEffect};
 
-/// 일반 raster/회색조의 밝기·대비를 원본 해상도에서 한 번 적용한다.
+/// 일반 raster/회색조/흑백의 밝기·대비를 원본 해상도에서 한 번 적용한다.
 /// 워터마크 프리셋 등 이미 bake된 결과는 호출자가 제외한다.
 pub(crate) fn adjusted_picture_bytes(
     data: &[u8],
@@ -11,7 +11,11 @@ pub(crate) fn adjusted_picture_bytes(
     contrast: i8,
 ) -> Option<Vec<u8>> {
     if (brightness == 0 && contrast == 0)
-        || !matches!(effect, ImageEffect::RealPic | ImageEffect::GrayScale)
+        || !matches!(
+            effect,
+            ImageEffect::RealPic | ImageEffect::GrayScale | ImageEffect::BlackWhite
+        )
+        || (effect == ImageEffect::BlackWhite && brightness != 0 && contrast != 0)
     {
         return None;
     }
@@ -28,7 +32,7 @@ pub(crate) fn adjusted_picture_bytes(
             let format = image::guess_format(data).ok()?;
             let mut pixels = decode_image_with_format_limited(data, format)?.to_rgba8();
             for pixel in pixels.pixels_mut() {
-                if effect == ImageEffect::GrayScale {
+                if matches!(effect, ImageEffect::GrayScale | ImageEffect::BlackWhite) {
                     // 한컴은 회색조를 먼저 바이트로 확정한 뒤 밝기·대비를 적용한다.
                     let gray = (299 * u32::from(pixel[0])
                         + 587 * u32::from(pixel[1])
@@ -38,6 +42,12 @@ pub(crate) fn adjusted_picture_bytes(
                 }
                 for channel in &mut pixel.0[..3] {
                     *channel = adjusted_channel(*channel, brightness, contrast);
+                }
+                if effect == ImageEffect::BlackWhite {
+                    // 독립 Print의 B=0/10/50 대조군: 색조를 적용한 회색 바이트의
+                    // 128 이하는 검정, 초과는 흰색이다. 먼저 이산화하면 중간 회색이 남는다.
+                    let value = if pixel[0] <= 128 { 0 } else { 255 };
+                    pixel.0[..3].fill(value);
                 }
             }
             let mut png = Vec::new();
