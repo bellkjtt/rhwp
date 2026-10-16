@@ -447,6 +447,12 @@ pub fn recompose_cell_lines_in_frame(
     stored_geometry_policy: impl Into<crate::model::provenance::StoredGeometryPolicy>,
 ) {
     let stored_geometry_policy = stored_geometry_policy.into();
+    // 개체 흐름을 분리한 정규화가 이미 같은 줄의 높이·간격을 발행했다.
+    // 일반 합성 단일 줄처럼 캐시를 지우고 채우면 그림 뒤에 글자 줄간격을
+    // 다시 더해 측정·조각 상자가 부푼다. 원본 저장 줄로 승격하지 않고 그대로 소비한다.
+    if para.layout_object_projection && !para.stored_text_partition_is_dirty() {
+        return;
+    }
     let has_synthetic_line_segs = !para.line_segs.is_empty()
         && para
             .line_segs

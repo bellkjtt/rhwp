@@ -785,7 +785,7 @@ fn reclassify_cell_floating_stacks(para: &mut Paragraph, min_height_hu: i32) -> 
                             let img_h = floating_stack_picture_common(img_ctrl)
                                 .map(|cm| cm.height as i32)
                                 .unwrap_or(template.line_height);
-                            sp.line_segs = vec![LineSeg {
+                            sp.publish_object_projection(vec![LineSeg {
                                 text_start: 0,
                                 vertical_pos: cum_vpos,
                                 line_height: img_h,
@@ -799,7 +799,7 @@ fn reclassify_cell_floating_stacks(para: &mut Paragraph, min_height_hu: i32) -> 
                                 // inline 그림과 구분할 수 있도록 provenance를 남긴다.
                                 tag: LineSeg::TAG_SINGLE_SEGMENT_LINE
                                     | LineSeg::TAG_IMPLEMENTATION_PROPERTY,
-                            }];
+                            }]);
                             cum_vpos = cum_vpos.saturating_add(img_h);
                             reclassify_floating_pictures_inline(&mut sp);
                             new_paras.push(sp);
