@@ -1,13 +1,61 @@
 ---
 kind: report
-status: working
+status: active
 canonical: mydocs/manual/pr_review_workflow.md
 last_verified: 2026-10-16
 ---
 
 # PR #7433 검토 — 저장 줄 없는 TAC 표의 성장·줄 소속·중첩 이월
 
-## 판정
+## 최종 판정
+
+**승인 — 메인터너 보정 후 승인.** 승인 대상은 [통합 PR #7951](https://github.com/edwardkim/rhwp/pull/7951)의
+code candidate `6614bb3353d706f18a9beffb5885f3d4c7702e3a`다. 원 PR7433의 기능·입력과 메인터너 보정을 구분해 통합했으며,
+현재 code candidate의 실제 Full CI·보조 workflow 성공을 확인했다. 아래 과거 보류는 작성 당시 기록이다.
+trailing head의 required check·MERGEABLE/CLEAN을 다시 확인한 뒤 사용자 승인 범위에서 정상 merge한다.
+
+- 실제 GitHub 검증: [CI](https://github.com/edwardkim/rhwp/actions/runs/38907419334) · [CodeQL](https://github.com/edwardkim/rhwp/actions/runs/38907418632) · [Render Diff](https://github.com/edwardkim/rhwp/actions/runs/38907418782) · [Adapter inter-diff](https://github.com/edwardkim/rhwp/actions/runs/38907418883) · [Proptest roundtrip](https://github.com/edwardkim/rhwp/actions/runs/38907418974). 같은 PR/repository/branch/head의 실제 성공 결과다.
+- 로컬 renderer source `f5a4774049fa10cc661f7220de0127d61fa081ba`: 전체10,454 PASS·실패0·45 skipped,
+  집중14+5 PASS, lint6종·Native4,043+2+4 PASS. 이후 code/tests/scripts/Cargo와 원본 입력은 불변이다.
+- Native/host fresh WASM13문서19쪽씩 최저100%·독립 Print 쪽수 일치·직접 확대 판독을 확인했다.
+  새 MCP Print3개7쪽도 기존 기준의96dpi RGB 픽셀과 전부 동일하고 양 경로 전쪽100%다.
+- 작은 용지/partial 폭 부족/wrapper의 devel2/1/1쪽은 기준 결함이며 현재/Print3/2/2쪽으로 복구됐다.
+  사용자 재검토에 따라 이3건을 수용했다. 기준의 없는6행은 계속NA이며 전체 일대일 통과로 꾸미지 않는다.
+  같은 쪽이 있는10문서12쪽/경로와 추가 공통8쪽의0.01%p 이상 하락0이다. 다른 입력·쪽의 기준은 유지한다.
+- 정식 회귀14개는 신규12+기존2보완이다. 관계 검사13개와 완료18쪽의 독립 Print±2px 검사1개를 포함한다.
+- PR 본문에 전체 Native/host WASM TSV26개38행과 exact head의 대표 review/overlay4개를 실제 표시했고
+  API 원문 및 raw 이미지 바이트 일치를 확인했다. 원시 TSV·로그는 Git에 커밋하지 않았다.
+- Docker 표준 WASM은 사용자 선택대로 미검증이다. host dev/no-opt를 Docker 성공으로 보고하지 않는다.
+  엄격 픽셀/Studio report-only 차이와 알려진 glyph raster 차이는 관용100%와 구분한다.
+- 근거: [Stage6](../../working/task_m100_7419_stage6.md), [새 MCP Print](../../working/task_m100_7419_stage7.md),
+  [사용자 판정 정정](../../working/task_m100_7419_stage8.md). #7416의 별도 문제는 해결 범위에 포함하지 않는다.
+
+## 첫 기여자와 merge 후 contributor PR comment 계획
+
+작성자imsebeom은 GitHub FIRST_TIME_CONTRIBUTOR이며 reviewer는jangster77이다. 원 PR head와 fork ref의
+`d895e51ac5fd1621abb99f0a20aa52034e01e083` 일치를 확인했다. 사용자 지시의 devel 기반 체리픽 통합 경로이며
+contributor의 author/date·원본 commit 대응과 fork를 보존한다. fork에 rebase/amend/force-push/삭제하지 않는다.
+
+merge·devel 반영과 실제 이슈 상태를 확인한 뒤 원 PR7433에 한국어 존댓말로 rhwp 첫 기여 감사·환영을
+명시한다. 원 기여인 NO_LS 셀 성장 보존을 먼저 설명하고, 선언 높이 추정 제거·중첩 줄 소속/분할/이월·
+내용 보존의 메인터너 보정이 필요했던 이유를 독립 Print·수정 전후 회귀 근거로 구분한다.
+실제 통합PR/merge SHA·위CI URL·로컬 결과·13문서19쪽 최저100%와 엄격 raster 차이를 기록한다.
+시각 검증 방법은 [Visual Sweep 정본](../../manual/verification/visual_sweep_guide.md#github-merge-comment)을
+연결하고, 현재 tracked Native/host WASM 저장 줄 혼재2쪽 review/overlay4개를 merge SHA로 고정한
+실제 raw Markdown 이미지로 포함한다. 사용자 직접 확인을 새로 받았다고 꾸미지 않는다.
+통합 반영 안내 뒤 원PR은 superseded close하고, 이슈7419만 실제 종료 여부를 확인한다.
+기여자 fork는 유지하며 다음 기여 환영을 적는다.7416은 닫지 않는다.
+
+필수 원시 증거는 기본 작업공간의 `pdf/pr-review-evidence/pr7433-20261016/`에 해시 검증 후 보존한다.
+post_merge.md 순서로 duration metadata 확인·devel sync·이슈/원PR 후속 안내·임시 head/worktree/branch와
+output 루트 전체 정리를 마친다. 공유 target/pr-review·사용자 Studio JS와 contributor fork는 보존한다.
+
+## CI 이전의 로컬 검토 기록
+
+<details>
+<summary>과거 보류·재검토 기록 — 현재 판정 아님</summary>
+
+### 당시 판정
 
 **현재 판정: 머지 보류 — 0953598 대비3문서의 전쪽 일대일 TSV 대응 미검증.** 기준은
 `0953598d8e08af5e9149b3e4cdbbbf2f5f2bae64`, 검증 source는
@@ -248,3 +296,5 @@ WASM 각각98% 이상이어야 하며, 좌표 검사가 통과해도 한쪽이 �
 이전 source 증거는 `regression-fix/`에서 보존한다. TSV·로그·중간 JSON은 커밋하지 않는다.
 주 작업공간 Studio JS의 사용자 dirty 변경은 보존했다.
 PR 생성·push·CI·merge·원 PR 종료·post_merge 정리는 아직 수행하지 않았다.
+
+</details>
