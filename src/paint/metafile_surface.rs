@@ -80,8 +80,20 @@ fn device_size(
             (w * natural_w / crop_w, h * natural_h / crop_h)
         }
     };
-    let w = (w / pixel).round();
-    let h = (h / pixel).round();
+    if !w.is_finite()
+        || !h.is_finite()
+        || w <= 0.0
+        || h <= 0.0
+        || !pixel.is_finite()
+        || pixel <= 0.0
+    {
+        return None;
+    }
+    // 독립 Print는 비균등 배치에서도 원본 비율의 자원을 만든 뒤 최종 사각형에 늘린다.
+    // 두 축의 장치 표본 수를 만족하는 단일 배율을 쓰며 crop·배치 좌표는 바꾸지 않는다.
+    let scale = (w / natural_w).max(h / natural_h) / pixel;
+    let w = (natural_w * scale).round();
+    let h = (natural_h * scale).round();
     if !w.is_finite()
         || !h.is_finite()
         || w < 1.0
