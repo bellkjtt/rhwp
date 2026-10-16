@@ -5,6 +5,12 @@
 
 use std::collections::HashMap;
 
+/// 직접 Unicode로 쓴 논리 기호도 명령형과 같은 수학 원자다.
+/// 이항/관계 연산자의 자동 간격 분류와는 구분한다.
+pub(crate) fn is_logical_symbol(symbol: &str) -> bool {
+    matches!(symbol, "∴" | "∵")
+}
+
 /// 이항 산술 기호는 직접 Unicode로 입력해도 문자 식별자와 분리한다.
 pub(crate) fn is_binary_symbol(symbol: &str) -> bool {
     matches!(symbol, "+" | "-" | "−" | "±" | "∓" | "×" | "÷" | "∙" | "⋅")

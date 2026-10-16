@@ -42,8 +42,11 @@ impl EqParser {
         if token.space_before
             || matches!(
                 token.ty,
-                TokenType::LBrace | TokenType::RBrace | TokenType::Whitespace
+                TokenType::LBrace | TokenType::RBrace
             )
+            // 독립 Print의 a~b over c는 a와 b가 같은 분자다. 붙은 normal
+            // 공간만 항 안에 남기며 얇은 공간·행/칸 구분은 경계로 유지한다.
+            || (token.ty == TokenType::Whitespace && token.value != "~")
         {
             return false;
         }

@@ -29,6 +29,7 @@ impl EqParser {
             TokenType::Symbol => {
                 self.pos += 1;
                 let attach_scripts = self.document_terms
+                    || super::super::symbols::is_logical_symbol(&val)
                     || (!val.is_ascii() && super::super::symbols::is_binary_symbol(&val));
                 // 한컴의 붙은 ASCII 화살표 축약을 의미 기호로 보존한다.
                 let node = if matches!(val.as_str(), "->" | "<-") {
@@ -36,7 +37,10 @@ impl EqParser {
                 } else if !val.is_ascii() && super::super::symbols::is_binary_symbol(&val) {
                     // 새 기호 토큰도 기존 Text/명령 경로의 첨자 결합을 유지한다.
                     EqNode::MathSymbol(val)
-                } else if !val.is_ascii() && super::super::symbols::is_relation_symbol(&val) {
+                } else if !val.is_ascii()
+                    && (super::super::symbols::is_relation_symbol(&val)
+                        || super::super::symbols::is_logical_symbol(&val))
+                {
                     EqNode::MathSymbol(val)
                 } else {
                     EqNode::Symbol(val)

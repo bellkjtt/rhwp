@@ -552,10 +552,11 @@ impl Tokenizer {
             return Token::new(TokenType::Symbol, sym, start);
         }
 
-        // Unicode 산술·관계 기호는 비-ASCII 피연산자와 붙어도 독립 기호다.
+        // Unicode 산술·관계·논리 기호는 비-ASCII 피연산자와 붙어도 독립 기호다.
         if !ch.is_ascii()
             && (super::symbols::is_relation_symbol(&ch.to_string())
-                || super::symbols::is_binary_symbol(&ch.to_string()))
+                || super::symbols::is_binary_symbol(&ch.to_string())
+                || super::symbols::is_logical_symbol(&ch.to_string()))
         {
             self.pos += 1;
             return Token::new(TokenType::Symbol, ch.to_string(), start);
@@ -569,6 +570,7 @@ impl Tokenizer {
                     || c == ' '
                     || super::symbols::is_relation_symbol(&c.to_string())
                     || super::symbols::is_binary_symbol(&c.to_string())
+                    || super::symbols::is_logical_symbol(&c.to_string())
                 {
                     break;
                 }
