@@ -172,3 +172,45 @@ compat 조건도 대조한다. 비교 가능한8문서의 양쪽8쪽에서 하�
 | `pdf/issue7419/partial-nested-width-wrap-print-2024.pdf` | `c4a8e326e03254df9a5df2767cef4bc8e2bb1420371d4b19d3cc3a7ad623441f` |
 | `tests/fixtures/issue7419-boundaries/partial-nested-wrapper.hwpx` | `95e9b90b1b2fa47e51566235e210291e093f886254ae2d82571c715574c7dd61` |
 | `pdf/issue7419/partial-nested-wrapper-print-2024.pdf` | `19fc1d70763dda29100f79c6bb5571f3285f25be1d9af20704d4b6be6e35167c` |
+
+## Native 소유권 보정 뒤 실행 기록
+
+최종 source `59d87766f96a72b8502a49aff31c66dd16b9742c`의 실패3개+신규12개 집중 검사는
+15/15통과했다(`regression-fix-focused.log`). 실패 assertion·baseline·fixture는 바꾸지 않았다.
+가상융합 시행령은74쪽으로 돌아왔으며 고정 devel과 전74쪽 render tree JSON이 바이트 동일하다
+(`regression-fix/decree-tree-comparison.json`). 전체 시각 보정 완료 문서라는 주장은 하지 않는다.
+
+새 source의 Native/fresh WASM11문서15쪽은 양쪽 최저100%·미달/누락0·Print 쪽수 일치다.
+전15쪽과 여백/이월/wrapper/뒤 본문 확대 판독, 대표 review·overlay를 다시 확인했다.
+이전 source PNG를 최신 결과로 바꾸어 기록하지 않았다. 최종 producer 해시, TSV와 직접 판독은
+`regression-fix/{producer-provenance,final-direct-read,final-devel-comparison}.json`에 있다.
+비교 가능한8문서는 양쪽 하락0, 쪽수 복구3문서는 기존 전쪽 일대일 gate가 계속 보류다.
+
+Studio 원본2개의 Canvas2D·CanvasKit compat/default software Print6캡처를 실행했다.
+초기 응답6개의 WASM SHA는 모두 `b4ead97873e707606b0351ae792b8f71926d4497aa2731826a9ca069862e115d`로
+fresh package와 일치한다. 최초 관측의 inspector body cache 축출은 별도 로그에 보존하고,
+관측 버퍼를 늘린 새 실제 캡처에서 신원을 확인했다. replay hard violation0이다.
+backend 간 report-only 엄격 픽셀 비교4건은 불일치이며 gate 통과로 표시하지 않는다.
+같은 좌표의 독립 PDF 내용 영역과 직접 대조했고 줄·표 소속/겹침 결함은 관찰하지 못했다.
+이 입력에는 별도 DOM 그림이 없으며 화면 안내선/래스터 윤곽 차이와 본문 배치를 구분했다.
+
+최종 lint6종(fmt·host/WASM Clippy·workspace build/all-target Clippy·suite manifest)은 모두 통과했다.
+release-test 전체는 시작됐으며 Native Skia3종은 그 뒤에 실행한다.
+두 묶음은 `regression-fix/pipeline.log`와 각 validation.json의 실제 exit로 갱신한다.
+[개별 review](../pr/archives/pr_7433_review.md)와 [현재 시각 자산](../pr/assets/pr_7433_maintainer/README.md)에 연결한다.
+
+## 추가 혼재 경계의 직접 실패 — 최종 후보 재보정 필요
+
+한컴2024가 실제 저장한 HWP/HWPX를 만든 뒤 부모 host와 첫 자식의 LineSeg만 제거했다.
+둘째 자식의 실제 저장 줄은 그대로 유지한다. 두 자식 줄을 모두 제거한 대조군도 만들었다.
+두 변형의 독립 Print는 모두2쪽이며, 쪽별 PDF PNG가 바이트 동일하다.
+59d87766f에서 전부 NO_LS인 대조군은100%/100%, 저장 줄 혼재 반례는55.80081%/68.31124%다.
+혼재 반례에서 첫 자식이1쪽에 나오지 않고2쪽의 두 자식이 겹치는 것을 직접 확인했다.
+이는 이전11문서의100%와 별도의 새 실패이며, 그 통과로 면제하지 않는다.
+`FrameGeometry`가 NoLS 자식만 소유하여, 같은 프레임 안의 저장 줄 자식이 셀 유닛에서 따로
+예약되는 생산/소비 불일치다. 실측 프레임을 만들 때 모든 TAC 형제를 함께 소유하게 보정한다.
+이 검사를 추가하기 전 양쪽90% 이상과 직접 판독을 다시 확보한다. 생성 과정·SHA·한컴job·PDF·
+수정 전 PNG는 ignored `output/pr-review/pr7433-current-20261016/regression-fix/mixed-storage/`에 보존한다.
+59d의 최종 전체 빌드는 이 결함 수정 전에 중단했다. 외부 pipeline exit130이며 테스트 summary가
+없으므로 전체 회귀의 성공/실패 건수로 기록하지 않는다. lint6종과 기존15개 집중 성공은 당시
+source의 증거로 남기고 다음 source에서 필요한 검증을 다시 한다. Native Skia3종은 미실행이다.
