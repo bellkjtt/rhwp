@@ -52,6 +52,16 @@ impl LayerBuilder {
             _ => (tree.root.bbox.width, tree.root.bbox.height),
         };
 
+        // 한컴 Print의 물리 MediaBox는 정수 point다. 배치가 끝난 논리 종이와
+        // root/자식 좌표는 유지하고 모든 출력 backend에 같은 종이 경계를 전달한다.
+        // HU에서 변환한 정확한 정수 point가 부동소수점 오차로 한 단계 내려가지 않게 한다.
+        let (page_width, page_height) = if self.profile == RenderProfile::Print {
+            let physical_extent = |px: f64| (px * 0.75 + 1e-9).floor() / 0.75;
+            (physical_extent(page_width), physical_extent(page_height))
+        } else {
+            (page_width, page_height)
+        };
+
         let root = LayerNode::group(
             tree.root.bbox,
             Some(tree.root.id),
