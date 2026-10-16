@@ -4,6 +4,9 @@
 //! web-sys를 통해 CanvasRenderingContext2d에 직접 그린다.
 
 #[cfg(target_arch = "wasm32")]
+mod image_reduction;
+
+#[cfg(target_arch = "wasm32")]
 use base64::Engine;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -2705,6 +2708,13 @@ impl Renderer for WebCanvasRenderer {
             canvas
         });
         if let Some(canvas) = decoded {
+            let _quality = image_reduction::ReductionQuality::for_full_image(
+                &self.ctx,
+                f64::from(canvas.width()),
+                f64::from(canvas.height()),
+                w,
+                h,
+            );
             let _ = self
                 .ctx
                 .draw_image_with_html_canvas_element_and_dw_and_dh(&canvas, x, y, w, h);
@@ -2719,6 +2729,13 @@ impl Renderer for WebCanvasRenderer {
 
         if let Some(img) = cached {
             if img.complete() && img.natural_width() > 0 {
+                let _quality = image_reduction::ReductionQuality::for_full_image(
+                    &self.ctx,
+                    f64::from(img.natural_width()),
+                    f64::from(img.natural_height()),
+                    w,
+                    h,
+                );
                 let _ = self
                     .ctx
                     .draw_image_with_html_image_element_and_dw_and_dh(&img, x, y, w, h);
@@ -2780,6 +2797,13 @@ impl Renderer for WebCanvasRenderer {
 
             // 이미지가 즉시 사용 가능하면 그리기
             if img.complete() && img.natural_width() > 0 {
+                let _quality = image_reduction::ReductionQuality::for_full_image(
+                    &self.ctx,
+                    f64::from(img.natural_width()),
+                    f64::from(img.natural_height()),
+                    w,
+                    h,
+                );
                 let _ = self
                     .ctx
                     .draw_image_with_html_image_element_and_dw_and_dh(&img, x, y, w, h);

@@ -391,15 +391,18 @@ pub(super) fn draw_image_bytes(
 
     let draw_image_rect = |src: Option<Rect>, dst: Rect| {
         let matrix = canvas.local_to_device_as_3x3();
+        let scale_x = matrix.scale_x().hypot(matrix.skew_y());
+        let scale_y = matrix.skew_x().hypot(matrix.scale_y());
         let source = src.unwrap_or(Rect::from_xywh(0., 0., decoded_width, decoded_height));
         let interpolation = super::super::image_resolver::png_sampling::magnification(
             super::super::image_resolver::png_sampling::interpolation(bytes),
             (source.width() as f64, source.height() as f64),
             (
-                (dst.width() * matrix.scale_x().hypot(matrix.skew_y())) as f64,
-                (dst.height() * matrix.skew_x().hypot(matrix.scale_y())) as f64,
+                (dst.width() * scale_x) as f64,
+                (dst.height() * scale_y) as f64,
             ),
         );
+        // 확대 선언과 binary effect의 우선순위를 보존한다.
         let sampling = if binary_preprocessed {
             sampling
         } else {
@@ -409,22 +412,33 @@ pub(super) fn draw_image_bytes(
                 None => sampling,
             }
         };
+        // 전체 원본의 축소에는 가는 선을 보존하는 저역 통과를 적용한다.
+        // crop의 strict 경계와 전처리한 binary의 기존 sampler는 유지한다.
+        let reduced = (src.is_none()
+            && !binary_preprocessed
+            && !matrix.has_perspective()
+            && scale_x.is_finite()
+            && scale_y.is_finite()
+            && (image.width() as f32 > dst.width() * scale_x
+                || image.height() as f32 > dst.height() * scale_y))
+            .then(|| image.with_default_mipmaps())
+            .flatten();
+        let actual_image = reduced.as_ref().unwrap_or(&image);
+        let options = if reduced.is_some() {
+            SamplingOptions::new(FilterMode::Linear, MipmapMode::Linear)
+        } else {
+            sampling.options()
+        };
         if let Some(src) = src.as_ref() {
             canvas.draw_image_rect_with_sampling_options(
-                &image,
+                actual_image,
                 Some((src, SrcRectConstraint::Strict)),
                 dst,
-                sampling.options(),
+                options,
                 &paint,
             );
         } else {
-            canvas.draw_image_rect_with_sampling_options(
-                &image,
-                None,
-                dst,
-                sampling.options(),
-                &paint,
-            );
+            canvas.draw_image_rect_with_sampling_options(actual_image, None, dst, options, &paint);
         }
     };
 
