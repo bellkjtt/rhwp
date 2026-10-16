@@ -449,9 +449,13 @@ mod image_adjustment_regressions {
         use rhwp::renderer::skia::SkiaLayerRenderer;
 
         let source = [80, 100, 120];
-        for (brightness, contrast, opacity) in
-            [(20, 0, 1.0), (0, 20, 1.0), (0, 8, 0.5), (0, 0, 1.0)]
-        {
+        for (brightness, contrast, opacity) in [
+            (20, 0, 1.0),
+            (0, 20, 1.0),
+            (20, 20, 1.0),
+            (0, 8, 0.5),
+            (0, 0, 1.0),
+        ] {
             let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [80, 100, 120, 128])));
             image.brightness = brightness;
             image.contrast = contrast;
@@ -484,7 +488,7 @@ mod image_adjustment_regressions {
 
     #[cfg(feature = "native-skia")]
     #[test]
-    fn issue_4764_direct_pdf_applies_grayscale_before_linear_contrast() {
+    fn issue_4764_direct_pdf_applies_linear_contrast_before_outer_grayscale() {
         use rhwp::model::image::ImageEffect;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::ImageNode;
@@ -494,12 +498,38 @@ mod image_adjustment_regressions {
         image.contrast = 50;
         let pdf = layer_trees_to_pdf(&[issue_4764_direct_pdf_image_tree(image)])
             .expect("grayscale then contrast PDF export");
-        // Linear luminance is about 0.1202. Applying contrast afterward gives
-        // 1.5 * 0.1202 - 0.25 < 0; reversing the filters leaves blue ink.
+        // SVG는 바깥 회색조 <g> 안에 밝기·대비 <g>를 둔다. 따라서 대비와
+        // 채널별 clamp 뒤 회색조를 적용한다. Chrome155에서 같은 SVG의
+        // 중앙 픽셀은 RGB(12,12,12)다. 순서를 뒤집으면 RGB(0,0,0)이 된다.
         assert!(issue_4764_pdf_images_contain_rgb(
             &issue_4764_pdf_image_streams(&pdf),
-            [0, 0, 0]
+            [12, 12, 12]
         ));
+    }
+
+    #[test]
+    fn issue_4764_direct_pdf_preserves_discrete_blackwhite_or_fails_closed() {
+        use rhwp::model::image::ImageEffect;
+        use rhwp::renderer::pdf::layer_trees_to_pdf;
+        use rhwp::renderer::render_tree::ImageNode;
+
+        let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [170, 170, 170, 255])));
+        image.effect = ImageEffect::BlackWhite;
+        image.brightness = 10;
+        match layer_trees_to_pdf(&[issue_4764_direct_pdf_image_tree(image)]) {
+            Ok(pdf) => {
+                // SVG의 회색조 다음 discrete(0,1)는 밝기 적용 후 흰색이 된다.
+                // 고대비 행렬만 사용해 중간 회색을 내보내면 성공으로 처리하지 않는다.
+                assert!(issue_4764_pdf_images_contain_rgb(
+                    &issue_4764_pdf_image_streams(&pdf),
+                    [255, 255, 255]
+                ));
+            }
+            Err(error) => assert!(
+                error.contains("BlackWhite") && error.contains("use the svg backend"),
+                "unexpected error: {error}"
+            ),
+        }
     }
 
     #[cfg(feature = "native-skia")]

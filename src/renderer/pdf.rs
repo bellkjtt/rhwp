@@ -221,6 +221,15 @@ fn validate_direct_pdf_tree(
                                     page_index,
                                     "page background image",
                                 )?;
+                                if image.effect == ImageEffect::BlackWhite
+                                    && (image.brightness != 0 || image.contrast != 0)
+                                {
+                                    return Err(unsupported(
+                                        page_index,
+                                        "page background image",
+                                        "unbaked BlackWhite brightness or contrast",
+                                    ));
+                                }
                                 if image.is_real_picture_watermark_tone_preset() {
                                     return Err(unsupported(
                                         page_index,
@@ -338,6 +347,16 @@ fn validate_direct_pdf_tree(
                             let effects_are_baked = resolved
                                 .as_deref()
                                 .is_some_and(|payload| payload.suppress_effects);
+                            if !effects_are_baked
+                                && image.effect == ImageEffect::BlackWhite
+                                && (image.brightness != 0 || image.contrast != 0)
+                            {
+                                return Err(unsupported(
+                                    page_index,
+                                    "image",
+                                    "unbaked BlackWhite brightness or contrast",
+                                ));
+                            }
                             if !effects_are_baked && image.is_watermark() {
                                 return Err(unsupported(
                                     page_index,

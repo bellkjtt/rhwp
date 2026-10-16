@@ -203,19 +203,26 @@ pub fn draw_image_bytes(
     paint.set_anti_alias(true);
     let effect_filter = image_effect_filter(effect);
     let has_adjustments = brightness != 0 || contrast != 0;
+    // 회색조와 일반 그림만 SVG의 선형 RGB 보정을 재생한다. 이산 흑백과
+    // 패턴 효과는 별도 계약이므로 기존 Native 경로를 유지한다.
+    let use_linear_adjustments =
+        has_adjustments && matches!(effect, ImageEffect::RealPic | ImageEffect::GrayScale);
     let adjustment_filter =
         has_adjustments.then(|| brightness_contrast_filter(brightness, contrast));
     let color_filter = match (effect_filter, adjustment_filter) {
+        (Some(effect), Some(adjustment)) if use_linear_adjustments => {
+            // SVG의 바깥 효과 그룹은 안쪽 밝기·대비 그룹의 결과를 받는다.
+            color_filters::compose(effect, adjustment)
+        }
         (Some(effect), Some(adjustment)) => color_filters::compose(adjustment, effect),
         (Some(effect), None) => Some(effect),
         (None, Some(adjustment)) => Some(adjustment),
         (None, None) => None,
     };
     if let Some(color_filter) = color_filter {
-        // SVG filter primitives default to linearRGB. Keep the entire effect/
-        // adjustment chain in that space so enabling direct PDF does not change
-        // the image colors relative to the existing SVG backend.
-        let color_filter = if has_adjustments {
+        // SVG 필터의 기본 색 공간은 linearRGB다. 검증한 일반 그림·회색조의
+        // 보정 체인 전체를 같은 공간에서 계산한다.
+        let color_filter = if use_linear_adjustments {
             let Some(filter) = color_filter.with_working_color_space(ColorSpace::new_srgb_linear())
             else {
                 return false;
