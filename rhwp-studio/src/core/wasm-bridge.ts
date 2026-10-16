@@ -342,8 +342,9 @@ export class WasmBridge {
     const doc = this.doc;
     const documentGeneration = this._documentGeneration;
     const current = () => this.doc === doc && this._documentGeneration === documentGeneration && isCurrent();
+    const metafileFontGeneration = this.canvasFontGeneration;
     if (!await this.metafileFonts.prepare(doc as unknown as MetafileFontDocument | null,
-      this.canvasFontGeneration, current)) return false;
+      metafileFontGeneration, () => current() && this.canvasFontGeneration === metafileFontGeneration)) return false;
     if (backend === 'canvas2d' && hasHostFontProvider()) {
       const generation = getHostFontState().generation;
       await prepareHostFontCatalog();
