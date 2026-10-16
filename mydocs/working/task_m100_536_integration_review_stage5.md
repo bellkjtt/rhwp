@@ -38,6 +38,9 @@ Native Skia 공식 3종의 완료를 대신하지 않는다.
 기존 위치·모양 차이도 남아 있으므로 수식 엔진 전체 해결로 표현하지 않는다. fresh WASM 패널은
 같은 head의 실제 PNG를 canonical 합성 함수로 만들고 capture manifest·PNG 해시를 연결했다.
 각 출력의 확대 판독과 최종 기록은 정식 회귀 실행 결과와 함께 마무리한다.
+새 기준은 [원본의 실제 MCP Print PDF](../../pdf/seo-rii-20261017/equation-lim-2020.pdf)로
+보존했다. 10,578 bytes, SHA-256
+`62b6b47da9c9dde5fb44ed4e025bbb871a048f01e9c7bf51f5e93be4a1a51aae`이며 원본 HWP는 기존 경로를 유지한다.
 
 ## 진단 입력의 별도 상태
 
@@ -57,8 +60,17 @@ Tf 110/92 em 비율, 이름의 scalar 순서·누락·중복 및 공통 기준�
 해당 쪽은 98% 미만이므로 절대 px 위치를 고정하지 않는다. 위 두 진단 입력은 사용하지 않는다.
 
 검사는 정식 suite의 CLI를 호출하며 runtime `CARGO_BIN_EXE_rhwp`를 우선한다.
-같은 검사 binary에 보정 전·후 CLI를 각각 공급하여 글꼴 거절 assertion에서 FAIL/PASS를 확인할
-계획이다. 아직 이 단계에서 그 결과를 미리 단정하지 않는다. 기존 command golden의 기대값은 유지했다.
+같은 검사 binary에 보정 전 CLI `456ac3585`와 보정 후 CLI `d9a0b1c79`를 각각 공급했다.
+보정 전에는 실제 HyhwpEQ 이름 글꼴 assertion에서 exit 101, 보정 후에는 exit 0을 확인했다.
+일반 nextest 경로에서도 **1 PASS / 0 FAIL**을 확인했다. 필터로 제외된 206건은 통과 수에 넣지 않는다.
+실제 명령·검사 이름·두 CLI 해시는 `limit-name-red-green.json`에 있고, build/environment 실패를
+수정 전 결함으로 세지 않았다. 기존 command golden의 기대값은 유지했다.
 
-이 회귀와 나머지 변경 case, 전체 nextest, 필수 lint·Native Skia·FFI off·최종 브라우저 및
+Frontend의 기존 host-font-provider 검사에는 첨자가 없는 극한의 이름만으로 실제 face를
+요청하는 반례를 보완했다. 같은 새 검사와 보정 전 helper에서 요청 누락 assertion으로 실패했고
+보정 후 helper에서 통과했다. 이는 바이트를 읽지 않는 font-request 메타데이터 계약이며,
+합성 상자를 독립 Print와 일치한 실물 fixture로 표시하지 않는다.
+실행 기록은 `host-font-limit-red-green.json`이다.
+
+나머지 변경 case, 전체 nextest, 필수 lint·Native Skia·FFI off·최종 브라우저 및
 개별 PR review 확정은 남아 있다. 새 PR·원격 CI·승인·통합은 아직 수행하지 않았다.
