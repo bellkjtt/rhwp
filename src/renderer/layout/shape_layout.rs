@@ -1,6 +1,7 @@
 //! 도형/글상자/그룹 개체 레이아웃
 
 mod affine_line;
+mod compound_rectangle;
 
 use super::super::composer::{
     compose_paragraph, reflow_line_segs, ComposedParagraph, ParagraphBox,
@@ -1610,6 +1611,7 @@ impl LayoutEngine {
                     render_h,
                     bin_data_content,
                 );
+                compound_rectangle::append_border(tree, &mut node, &rect.drawing);
                 // TextBox가 있으면 자식으로 텍스트 레이아웃
                 self.layout_textbox_content(
                     tree,
