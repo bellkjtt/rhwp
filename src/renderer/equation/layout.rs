@@ -15,6 +15,8 @@ mod delimiter_advance;
 mod delimiter_outline;
 mod fraction_geometry;
 mod glyph_advances;
+mod hancom_decoration;
+mod hancom_sum;
 mod integral_placement;
 mod ladder_geometry;
 mod left_script_geometry;
@@ -165,27 +167,6 @@ impl EqLayout {
         }
     }
 
-    /// 독립 Print의 HYhwpEQ·HancomEQN 첨자는 명목 크기의 0.68배다.
-    /// 다른 face의 계약과 실제 자식 상자의 글자 크기는 보존한다.
-    fn script_font_size(&self, fs: f64) -> f64 {
-        fs * if self.hancom_math_face || self.hancom_eqn {
-            0.68
-        } else {
-            SCRIPT_SCALE
-        }
-    }
-
-    /// 정상 한컴 Print의 네 크기에서 본문 기준선과 분수선 중심을 대조한 축.
-    /// 명목 em의 약 0.32826이며 PDF의 실제 글자 행렬로 환산하면 0.3285다.
-    /// 원본의 논리 축과 표시 글꼴의 TeX 축을 서로 대신하지 않는다.
-    fn math_axis_height(&self, fs: f64) -> f64 {
-        fs * if self.hancom_math_face {
-            0.3285
-        } else {
-            AXIS_HEIGHT
-        }
-    }
-
     /// AST를 레이아웃 박스로 변환
     pub fn layout(&self, node: &EqNode) -> LayoutBox {
         let root = Self {
@@ -195,7 +176,7 @@ impl EqLayout {
         let result = root.layout_node(node, self.font_size);
         // 독립 글꼴 프레임을 측정과 표시의 공통 루트에 보존한다.
         // 자식의 기준선 상대 원점은 유지하며 빈 수식을 글줄로 바꾸지 않는다.
-        if self.hancom_math_face && result.height > 0.0 {
+        if (self.hancom_math_face || self.hancom_eqn) && result.height > 0.0 {
             root.matrix_row_box(result, self.font_size)
         } else {
             result

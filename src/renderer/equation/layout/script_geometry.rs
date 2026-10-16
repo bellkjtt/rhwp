@@ -71,8 +71,7 @@ impl EqLayout {
             let y = base.baseline + fs * 0.25 - sub.baseline;
             return (y, base.height.max(y + sub.height));
         }
-        let source = self
-            .hancom_math_face
+        let source = (self.hancom_math_face || self.hancom_eqn)
             .then(|| super::super::logical_font_frame::subscript_geometry(base, sub, fs, self.dpi))
             .flatten();
         let y = source.map_or(base.baseline * 0.4, |(y, _)| y);

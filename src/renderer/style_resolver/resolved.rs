@@ -211,7 +211,7 @@ impl ResolvedCharStyle {
             .unwrap_or(false)
     }
 
-    /// 대체되지 않은 HFT 기호 슬롯의 원본 전각 전진을 보존한다.
+    /// 표시용 대체 글꼴과 구분해 원본 언어 슬롯의 HFT 선언을 조회한다.
     pub fn source_hft_for_lang(&self, lang_index: usize) -> bool {
         let slot = if lang_index < self.font_families.len()
             && !self.font_families[lang_index].is_empty()
@@ -226,6 +226,7 @@ impl ResolvedCharStyle {
             .unwrap_or(false)
     }
 
+    /// 대체되지 않은 HFT 기호 슬롯의 원본 전각 전진을 보존한다.
     pub fn hft_fullwidth_dot_for_lang(&self, lang_index: usize) -> bool {
         let slot = if lang_index < self.font_families.len()
             && !self.font_families[lang_index].is_empty()

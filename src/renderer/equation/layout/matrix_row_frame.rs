@@ -2,6 +2,10 @@
 use super::{EqLayout, LayoutBox, LayoutKind};
 impl EqLayout {
     pub(super) fn matrix_cell_frame(&self, cell: &LayoutBox, fs: f64) -> (f64, f64) {
+        if self.hancom_eqn {
+            return super::super::hancom_frame::metrics(cell, fs, self.dpi)
+                .unwrap_or((cell.height, cell.baseline));
+        }
         if !self.hancom_math_face {
             return (cell.height, cell.baseline);
         }
@@ -11,7 +15,12 @@ impl EqLayout {
     pub(super) fn matrix_row_box(&self, mut child: LayoutBox, fs: f64) -> LayoutBox {
         if child.height == 0.0 {
             child.height = fs;
-            child.baseline = fs * if self.hancom_math_face { 0.86 } else { 0.8 };
+            child.baseline = fs
+                * if self.hancom_math_face || self.hancom_eqn {
+                    0.86
+                } else {
+                    0.8
+                };
             return child;
         }
         let (height, baseline) = self.matrix_cell_frame(&child, fs);

@@ -245,13 +245,14 @@ fn render_box(
             numer,
             denom,
             axis_height,
+            rule_thickness,
         } => {
             render_box(canvas, fonts, numer, x, y, color, fs, italic, bold);
             let line_y = y + lb.baseline - axis_height;
             canvas.draw_line(
                 ((x + fs * 0.05) as f32, line_y as f32),
                 ((x + lb.width - fs * 0.05) as f32, line_y as f32),
-                &stroke_paint(color, fs * 0.04),
+                &stroke_paint(color, *rule_thickness),
             );
             render_box(canvas, fonts, denom, x, y, color, fs, italic, bold);
         }

@@ -63,6 +63,8 @@ pub enum LayoutKind {
         denom: Box<LayoutBox>,
         /// 측정에서 정한 기준선 위 수학 축. 각 출력 경로가 그대로 소비한다.
         axis_height: f64,
+        /// 실제 수식 face의 괘선 두께. 출력 경로가 일반 MATH 비율로 덮어쓰지 않는다.
+        rule_thickness: f64,
     },
     /// 위아래 배치 (분수선 없음)
     Atop {

@@ -177,11 +177,12 @@ fn render_box(
             numer,
             denom,
             axis_height,
+            rule_thickness,
         } => {
             render_box(ctx, numer, x, y, color, fs, italic, bold);
             // 분수선 — baseline에서 axis_height 위에 배치 (SVG 경로와 동일)
             let line_y = y + lb.baseline - axis_height;
-            let line_thick = fs * 0.04;
+            let line_thick = *rule_thickness;
             ctx.set_stroke_style_str(color);
             ctx.set_line_width(line_thick);
             ctx.begin_path();

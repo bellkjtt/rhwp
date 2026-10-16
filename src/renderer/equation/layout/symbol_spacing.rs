@@ -26,7 +26,7 @@ fn opening_delimiter(node: &EqNode) -> bool {
 }
 
 /// 분수·근호의 끝 여백·닫는 괄호의 점유 뒤에 연산자 앞 여백을 중복 예약하지 않는다.
-fn reserves_operator_gap(node: &EqNode) -> bool {
+fn reserves_operator_gap(node: &EqNode, hancom_eqn: bool) -> bool {
     match node {
         EqNode::Fraction { .. } | EqNode::Sqrt { .. } => true,
         // 독립 Print의 벡터 합·괄호식은 장식 점유 뒤 앞 연산자 여백을 다시 더하지 않는다.
@@ -38,9 +38,17 @@ fn reserves_operator_gap(node: &EqNode) -> bool {
                 | super::super::symbols::DecoKind::Dyad,
             ..
         } => true,
+        EqNode::Decoration {
+            kind: super::super::symbols::DecoKind::Hat,
+            ..
+        } if hancom_eqn => true,
         EqNode::Paren { right, .. } => !right.is_empty(),
-        EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => reserves_operator_gap(body),
-        EqNode::Row(items) => items.last().is_some_and(reserves_operator_gap),
+        EqNode::FontStyle { body, .. } | EqNode::Color { body, .. } => {
+            reserves_operator_gap(body, hancom_eqn)
+        }
+        EqNode::Row(items) => items
+            .last()
+            .is_some_and(|item| reserves_operator_gap(item, hancom_eqn)),
         _ => false,
     }
 }
@@ -105,13 +113,14 @@ fn before_operator_gap(
     previous: &EqNode,
     adjacent: bool,
     source: bool,
+    hancom_eqn: bool,
     padding: f64,
     fs: f64,
     relation: bool,
 ) -> f64 {
     if (operator(boundary_element(previous, false)) && adjacent)
         || opening_delimiter(previous)
-        || (source && reserves_operator_gap(previous))
+        || (source && reserves_operator_gap(previous, hancom_eqn))
     {
         0.0
     } else if source && ends_with_script(previous) {
@@ -216,6 +225,7 @@ impl EqLayout {
                             &nodes[significant[position - 1]],
                             !explicit_gap(nodes, significant[position - 1], significant[position]),
                             true,
+                            self.hancom_eqn,
                             pad,
                             fs,
                             relation,
@@ -271,6 +281,7 @@ impl EqLayout {
                         &nodes[significant[position - 1]],
                         !explicit_gap(nodes, significant[position - 1], significant[position]),
                         source_metrics.is_some(),
+                        self.hancom_eqn,
                         padding,
                         fs,
                         super::super::symbols::is_relation_symbol(text),

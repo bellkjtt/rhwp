@@ -10,6 +10,9 @@ impl EqLayout {
         fs: f64,
     ) -> LayoutBox {
         let b = self.layout_node(body, fs);
+        if self.hancom_eqn && kind == super::super::symbols::DecoKind::Hat {
+            return self.layout_hancom_hat(b, fs);
+        }
         // 부정 빗금은 위쪽 악센트가 아니다. 독립 Print의 저장 프레임은
         // 본체와 같은 높이·기준선을 가지며 표시는 그 위에 겹친다.
         if kind == super::super::symbols::DecoKind::StrikeThrough {

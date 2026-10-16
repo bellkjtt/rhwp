@@ -59,6 +59,7 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
                 if picture.common.treat_as_char)
         });
     let frame_admits_controls = line_breaking::supports_cached_body_frame_controls(para)
+        || inline_frame_admission::supports_uncached_inline_host(para)
         || (justified_kopub_picture
             && para.controls.iter().all(|control| {
                 matches!(control, crate::model::control::Control::Picture(picture)

@@ -6,6 +6,25 @@
 
 use super::LayoutBox;
 
+fn hancom_position(
+    numer: &mut LayoutBox,
+    denom: &mut LayoutBox,
+    fs: f64,
+    dpi: f64,
+) -> Option<(f64, f64)> {
+    let frame = super::super::hancom_frame::fraction(numer, denom, fs, dpi)?;
+    let (line_height, line_baseline) = super::super::font_frame_metrics::line_at_dpi(fs, dpi)?;
+    let (_, numer_baseline) = super::super::hancom_frame::metrics(numer, fs, dpi)?;
+    let (denom_height, denom_baseline) = super::super::hancom_frame::metrics(denom, fs, dpi)?;
+    // 분자의 상행 확장과 분모의 하행 확장을 각자 소비한다. 장식·첨자의
+    // 전체 높이를 같은 방향으로 더하면 기호의 본체 기준선까지 이동한다.
+    let above = (numer_baseline - line_baseline).max(0.0);
+    let below = (denom_height - denom_baseline - (line_height - line_baseline)).max(0.0);
+    numer.y = line_baseline + above - numer.baseline;
+    denom.y = frame.0 - line_height + line_baseline - below - denom.baseline;
+    Some(frame)
+}
+
 fn source_position(
     numer: &mut LayoutBox,
     denom: &mut LayoutBox,
@@ -60,7 +79,7 @@ impl EqLayout {
         // 한컴이 새로 생성한 단순 분수는 반각 숫자와 양쪽 1/4 em을 예약한다.
         // 세로 기준선 간격과 수평 괘선 여백을 같은 임의 비율로 묶지 않는다.
         let pad = fs
-            * if self.hancom_math_face {
+            * if self.hancom_math_face || self.hancom_eqn {
                 0.25
             } else {
                 FRAC_LINE_PAD
@@ -72,10 +91,13 @@ impl EqLayout {
         let mut d_box = d;
         d_box.x = (w - d_box.width) / 2.0;
         let axis_height = self.math_axis_height(fs);
-        let source = self
-            .hancom_math_face
-            .then(|| source_position(&mut n_box, &mut d_box, fs, self.dpi))
-            .flatten();
+        let source = if self.hancom_eqn {
+            hancom_position(&mut n_box, &mut d_box, fs, self.dpi)
+        } else {
+            self.hancom_math_face
+                .then(|| source_position(&mut n_box, &mut d_box, fs, self.dpi))
+                .flatten()
+        };
         let (total_h, baseline) =
             source.unwrap_or_else(|| position(&mut n_box, &mut d_box, fs, axis_height));
 
@@ -90,6 +112,13 @@ impl EqLayout {
                 numer: Box::new(n_box),
                 denom: Box::new(d_box),
                 axis_height,
+                // HancomEQN의 U+E06D bbox 높이는 UPM 1024에서 32다.
+                rule_thickness: fs
+                    * if self.hancom_eqn {
+                        32.0 / 1024.0
+                    } else {
+                        super::FRAC_LINE_THICK
+                    },
             },
         }
     }

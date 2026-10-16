@@ -2,6 +2,30 @@
 use super::{estimate_text_width, glyph_advances, EqLayout, LayoutBox, LayoutKind};
 
 impl EqLayout {
+    /// 독립 Print의 HYhwpEQ·HancomEQN 첨자는 명목 크기의 0.68배다.
+    /// 다른 face의 계약과 실제 자식 상자의 글자 크기는 보존한다.
+    pub(super) fn script_font_size(&self, fs: f64) -> f64 {
+        fs * if self.hancom_math_face || self.hancom_eqn {
+            0.68
+        } else {
+            super::SCRIPT_SCALE
+        }
+    }
+
+    /// 정상 한컴 Print의 네 크기에서 본문 기준선과 분수선 중심을 대조한 축.
+    /// HYhwpEQ의 0.3285em과 HancomEQN의 실제 분수선 중심을 구분한다.
+    /// 원본의 논리 축과 표시 글꼴의 TeX 축을 서로 대신하지 않는다.
+    pub(super) fn math_axis_height(&self, fs: f64) -> f64 {
+        fs * if self.hancom_eqn {
+            // HancomEQN 분수선의 bbox 중심 619/1024와 원래 0.3em 원점.
+            619.0 / 1024.0 - 0.3
+        } else if self.hancom_math_face {
+            0.3285
+        } else {
+            super::AXIS_HEIGHT
+        }
+    }
+
     pub(super) fn layout_hancom_glyphs(
         &self,
         text: &str,

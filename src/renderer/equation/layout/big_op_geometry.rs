@@ -17,6 +17,11 @@ impl EqLayout {
         if is_integral_symbol(symbol) {
             return self.layout_integral(symbol, sub, sup, fs);
         }
+        if self.hancom_eqn && symbol == "∑" {
+            if let Some(value) = self.layout_hancom_sum(sub, sup, fs) {
+                return value;
+            }
+        }
         // ∑, ∏ 등: limits 스타일 (위/아래 중앙)
         let source_sum = self.hancom_math_face && symbol == "∑";
         let op_fs = if source_sum {

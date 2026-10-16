@@ -20,6 +20,7 @@ pub(super) enum Role {
     Number,
     Operator,
     Greek,
+    BigOperator,
 }
 
 pub(super) fn is_operator(text: &str) -> bool {
@@ -85,9 +86,15 @@ fn glyph(ch: char, role: Role) -> Option<(char, u16)> {
             _ => return None,
         },
         Role::Greek => {
-            let index = "αβγδεζηθικλμνξοπρστυφχψω".chars().position(|c| c == ch)?;
-            (0xe09d + index as u32, 0)
+            if let Some(index) = "αβγδεζηθικλμνξοπρστυφχψω".chars().position(|c| c == ch)
+            {
+                (0xe09d + index as u32, 0)
+            } else {
+                let index = "ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ".chars().position(|c| c == ch)?;
+                (0xe085 + index as u32, 0)
+            }
         }
+        Role::BigOperator if ch == '∑' => (0xe067, 739),
         _ => return None,
     };
     Some((char::from_u32(code)?, advance))
@@ -101,7 +108,9 @@ pub(super) fn measure(
     pad: f64,
     font_family: &'static str,
 ) -> Option<GlyphRun> {
-    if font_family != "HancomEQN" && (matches!(role, Role::Greek) || text == ",") {
+    if font_family != "HancomEQN"
+        && (matches!(role, Role::Greek | Role::BigOperator) || text == ",")
+    {
         return None;
     }
     if text.is_empty() || !fs.is_finite() || fs <= 0.0 || !dpi.is_finite() || dpi <= 0.0 {
@@ -130,6 +139,11 @@ pub(super) fn measure(
         } else {
             (logical_size * f64::from(advance) / 1024.0).round() * dpi / 96.0
         };
+        if font_family == "HancomEQN" && matches!(role, Role::Operator) && ch == ',' {
+            // 독립 Print의 네 크기에서 확인한 수학 쉼표의 오른쪽 간격.
+            // glyph 자체의 GDI 전진과 구분하며 쉼표의 표시 원점은 보존한다.
+            width += fs * 0.07;
+        }
     }
     Some(GlyphRun {
         font_family,

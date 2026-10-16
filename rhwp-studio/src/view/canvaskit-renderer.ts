@@ -4405,7 +4405,7 @@ export class CanvasKitLayerRenderer {
             x + layout.width - fontSize * 0.05,
             y + layout.baseline - layout.kind.axisHeight,
             color,
-            fontSize * 0.04,
+            layout.kind.ruleThickness ?? fontSize * 0.04,
           )
           && child(layout.kind.denom);
       case 'atop':
