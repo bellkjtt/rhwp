@@ -1,25 +1,26 @@
 # PR #7433 메인터너 보정 시각 자산
 
-- 렌더링 source: `dca310c06036c7f3fa7ca30cce74c1704f1169f2`.
-- 회귀 추가 source: `9f464aa2c`. 이 commit은 검사·입력·문서만 추가하며 렌더링 코드는 같다.
-- 기준 devel: `4662c069e557e928ed7968d061121fde90b1f027`.
+- 렌더링 source: `7fe3b2ce45b996c550397ab588f4e3903cbd9508`.
+- 리베이스 후 위 source에서 실제 Native와 fresh WASM을 다시 빌드해 전쪽 재출력했다.
+- 기준 devel: `cdef0073bb24512daf0622dec5051ac62cb8d57e`.
 - 13문서19쪽 Native/fresh WASM의2px 관용 실루엣 최저100%, 독립 Print 쪽수 일치.
   엄격 픽셀100%가 아니다. 여백·분할·wrapper·저장 줄 혼재·뒤 본문을 전쪽 직접 대조했다.
 - Native/fresh WASM의 PNG는 같은96dpi·Print profile·compat2024와 같은 한컴 글꼴을 쓴다.
 - 기존 입력 출처는 [Stage1](../../../working/task_m100_7419_stage1.md),
   분할 경계는 [Stage3](../../../working/task_m100_7419_stage3.md),
-  실제 저장 줄 혼재의 생성·수정 전후는 [Stage4](../../../working/task_m100_7419_stage4.md)에 있다.
-- 현재 원시 증거는 ignored `output/pr-review/pr7433-current-20261016/mixed-storage-fix/`다.
-  `candidate-{native,wasm}-sweep/`, `{native,wasm}-scores/`, `final-direct-read.json`,
-  `mixed-visual-evidence.json`, `review-assets.json`에서 TSV·생산자·직접 판독·PNG SHA를 확인한다.
+  실제 저장 줄 혼재의 생성·수정 전후는 [Stage4](../../../working/task_m100_7419_stage4.md),
+  리베이스 후 재검증은 [Stage5](../../../working/task_m100_7419_stage5.md)에 있다.
+- 현재 원시 증거는 ignored `output/pr-review/pr7433-current-20261016/rebased-cdef/`다.
+  `candidate-{native,wasm}-{sweep,review}/`, `direct-read.json`,
+  `producer-builds.json`, `review-assets.json`에서 TSV·생산자·직접 판독·PNG SHA를 확인한다.
 - devel과 비교 가능한10문서·backend별12쪽에서0.01%p 이상 하락0이다. 나머지3문서는
   정상 쪽수 복구로 base TSV가 없어 전쪽 일대일 gate가 **re_review_required**다.
   최저100%로 이 보류 조건을 면제하지 않는다.
 - `studio-source-direct.png`, `studio-nested-direct.png`는59d source의 과거 캡처다.
   당시 Canvas2D·CanvasKit compat/default software6캡처의 초기 WASM 응답 해시와
   replay hard violation0을 확인했다. 엄격 픽셀4건은 report-only 불일치(최대0.01088193)였다.
-  이 두 이미지를 현재 dca source의 Studio 재실행 또는 parity gate 통과로 표시하지 않는다.
-- 아래 현재26개 대표 이미지는 dca에서 새로 산출했다. 기존18개는59d 산출물과 바이트도 같다.
+  이 두 이미지를 현재7fe source의 Studio 재실행 또는 parity gate 통과로 표시하지 않는다.
+- 아래 현재26개 대표 이미지는7fe에서 새로 산출했다.26개 모두 리베이스 전 자산과 바이트도 같다.
   Visual Sweep review와 standalone overlay를 함께 표시해 판독한다.
 - [개별 검토](../../archives/pr_7433_review.md). PR/push는 사용자의 별도 승인 전까지 보류한다.
 
@@ -84,3 +85,19 @@
 | --- | --- |
 | [studio-source-direct.png](studio-source-direct.png) | `d16b74a25263e4a4c32f6bc5ec3294521da3947cccd84f591c726632bcc3d2a8` |
 | [studio-nested-direct.png](studio-nested-direct.png) | `84fac574e671a28296584c77fc52ed632d38cf5d9045a006780e81d7873782b6` |
+
+
+## 리베이스 후 실제 Studio 혼재2쪽
+
+현재7fe source의 Canvas2D/CanvasKit software 캡처다.15캡처의 초기 WASM 해시 일치와
+replay hard violation0 및 실제 내용을 확인했다. 보고용 엄격 픽셀 비교10건 미달은 남는다.
+이 두 이미지는 Visual Sweep review/overlay나 독립 Print gate의 대체 증거가 아니다.
+
+![Studio Canvas2D 혼재2쪽](studio-mixed-canvas2d.png)
+
+![Studio CanvasKit 혼재2쪽](studio-mixed-canvaskit.png)
+
+| 파일 | SHA-256 |
+| --- | --- |
+| [studio-mixed-canvas2d.png](studio-mixed-canvas2d.png) | `32900b263749c9356d62a8b597cbcaab6c797c0e05cdf6a0c27c93c1632a0560` |
+| [studio-mixed-canvaskit.png](studio-mixed-canvaskit.png) | `2fdda7522692b901a12c98435785081b5bb5aef775d2b76eaaa9bbb3970c85c4` |
