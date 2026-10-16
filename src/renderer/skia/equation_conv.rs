@@ -362,20 +362,28 @@ fn render_box(
                 );
             }
         }
-        LayoutKind::Limit { is_upper, sub } => {
-            let name = if *is_upper { "Lim" } else { "lim" };
-            draw_text(
-                canvas,
-                fonts,
-                name,
-                x,
-                y + fs * 0.8,
-                fs,
-                false,
-                false,
-                color,
-                false,
-            );
+        LayoutKind::Limit {
+            is_upper,
+            name,
+            sub,
+        } => {
+            if let Some(name) = name {
+                render_box(canvas, fonts, name, x, y, color, name.height, false, false);
+            } else {
+                let name = if *is_upper { "Lim" } else { "lim" };
+                draw_text(
+                    canvas,
+                    fonts,
+                    name,
+                    x,
+                    y + fs * 0.8,
+                    fs,
+                    false,
+                    false,
+                    color,
+                    false,
+                );
+            }
             if let Some(sub) = sub {
                 render_box(
                     canvas,

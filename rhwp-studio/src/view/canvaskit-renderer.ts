@@ -4372,19 +4372,22 @@ export class CanvasKitLayerRenderer {
       }
       case 'limit': {
         const size = this.equationFontSizeFromBox(layout, fontSize);
-        const limitDrawn = this.drawEquationText(
-          canvas,
-          layout.kind.isUpper ? 'Lim' : 'lim',
-          x,
-          y + size * 0.8,
-          size,
-          color,
-          false,
-          false,
-          layout.width,
-          false,
-          '함초롬바탕',
-        );
+        // 이름의 글리프·폭·em 크기는 producer가 함께 정한다.
+        const limitDrawn = layout.kind.name
+          ? child(layout.kind.name, layout.kind.name.height, false, false)
+          : this.drawEquationText(
+            canvas,
+            layout.kind.isUpper ? 'Lim' : 'lim',
+            x,
+            y + size * 0.8,
+            size,
+            color,
+            false,
+            false,
+            layout.width,
+            false,
+            '함초롬바탕',
+          );
         return limitDrawn && (layout.kind.sub
           ? child(layout.kind.sub, fontSize * 0.7, false, false)
           : true);

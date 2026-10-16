@@ -2028,9 +2028,13 @@ fn canvaskit_equation_layout_is_supported(layout: &LayoutBox) -> bool {
                         .as_deref()
                         .is_none_or(|item| child(item, remaining_nodes))
             }
-            LayoutKind::Limit { sub, .. } => sub
-                .as_deref()
-                .is_none_or(|item| child(item, remaining_nodes)),
+            LayoutKind::Limit { name, sub, .. } => {
+                name.as_deref()
+                    .is_none_or(|item| child(item, remaining_nodes))
+                    && sub
+                        .as_deref()
+                        .is_none_or(|item| child(item, remaining_nodes))
+            }
             LayoutKind::Matrix { cells, .. } => cells
                 .iter()
                 .flatten()

@@ -3049,8 +3049,13 @@ fn write_equation_layout_kind(buf: &mut String, kind: &LayoutKind) {
             write_optional_equation_box(buf, "sup", sup.as_deref());
             buf.push('}');
         }
-        LayoutKind::Limit { is_upper, sub } => {
+        LayoutKind::Limit {
+            is_upper,
+            name,
+            sub,
+        } => {
             let _ = write!(buf, "{{\"type\":\"limit\",\"isUpper\":{}", is_upper);
+            write_optional_equation_box(buf, "name", name.as_deref());
             write_optional_equation_box(buf, "sub", sub.as_deref());
             buf.push('}');
         }
