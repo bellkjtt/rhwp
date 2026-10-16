@@ -22,7 +22,7 @@ PR별 review 문서에 남긴다. 같은 checkout·target·Cargo cache를 공유
 Native/fresh WASM의 관련 모든 페이지에서 90% 이상 확인 → 독립 기대값에 따라 필요한 검사 변경**
 순서로 진행한다. 새 회귀의 추가도 같은 90% 선행 조건을 따른다. 실물 배치는 절대 px 좌표·고정 px
 영역으로 선택하지 않고 문단·줄·개체의 소유·순서·보존·포함·겹침 관계로 검사한다. 다만 완료된
-해당 페이지의 Native/fresh WASM 실루엣이 각각98% 이상이고 독립 PDF와 직접 판독을 마쳤으면
+해당 페이지의 Native/fresh WASM `silhouette_raw_match_percent`가 각각98% 이상이고 독립 PDF와 직접 판독을 마쳤으면
 ±2px 좌표 고정도 허용한다. 문서 전체98% 이상은 요구하지 않는다.
 [페이지별 px 회귀 조건](visual_fixture_evidence.md#완료-페이지의-98-이상-실루엣과-px-좌표-회귀)을 따른다. 상세 절차는
 [시각 선행 조건](visual_fixture_evidence.md#렌더링-회귀-테스트-신규-추가의-시각-검증-선행-조건)과
