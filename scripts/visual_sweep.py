@@ -26,9 +26,11 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 try:
     from scripts.visual_sweep_workers import ordered_page_map
     from scripts.visual_sweep_images import open_page_rgb, page_rgb
+    from scripts.visual_sweep_pdf import PDF_RASTERIZER, pdf_raster_commands, pdf_rasterizer_provenance
 except ModuleNotFoundError:
     from visual_sweep_workers import ordered_page_map
     from visual_sweep_images import open_page_rgb, page_rgb
+    from visual_sweep_pdf import PDF_RASTERIZER, pdf_raster_commands, pdf_rasterizer_provenance
 
 
 LABEL_FONT_ENV = "RHWP_VISUAL_SWEEP_LABEL_FONT"
@@ -67,8 +69,6 @@ FRAME_OVERFLOW_TOLERATED_BLEED_PX = 12
 FRAME_BOTTOM_GLYPH_BLEED_TOLERANCE_PX = 6
 FRAME_INTERIOR_DECORATION_MIN_BOTTOM_MARGIN_PX = 16
 DEFAULT_RHWP_BIN = "target/pr-review/debug/rhwp"
-# 명령과 provenance는 같은 기본 정책으로 PDF의 실제 채우기를 보존한다.
-PDF_THIN_LINE_MODE = "none"
 # 가운데 정렬 미주 구분선은 Chrome 페이지 래스터 폭의 거의 절반을 차지할 수 있다.
 # 페이지 경계선이 아니므로 더 엄격한 선 길이 기준은
 # 아래쪽 테두리 선을 선택할 때만 적용한다.
@@ -269,35 +269,6 @@ def raster_paths_for_selected_pages(
     return []
 
 
-def pdf_raster_commands(
-    pdf: Path, dpi: int, pdf_prefix: Path, selected_pages: list[int] | None
-) -> list[list[str]]:
-    """얇은 선 보정을 끄고 원본 PDF의 채우기를 보존해 요청 쪽을 래스터화한다.
-
-    shape/solid는 한컴 Print의 그라데이션 채우기를 지울 수 있다.
-    문서별 예외 없이 기본 none을 사용하며 비교 임계값·공차는 바꾸지 않는다.
-    """
-    if not selected_pages:
-        return [["pdftoppm", "-r", str(dpi), "-thinlinemode", PDF_THIN_LINE_MODE, "-png", str(pdf), str(pdf_prefix)]]
-    return [
-        [
-            "pdftoppm",
-            "-f",
-            str(page),
-            "-l",
-            str(page),
-            "-r",
-            str(dpi),
-            "-thinlinemode",
-            PDF_THIN_LINE_MODE,
-            "-png",
-            str(pdf),
-            str(pdf_prefix),
-        ]
-        for page in selected_pages
-    ]
-
-
 def ensure_selected_pages_available(
     selected_pages: list[int],
     groups: dict[str, list[Path]],
@@ -336,7 +307,7 @@ def page_num(path: Path) -> int:
 
 
 def ensure_tools(svg_rasterizer: str = "webfont") -> None:
-    required = ["pdftoppm", "pdftotext", "pdfinfo"]
+    required = [PDF_RASTERIZER, "pdftotext", "pdfinfo"]
     if svg_rasterizer == "rsvg":
         required.append("rsvg-convert")
     elif svg_rasterizer != "native-skia":
@@ -586,7 +557,7 @@ def sweep_provenance(
         },
         "image_decoding": image_decoding_provenance(),
         "svg_rasterizer": svg_rasterizer,
-        "pdf_rasterizer": {"program": "pdftoppm", "thin_line_mode": PDF_THIN_LINE_MODE},
+        "pdf_rasterizer": pdf_rasterizer_provenance(),
         "comparison_profile": "print",
         "rhwp_binary": rhwp_binary_identifier(root, rhwp_bin),
     }

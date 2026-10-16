@@ -14,8 +14,8 @@ from scripts import visual_sweep as SWEEP
 
 class HancomPrintRasterTests(unittest.TestCase):
     def test_hancom_print_gradient_is_preserved_in_reference_raster(self):
-        if shutil.which("pdftoppm") is None:
-            self.skipTest("실제 Print 래스터 검증에는 Poppler pdftoppm이 필요함")
+        if shutil.which(SWEEP.PDF_RASTERIZER) is None:
+            self.skipTest("실제 Print 래스터 검증에는 Poppler Cairo가 필요함")
         root = Path(__file__).resolve().parents[2]
         pdf = root / "pdf/issue7642-failed-regression-print-20261015/distribution_doc-2020.pdf"
         self.assertEqual(
