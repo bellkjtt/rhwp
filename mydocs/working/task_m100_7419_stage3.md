@@ -1,5 +1,21 @@
 # #7419 Stage 3 — 전체 검증과 제출 판정
 
+## 전체 회귀에서 검출한 Native 소유권 회귀의 보정
+
+`fafd0d378` 전체 회귀에서 가상융합 시행령(`issue6776/78494…hwpx`)의 셀 쪽 밖2줄,
+off-canvas2건과 `maintainer_nested_table_lines::missing_stored_rows_do_not_assume_one_inline_row`의
+Native NO_LS 대조군 실패를 검출했다. 확장자는 hwpx지만 이 입력의 실제 magic은 HWP5 CFB다.
+동일 입력의 고정 devel4662 CLI는74쪽/셀 쪽 밖0, 후보는75쪽/쪽 밖2다. 현재28·46쪽의
+pi248·442가 각각18.6/10.5px 용지 밖으로 나갔다. 기존 이슈 이관이나 기대값 변경으로 숨기지 않는다.
+
+원인은 셀 전용 측정 투영과 별개로 일반 문단 프레임의 NO_LS 빈 host/다중 TAC 수용도 넓힌 것이다.
+일반/Native의 기존 `보이는 글자+단일 TAC` 수용은 유지하고, 현대 NO_LS 셀의 측정 소유자가
+실측 높이 목록을 전달했을 때만 빈 host/다중 TAC 줄과 프레임 좌표를 발행하도록 고친다.
+생산한 프레임에 실측 표 높이를 함께 넣어 측정·셀 유닛·whole/partial paint가 같은 결과를 읽는다.
+기존 정상 행 소유·내용 보존 검사는 그대로 두고, 실패3개와 신규12개를 먼저 다시 실행한다.
+진단 명령·전후 원시 로그는 `output/pr-review/pr7433-current-20261016/overflow6776-*`,
+원인 기록은 같은 경로의 `regression-cause-and-fix.md`에 보존한다. 보정 후 결과는 아직 미검증이다.
+
 제품 코드 `a08cf5cc6`, 관계 회귀 `fd8ed2451`.
 아래 추가 보정 전의 기록은 Stage1·Stage2에 있다. 이 단계에서는 분할 경로 대조로 제품 코드도 추가 보정했으므로 최종 source의 시각·전체 게이트를 다시 수행한다.
 
@@ -105,3 +121,54 @@ PR 생성은 검증 결과와 본문을 준비한 뒤 별도 승인을 받아 �
 `FrameGeometry::inline_table_height_hu`의 현재 본체 높이를 소비하도록 수정했다.
 `expanded-targeted-tests.log`와 `frame-height-final-regression-proof.log`는 같은 검사 실행 파일로
 수정 전10통과/2실패 → 수정 후12통과/0실패를 대조한다. 최종 시각 증거는 새 source에서 전쪽 재산출한다.
+
+## 리베이스 후 최종 시각 판정
+
+기준 `4662c069e557e928ed7968d061121fde90b1f027` 위로 충돌 없이 리베이스했다.
+제품·회귀 소스 SHA는 `fafd0d37813a61af76fbe4f0e0a4bcf5f3c64783`이다. 이전 코드
+`a08cf5cc6`→`fab2e2cfd`, 관계 검사 `fd8ed2451`→`11dccf763`, 최종 보정
+`578d1376d`→`fafd0d378`은 리베이스 전후 대응이며 과거 실행 로그의 SHA를 소급 교체하지 않는다.
+
+같은 입력·한컴 Print·96dpi·compat2024·Print profile·고정 HBATANG/HDOTUM 글꼴을 사용했다.
+각 소스의 Native와 fresh WASM producer는 `final-builds.json`의 별도 빌드로 만들었고
+`final-producer-provenance.json`에 파일 SHA를 고정했다. sweep manifest의 git_head는 실행 작업트리이며,
+기준 producer의 source SHA를 후보 작업트리 SHA로 해석하지 않는다.
+
+- 최종 Native: 11문서·15쪽, 최저100%, 미달·누락0, 모든 Print 쪽수 일치.
+- 최종 fresh WASM: 같은11문서·15쪽, 최저100%, 미달·누락0, 모든 Print 쪽수 일치.
+- 새 PNG15쪽을 Native/독립 Print/fresh WASM 같은 영역에서 직접 확인했다. 여백·이월·wrapper·
+  후속 본문은 같은 확대율에서도 대조했고 대표 review 및 standalone overlay도 확인했다.
+  같은 줄/개행/폭 부족, 줄·표 순서, 마지막 자식과 뒤 본문, 작은 용지3쪽의 소유가 일치한다.
+- 100%는2px 관용 실루엣 보조값이다. 실제 래스터 윤곽은 backend마다 다르므로 엄격 픽셀100%를
+  주장하지 않는다. 해당 출력에서 남은 줄바꿈·포함·누락·겹침·여백 결함은 관찰하지 못했다.
+  이 입력에는 수식·캡션·각주가 없어 그 조합의 새로운 시각 일치 주장을 하지 않는다.
+- 관계 검사11개와 px 검사1개(11문서의 완료14쪽)를 합한12개를 같은 진단 실행 파일로 대조했다.
+  새 devel0통과/12실패 → 분할 보정 전9통과/3실패 → 최종 CLI12통과/0실패다.
+  실패는 실제 셀 포함·쪽수·제어문 소유·제목 원점 assertion이며 빌드/환경 실패가 아니다.
+  최종 source의 전체 Cargo 실행 결과는 아래 필수 검증 완료 기록과 구분한다.
+
+### devel 전쪽 일대일 gate
+
+`compare_final.py`는 Decimal로0.01%p 하락을 비교하고 입력/PDF/글꼴 해시·backend·profile·
+compat 조건도 대조한다. 비교 가능한8문서의 양쪽8쪽에서 하락0쪽, 조건 불일치0건이다.
+나머지3문서는 아래 쪽수 복구 때문에 base TSV가 없다. 현행 지침과 사용자가 고른
+전체 일대일 기준을 유지하므로 `re_review_required`이며 PR 생성·승인·통합을 보류한다.
+
+| 입력 | devel Native/WASM | 최종 Native/WASM | 독립 Print |
+| --- | --- | --- | --- |
+| page-height-28000 | 2/2 | 3/3 | 3 |
+| partial-nested-width-wrap | 1/1 | 2/2 | 2 |
+| partial-nested-wrapper | 1/1 | 2/2 | 2 |
+
+같은 쪽의 수치 하락을 검출한 결과와, 위 쪽수 복구의 대응 증거 부족을 혼동하지 않는다.
+모든 후보 쪽이100%여도 이 별도 gate를 승인으로 바꾸지 않았다. 원본·독립 PDF·정상 회귀를
+제거하거나 기준을 바꿔 PR 조건을 회피하지 않는다.
+
+### 추가 입력의 고정 바이트
+
+| 입력/PDF | SHA-256 |
+| --- | --- |
+| `tests/fixtures/issue7419-boundaries/partial-nested-width-wrap.hwpx` | `500fb3d32f015808c3c4c4d5304fdd561e33ec233bbae7e6cdd536911c55d096` |
+| `pdf/issue7419/partial-nested-width-wrap-print-2024.pdf` | `c4a8e326e03254df9a5df2767cef4bc8e2bb1420371d4b19d3cc3a7ad623441f` |
+| `tests/fixtures/issue7419-boundaries/partial-nested-wrapper.hwpx` | `95e9b90b1b2fa47e51566235e210291e093f886254ae2d82571c715574c7dd61` |
+| `pdf/issue7419/partial-nested-wrapper-print-2024.pdf` | `19fc1d70763dda29100f79c6bb5571f3285f25be1d9af20704d4b6be6e35167c` |

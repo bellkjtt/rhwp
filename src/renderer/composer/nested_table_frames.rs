@@ -58,7 +58,7 @@ pub(crate) fn recompose_cell_lines_with_nested_tables(
     if let Some(paragraph) = &projected {
         // 원본에 글자가 없어도 인라인 개체 슬롯은 실제 줄을 만든다.
         // 빈 문자열을 점유 없음으로 바꾸지 않고 같은 프레임 소유자에게 전달한다.
-        if let Some(rebuilt) = super::recompose_stored_lines_in_frame(
+        if let Some(rebuilt) = super::recompose_stored_lines_in_frame_with_known_square_band(
             composed,
             paragraph,
             super::ParagraphBox::content_for_style(
@@ -72,6 +72,10 @@ pub(crate) fn recompose_cell_lines_with_nested_tables(
             legacy_geometry,
             super::line_breaking::StoredRowMissPolicy::Reflow,
             &[],
+            false,
+            false,
+            false,
+            &heights,
         ) {
             *composed = rebuilt;
         }
@@ -86,12 +90,5 @@ pub(crate) fn recompose_cell_lines_with_nested_tables(
             native_hwp5,
             cache,
         );
-    }
-    if let Some(frame) = composed
-        .frame_geometry
-        .as_mut()
-        .filter(|_| projected.is_some())
-    {
-        std::sync::Arc::make_mut(frame).inline_table_heights = heights;
     }
 }
