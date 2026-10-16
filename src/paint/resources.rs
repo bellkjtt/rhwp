@@ -330,6 +330,14 @@ pub fn source_image_key(
             contrast,
             grayscale,
         }
+    } else if let Some((brightness, contrast, effect)) =
+        crate::renderer::image_resolver::picture_tone_parameters(image)
+    {
+        SourceImageVariant::PictureTone {
+            brightness,
+            contrast,
+            effect,
+        }
     } else {
         SourceImageVariant::Source
     };
@@ -339,6 +347,13 @@ pub fn source_image_key(
             contrast,
             grayscale,
         } => format!("wmftone_{brightness}_{contrast}_{}", u8::from(grayscale)),
+        SourceImageVariant::PictureTone {
+            brightness,
+            contrast,
+            effect,
+        } => {
+            format!("pictone_{brightness}_{contrast}_{effect}")
+        }
         _ => variant.as_str().to_owned(),
     };
     Some(format!(
@@ -356,6 +371,12 @@ pub enum SourceImageVariant {
     BakedWatermarkPng,
     /// 원본 해상도에서 흑백을 확정한 PNG.
     BakedBlackWhitePng,
+    /// 일반 raster의 원본 포맷 변환 뒤 밝기·대비·효과를 확정한 PNG.
+    PictureTone {
+        brightness: i8,
+        contrast: i8,
+        effect: u8,
+    },
     /// WMF 색 처리. producer의 밝기·명암·회색조 결과를 재현한다.
     WmfPictureTone {
         brightness: i8,
@@ -370,6 +391,7 @@ impl SourceImageVariant {
             SourceImageVariant::Source => "src",
             SourceImageVariant::BakedWatermarkPng => "wmpng",
             SourceImageVariant::BakedBlackWhitePng => "bwpng",
+            SourceImageVariant::PictureTone { .. } => "pictone",
             SourceImageVariant::WmfPictureTone { .. } => "wmftone",
         }
     }
@@ -395,6 +417,24 @@ pub fn parse_source_image_key(key: &str) -> Option<(u32, u16, SourceImageVariant
         "src" => SourceImageVariant::Source,
         "wmpng" => SourceImageVariant::BakedWatermarkPng,
         "bwpng" => SourceImageVariant::BakedBlackWhitePng,
+        tag if tag.starts_with("pictone_") => {
+            let mut values = tag.strip_prefix("pictone_")?.split('_');
+            let brightness = values.next()?.parse::<i8>().ok()?;
+            let contrast = values.next()?.parse::<i8>().ok()?;
+            let effect = values.next()?.parse::<u8>().ok()?;
+            if values.next().is_some()
+                || !(-100..=100).contains(&brightness)
+                || !(-100..=100).contains(&contrast)
+                || effect > 2
+            {
+                return None;
+            }
+            SourceImageVariant::PictureTone {
+                brightness,
+                contrast,
+                effect,
+            }
+        }
         tag if tag.starts_with("wmftone_") => {
             let mut values = tag.strip_prefix("wmftone_")?.split('_');
             let brightness = values.next()?.parse::<i8>().ok()?;
@@ -578,7 +618,7 @@ mod tests {
     }
 
     #[test]
-    fn source_image_key_changes_only_when_jpeg_base64_is_baked() {
+    fn source_image_key_tracks_picture_tones_and_legacy_watermarks() {
         // MIME 판정은 다른 포맷의 8-byte magic과 같은 최소 길이 계약을 사용한다.
         let mut image = ImageNode::new(
             7,
@@ -588,13 +628,19 @@ mod tests {
 
         image.effect = ImageEffect::GrayScale;
         image.brightness = 1;
-        // 한쪽 축만 있는 일반 회색조는 원본 신원을 유지한다. 독립 Print RGB
-        // 대조군은 tests/cases/issue_7751_raster_picture_tones.rs에서 검사한다.
-        assert_eq!(source_image_key(3, &image).as_deref(), Some("bin:3:7:src"));
+        // 일반 색조는 legacy 워터마크와 구분한 요청 신원을 사용한다.
+        // 실제 바이트·RGB·decode 실패 계약은 공개 API 회귀에서 따로 검사한다.
+        assert_eq!(
+            source_image_key(3, &image).as_deref(),
+            Some("bin:3:7:pictone_1_0_1")
+        );
 
         image.brightness = 0;
         image.contrast = 1;
-        assert_eq!(source_image_key(3, &image).as_deref(), Some("bin:3:7:src"));
+        assert_eq!(
+            source_image_key(3, &image).as_deref(),
+            Some("bin:3:7:pictone_0_1_1")
+        );
 
         // 실제 워터마크의 두 축과 JPEG 형식이 함께 있을 때만 전용 bake다.
         image.brightness = 1;
@@ -603,7 +649,10 @@ mod tests {
             Some("bin:3:7:wmpng")
         );
         image.effect = ImageEffect::RealPic;
-        assert_eq!(source_image_key(3, &image).as_deref(), Some("bin:3:7:src"));
+        assert_eq!(
+            source_image_key(3, &image).as_deref(),
+            Some("bin:3:7:pictone_1_1_0")
+        );
         image.effect = ImageEffect::GrayScale;
 
         // JPEG 이 아니면 효과 필드는 별도 JSON 속성일 뿐 base64 payload는 바뀌지 않는다.

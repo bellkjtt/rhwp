@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createRequire} from 'node:module';
+import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {readFileSync,rmSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import test from 'node:test';
@@ -74,12 +74,14 @@ controls["hancom-blackwhite-axis-probe-2024"] = [
 ];
 
 for (const [name,expected] of Object.entries(controls)) {
-test(`한컴 저장 대조군 ${name}의 실제 Canvas RGB는 독립 Print를 따른다`,async t=>{
+test(`한컴 저장 대조군 ${name}의 실제 Canvas·DOM RGB는 독립 Print를 따른다`,async t=>{
  const pkg=resolve(process.env.RHWP_SWEEP_TEST_WASM_PKG||join(root,'pkg'));
  const files=new Map([
  ['/rhwp.js',['application/javascript',readFileSync(join(pkg,'rhwp.js'))]],
  ['/rhwp_bg.wasm',['application/wasm',readFileSync(join(pkg,'rhwp_bg.wasm'))]],
  ['/input.hwp',['application/octet-stream',readFileSync(join(root,`tests/fixtures/issue_7751_color_controls/${name}.hwp`))]],
+ ['/flow.js',['application/javascript',Buffer.from(stripTypeScriptTypes(
+  readFileSync(join(root,'rhwp-studio/src/view/flow-image-clip.ts'),'utf8'),{mode:'strip'}))]],
  ]);
  const server=createSweepServer(files,new Map());
  await new Promise((a,r)=>{server.once('error',r);server.listen(0,'127.0.0.1',a)});
@@ -87,7 +89,9 @@ test(`한컴 저장 대조군 ${name}의 실제 Canvas RGB는 독립 Print를 �
  const profile=createSweepBrowserProfile(join(root,'output/pr-review/browser-profile-tests'),'rgb');let browser;
  t.after(async()=>{if(browser)await browser.close();rmSync(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100})});
  browser=await require('puppeteer-core').launch({executablePath:findChrome(process.env.VISUAL_SWEEP_CHROME),headless:true,userDataDir:profile,protocolTimeout:180000});
- const page=await browser.newPage();await page.goto(`http://127.0.0.1:${server.address().port}`);
+ const page=await browser.newPage();
+ await page.setViewport({width:1200,height:1400,deviceScaleFactor:1});
+ await page.goto(`http://127.0.0.1:${server.address().port}`);
  const result=await page.evaluate(async()=>{
   const wasm=await import('/rhwp.js');await wasm.default();
   const doc=new wasm.HwpDocument(new Uint8Array(await(await fetch('/input.hwp')).arrayBuffer()));
@@ -103,7 +107,24 @@ test(`한컴 저장 대조군 ${name}의 실제 Canvas RGB는 독립 Print를 �
    const canvas=document.getElementById('page');
    for(let i=0;i<6;i++){doc.renderPageToCanvasFilteredWithProfile(0,canvas,1,'all','print');if(!pending.size)break;await Promise.all([...pending])}
    const ctx=canvas.getContext('2d');
-   return{errors,images:images.map(im=>({effect:im.effect,brightness:im.brightness,contrast:im.contrast,key:im.sourceImageKey})),rows:images.map(im=>{const {x,y,width:w,height:h}=im.bbox;return Array.from({length:11},(_,k)=>Array.from(ctx.getImageData(Math.floor(x+(k+.5)*w/11),Math.floor(y+h/2),1,1).data))})};
+   const rows=images.map(im=>{const {x,y,width:w,height:h}=im.bbox;return Array.from({length:11},(_,k)=>Array.from(ctx.getImageData(Math.floor(x+(k+.5)*w/11),Math.floor(y+h/2),1,1).data))});
+   // 실제 Studio의 좁은 질의·source 바이트·CSS 조립 함수를 연결한다.
+   // Canvas의 올바른 픽셀이 DOM의 올바른 색조를 대신 입증하지 못한다.
+   const {flowImageOpsFromNarrowQuery}=await import('/flow.js');
+   const ops=flowImageOpsFromNarrowQuery(doc.getPageFlowImageOps(0),(key,mime)=>
+    URL.createObjectURL(new Blob([doc.getSourceImageBytes(key)],{type:mime})));
+   if(!ops||ops.length!==images.length)throw Error('DOM 그림의 행 소속·누락·중복');
+   ops.sort((a,b)=>a.bbox.y-b.bbox.y);
+   document.body.replaceChildren();document.body.style.cssText='margin:0;background:white;position:relative';
+   for(const op of ops){
+    const img=new Image(),b=op.bbox;
+    img.style.cssText=`position:absolute;left:${b.x}px;top:${b.y}px;width:${b.width}px;height:${b.height}px;filter:${op.filter||'none'}`;
+    const ready=new Promise((accept,reject)=>{img.onload=accept;img.onerror=reject});
+    img.src=op.src;document.body.append(img);await ready;
+   }
+   await new Promise(a=>requestAnimationFrame(()=>requestAnimationFrame(a)));
+   return{errors,images:images.map(im=>({effect:im.effect,brightness:im.brightness,contrast:im.contrast,key:im.sourceImageKey})),rows,
+    domPoints:ops.map(({bbox:b})=>Array.from({length:11},(_,k)=>[Math.floor(b.x+(k+.5)*b.width/11),Math.floor(b.y+b.height/2)]))};
   }finally{Object.defineProperty(HTMLImageElement.prototype,'src',descriptor);doc.free()}
  });
  assert.deepEqual(result.errors,[]);assert.equal(result.rows.length,expected.length,'행 소속·누락·중복');
@@ -112,13 +133,25 @@ test(`한컴 저장 대조군 ${name}의 실제 Canvas RGB는 독립 Print를 �
   for(let i=0;i<axes.length;i++) {
    const [brightness,contrast]=axes[i], op=result.images[i];
    if(brightness===0&&contrast===0) assert.ok(op.key.endsWith(':bwpng'),'무보정 흑백 source 계약');
-   else {assert.equal(op.effect,'blackWhite');assert.equal(op.brightness,brightness);assert.equal(op.contrast,contrast);}
+   else {
+    assert.ok(op.key.endsWith(`:pictone_${brightness}_${contrast}_2`),'저장된 축·효과를 구분하는 색조 신원');
+    assert.equal(op.effect,'realPic');assert.equal(op.brightness,0);assert.equal(op.contrast,0);
+   }
   }
  }
 
+ const screenshot=Array.from(await page.screenshot({type:'png'}));
+ const domRows=await page.evaluate(async({bytes,points})=>{
+  const bitmap=await createImageBitmap(new Blob([new Uint8Array(bytes)],{type:'image/png'}));
+  const canvas=document.createElement('canvas');canvas.width=bitmap.width;canvas.height=bitmap.height;
+  const ctx=canvas.getContext('2d');ctx.drawImage(bitmap,0,0);bitmap.close();
+  return points.map(row=>row.map(([x,y])=>Array.from(ctx.getImageData(x,y,1,1).data)));
+ },{bytes:screenshot,points:result.domPoints});
  for(let i=0;i<expected.length;i++)for(let k=0;k<11;k++){
   assert.equal(result.rows[i][k][3],255);
   for(let c=0;c<3;c++)assert.ok(Math.abs(result.rows[i][k][c]-expected[i][k][c])<=1,`행${i} 패치${k}: actual=${result.rows[i][k]} Print=${expected[i][k]}`);
+  assert.equal(domRows[i][k][3],255);
+  for(let c=0;c<3;c++)assert.ok(Math.abs(domRows[i][k][c]-expected[i][k][c])<=1,`DOM 행${i} 패치${k}: actual=${domRows[i][k]} Print=${expected[i][k]}`);
  }
 });
 }

@@ -15,7 +15,7 @@ use crate::renderer::render_tree::{
 };
 
 mod picture_adjustments;
-pub(crate) use picture_adjustments::adjusted_picture_bytes;
+pub(crate) use picture_adjustments::{adjusted_picture_bytes, picture_tone_parameters};
 mod wmf_picture;
 
 // ── 변환 결과 메모 ──
@@ -187,6 +187,22 @@ pub(crate) fn emitted_source_image_bytes(
     data: &[u8],
     variant: crate::paint::SourceImageVariant,
 ) -> (&'static str, std::borrow::Cow<'_, [u8]>) {
+    if let crate::paint::SourceImageVariant::PictureTone {
+        brightness,
+        contrast,
+        effect,
+    } = variant
+    {
+        // 원본 포맷 변환도 inline과 같은 순서다. TIFF/PCX 등의 원본을 CSS에
+        // 넘기거나, 이미 bake한 RGB에 frontend가 다시 효과를 적용하지 않는다.
+        let (mime, converted) = emitted_image_bytes(data, false);
+        if let Some(bytes) = picture_adjustments::picture_tone_effect(effect)
+            .and_then(|effect| adjusted_picture_bytes(&converted, effect, brightness, contrast))
+        {
+            return ("image/png", std::borrow::Cow::Owned(bytes));
+        }
+        return (mime, converted);
+    }
     if let crate::paint::SourceImageVariant::WmfPictureTone {
         brightness,
         contrast,
@@ -220,6 +236,11 @@ pub(crate) fn resolved_image_effects(
 }
 
 pub(crate) fn resolve_image_payload(image: &ImageNode) -> Option<ResolvedImagePayload> {
+    let base = resolve_unadjusted_image_payload(image);
+    picture_adjustments::resolve_picture_tone(image, base)
+}
+
+fn resolve_unadjusted_image_payload(image: &ImageNode) -> Option<ResolvedImagePayload> {
     let data = image.data.as_deref()?;
     let mime = detect_image_mime_type(data);
 

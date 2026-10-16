@@ -2,6 +2,72 @@
 
 use super::{decode_image_with_format_limited, memoized, Conversion, Cursor, ImageEffect};
 
+fn supports_adjustment(effect: ImageEffect, brightness: i8, contrast: i8) -> bool {
+    (brightness != 0 || contrast != 0)
+        && matches!(
+            effect,
+            ImageEffect::RealPic | ImageEffect::GrayScale | ImageEffect::BlackWhite
+        )
+        && !(effect == ImageEffect::BlackWhite && brightness != 0 && contrast != 0)
+}
+
+/// Inline payload와 지연 로딩 키가 공유하는 일반 raster 색조 조건이다.
+pub(crate) fn picture_tone_parameters(image: &super::ImageNode) -> Option<(i8, i8, u8)> {
+    if super::is_watermark_image(image)
+        || image.is_real_picture_watermark_tone_preset()
+        || !supports_adjustment(image.effect, image.brightness, image.contrast)
+        || !matches!(
+            super::detect_image_mime_type(image.data.as_deref()?),
+            "image/png"
+                | "image/jpeg"
+                | "image/bmp"
+                | "image/tiff"
+                | "image/x-pcx"
+                | "image/gif"
+                | "image/webp"
+        )
+    {
+        return None;
+    }
+    Some((
+        image.brightness.clamp(-100, 100),
+        image.contrast.clamp(-100, 100),
+        image.effect as u8,
+    ))
+}
+
+pub(super) fn picture_tone_effect(effect: u8) -> Option<ImageEffect> {
+    match effect {
+        0 => Some(ImageEffect::RealPic),
+        1 => Some(ImageEffect::GrayScale),
+        2 => Some(ImageEffect::BlackWhite),
+        _ => None,
+    }
+}
+
+pub(super) fn resolve_picture_tone(
+    image: &super::ImageNode,
+    base: Option<super::ResolvedImagePayload>,
+) -> Option<super::ResolvedImagePayload> {
+    if let Some((brightness, contrast, effect)) = picture_tone_parameters(image) {
+        let data = base
+            .as_ref()
+            .map(|p| p.data.as_slice())
+            .or(image.data.as_deref());
+        if let Some(data) = data.and_then(|data| {
+            adjusted_picture_bytes(data, picture_tone_effect(effect)?, brightness, contrast)
+        }) {
+            return Some(super::ResolvedImagePayload {
+                data,
+                mime: "image/png",
+                kind: super::ResolvedImageKind::FormatConverted,
+                suppress_effects: true,
+            });
+        }
+    }
+    base
+}
+
 /// 일반 raster/회색조/흑백의 밝기·대비를 원본 해상도에서 한 번 적용한다.
 /// 워터마크 프리셋 등 이미 bake된 결과는 호출자가 제외한다.
 pub(crate) fn adjusted_picture_bytes(
@@ -10,13 +76,7 @@ pub(crate) fn adjusted_picture_bytes(
     brightness: i8,
     contrast: i8,
 ) -> Option<Vec<u8>> {
-    if (brightness == 0 && contrast == 0)
-        || !matches!(
-            effect,
-            ImageEffect::RealPic | ImageEffect::GrayScale | ImageEffect::BlackWhite
-        )
-        || (effect == ImageEffect::BlackWhite && brightness != 0 && contrast != 0)
-    {
+    if !supports_adjustment(effect, brightness, contrast) {
         return None;
     }
     let brightness = brightness.clamp(-100, 100);
