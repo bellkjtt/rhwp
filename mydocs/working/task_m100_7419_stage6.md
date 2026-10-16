@@ -233,3 +233,35 @@ complete·exit0이다. 실행 중인 Cargo/Rust/WASM 작업은 남지 않았다.
 각 validation JSON/log, 판정은 `final-devel-comparison.json`에 연결한다. 이후 문서-only 기록
 commit은 검증 source와 구분하고 코드/검사/입력/asset 불변을 확인한다. 문서-only 변경으로
 전체 Cargo 검증을 다시 실행하지 않는다.
+
+## 사용자 보정 요청 후 3문서의 누락 진단 보완
+
+원격 devel을 다시 읽어0953598 그대로임을 확인했다. 따라서 추가 리베이스는 하지 않았다.
+기준/후보 source·입력·Print·글꼴·측정 방법은 바꾸지 않았다. 기존 PNG를 재측정한 결과이며
+새 source에서 다시 렌더한 결과로 보고하지 않는다.
+
+기존에는 기준 쪽수 차이 때문에 TSV 산출이 중단돼 공통 쪽의 수치도 없었다. 이제 같은
+Visual Sweep의`write_silhouette_tsv`에 실제 기준 PNG와 PDF PNG 및 원래 전체 쪽수를
+전달해 공통 쪽의 진단 TSV6개를 별도 산출했다. 각 manifest는 원래 쪽수 차이와
+`re_review_required`를 유지하며 생산 source·원시 provenance·PNG 해시·누락 쪽을 기록한다.
+
+- 공통8쪽(양 경로 합산)의 후보 점수는 모두100%,0.01%p 이상 하락0이다.
+- 작은 용지 Native p1/p2는10.49571/21.71547%, WASM은9.29248/23.50084%다.
+- partial 폭 부족 p1은 Native58.58906%, WASM56.69763%다.
+- wrapper p1은 Native90.93783%, WASM91.23852%다.
+- 기준에 없는 작은 용지 p3, partial 두 입력 p2는 양 경로에서 총6행이다.
+  해당 점수·하락폭은`NA`이며 성공이나0점으로 꾸미지 않는다.
+
+원시 위치는 기본 작업공간의 ignored
+`output/pr-review/pr7433-current-20261016/rebased-0953598/` 아래다.
+
+- 재현:`venv/bin/python <위 경로>/audit_missing_base_pages.py`(기본 작업공간에서 실행), exit0.
+- 로그:`base-mismatch-audit.log`.
+- 전체14행의 누락/측정 구분:`base-mismatch-audit/page-comparison.tsv`.
+- 요약·생산 source·진단 TSV6개 경로:`base-mismatch-audit/summary.json`.
+
+후보는 이미 독립 Print와 같은3/2/2쪽으로 보정됐으므로 후보의 쪽수를 다시2/1/1로 줄이는
+수정은 정답 출력을 훼손한다. 고정된0953598의 누락을 현재 후보 코드로 바꿀 수도 없다.
+이 자료는 원인·수치의 미검증을 줄였지만 사용자가 선택한 엄격한 일대일 보류를 해제하지 않는다.
+기준 SHA를 변경하거나 검증 조건을 예외 처리하지 않았고 원격 조치도 하지 않았다.
+코드·검사·렌더 출력 불변인 진단/문서 보완이므로 전체 Rust 회귀를 반복하지 않았다.
