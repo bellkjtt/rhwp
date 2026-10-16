@@ -18,6 +18,7 @@ mod image_effect;
 mod line_replay;
 mod renderer;
 mod replay_policy;
+mod svg_bitmap_mask;
 mod synthetic_typeface;
 mod text_replay;
 mod text_shaping;

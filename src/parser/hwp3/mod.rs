@@ -6,6 +6,7 @@ use crate::model::document::Document;
 use snafu::Snafu;
 use std::io::{self, Cursor, Read};
 
+mod border_width;
 pub mod crypto;
 pub mod drawing;
 pub mod encoding;
@@ -1450,7 +1451,7 @@ fn parse_hwp3_object_dispatch(
                     1 => (BorderLineType::Solid, 1), // 한컴 정상 저장의 기본 얇은 선: 0.12mm
                     2 => (BorderLineType::Solid, 6), // 0.4mm (굵은 실선)
                     3 => (BorderLineType::Dot, 1),   // 기본 얇은 선과 같은 두께
-                    4 => (BorderLineType::Double, 6), // 0.4mm (이중선 두께 확보)
+                    4 => (BorderLineType::Double, border_width::DOUBLE_LINE_WIDTH),
                     _ => (BorderLineType::None, 0),
                 };
                 crate::model::style::BorderLine {
@@ -4536,11 +4537,14 @@ fn parse_hwp3_inner(
                 4 => BorderLineType::Double,
                 _ => BorderLineType::Solid, // 5 이상: 미정의 → Solid fallback
             };
-            // width: HWP5 BorderLine.width 는 인덱스 (0=0.1mm, 1=0.12mm, ..., 6=0.5mm).
-            // HWP3 raw 의 border 두께 별도 정보 없음 → 기본 1 (얇은 실선) 적용.
+            // HWP5 폭 인덱스7은 이중선 전체0.5mm다. 기본 얇은 선 폭과 구분한다.
             let bl = BorderLine {
                 line_type,
-                width: 1,
+                width: if doc_info.border_type == 4 {
+                    border_width::DOUBLE_LINE_WIDTH
+                } else {
+                    1
+                },
                 color: 0x00000000,
             };
             page_border.borders = [bl, bl, bl, bl];

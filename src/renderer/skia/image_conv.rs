@@ -664,6 +664,15 @@ fn rasterize_svg_document_to_png(
         return None;
     }
 
+    if let Some(png) = super::svg_bitmap_mask::rasterize_before_reduction(
+        &tree,
+        raster_width as u32,
+        raster_height as u32,
+        MAX_SVG_RASTER_PIXELS,
+    ) {
+        return Some(png);
+    }
+
     let transform = tiny_skia::Transform::from_scale(
         raster_width as f32 / size.width(),
         raster_height as f32 / size.height(),
