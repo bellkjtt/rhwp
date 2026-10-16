@@ -33,6 +33,9 @@
 - collaborator·maintainer의 예외 처리와 오늘할일·PR review 문서는 `pr_review_workflow.md`의
   라우팅 결과에 해당하는 역할별 자식 절차를 따른다. 모 문서만 읽고 세부 경로를 추정해 진행하지 않는다.
 - 작업 단계가 바뀌면 현재 단계의 변경을 커밋한 뒤 다음 단계 문서를 시작한다.
+- 새 테스트는 기존 자동 수집·suite·Native 실행 경로를 먼저 확인하고, `ci.yml`에
+  불필요한 개별 호출이나 중복 검증을 추가하지 않는다. 실제 실행 누락이 있을 때의 추가 기준은
+  [CI 테스트 호출 추가 기준](mydocs/manual/github_operations.md#531-ci-테스트-호출-추가-기준)을 따른다.
 - GitHub comment, remote push, PR 생성은 사용자 승인을 받은 뒤 수행한다.
 - Windows PowerShell에서 한글을 포함한 여러 단락의 PR·review·comment 본문은 here-string을
   `gh --body-file -`로 직접 pipe하지 않는다. UTF-8 **without BOM** 임시 Markdown 파일을

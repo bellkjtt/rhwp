@@ -142,6 +142,10 @@ WASM의 `CARGO_TARGET_DIR`는 위에서 고정한 같은 경로를 사용한다.
 `run-rust-test.mjs`도 이를 기본 적용한다. lockfile 자체를 의도적으로 바꾸는 의존성 갱신 작업만 별도
 검증에서 이 규칙을 벗어날 수 있다.
 
+새 검사는 기존 자동 수집·suite·Native 실행 경로에서 실제로 실행되는지 먼저 확인한다.
+`ci.yml`에 불필요한 개별 호출을 추가하지 않으며, 실행 누락으로 추가가 필요한 경우에는
+[CI 테스트 호출 추가 기준](../github_operations.md#531-ci-테스트-호출-추가-기준)을 따른다.
+
 `wasm-pack`은 Cargo build 전에 별도 metadata를 실행하므로, WASM 검증은 raw `wasm-pack build` 대신
 아래 wrapper를 사용한다. wrapper는 두 Cargo 호출 모두에 `--locked`를 적용한다.
 
