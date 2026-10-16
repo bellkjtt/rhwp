@@ -164,3 +164,11 @@ TSV·원시 JSON·실행 파일은 Git에 추가하지 않는다.
 추가 증거는 `stage1629-endnote-flow-traces/fit-paint-head-audit.json`,
 `stage1629-new-column-actual-head-audit.json`, 각 변형의 실제 실행 명령·최종 pageCount·
 `flow-debug.log`에 있다. 새 미주 조판 구현이나 기대값 변경은 아직 하지 않았다.
+
+### 파싱 전 원본 레코드 확인
+
+`stage1631-raw-note-coordinate-audit.py`로 parser를 거치지 않고 HWP 17개의 OLE
+`BodyText/Section*` 레코드와 HWPX 13개의 section XML을 직접 읽었다. 원본 30개·미주
+1,380개의 첫 저장 vpos가 모두 0이고 미주 내부 모든 줄 위치도 앞선 parser IR과 같았다.
+이 비교군의 로컬 원점·되감김 관측이 parser 정규화 때문에 만들어진 값은 아니다.
+`stage1631-raw-note-coordinate-audit.json`에 입력 SHA-256·형식별 건수·사다리 비교를 보존했다.
