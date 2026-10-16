@@ -1,4 +1,3 @@
-
 /// 새 LINE_SEG를 만들 때만 한컴 재조판 공백 metric을 반영한 텍스트 폭.
 ///
 /// 저장본의 글꼴 고유 공백과 한컴이 새로 조판한 반각 공백은 다를 수 있다. 호출자는
@@ -774,5 +773,6 @@ pub(crate) fn recompose_stored_lines_in_frame(
         false,
         false,
         false,
+        &[],
     )
 }
