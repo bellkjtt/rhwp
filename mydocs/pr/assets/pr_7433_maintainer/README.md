@@ -1,33 +1,53 @@
 # PR #7433 메인터너 보정 시각 자산
 
-- 검증 code: `59d87766f96a72b8502a49aff31c66dd16b9742c`.
+- 렌더링 source: `dca310c06036c7f3fa7ca30cce74c1704f1169f2`.
+- 회귀 추가 source: `9f464aa2c`. 이 commit은 검사·입력·문서만 추가하며 렌더링 코드는 같다.
 - 기준 devel: `4662c069e557e928ed7968d061121fde90b1f027`.
-- 전체 입력11문서15쪽 Native/fresh WASM의2px 관용 실루엣 최저100%, 독립 Print 쪽수 일치.
-  엄격 픽셀100%라는 뜻은 아니다. 여백·분할·wrapper·뒤 본문을 포함해 전쪽 직접 대조했다.
-- 원본·독립 Print의 출처/해시는 [Stage1](../../../working/task_m100_7419_stage1.md),
-  추가 분할2개의 고정 바이트와 실패 보정은 [Stage3](../../../working/task_m100_7419_stage3.md)에 있다.
-- 전체 원시 TSV·실행 로그·producer 해시는 ignored
-  `output/pr-review/pr7433-current-20261016/regression-fix/`에 보존한다.
-  `candidate-{native,wasm}-sweep/<입력>/silhouette.tsv`, `producer-provenance.json`,
-  `final-direct-read.json`, `final-devel-comparison.json`이 최종 source의 증거다.
-- 비교 가능한8문서는 devel 대비 하락0이다. 나머지3문서는 정상 쪽수 복구로 base TSV가 없어
-  전쪽 일대일 gate는 **re_review_required**다. 최저100%로 이 보류 조건을 면제하지 않는다.
-- Studio 추가 캡처는 실제 Canvas2D·CanvasKit compat/default software의 Print profile이다.
-  초기 WASM 응답6개의 SHA가 위 fresh package와 일치한다. replay hard violation0,
-  내용·줄 소속·겹침을 직접 확인했다. backend 간 report-only 엄격 픽셀 비교4건은
-  불일치다(최대0.01088193). 이를 parity gate 통과로 표시하지 않는다. glyph 윤곽과 화면 안내선
-  차이가 있으며, 아래 Studio 비교 PNG는 독립 PDF의 내용 영역을 같은 좌표로 잘라 판독한 것이다.
-- [개별 검토](../../archives/pr_7433_review.md). GitHub PR 생성·승인·merge는 별도이며 아직 수행하지 않았다.
+- 13문서19쪽 Native/fresh WASM의2px 관용 실루엣 최저100%, 독립 Print 쪽수 일치.
+  엄격 픽셀100%가 아니다. 여백·분할·wrapper·저장 줄 혼재·뒤 본문을 전쪽 직접 대조했다.
+- Native/fresh WASM의 PNG는 같은96dpi·Print profile·compat2024와 같은 한컴 글꼴을 쓴다.
+- 기존 입력 출처는 [Stage1](../../../working/task_m100_7419_stage1.md),
+  분할 경계는 [Stage3](../../../working/task_m100_7419_stage3.md),
+  실제 저장 줄 혼재의 생성·수정 전후는 [Stage4](../../../working/task_m100_7419_stage4.md)에 있다.
+- 현재 원시 증거는 ignored `output/pr-review/pr7433-current-20261016/mixed-storage-fix/`다.
+  `candidate-{native,wasm}-sweep/`, `{native,wasm}-scores/`, `final-direct-read.json`,
+  `mixed-visual-evidence.json`, `review-assets.json`에서 TSV·생산자·직접 판독·PNG SHA를 확인한다.
+- devel과 비교 가능한10문서·backend별12쪽에서0.01%p 이상 하락0이다. 나머지3문서는
+  정상 쪽수 복구로 base TSV가 없어 전쪽 일대일 gate가 **re_review_required**다.
+  최저100%로 이 보류 조건을 면제하지 않는다.
+- `studio-source-direct.png`, `studio-nested-direct.png`는59d source의 과거 캡처다.
+  당시 Canvas2D·CanvasKit compat/default software6캡처의 초기 WASM 응답 해시와
+  replay hard violation0을 확인했다. 엄격 픽셀4건은 report-only 불일치(최대0.01088193)였다.
+  이 두 이미지를 현재 dca source의 Studio 재실행 또는 parity gate 통과로 표시하지 않는다.
+- 아래 현재26개 대표 이미지는 dca에서 새로 산출했다. 기존18개는59d 산출물과 바이트도 같다.
+  Visual Sweep review와 standalone overlay를 함께 표시해 판독한다.
+- [개별 검토](../../archives/pr_7433_review.md). PR/push는 사용자의 별도 승인 전까지 보류한다.
 
-## 대표 PNG
+## Native 저장 줄 혼재2쪽
 
-![Native 원본 중첩 표 review](native-nested-source-review-001.png)
+![Native 저장 줄 혼재 review](native-mixed-storage-review-002.png)
+
+![Native 저장 줄 혼재 overlay](native-mixed-storage-overlay-002.png)
+
+## fresh WASM 저장 줄 혼재2쪽
+
+![fresh WASM 저장 줄 혼재 review](wasm-mixed-storage-review-002.png)
+
+![fresh WASM 저장 줄 혼재 overlay](wasm-mixed-storage-overlay-002.png)
+
+## Native 원본 중첩1쪽
+
+![Native 원본 중첩 review](native-nested-source-review-001.png)
+
+![Native 원본 중첩 overlay](native-nested-source-overlay-001.png)
+
+## fresh WASM wrapper 이월2쪽
 
 ![fresh WASM wrapper 이월 review](wasm-wrapper-review-002.png)
 
-![Studio 실제 backend 내용 영역 비교](studio-nested-direct.png)
+![fresh WASM wrapper 이월 overlay](wasm-wrapper-overlay-002.png)
 
-## 파일 SHA-256
+## 현재 대표 파일 SHA-256
 
 | 파일 | SHA-256 |
 | --- | --- |
@@ -49,5 +69,18 @@
 | [wasm-wrapper-overlay-002.png](wasm-wrapper-overlay-002.png) | `2292329b45c6502c414714db4eb3c2b5b3637213b98a5ac7d9e85ff78451cb23` |
 | [wasm-margins-overlay-001.png](wasm-margins-overlay-001.png) | `a5f64f3e7a31dacba76197d3978193f0d5edb91fb6ea6023b96d01609974e166` |
 | [wasm-partial-width-review-001.png](wasm-partial-width-review-001.png) | `37fadb760a9b03bf18b56bc72657cd6e6ab4f8dc4e8fdf5cb96aeb02036898ec` |
+| [native-mixed-storage-review-001.png](native-mixed-storage-review-001.png) | `e690840c0ab302a011440dcffdfce75907556e9a0688696520b6826ee14dd3b8` |
+| [native-mixed-storage-overlay-001.png](native-mixed-storage-overlay-001.png) | `84a70d49a9368ae6792a5abef9d2b7781830a180ed634cf2f1150d81499aa80b` |
+| [native-mixed-storage-review-002.png](native-mixed-storage-review-002.png) | `63885c65ac0e2dd7a55e284c9c0a17e3585badf69f764dceb7601f7c0d6297a1` |
+| [native-mixed-storage-overlay-002.png](native-mixed-storage-overlay-002.png) | `de0e17e67821ef3624ceae7b52bbad71c86132d8cb04a1c41590ab8e9c6baf09` |
+| [wasm-mixed-storage-review-001.png](wasm-mixed-storage-review-001.png) | `d20d369bb978905fe1ae435c757b25e81028e9c200d4ce64ddb51700e2b3d1f9` |
+| [wasm-mixed-storage-overlay-001.png](wasm-mixed-storage-overlay-001.png) | `2cc2a09af0807e1fa83b744e91b5944cae919f499789efdba891c9d2a87be791` |
+| [wasm-mixed-storage-review-002.png](wasm-mixed-storage-review-002.png) | `a6a06fc95935ecca66c0fdfc17c0014a08fc203a38f586a462998780e727c810` |
+| [wasm-mixed-storage-overlay-002.png](wasm-mixed-storage-overlay-002.png) | `140a39192fadda1200c84b6a67953a4f647c9fdf75c4f518269813a0eb44a7af` |
+
+## 과거 Studio 캡처 SHA-256
+
+| 파일 | SHA-256 |
+| --- | --- |
 | [studio-source-direct.png](studio-source-direct.png) | `d16b74a25263e4a4c32f6bc5ec3294521da3947cccd84f591c726632bcc3d2a8` |
 | [studio-nested-direct.png](studio-nested-direct.png) | `84fac574e671a28296584c77fc52ed632d38cf5d9045a006780e81d7873782b6` |
