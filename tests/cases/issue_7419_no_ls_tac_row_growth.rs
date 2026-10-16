@@ -1,7 +1,7 @@
 //! #7419: 저장 줄 없는 TAC 표의 셀·인라인 줄·이월 소유를 보호한다.
 //!
-//! 독립 한컴 Print와 Native/fresh WASM 9문서·11쪽 모두100%, 직접 확대 판독:
-//! mydocs/working/task_m100_7419_stage1.md. 원본2개 검사의 고정 영역 선택을
+//! 독립 한컴 Print와 Native/fresh WASM 11문서·15쪽 모두100%, 직접 확대 판독:
+//! mydocs/working/task_m100_7419_stage3.md. 원본2개 검사의 고정 영역 선택을
 //! 실제 셀 소유·내용 보존·포함·순서 관계로 교체한다. 완료 쪽은 별도로±2px도 검사한다.
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -363,6 +363,120 @@ fn small_page_moves_complete_tables_and_preserves_following_content() {
     }
 }
 
+// 이 입력은 문단 안 텍스트가 없는 개체 호스트다. 원본의 문단·개체 순서를 따라
+// 전체 내용을 읽어, 조각 경계에서 생기는 누락·중복도 검사한다.
+fn source_text(paragraphs: &[Paragraph]) -> String {
+    let mut result = String::new();
+    for paragraph in paragraphs {
+        result.push_str(&paragraph.text);
+        for control in &paragraph.controls {
+            if let Control::Table(table) = control {
+                for cell in &table.cells {
+                    result.push_str(&source_text(&cell.paragraphs));
+                }
+            }
+        }
+    }
+    compact(&result)
+}
+
+fn verify_split_nested(name: &str, child_pages: [usize; 2]) {
+    let pages: Vec<Value> = export(name, "export-render-tree", "json")
+        .iter()
+        .map(|json| serde_json::from_str(json).unwrap())
+        .collect();
+    assert_eq!(pages.len(), 2, "독립 Print의 전체 쪽수");
+    let document = rhwp::parser::parse_document(&fs::read(source_path(name)).unwrap()).unwrap();
+    let paragraphs = &document.sections[0].paragraphs;
+    assert_eq!(
+        text(&pages.iter().flat_map(nodes).collect::<Vec<_>>()),
+        source_text(paragraphs),
+        "전체 문단·표 내용의 순서·누락·중복"
+    );
+    let mut expected = Vec::new();
+    source_tables(paragraphs, &mut expected);
+    let expected = &expected[expected.len() - 2..];
+    let mut actual = Vec::new();
+    for (page_index, page) in pages.iter().enumerate() {
+        let all = nodes(page);
+        let body = all.iter().find(|n| n["type"] == "Body").unwrap();
+        for table in all.iter().filter(|n| n["type"] == "Table") {
+            assert!(
+                value(table, "y") >= value(body, "y") - 0.2 && bottom(table) <= bottom(body) + 0.2,
+                "완료 조각의 외곽까지 본문 안에 포함"
+            );
+            let cells: Vec<_> = table["children"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|n| n["type"] == "Cell")
+                .collect();
+            for owner in &cells {
+                for child in nodes(owner)
+                    .iter()
+                    .filter(|n| n["type"] == "Table" || n["type"] == "TextLine")
+                {
+                    assert!(
+                        value(child, "y") >= value(owner, "y") - 0.2
+                            && bottom(child) <= bottom(owner) + 0.2,
+                        "조각의 줄·중첩 표는 소유 셀 안에 포함"
+                    );
+                }
+            }
+            if cells.len() == 2
+                && nodes(table).iter().filter(|n| n["type"] == "Table").count() == 1
+                && table["pi"] == 0
+            {
+                actual.push((page_index, *table));
+            }
+        }
+    }
+    assert_eq!(actual.len(), 2, "두 자식 표의 누락·중복");
+    for (index, ((page, table), original)) in actual.iter().zip(expected).enumerate() {
+        assert_eq!(*page, child_pages[index], "독립 Print의 자식 표 쪽 소유");
+        assert_eq!(table["ci"], index, "원시 제어문 슬롯의 소유 보존");
+        for source in &original.cells {
+            let target = cell(table, source.row);
+            assert_eq!(
+                text(&own_nodes(target)),
+                compact(
+                    &source
+                        .paragraphs
+                        .iter()
+                        .map(|p| p.text.as_str())
+                        .collect::<String>()
+                ),
+                "각 자식 셀의 내용 소유"
+            );
+        }
+        assert!(bottom(cell(table, 0)) <= value(cell(table, 1), "y") + 0.2);
+    }
+    let last_nodes = nodes(&pages[1]);
+    let last_frame = last_nodes
+        .iter()
+        .find(|n| n["type"] == "Table" && n["pi"] == 4)
+        .unwrap();
+    let following = last_nodes
+        .iter()
+        .find(|n| n["type"] == "TextRun" && n["text"] == "후속 본문 보존")
+        .unwrap();
+    assert!(
+        value(following, "y") >= bottom(last_frame) - 0.2,
+        "표 종료 이후 본문은 마지막 조각과 겹치지 않는다"
+    );
+    assert!(!text(&nodes(&pages[0])).contains("후속본문보존"));
+}
+
+#[test]
+fn partial_cell_moves_each_reflowed_inline_line_without_loss() {
+    verify_split_nested("partial-nested-width-wrap", [0, 1]);
+}
+
+#[test]
+fn one_inline_wrapper_keeps_both_children_together_on_the_next_page() {
+    verify_split_nested("partial-nested-wrapper", [1, 1]);
+}
+
 #[test]
 fn completed_pages_keep_independent_print_title_origins_with_two_px_tolerance() {
     // 독립 Print PDF의 span.origin을72pt→96dpi로 환산했다. 구현 상자는 재인용하지 않는다.
@@ -446,22 +560,44 @@ fn completed_pages_keep_independent_print_title_origins_with_two_px_tolerance() 
     assert_eq!(small.len(), 3);
     assert_title_origins(&small[1], &[("첫", 117.216471, 152.993144)], "작은 용지2쪽");
     assert_title_origins(&small[2], &[("둘", 117.216471, 152.993144)], "작은 용지3쪽");
+    for (name, second_page) in [
+        (
+            "partial-nested-width-wrap",
+            vec![
+                ("첫", 134.327199, 154.882578),
+                ("후", 113.378550, 281.924703),
+            ],
+        ),
+        (
+            "partial-nested-wrapper",
+            vec![
+                ("첫", 124.732401, 156.802612),
+                ("첫", 138.005208, 299.204997),
+                ("후", 113.378550, 428.167155),
+            ],
+        ),
+    ] {
+        let outputs = export(name, "export-svg", "svg");
+        assert_eq!(outputs.len(), 2);
+        let mut first_page = vec![
+            ("첫", 117.216471, 214.883586),
+            ("둘", 117.216471, 293.284892),
+        ];
+        if name == "partial-nested-width-wrap" {
+            first_page.push(("첫", 120.894480, 327.205465));
+        }
+        assert_title_origins(&outputs[0], &first_page, name);
+        assert_title_origins(&outputs[1], &second_page, name);
+    }
 }
 
 fn assert_title_origins(svg: &str, expected: &[(&str, f64, f64)], name: &str) {
     let xml = roxmltree::Document::parse(svg).unwrap();
-    let mut first = 0;
-    let mut second = 0;
+    let mut ordinals = std::collections::BTreeMap::new();
     for &(marker, expected_x, expected_y) in expected {
-        let ordinal = if marker == "첫" {
-            let old = first;
-            first += 1;
-            old
-        } else {
-            let old = second;
-            second += 1;
-            old
-        };
+        let next = ordinals.entry(marker).or_insert(0);
+        let ordinal = *next;
+        *next += 1;
         let glyph = xml
             .descendants()
             .filter(|n| n.has_tag_name("text") && n.text().is_some_and(|s| s.starts_with(marker)))

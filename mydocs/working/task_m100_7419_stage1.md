@@ -12,7 +12,7 @@ Issue: #7419, 원 PR: #7433. 기준 devel `375aff29498166260a22796d54e67f508c84a
 4. `layout_horizontal_cell_paragraphs`는 파생 프레임을 적용한 문단과 `control_slot_line_index`의 소유 줄을 사용한다. 높이의 우연한 일치나 같은 TAC 속성으로 소속을 추정하지 않는다. 프레임 이후 별도 앵커 선택까지 확인했다. 아래 실제 반례가 같은 줄 합산·개행 유실·후행 텍스트 이동을 검출한다.
 5. 페이지 예산: `tac_fit::prepare`의 `measured_tac_floor` → `height_for_fit` → pre-flush/이월 → `flow_table::place`의 `format_table`/`effective_height`와 `typeset_tac_table` → `tac_reconcile::effective_cap` → 실제 `resolve_row_heights_trusting_declared`·paint를 대조했다. 최신 devel의 기존 실측 하한이 체리픽한 행 성장분을 이미 소비하므로 pagination 코드는 중복 수정하지 않았다. 용지28000HU는 원 devel2쪽, 체리픽부터3쪽, 독립 Print3쪽이다. 1쪽 제목 / 2쪽 첫 표 / 3쪽 뒤 표를 실제 출력에서 확인했다.
 
-분할 continuation의 컷·rowspan 소유·예약 알고리즘은 변경하지 않는다. 이 작업의 TAC 전체 표는 한 쪽에 들어가지 않으면 통째로 이월한다. 작은 용지의 제목 뒤 예산은 선언64px만 fit하던 경계이며 내용70.45px가 들어가지 않아 다음 쪽으로 간다. 각각 마지막 행과 뒤 표 보존을 확인했다. 배경·비TAC·저장 줄·HWP5는 새 중첩 프레임 분기의 비적용 경로다. 정상 대조군과 전체 회귀는 다음 단계에서 별도로 확인한다.
+이 Stage1 시점에는 분할 continuation의 컷·rowspan 소유·예약 알고리즘을 변경하지 않았다. 후속 분할 경로의 추가 보정과 실제 반례는 [Stage3](task_m100_7419_stage3.md)에 기록한다. 이 작업의 TAC 전체 표는 한 쪽에 들어가지 않으면 통째로 이월한다. 작은 용지의 제목 뒤 예산은 선언64px만 fit하던 경계이며 내용70.45px가 들어가지 않아 다음 쪽으로 간다. 각각 마지막 행과 뒤 표 보존을 확인했다. 배경·비TAC·저장 줄·HWP5는 새 중첩 프레임 분기의 비적용 경로다. 정상 대조군과 전체 회귀는 다음 단계에서 별도로 확인한다.
 
 ## 독립 Print와 입력 생성
 
