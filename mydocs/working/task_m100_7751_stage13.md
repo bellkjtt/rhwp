@@ -81,4 +81,13 @@ Native/fresh WASM의 실제 저장 색조5개는 각각전1쪽 모두raw100%를 
 CI의 Node22에서도 실제 TypeScript 함수 로딩을 지원하는
 [stripTypeScriptTypes API](https://nodejs.org/download/release/v22.14.0/docs/api/module.html#modulestriptypescripttypescode-options)의
 22.13.0 도입을 확인했다. 타입만 제거해 같은 함수를 실행하며 색조 구현을 테스트에 복제하지 않는다.
-남은 fresh WASM383쪽·전체 Rust/Skia/lint·최종 head CI는 아직 완료로 보고하지 않는다.
+fresh WASM383쪽도 새로 출력해 최저92.98362%,90%미만·누락·고정devel대비
+0.01%p이상하락0쪽을 확인했다. Native Skia lib는4,043통과·12기존ignore,
+공식 focused26건도 모두 통과했다. 실제SVG 브라우저3/130/375쪽은 각각
+raw99.99690/98.61065/99.46269%였다. 실제Direct PDF 색조5개도 모두raw100%였다.
+
+최종 전체 nextest를 준비하던 중 upstream/devel에 #7953이 들어왔다.
+이전 기준의 실행 중 nextest 소유 PID에 SIGINT를 보내 종료코드−2로 끝냈다.
+이는 전체 통과가 아니며, 출력 공백이나 관찰 timeout 때문에 종료한 것이 아니다.
+clean 작업 트리와 Cargo/Rust 종료를 확인한 뒤 새devel 위로30커밋을 충돌 없이
+rebase했다. 이어지는 검증은 [14단계](task_m100_7751_stage14.md)에 기록한다.

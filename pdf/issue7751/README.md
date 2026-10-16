@@ -105,6 +105,8 @@ node scripts/run-rust-test.mjs issue_7751_raster_picture_tones -- --cargo-profil
 ```
 
 변환 호출은 [한컴2024 MCP](../../mydocs/manual/mcp_hwp2024Convert_usage.md)를 따른다.
-인증 값은 기록하지 않는다. 이 RGB 대조는 Native PNG·Canvas·SVG의 색 계약이다.
-Direct PDF의 색조가 있는 BlackWhite(일반 그림·legacy 워터마크 모두)와 미지원
-패턴은 이 자료만으로 지원 범위를 넓히지 않으며 기존 fail-closed 계약을 유지한다.
+인증 값은 기록하지 않는다. 이 RGB 대조는 Native PNG·Canvas·SVG·실제 Studio DOM의
+색 계약이다. 13단계의 공통 producer에서 이미 PNG로 확정한 일반 그림 색조는
+Direct PDF로도 실제 변환해 위5개 입력 모두 raw100%를 확인했다.
+아직 bake되지 않은 이산 흑백 효과, 미지원 legacy 워터마크 조합과 패턴의 기존
+명시적 거부는 유지한다. 이5개 대조군의 통과를 모든 그림 조합의 지원으로 확대하지 않는다.
