@@ -28,14 +28,24 @@ pub(crate) fn recompose_cell_lines_with_nested_tables(
 ) {
     let mut projected = None;
     let mut heights = Vec::new();
-    if !native_hwp5 && !legacy_geometry && crate::renderer::para_has_no_stored_line_segs(source) {
+    let reflowed_table_host = !native_hwp5
+        && !legacy_geometry
+        && crate::renderer::para_has_no_stored_line_segs(source)
+        && source.controls.iter().any(|control| {
+            matches!(control, Control::Table(table)
+                if table.common.treat_as_char && table_cells_have_no_stored_lines(table))
+        });
+    if reflowed_table_host {
         for (index, control) in source.controls.iter().enumerate() {
             let Control::Table(table) = control else {
                 continue;
             };
-            if !table.common.treat_as_char || !table_cells_have_no_stored_lines(table) {
+            if !table.common.treat_as_char {
                 continue;
             }
+            // 같은 줄 구성에 참여하는 저장 줄 자식도 프레임 소유자다. 일부만
+            // 발행하면 셀 컷은 형제를 따로 예약하고 paint는 같은 줄에 겹쳐 그린다.
+            // 자식의 내부 저장 줄은 재조판하지 않고 본체 실측만 전달한다.
             let measured = nested_height(table);
             let Ok(height) = u32::try_from(crate::renderer::px_to_hwpunit(measured, dpi)) else {
                 continue;
