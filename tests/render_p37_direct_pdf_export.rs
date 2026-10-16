@@ -510,25 +510,39 @@ mod image_adjustment_regressions {
     #[test]
     fn issue_4764_direct_pdf_preserves_discrete_blackwhite_or_fails_closed() {
         use rhwp::model::image::ImageEffect;
+        use rhwp::model::style::ImageFillMode;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
-        use rhwp::renderer::render_tree::ImageNode;
+        use rhwp::renderer::render_tree::{ImageNode, PageBackgroundImage};
 
         let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [170, 170, 170, 255])));
         image.effect = ImageEffect::BlackWhite;
         image.brightness = 10;
-        match layer_trees_to_pdf(&[issue_4764_direct_pdf_image_tree(image)]) {
-            Ok(pdf) => {
-                // SVG의 회색조 다음 discrete(0,1)는 밝기 적용 후 흰색이 된다.
-                // 고대비 행렬만 사용해 중간 회색을 내보내면 성공으로 처리하지 않는다.
-                assert!(issue_4764_pdf_images_contain_rgb(
-                    &issue_4764_pdf_image_streams(&pdf),
-                    [255, 255, 255]
-                ));
+        let background = PageBackgroundImage {
+            data: issue_4764_png_rgba(4, 4, [170, 170, 170, 255]),
+            fill_mode: ImageFillMode::FitToSize,
+            // 쪽 배경은 저장 순서이므로 화면 밝기10은 contrast에 들어간다.
+            brightness: 0,
+            contrast: 10,
+            effect: ImageEffect::BlackWhite,
+        };
+        for tree in [
+            issue_4764_direct_pdf_image_tree(image),
+            issue_4764_direct_pdf_page_background_tree(background),
+        ] {
+            match layer_trees_to_pdf(&[tree]) {
+                Ok(pdf) => {
+                    // SVG의 회색조 다음 discrete(0,1)는 밝기 적용 후 흰색이 된다.
+                    // 고대비 행렬만 사용해 중간 회색을 내보내면 성공으로 처리하지 않는다.
+                    assert!(issue_4764_pdf_images_contain_rgb(
+                        &issue_4764_pdf_image_streams(&pdf),
+                        [255, 255, 255]
+                    ));
+                }
+                Err(error) => assert!(
+                    error.contains("BlackWhite") && error.contains("use the svg backend"),
+                    "unexpected error: {error}"
+                ),
             }
-            Err(error) => assert!(
-                error.contains("BlackWhite") && error.contains("use the svg backend"),
-                "unexpected error: {error}"
-            ),
         }
     }
 
