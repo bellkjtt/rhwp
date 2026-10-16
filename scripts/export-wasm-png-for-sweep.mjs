@@ -186,12 +186,14 @@ async function main() {
         }
         // 같은 문서의 필요한 face를 한 번만 공급한다. 데이터는 SVG/base64로 복제하지 않는다.
         const fontInfo = await page.evaluate(async ({pages, fonts, scale}) => {
-          const {installCanvasFont} = await import('/font-registration.mjs');
+          const {installCanvasFont, selectMetafileFontFaces} = await import('/font-registration.mjs');
           const doc = globalThis.sweepDocument, canvas = document.getElementById('page');
           for (const page of pages) doc.renderPageToCanvasFilteredWithProfile(page - 1, canvas, scale, 'all', 'print');
+          const metafileRequests = typeof doc.getMetafileFontRequests === 'function' ? JSON.parse(doc.getMetafileFontRequests()) : [];
+          const metafileFaces = selectMetafileFontFaces(fonts, metafileRequests);
           const requested = new Set();
-          if (typeof doc.getMetafileFontRequests === 'function') {
-            for (const request of JSON.parse(doc.getMetafileFontRequests())) {
+          if (metafileRequests.length) {
+            for (const request of metafileRequests) {
               for (const family of request.families) {
                 if (fonts.some(record => record.families.some(name => name.toLowerCase() === family.toLowerCase()))) {
                   requested.add(family.toLowerCase());
@@ -217,7 +219,7 @@ async function main() {
             if (!response.ok) throw Error(`공급 글꼴을 읽을 수 없습니다: ${record.url}`);
             const bytes = await response.arrayBuffer();
             for (const family of selected) {
-              try { await installCanvasFont(family, bytes, {weight: String(record.weight), style: record.style}, doc); }
+              try { await installCanvasFont(family, bytes, {weight: String(record.weight), style: record.style}, doc, metafileFaces.has(`${family.toLowerCase()}|${record.weight}|${record.style}`)); }
               catch (error) { throw Error(`선택한 Canvas 글꼴을 적재할 수 없습니다: ${family}, ${record.source}, ${error}`); }
               supplied.add(`${family.toLowerCase()}|${record.weight}|${record.style}`);
               loaded.push({family, sourceSha256: record.sourceSha256, sha256: record.sha256, faceIndex: record.faceIndex, weight: record.weight, style: record.style, repairs: record.repairs, sourceKind: record.sourceKind || 'external'});
