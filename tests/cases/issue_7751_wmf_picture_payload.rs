@@ -57,7 +57,7 @@ fn find_image(node: &LayerNode) -> Option<&[u8]> {
         }),
     }
 }
-fn check(effect: ImageEffect, b: i8, c: i8, expected_white: u8) {
+fn check(effect: ImageEffect, b: i8, c: i8, expected_white: Option<u8>) {
     let core = DocumentCore::from_bytes(&bytes()).unwrap();
     let mut image = ImageNode::new(376, Some(source()));
     image.effect = effect;
@@ -88,21 +88,31 @@ fn check(effect: ImageEffect, b: i8, c: i8, expected_white: u8) {
         "색 변환에서 원본 픽셀 크기 보존"
     );
     let mut count = 0;
+    let mut black_count = 0;
     for (before, after) in src.pixels().zip(dst.pixels()) {
         if before.0 == [255, 255, 255, 255] {
-            assert_eq!(
-                after.0,
-                [expected_white, expected_white, expected_white, 255],
-                "독립 Print 흰색의 RGB555 평균"
-            );
+            if let Some(value) = expected_white {
+                assert_eq!(
+                    after.0,
+                    [value, value, value, 255],
+                    "독립 Print 원본 그림의 흰색"
+                );
+            }
             count += 1;
         }
         if effect == ImageEffect::GrayScale {
             assert_eq!(after[0], after[1]);
             assert_eq!(after[1], after[2]);
         }
+        if expected_white.is_some() && before.0 == [0, 0, 0, 255] {
+            assert_eq!(after.0, before.0, "Print의 검은 글자 위치·픽셀 보존");
+            black_count += 1;
+        }
     }
     assert!(count > 1000, "실제 그림의 흰색 영역을 검사");
+    if expected_white.is_some() {
+        assert!(black_count > 100, "배경만 남기고 그림 글자를 지우지 않는다");
+    }
     assert!(
         core.get_source_image_bytes_native(&key.replacen("bin:0:", "bin:1:", 1))
             .is_none(),
@@ -111,11 +121,12 @@ fn check(effect: ImageEffect, b: i8, c: i8, expected_white: u8) {
 }
 #[test]
 fn issue_7751_real_picture_inline_and_lazy_pixels_follow_independent_print() {
-    check(ImageEffect::RealPic, -5, 0, 249)
+    check(ImageEffect::RealPic, -5, 0, Some(249))
 }
 #[test]
-fn issue_7751_grayscale_has_same_inline_and_lazy_payload_without_rgb555() {
-    check(ImageEffect::GrayScale, -5, 0, 242)
+fn issue_7751_grayscale_inline_and_lazy_payload_preserve_equal_channels() {
+    // 원본 Print는 실사 효과다. 다른 효과의 기대 색을 구현식으로 만들어 고정하지 않는다.
+    check(ImageEffect::GrayScale, -5, 0, None)
 }
 #[test]
 fn issue_7751_distinct_tones_and_effects_have_distinct_keys() {

@@ -374,7 +374,8 @@ fn issue_7751_form_tables_preserve_outer_margins_and_prefix_alignment() {
     };
     let left = table(&page.root, 12, 18);
     let right = table(&page.root, 12, 43);
-    // 독립 Print path를96dpi로 환산. 양쪽99%대인 완료 페이지의 외곽을 보호한다.
+    // 독립 Print의 서식 clipping frame을96dpi로 환산한다. stroke 중심과 구분한다.
+    // 양쪽99%대인 완료 페이지의 논리 서식틀과 아래 내용·여백 관계를 함께 보호한다.
     near(left.bbox.x, 96.470667, "왼쪽 서식 외곽 x");
     near(left.bbox.y, 96.216, "왼쪽 서식 외곽 y");
     near(right.bbox.x, 526.509333, "오른쪽 서식 외곽 x");

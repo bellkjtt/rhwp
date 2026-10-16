@@ -965,7 +965,7 @@ impl PaintOp {
                 // 그림(`bin_data_id == 0`)은 되찾을 길이 없으므로 종전대로 싣는다.
                 let source_image_key = crate::paint::source_image_key(ctx.bin_data_epoch, image);
                 let omit_bytes = ctx.options.omit_image_bytes && source_image_key.is_some();
-                if let Some(payload) = resolved.as_deref() {
+                if let Some(payload) = resolved {
                     if omit_bytes {
                         let _ = write!(
                             buf,
@@ -1028,10 +1028,7 @@ impl PaintOp {
                     let _ = write!(buf, ",\"originalSizeHu\":[{},{}]", width, height);
                 }
                 let (effect, brightness, contrast) =
-                    crate::renderer::image_resolver::resolved_image_effects(
-                        image,
-                        resolved.as_deref(),
-                    );
+                    crate::renderer::image_resolver::resolved_image_effects(image, resolved);
                 let _ = write!(
                     buf,
                     ",\"effect\":{},\"brightness\":{},\"contrast\":{}",
