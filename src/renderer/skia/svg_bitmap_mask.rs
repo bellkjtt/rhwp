@@ -1,6 +1,8 @@
 //! 반복 비트맵의 마스크를 원래 표본 격자에서 합성한 뒤 축소한다.
 use resvg::{tiny_skia, usvg};
-use skia_safe::{AlphaType, ColorType, Data, FilterMode, ImageInfo, MipmapMode, SamplingOptions};
+use skia_safe::{
+    AlphaType, ColorType, Data, FilterMode, ImageInfo, MipmapMode, Paint, SamplingOptions,
+};
 
 fn contains_image(group: &usvg::Group) -> bool {
     group.children().iter().any(|node| match node {
@@ -68,12 +70,14 @@ pub(super) fn rasterize_before_reduction(
     )?;
     let mut surface = skia_safe::surfaces::raster_n32_premul((width as i32, height as i32))?;
     surface.canvas().clear(skia_safe::Color::TRANSPARENT);
+    let mut paint = Paint::default();
+    paint.set_anti_alias(true);
     surface.canvas().draw_image_rect_with_sampling_options(
         &image,
         None,
         skia_safe::Rect::from_wh(width as f32, height as f32),
         SamplingOptions::new(FilterMode::Linear, MipmapMode::None),
-        None,
+        &paint,
     );
     let mut options = skia_safe::png_encoder::Options::default();
     options.z_lib_level = 1;
