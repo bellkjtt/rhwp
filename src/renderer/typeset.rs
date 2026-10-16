@@ -5730,14 +5730,16 @@ fn compute_body_wide_top_reserve_for_para(
             Control::Picture(p) if !p.common.treat_as_char => &p.common,
             _ => continue,
         };
-        if (!matches!(common.text_wrap, TextWrap::TopAndBottom)
-            && !crate::renderer::float_placement::is_body_wide_square_table(
-                ctrl,
-                &layout.body_area,
-                dpi,
-            ))
-            || common.treat_as_char
-        {
+        if let Some(bottom) = crate::renderer::float_placement::stored_square_top_band(
+            para,
+            ctrl,
+            &layout.body_area,
+            dpi,
+        ) {
+            max_bottom = max_bottom.max(bottom - body_top);
+            continue;
+        }
+        if !matches!(common.text_wrap, TextWrap::TopAndBottom) || common.treat_as_char {
             continue;
         }
         let shape_w = crate::renderer::hwpunit_to_px(common.width as i32, dpi);

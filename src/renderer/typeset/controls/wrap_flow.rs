@@ -52,6 +52,24 @@ pub(in crate::renderer::typeset) fn place(
                 // 통째로 페이지 흐름에서 누락된다. 이 경우 wrap zone 을 종료하고
                 // 일반 텍스트 배치로 폴백한다 (LINE_SEG cs/sw 가 이미 wrap 형상을
                 // 인코딩하므로 layout 이 첫 줄을 표 옆에, 나머지를 표 아래에 렌더).
+                let profile = engine.profile.get();
+                if is_empty_para
+                    && (profile.hwp5_stored_pagination_layout() || profile.hwpx_stored_layout())
+                    && !profile.session_edited()
+                    && !engine.uniform_filler_ladder.get()
+                    && !st.vpos_ladder_dirty
+                    && crate::renderer::float_placement::stored_empty_line_closes_flow(
+                        paragraphs, para_idx,
+                    )
+                {
+                    // 저장 사다리가 닫는 빈 줄은 정상 fit/paint로 한 번 소비한다.
+                    st.register_following_wrap_anchor(
+                        para_idx,
+                        wrap_match::picture_anchor(paragraphs, band),
+                    );
+                    return false;
+                }
+
                 if let Some(absorption) = wrap_absorption::whole_paragraph(
                     para,
                     paragraphs,
