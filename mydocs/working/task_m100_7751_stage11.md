@@ -66,3 +66,33 @@ Visual Sweep/DPI/허용치/마스크는 바꾸지 않고 제품의 Print 출력�
 동일 코드의 Native/fresh WASM 전383쪽 TSV와 devel 대비 하락을 확인한다.
 Cargo의 집중 검사 실행이 함께 만든 실제 CLI를 source 파일 SHA와 바이트 SHA로
 동결했다. 실행 파일만 새 경로에 복사했으며 공용 target은 그대로 재사용한다.
+
+## 전383쪽 결과와 재검토
+
+- Native 최저93.07066%, fresh WASM 최저92.98523%, 양쪽383쪽/누락0/90% 미만0.
+- 그러나 devel 대비0.01%p 하락은 Native8쪽, WASM8쪽이다. 공통7쪽과
+  Native177/WASM205를 포함한9쪽을 별도로 분석했다. PR 생성·승인·통합은 보류한다.
+- 이9쪽의 기존9단계 PNG와 현재 PNG에서 물리 종이 안쪽의 변경 픽셀은0개다.
+  예를 들어57쪽의 content union은105017→104167로850 줄었다.
+  종이 밖1열의 제거가 매칭되는 내용 픽셀 분모를 줄였음을 확인했다. 기준을 완화하지 않는다.
+- Native 전체 PDF raster383쪽을 SHA·96dpi·thinlinemode=shape로 고정해 WASM에서
+  재사용했다. 글꼴 catalog492faces의 실제 프로그램 hash를 모두 재검증한 뒤 재사용하고,
+  WASM PNG383쪽은 새2d08313b6 package로 전부 다시 출력했다. 과거 RHWP PNG는 재사용하지 않았다.
+  실제 명령·PDF PNG별 SHA·입력과 package SHA는 source_provenance.json에 보존했다.
+- 고정 devel 참조는fe5725dc3, 기존 기준 producer는552514f42다. 두 commit의
+  renderer/paint/parser/model/document_core source diff가 없음을 다시 확인했다.
+  실제 기준 producer SHA를fe로 바꾸어 표시하지 않았다.
+
+## 다음 원인 계층의 독립 관측
+
+한컴 PDF130쪽의 바탕쪽 JPEG 전체 폭은740px이고 Native 바탕쪽 그림은740.7867px다.
+같은 원본 그림을 자른 제목 부분은 PDF `(158.708,74.552,511.4467,74.0733)`px,
+Native `(158.84,74.6267,512.0267,74.0533)`px다. 물리/논리 종이 비율로 raster
+그림의 목적 사각형을 투영한 진단은 위치·크기를 독립 출력에 가깝게 했다.
+동적 제목 텍스트는 별도 GDI 원점을 사용하므로 함께 축소하지 않는다.
+
+이 진단의 비투영 대조군15쪽은 공식 Native PNG와 픽셀이 완전히 같았다.
+그림 목적 사각형만 바꾼 진단에서는 위9쪽의 devel 대비 하락이0.003%p 미만으로
+줄었고 다른 대표 경계를 악화하지 않았다. 이는 제품 검증을 대신하지 않는다.
+바탕쪽 raster 그림의 인쇄 기준 프레임을 공통 producer에서 명확히 하고,
+실제 Native/fresh WASM 전체 재검증을 다음 단계에서 수행한다.
