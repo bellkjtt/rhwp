@@ -1,7 +1,7 @@
 //! #7419: 저장 줄 없는 TAC 표의 셀·인라인 줄·이월 소유를 보호한다.
 //!
-//! 독립 한컴 Print와 Native/fresh WASM 11문서·15쪽 모두100%, 직접 확대 판독:
-//! mydocs/working/task_m100_7419_stage3.md. 원본2개 검사의 고정 영역 선택을
+//! 독립 한컴 Print와 Native/fresh WASM 13문서·19쪽 모두100%, 직접 확대 판독:
+//! mydocs/working/task_m100_7419_stage3.md 및 stage4.md. 원본2개 검사의 고정 영역 선택을
 //! 실제 셀 소유·내용 보존·포함·순서 관계로 교체한다. 완료 쪽은 별도로±2px도 검사한다.
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -478,6 +478,19 @@ fn one_inline_wrapper_keeps_both_children_together_on_the_next_page() {
 }
 
 #[test]
+fn mixed_saved_and_reflowed_inline_children_keep_their_page_owners() {
+    // 실제 한컴 저장본에서 부모와 첫 자식의 LineSeg만 제거했다.
+    // 저장 줄이 있는 둘째 자식도 같은 호스트 프레임의 소유자여야 한다.
+    verify_split_nested("mixed-child-storage", [0, 1]);
+}
+
+#[test]
+fn reflowing_both_inline_children_preserves_the_mixed_storage_control() {
+    // 혼재 입력과 기하·내용이 같고 두 자식의 저장 줄만 모두 제거한 대조군이다.
+    verify_split_nested("no-child-storage", [0, 1]);
+}
+
+#[test]
 fn completed_pages_keep_independent_print_title_origins_with_two_px_tolerance() {
     // 독립 Print PDF의 span.origin을72pt→96dpi로 환산했다. 구현 상자는 재인용하지 않는다.
     // Stage1의 입력·PDF SHA, 양쪽100% TSV와 직접 판독이 선행 조건이다.
@@ -576,6 +589,20 @@ fn completed_pages_keep_independent_print_title_origins_with_two_px_tolerance() 
                 ("후", 113.378550, 428.167155),
             ],
         ),
+        (
+            "mixed-child-storage",
+            vec![
+                ("첫", 134.327199, 154.882578),
+                ("후", 113.378550, 281.924703),
+            ],
+        ),
+        (
+            "no-child-storage",
+            vec![
+                ("첫", 134.327199, 154.882578),
+                ("후", 113.378550, 281.924703),
+            ],
+        ),
     ] {
         let outputs = export(name, "export-svg", "svg");
         assert_eq!(outputs.len(), 2);
@@ -583,7 +610,10 @@ fn completed_pages_keep_independent_print_title_origins_with_two_px_tolerance() 
             ("첫", 117.216471, 214.883586),
             ("둘", 117.216471, 293.284892),
         ];
-        if name == "partial-nested-width-wrap" {
+        if matches!(
+            name,
+            "partial-nested-width-wrap" | "mixed-child-storage" | "no-child-storage"
+        ) {
             first_page.push(("첫", 120.894480, 327.205465));
         }
         assert_title_origins(&outputs[0], &first_page, name);
