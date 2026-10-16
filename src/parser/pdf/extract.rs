@@ -39,7 +39,7 @@ pub(super) fn extract(
             "invalid page dimensions",
         ));
     }
-    let spans = checked(pdf, pdf.extract_spans(page))?;
+    let spans = checked(pdf, pdf.extract_painted_spans(page))?;
     let paths = checked(pdf, pdf.extract_paths(page))?;
     for path in &paths {
         budget.path_operations = budget
@@ -99,7 +99,11 @@ pub(super) fn extract(
         return Err(PdfImportError::budget("page image count exceeds 32"));
     }
     let mut images = Vec::with_capacity(handles.len());
+    let mut image_orders = Vec::with_capacity(handles.len());
     for handle in handles {
+        if handle.opacity == 0.0 {
+            continue;
+        }
         let Some(visible) = handle.clip.visible_bounds(handle.bbox).map_err(|_| {
             PdfImportError::new(
                 "PDF_IMAGE_UNSUPPORTED",
@@ -129,15 +133,26 @@ pub(super) fn extract(
             ),
             other => PdfImportError::backend(other),
         })?;
-        if image.width() != handle.width || image.height() != handle.height {
-            return Err(PdfImportError::new(
-                "PDF_IMAGE_UNSUPPORTED",
-                "decoded image dimensions differ from declaration",
-            ));
+        // Handle decode validates the codec's declared dimensions before mask
+        // composition. A higher-resolution mask may then increase the bitmap
+        // resolution without changing CTM/visible bounds. Account those pixels
+        // as well; a 2x2 colour image must not hide a large alpha plane.
+        let decoded_pixels = u64::from(image.width()) * u64::from(image.height());
+        if decoded_pixels > pixels {
+            budget.image_pixels = budget
+                .image_pixels
+                .checked_add(decoded_pixels - pixels)
+                .ok_or_else(|| PdfImportError::budget("composited image pixel count overflow"))?;
+            if decoded_pixels > 16_000_000 || budget.image_pixels > MAX_DOCUMENT_IMAGE_PIXELS {
+                return Err(PdfImportError::budget(
+                    "composited image pixel budget exceeded",
+                ));
+            }
         }
         // Ownership inference and lowering consume the same visible bounds.
         // Keep the full bitmap and CTM so lowering can preserve an editable crop.
         image.set_bbox(visible);
+        image_orders.push(handle.source_order.clone());
         images.push(image);
     }
     let detection = table_detection::detect_ruled_tables(&spans, &paths, &images, media_box)
@@ -175,6 +190,7 @@ pub(super) fn extract(
         media_box,
         spans,
         images,
+        image_orders,
         paths,
         snapshot: json!({"tableDetection": detection, "recognition": recognition}),
     })

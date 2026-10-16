@@ -14,6 +14,9 @@ use std::borrow::Cow;
 use std::cmp::min;
 use std::path::Path;
 
+#[path = "image_mask_limited.rs"]
+mod image_mask_limited;
+
 /// A PDF image with metadata and pixel data.
 ///
 /// Represents an image extracted from a PDF, including dimensions,
@@ -101,6 +104,66 @@ impl PdfImage {
             samples_are_raw: true,
             decode_folded_in: false,
         }
+    }
+
+    fn apply_opacity(
+        &mut self,
+        opacity: f32,
+        budget: &crate::import_limits::ImportBudget,
+    ) -> Result<()> {
+        if let ImageData::Raw {
+            pixels,
+            format: PixelFormat::RGBA,
+        } = &mut self.data
+        {
+            for row in pixels.chunks_mut(self.width as usize * 4) {
+                budget.check()?;
+                for p in row.chunks_exact_mut(4) {
+                    p[3] = (f32::from(p[3]) * opacity).round() as u8;
+                }
+            }
+            return Ok(());
+        }
+        let rgb: Cow<'_, [u8]> = match &self.data {
+            ImageData::Raw {
+                pixels,
+                format: PixelFormat::RGB,
+            } if self.bits_per_component == 8 => Cow::Borrowed(pixels),
+            ImageData::Jpeg(_) => Cow::Owned(
+                Self::into_rgb_with_budget(self.decode_jpeg_with_budget(budget)?, Some(budget))?
+                    .into_raw(),
+            ),
+            ImageData::Raw { pixels, format } if self.bits_per_component == 8 => Cow::Owned(
+                self.raw_rgb_with_budget(pixels, *format, budget)?
+                    .into_raw(),
+            ),
+            _ => return Err(Error::Unsupported("limited image opacity sample format".into())),
+        };
+        let count = (self.width as usize)
+            .checked_mul(self.height as usize)
+            .ok_or_else(|| budget.reject("image opacity geometry"))?;
+        if rgb.len() != count * 3 {
+            return Err(Error::Image("invalid RGB opacity samples".into()));
+        }
+        let mut pixels = sample_buffer(
+            count
+                .checked_mul(4)
+                .ok_or_else(|| budget.reject("image opacity bytes"))?,
+            Some(budget),
+        )?;
+        for row in rgb.chunks(self.width as usize * 3) {
+            budget.check()?;
+            for c in row.chunks_exact(3) {
+                pixels.extend_from_slice(&[c[0], c[1], c[2], (opacity * 255.0).round() as u8]);
+            }
+        }
+        self.data = ImageData::Raw {
+            pixels,
+            format: PixelFormat::RGBA,
+        };
+        self.bits_per_component = 8;
+        self.color_space = ColorSpace::DeviceRGB;
+        Ok(())
     }
 
     /// Whether the stored samples are still in the image's raw sample space
@@ -397,16 +460,44 @@ impl PdfImage {
         }
         // Includes pixel decode, conversion and temporary RGB output. This is
         // accounted work, not a promise about the codec's private scratch heap.
-        budget.charge_decoded(
-            raw_size
-                .checked_mul(3)
-                .ok_or_else(|| budget.reject("image work overflow"))?,
-        )?;
+        if self.borrowed_png_samples().is_none() {
+            budget.charge_decoded(
+                raw_size
+                    .checked_mul(3)
+                    .ok_or_else(|| budget.reject("image work overflow"))?,
+            )?;
+        }
         let mut buffer = budget.output();
         let result = self.encode_png(&mut buffer, Some(budget));
         budget.check()?;
         result?;
         Ok(buffer.finish())
+    }
+
+    // This result is consumed by both budget accounting and encoding. Already
+    // decoded samples need no image-sized decode/conversion scratch: PNG feeds
+    // borrowed rows into the audited compressor and bounded output writer.
+    fn borrowed_png_samples(&self) -> Option<(&[u8], usize)> {
+        let ImageData::Raw { pixels, format } = &self.data else {
+            return None;
+        };
+        if self.bits_per_component != 8 || self.ccitt_params.is_some() {
+            return None;
+        }
+        let channels = match format {
+            PixelFormat::RGBA => 4,
+            PixelFormat::RGB => 3,
+            PixelFormat::Grayscale
+                if matches!(self.color_space, ColorSpace::DeviceGray | ColorSpace::CalGray) =>
+            {
+                1
+            },
+            _ => return None,
+        };
+        let size = (self.width as usize)
+            .checked_mul(self.height as usize)?
+            .checked_mul(channels)?;
+        (pixels.len() == size).then_some((pixels, channels))
     }
 
     fn encode_png(
@@ -442,6 +533,15 @@ impl PdfImage {
             .map_err(|e| Error::Encode(format!("Failed to encode PNG: {}", e)))
         };
 
+        if let Some((pixels, channels)) = self.borrowed_png_samples() {
+            let color = match channels {
+                1 => image::ColorType::L8,
+                3 => image::ColorType::Rgb8,
+                4 => image::ColorType::Rgba8,
+                _ => unreachable!("validated borrowed PNG samples"),
+            };
+            return write_pixels(pixels, color.into());
+        }
         match &self.data {
             ImageData::Raw { pixels, format } => {
                 let expected_gray = (self.width as usize)
@@ -456,7 +556,12 @@ impl PdfImage {
                         && self.ccitt_params.is_some()
                 });
 
-                if ccitt_budget.is_none()
+                if *format == PixelFormat::RGBA && self.bits_per_component == 8 {
+                    if expected_gray.checked_mul(4) != Some(pixels.len()) {
+                        return Err(Error::Image("invalid RGBA image length".into()));
+                    }
+                    write_pixels(pixels, image::ColorType::Rgba8.into())?;
+                } else if ccitt_budget.is_none()
                     && *format == PixelFormat::Grayscale
                     && matches!(self.color_space, ColorSpace::DeviceGray | ColorSpace::CalGray)
                     && pixels.len() == expected_gray
@@ -536,6 +641,11 @@ impl PdfImage {
         let mut rgb = sample_buffer(size, Some(budget))?;
         match format {
             PixelFormat::RGB => rgb.extend_from_slice(pixels),
+            PixelFormat::RGBA => {
+                for pixel in pixels.chunks_exact(4) {
+                    rgb.extend_from_slice(&pixel[..3]);
+                }
+            },
             PixelFormat::Grayscale => {
                 for &gray in pixels {
                     rgb.extend_from_slice(&[gray; 3]);
@@ -784,6 +894,11 @@ impl PdfImage {
                     .map(image::DynamicImage::ImageLuma8)
                 } else {
                     match (format, self.color_space) {
+                        (PixelFormat::RGBA, _) => {
+                            image::RgbaImage::from_raw(self.width, self.height, pixels.clone())
+                                .ok_or_else(|| Error::Decode("Invalid RGBA dimensions".into()))
+                                .map(image::DynamicImage::ImageRgba8)
+                        },
                         (PixelFormat::RGB, ColorSpace::DeviceRGB) => {
                             image::ImageBuffer::<image::Rgb<u8>, Vec<u8>>::from_raw(
                                 self.width,
@@ -812,6 +927,7 @@ impl PdfImage {
                                     self.build_icc_transform().as_ref(),
                                 ),
                                 PixelFormat::RGB => pixels.clone(),
+                                PixelFormat::RGBA => unreachable!("handled above"),
                             };
                             image::ImageBuffer::<image::Rgb<u8>, Vec<u8>>::from_raw(
                                 self.width,
@@ -838,7 +954,7 @@ pub enum ImageData {
     Raw {
         /// Raw pixel bytes.
         pixels: Vec<u8>,
-        /// Pixel format (RGB, Grayscale, CMYK).
+        /// Pixel format (RGB, RGBA, Grayscale, CMYK).
         format: PixelFormat,
     },
 }
@@ -905,6 +1021,8 @@ impl ColorSpace {
 pub enum PixelFormat {
     /// RGB format (3 bytes per pixel).
     RGB,
+    /// RGB with straight alpha (4 bytes per pixel), after explicit masking.
+    RGBA,
     /// Grayscale format (1 byte per pixel).
     Grayscale,
     /// CMYK format (4 bytes per pixel).
@@ -917,6 +1035,7 @@ impl PixelFormat {
         match self {
             PixelFormat::Grayscale => 1,
             PixelFormat::RGB => 3,
+            PixelFormat::RGBA => 4,
             PixelFormat::CMYK => 4,
         }
     }
@@ -1316,7 +1435,10 @@ pub fn extract_image_from_xobject_at(
             .and_then(|n| n.checked_mul(8))
             .filter(|&n| n > 0 && n <= budget.limits.stream_bytes)
             .ok_or_else(|| budget.reject("image extraction buffer"))?;
-        budget.charge_decoded(worst_buffer)?;
+        // Geometry preflight is not an allocation. Bounded decoders, unpackers
+        // and colour conversion reserve their actual buffers below; do not
+        // additionally charge a fictitious width*height*8 scratch plane.
+        let _ = worst_buffer;
     }
 
     let sample_depth = dict
@@ -2382,6 +2504,9 @@ fn expand_indexed_to_rgb_with_context(
                 continue;
             }
             match base_fmt {
+                PixelFormat::RGBA => {
+                    return Err(Error::Image("Indexed base cannot contain alpha".into()));
+                },
                 PixelFormat::RGB => out.extend_from_slice(&palette[off..off + 3]),
                 PixelFormat::Grayscale => {
                     let g = palette[off];
@@ -2784,6 +2909,8 @@ fn icc_matches_format(
 ) -> Option<&crate::color::Transform> {
     let t = transform?;
     let needed = match format {
+        // Mask composition has already converted colour samples to RGB.
+        PixelFormat::RGBA => return None,
         PixelFormat::RGB => 3,
         PixelFormat::Grayscale => 1,
         PixelFormat::CMYK => 4,
@@ -2806,6 +2933,12 @@ fn save_raw_as_png(
     use image::{ImageBuffer, ImageFormat, Luma, Rgb};
 
     match format {
+        PixelFormat::RGBA => {
+            let img = image::RgbaImage::from_raw(width, height, pixels.to_vec())
+                .ok_or_else(|| Error::Image("Invalid RGBA image dimensions".into()))?;
+            img.save_with_format(path, ImageFormat::Png)
+                .map_err(|e| Error::Image(format!("Failed to save PNG: {e}")))
+        },
         PixelFormat::RGB => {
             // RGB source through an ICC profile (Adobe RGB, ProPhoto, wide-
             // gamut cameras) → convert to sRGB before writing. With no
@@ -2860,6 +2993,9 @@ fn save_raw_as_jpeg(
     use image::{ImageBuffer, ImageFormat, Luma, Rgb};
 
     match format {
+        PixelFormat::RGBA => Err(Error::Unsupported(
+            "JPEG cannot preserve image transparency; save as PNG".into(),
+        )),
         PixelFormat::RGB => {
             let rgb = match icc_matches_format(transform, format) {
                 Some(t) => t.convert_rgb_buffer(pixels),
@@ -3941,6 +4077,10 @@ pub struct PdfImageHandle<'doc> {
     /// Zero-based index of this image among all images painted on the page,
     /// in content-stream paint order.
     pub paint_order: usize,
+    /// Lexicographic operator invocation path for interleaving paths/images.
+    pub source_order: Vec<usize>,
+    /// Nonstroking alpha constant at this image invocation.
+    pub opacity: f32,
     /// Axis-aligned bounding box of this image in PDF user space, computed
     /// during Phase 1 by applying the current transformation matrix to the
     /// unit rectangle `[0,0,1,1]`.
@@ -3989,38 +4129,56 @@ impl<'doc> PdfImageHandle<'doc> {
             PdfImageSource::Inline { stream_object, .. } => (stream_object, None),
         };
 
-        if self.doc.import_budget().is_some() {
-            // The limited handle path imports the image as an independent IR
-            // picture. Unlike the renderer, it has no mask compositor or
-            // current nonstroking colour. Never return the base pixels while
-            // silently dropping Table 89's transparency/stencil semantics.
-            // The legacy extractor remains available to renderer callers that
-            // apply these masks themselves.
-            let dict = obj
-                .as_dict()
-                .ok_or_else(|| Error::Image("invalid image object".into()))?;
-            for key in ["Mask", "SMask", "ImageMask"] {
-                if let Some(value) = dict.get(key) {
-                    let value = resolve_image_object(Some(self.doc), value)?;
-                    let absent = matches!(*value, crate::object::Object::Null)
-                        || (key == "ImageMask" && value.as_bool() == Some(false));
-                    if !absent {
-                        return Err(Error::Unsupported(format!("limited image import /{key}")));
-                    }
-                }
-            }
-        }
-
-        // Pass the active resource ColorSpace map so a resource-name
-        // `/ColorSpace` (e.g. `/CS0`) resolves the same way the renderer does.
-        // `None` when empty preserves the original decode path for the common
-        // case where the image's colour space needs no resource lookup.
         let cs_map = if self.color_space_resources.is_empty() {
             None
         } else {
             Some(&self.color_space_resources)
         };
+        let mask = if let Some(budget) = self.doc.import_budget() {
+            // The limited handle path imports the image as an independent IR
+            // picture. Compose image alpha, while standalone stencils still
+            // require the graphics state's current nonstroking colour.
+            // Never return the base pixels while silently dropping a mask.
+            // The legacy extractor remains available to renderer callers that
+            // apply these masks themselves.
+            let dict = obj
+                .as_dict()
+                .ok_or_else(|| Error::Image("invalid image object".into()))?;
+            if let Some(value) = dict.get("ImageMask") {
+                let value = resolve_image_object(Some(self.doc), value)?;
+                let absent =
+                    matches!(*value, crate::object::Object::Null) || value.as_bool() == Some(false);
+                if !absent {
+                    return Err(Error::Unsupported("limited image import /ImageMask".into()));
+                }
+            }
+            image_mask_limited::Mask::read(self.doc, dict, cs_map, budget)?
+        } else {
+            None
+        };
+
+        // Pass the active resource ColorSpace map so a resource-name
+        // `/ColorSpace` (e.g. `/CS0`) resolves the same way the renderer does.
+        // `None` when empty preserves the original decode path for the common
+        // case where the image's colour space needs no resource lookup.
         let mut image = extract_image_from_xobject(Some(self.doc), obj, obj_ref, cs_map)?;
+        // Validate codec output against the source declaration before a mask
+        // compositor may increase the bitmap resolution in the same unit square.
+        if self.doc.import_budget().is_some()
+            && (image.width != self.width || image.height != self.height)
+        {
+            return Err(Error::Unsupported(
+                "decoded image dimensions differ from declaration".into(),
+            ));
+        }
+        if let Some(mask) = mask {
+            mask.apply(&mut image, self.doc.import_budget().expect("bounded mask"))?;
+        }
+        if self.opacity < 1.0 {
+            if let Some(budget) = self.doc.import_budget() {
+                image.apply_opacity(self.opacity, budget)?;
+            }
+        }
         self.doc.check_import_budget()?;
 
         // Use pre-computed bbox and rotation from Phase 1 — no need to call
@@ -4316,6 +4474,8 @@ pub(crate) fn image_handle_from_xobject<'doc>(
         filter_chain,
         is_inline: false,
         paint_order,
+        source_order: Vec::new(),
+        opacity: 1.0,
         bbox,
         clip: super::image_clip::ImageClip::Unbounded,
         rotation_degrees,
@@ -4402,6 +4562,8 @@ pub(crate) fn image_handle_from_inline<'doc>(
         filter_chain,
         is_inline: true,
         paint_order,
+        source_order: Vec::new(),
+        opacity: 1.0,
         bbox,
         clip: super::image_clip::ImageClip::Unbounded,
         rotation_degrees,

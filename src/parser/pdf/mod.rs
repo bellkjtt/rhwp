@@ -1,10 +1,11 @@
 //! Experimental PDF frontend. Emits common IR without serializing/reparsing HWPX.
 //!
-//! `pdf-import` is opt-in. The internal backend limits decoded outputs, but full
-//! codec/font/cache allocation bounds are not yet proven. Do not expose this
-//! frontend to untrusted inputs in a release.
+//! `pdf-import` is enabled by default and can be excluded with
+//! `--no-default-features`. The internal backend limits decoded outputs, but
+//! full codec/font/cache allocation bounds are not yet proven.
 mod extract;
 mod lowering;
+mod path_paint;
 mod recognition;
 mod structured_lowering;
 mod table_detection;
@@ -108,6 +109,7 @@ struct ExtractedPage {
     media_box: (f32, f32, f32, f32),
     spans: Vec<TextSpan>,
     images: Vec<PdfImage>,
+    image_orders: Vec<Vec<usize>>,
     paths: Vec<PathContent>,
     // Internal structural evidence only, dropped after each page's lowering.
     snapshot: Value,
@@ -206,7 +208,7 @@ pub fn parse_pdf_with_options(
         let extra = page
             .spans
             .len()
-            .checked_add(cells * 3 + tables.len() * 2 + 1)
+            .checked_add(cells * 3 + tables.len() * 2 + 1 + page.images.len() + page.paths.len())
             .ok_or_else(|| PdfImportError::budget("style count overflow"))?;
         for size in [
             document.doc_info.para_shapes.len(),
@@ -269,7 +271,7 @@ pub fn parse_pdf_with_options(
             paragraph_policy: "observed-lines; authored paragraph boundaries are not recovered",
             parser_allocation_bounds_proven: false,
             warnings: vec![
-                "Experimental opt-in frontend; upstream allocation bounds remain unproven",
+                "Experimental PDF frontend; upstream allocation bounds remain unproven",
                 "Clipping, transparency, embedded fonts and complex paint are not fully reconstructed",
                 "Deferred table families retain positional content; inspect page diagnostics",
             ],
