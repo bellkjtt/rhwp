@@ -190,6 +190,15 @@ async function main() {
           const doc = globalThis.sweepDocument, canvas = document.getElementById('page');
           for (const page of pages) doc.renderPageToCanvasFilteredWithProfile(page - 1, canvas, scale, 'all', 'print');
           const requested = new Set();
+          if (typeof doc.getMetafileFontRequests === 'function') {
+            for (const request of JSON.parse(doc.getMetafileFontRequests())) {
+              for (const family of request.families) {
+                if (fonts.some(record => record.families.some(name => name.toLowerCase() === family.toLowerCase()))) {
+                  requested.add(family.toLowerCase());
+                }
+              }
+            }
+          }
           for (const value of globalThis.sweepRequestedFonts) {
             const style = document.createElement('span').style; style.font = value;
             const chain = (style.fontFamily.match(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^,]+/g) || [])
