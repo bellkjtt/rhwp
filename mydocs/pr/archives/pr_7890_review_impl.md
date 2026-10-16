@@ -33,3 +33,32 @@
 - `c533d85d03499faab411fe41eb64cd7d6a3b34f1`
 - `1eade8b0dc6a82d8d4d1874868389bf5ec89276d`
 - `6086d76e1e00ad078c769fc6e9b5d5faadf769b3`
+
+## 실제 적용 결과
+
+- 원 `9df25c8f22985486fb0e045f693b5663e8f90609` → 통합 `924da30d8848a33a28c361f349f97bb2a3285c2a` (applied).
+- 원 `447cb32e896a380f9c61e328b89a35e67dfbdba3` → 통합 `1c311b8ac03ef9ff3d91d66941af6a9123f7cada` (applied).
+- 원 `7cf3f14ddd80d991bf75d6fbe006d4451547c3b4` → 통합 `bd47a160c6e2425f93b41cbd0f378e2e044ecaf9` (applied).
+- 원 `88cff3560f5052a446fb33b358b3c3f2e32f9f93` → 통합 `66f2c9da3bd1e0f605c8e42fa077596d9b641901` (applied).
+- 원 `084964c5dc54884834d56105ff4429a74c5ac13e` → 통합 `ae4ad65828a720eca2a51726bcbb0d6e73c53147` (applied).
+- 원 `b827287a5a7fdb9bf1968e880148763e48d13772` → 통합 `8684212b359e538eb6d16b8ba0ad5bca02a61df3` (applied).
+- 원 `65adfe356305eca0eac59b73e5a696c5a52758f5` → 통합 `53fad1ef327aed56e18ed4c009a31db67a0f6385` (applied).
+- 원 `fe3cbd62ce2b49bc4ba10e27af132c338133f3b8` → 통합 `6d4a146e6e9b9a10d0975e90f022fc25e49bcfc7` (applied).
+- 원 `7c4ae0e5383a55168b9cb689f35d247222bba24e` → 통합 `f8aa165d8245ff4e548869e4b362f3a34d77c851` (applied).
+- 원 `dc6ce6fee23caebf03605496b49084ab47232795` → 통합 `c857fffa6c27d06ecd111d685bcd0b6e03c9dac1` (applied).
+- 원 `4e2741f70c4e5fe232b6fe4b5985a1b05a50e76a` → 통합 `c69e4df4322a5560d773151841f56f69f24744cc` (applied).
+- 원 `266117ee941cdccb48d4c039ac372b9a75ed1c6b` → 통합 `8887676a193c5ee9aec8166fed8320e5213874e0` (applied).
+- 원 `493819d8b67a9adac3f881635aa8fabf545e5dc0` → 통합 `6f0523df1ebef65d0e8ddfc5ecab687de6e93660` (applied).
+- 원 `ebb1bf918f9006ea7ef4b086018f6a4a988f1dc5` → 통합 `696ab603f4930ec1ac899ad6e0047e09a98420a4` (applied).
+- 원 `e0604f0d206d84aceebc600ac555704feeda6edb` → 통합 `b55e1396580047166dfc5ae9fbd92cad15753dbc` (applied).
+- 원 `f5892664440aa3e5a6d940882f3c1250cfc990af` → 통합 `cfce101094507e6c85ef60af51c8100a646b3600` (applied).
+- 원 `7f93f337c6a79719bdb14c261bc7eb2ae43a3719` → 통합 `8394eaf645d861427094c55e9f8d6a6aecdd3342` (applied).
+- 원 `f10c215725926f1550cd92ef4eededb3a668e42e` → 통합 `37dcf275ebf71ae920cd780ccd3bec459dac86c2` (applied).
+- 원 `4a53eacd8a77fc18b92470bf32b6809aa22ca6dd` → 통합 `f1850e72c78ab8eecfedb0061505f63dc9c901f9` (applied).
+- 원 `e743bbda044290bac21421c3252479560009b4c1` → 통합 `7daad4d49599f62a78016d133346d29fcaabcaed` (applied).
+- 원 `994e8a7835f22b6c0433d826c490dfb827532e42` → 통합 `d20c87bbdaa64b2939399504704d0d21dd61ced1` (applied).
+- 원 `c533d85d03499faab411fe41eb64cd7d6a3b34f1` → 통합 `56115aeeb9a6a400906eb20aa4222e2e99528c48` (applied).
+- 원 `1eade8b0dc6a82d8d4d1874868389bf5ec89276d` → 통합 `e2b8613de26cc65814f3fc5c0f81c1455671a0c3` (applied).
+- 원 `6086d76e1e00ad078c769fc6e9b5d5faadf769b3` → 통합 `76e6070a3f08cad10476e9b577dcdb1baf58eff8` (applied).
+
+[충돌·원 merge 해소 대조](../../working/task_m100_536_integration_review_stage1.md). 필수 검증은 진행 중이다.

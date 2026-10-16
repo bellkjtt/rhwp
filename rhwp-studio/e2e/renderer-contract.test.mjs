@@ -2182,9 +2182,6 @@ requireSnippet(
   /formDrawingReplayRejection\(op\)[\s\S]*?if \(rejection\)[\s\S]*?return;[\s\S]*?const drawing = op\.drawing![\s\S]*?for \(const primitive of drawing\.primitives\)[\s\S]*?const label = drawing\.label[\s\S]*?this\.drawStaticControlText[\s\S]*?x: label\.x, y: label\.baseline[\s\S]*?formObject:textReplayFailed/,
   'form replay should validate and consume producer drawing, preserve its label baseline, and reject failed text replay',
 );
-assertFootnoteMarkerBaselineReplay(CanvasKitLayerRendererRuntime);
-assert.doesNotMatch(extractSwitchCaseClusterBody(renderOpBody, 'footnoteMarker'), /baseline:\s*op\.bbox\.y/,
-  '각주 표식의 기준선은 쪽의 절대 y 좌표가 아닌 줄 내부 값이어야 한다');
 assert.doesNotMatch(renderFormObjectBody, /op\.(?:formType|caption|text)\b/,
   'form replay must not rederive geometry or display text from raw control fields');
 const formReplaySource = fs.readFileSync(path.join(canvaskitDirectory, 'form-replay.ts'), 'utf8');
@@ -2193,6 +2190,9 @@ requireSnippet(formReplaySource, /if \(!drawing\) return 'missingProducerDrawing
 requireSnippet(canvaskitSource,
   /private drawStaticControlText\([\s\S]*?this\.paragraphFonts\.source[\s\S]*?MakeFromFontProvider[\s\S]*?unresolvedCodepoints[\s\S]*?getAlphabeticBaseline/,
   'static labels should consume only prepared Paragraph fonts and reject missing native glyphs');
+assertFootnoteMarkerBaselineReplay(CanvasKitLayerRendererRuntime);
+assert.doesNotMatch(extractSwitchCaseClusterBody(renderOpBody, 'footnoteMarker'), /baseline:\s*op\.bbox\.y/,
+  '각주 표식의 기준선은 쪽의 절대 y 좌표가 아닌 줄 내부 값이어야 한다');
 for (const [label, body, baselinePattern] of [
   ['placeholder', renderPlaceholderBody, /baseline: Math\.max\(10, op\.bbox\.height \* 0\.65\)/],
 ]) {

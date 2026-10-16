@@ -266,3 +266,34 @@ fn native_centered_linear_gradient_preserves_two_sided_color_ramps() {
         assert!(side[2].saturating_sub(center[2]) > 100);
     }
 }
+
+#[test]
+fn native_linear_gradient_keeps_the_first_color_at_the_source_center() {
+    let renderer = SkiaLayerRenderer::new();
+    for center in [0, 50, 100] {
+        let mut source = gradient(0);
+        source.center_y = center;
+        let page = tree("rectangle", source, bounds());
+        assert_axial_vector_pdf(page.clone());
+        let pixels = renderer
+            .render_pixels_with_options(&page, RasterRenderOptions::default())
+            .unwrap();
+        let red_dominates = |y: usize| {
+            let offset = y * pixels.stride + 4 * 48;
+            pixels.bytes[offset] > pixels.bytes[offset + 2]
+        };
+        assert_eq!(
+            red_dominates(10),
+            center == 0,
+            "upper ramp, center={center}"
+        );
+        assert_eq!(
+            red_dominates(30),
+            center == 100,
+            "lower ramp, center={center}"
+        );
+        if center == 50 {
+            assert!(red_dominates(20), "the first color remains at the center");
+        }
+    }
+}

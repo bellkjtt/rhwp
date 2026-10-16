@@ -249,7 +249,6 @@ impl NativeEditor {
         text: &str,
     ) -> Result<NativeEditOutcome, NativeHostError> {
         self.check_edit_ready(expected_revision)?;
-        Self::check_body_text_span(&self.session.core, &self.selection)?;
         Self::validate_text(text)?;
         Self::validate_selection(&self.session.core, selection)?;
         let selection_after = Self::replacement_end(selection, text)?;

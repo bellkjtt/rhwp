@@ -632,6 +632,18 @@ test('SVG finite viewBox-to-destination mapping retains outline admission', () =
 });
 
 
+test('SVG mapping admission follows the explicit font em viewport', () => {
+  for (const [compatibilityWidth, emWidth, supported] of [[F32_MAX, 1, true], [1, F32_MAX, false]] as const) {
+    const op: LayerGlyphOutlineOp = svg();
+    op.bbox = { x: 0, y: 0, width: compatibilityWidth, height: 1 };
+    op.svgGlyph!.viewBox = { x: 0, y: 0, width: 0.001, height: 1 };
+    op.svgGlyph!.fontEmBox = { x: 0, y: 0, width: emWidth, height: 1 };
+    if (supported) expectAccepted(op);
+    else expectRejected(op);
+  }
+});
+
+
 function expectWholeRunWireSelection(candidate: LayerGlyphOutlineOp, supported: boolean) {
   const outline: LayerGlyphOutlineOp = {
     ...candidate,

@@ -1004,7 +1004,8 @@ fn collect_glyph_outline_reject_reasons(
         GlyphOutlinePayloadKind::SvgGlyph => match outline.svg_glyph.as_ref() {
             Some(svg_glyph)
                 if !svg_glyph.has_static_sanitized_contract()
-                    || !svg_glyph.has_portable_view_box_mapping(bbox) =>
+                    || !svg_glyph
+                        .has_portable_view_box_mapping(svg_glyph.font_em_box.unwrap_or(bbox)) =>
             {
                 reasons.insert(VariantRejectReason::UnsupportedSvgGlyph);
             }

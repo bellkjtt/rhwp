@@ -479,7 +479,7 @@ fn strict_stroke_rejects_finite_values_outside_f32() {
     .is_strict_subset());
 }
 
-fn strict_outline_tree() -> PageLayerTree {
+fn monochrome_selector_tree() -> PageLayerTree {
     let bounds = BoundingBox::new(0.0, 0.0, 24.0, 24.0);
     let style = TextStyle {
         font_family: "Test".to_string(),
@@ -576,7 +576,7 @@ fn strict_outline_tree() -> PageLayerTree {
 
 #[test]
 fn strict_outline_selector_keeps_text_fallback_when_geometry_exceeds_f32() {
-    let tree = strict_outline_tree();
+    let tree = monochrome_selector_tree();
     let options = TextVariantSelectionOptions::canvaskit_strict_outline();
     let reports = analyze_text_variant_selection(&tree, options);
     assert_eq!(reports.len(), 1);
@@ -627,6 +627,42 @@ fn strict_outline_selector_keeps_text_fallback_when_geometry_exceeds_f32() {
                 vec![VariantRejectReason::UnsupportedOutlinePayload],
                 "only the changed scalar should reject {field}: {value}"
             );
+        }
+    }
+}
+
+#[test]
+fn strict_outline_selector_obeys_the_portable_command_limit() {
+    let mut tree = monochrome_selector_tree();
+    for (command_count, expected) in [
+        (4096, TextVariantKind::GlyphOutline),
+        (4097, TextVariantKind::TextRun),
+    ] {
+        let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
+            unreachable!("leaf fixture")
+        };
+        let PaintOp::GlyphOutline { outline, .. } = &mut ops[1] else {
+            unreachable!("outline fixture")
+        };
+        outline.paths[0]
+            .commands
+            .resize(command_count, PathCommand::LineTo(0.0, 0.0));
+        let reports = analyze_text_variant_selection(
+            &tree,
+            TextVariantSelectionOptions::canvaskit_strict_outline(),
+        );
+        assert_eq!(reports.len(), 1);
+        let report = &reports[0];
+        assert_eq!(report.selected_variant_kind, Some(expected));
+        assert_eq!(report.fallback_required, command_count > 4096);
+        if command_count > 4096 {
+            assert_eq!(report.rejected_variants.len(), 1);
+            assert_eq!(
+                report.rejected_variants[0].reasons,
+                vec![VariantRejectReason::UnsupportedOutlinePayload]
+            );
+        } else {
+            assert!(report.rejected_variants.is_empty());
         }
     }
 }
@@ -686,7 +722,7 @@ fn bitmap_and_svg_bounds_stay_positive_in_f32_replay_space() {
 
 #[test]
 fn shared_svg_selector_preserves_the_required_fallback_font_for_invalid_destination() {
-    let mut tree = strict_outline_tree();
+    let mut tree = monochrome_selector_tree();
     let svg_ref = tree
         .resources
         .intern_svg_fragment("<path d=\"M0 0H10V10Z\"/>");
@@ -763,7 +799,7 @@ fn shared_bitmap_and_svg_selector_preserves_fonts_when_decimal_wire_extents_coll
         ),
     ] {
         for value in values {
-            let mut tree = strict_outline_tree();
+            let mut tree = monochrome_selector_tree();
             let svg_ref = tree
                 .resources
                 .intern_svg_fragment("<path d=\"M0 0H10V10Z\"/>");
@@ -840,7 +876,7 @@ fn bitmap_and_svg_resource_keys_use_full_fixed_decimals_at_large_f32_values() {
             "340282346638528859811704183484516925440",
         ),
     ] {
-        let mut tree = strict_outline_tree();
+        let mut tree = monochrome_selector_tree();
         let svg_ref = tree
             .resources
             .intern_svg_fragment("<path d=\"M0 0H10V10Z\"/>");
@@ -887,7 +923,7 @@ fn bitmap_and_svg_resource_keys_use_full_fixed_decimals_at_large_f32_values() {
 
 #[test]
 fn bitmap_and_svg_resource_keys_preserve_the_fixed_decimal_negative_zero_sign() {
-    let mut tree = strict_outline_tree();
+    let mut tree = monochrome_selector_tree();
     let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
         unreachable!()
     };
@@ -953,7 +989,7 @@ fn shared_svg_selector_keeps_fallback_fonts_when_view_box_mapping_overflows() {
             BoundingBox::new(0.0, 0.0, max * 0.001_25, 1.0),
         ),
     ] {
-        let mut tree = strict_outline_tree();
+        let mut tree = monochrome_selector_tree();
         let svg_ref = tree
             .resources
             .intern_svg_fragment("<path d=\"M0 0H10V10Z\"/>");
@@ -992,6 +1028,104 @@ fn shared_svg_selector_keeps_fallback_fonts_when_view_box_mapping_overflows() {
 }
 
 #[test]
+fn shared_svg_selector_uses_the_explicit_font_em_destination() {
+    let mut tree = monochrome_selector_tree();
+    let svg_ref = tree
+        .resources
+        .intern_svg_fragment("<path d=\"M0 0H10V10Z\"/>");
+    let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
+        unreachable!()
+    };
+    let PaintOp::GlyphOutline { bbox, outline } = &mut ops[1] else {
+        unreachable!()
+    };
+    *bbox = BoundingBox::new(1e100, 0.0, 8.0, 8.0);
+    outline.payload_kind = GlyphOutlinePayloadKind::SvgGlyph;
+    outline.paths.clear();
+    outline.svg_glyph = Some(SvgGlyphPayload {
+        svg_ref,
+        font_em_box: Some(BoundingBox::new(0.0, 0.0, 8.0, 8.0)),
+        ..svg()
+    });
+    let options = TextVariantSelectionOptions {
+        allow_svg_glyph: true,
+        ..TextVariantSelectionOptions::canvaskit_strict_outline()
+    };
+    assert_eq!(
+        analyze_text_variant_selection(&tree, options)[0].selected_variant_kind,
+        Some(TextVariantKind::GlyphOutline)
+    );
+    assert!(
+        analyze_canvaskit_replay_plan(&tree, CanvasKitReplayMode::Default)
+            .required_font_families
+            .is_empty()
+    );
+    for invalid in [
+        BoundingBox::new(0.0, 0.0, 1e-100, 8.0),
+        BoundingBox::new(1.0, 0.0, 2f64.powi(-25), 8.0),
+    ] {
+        let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
+            unreachable!()
+        };
+        let PaintOp::GlyphOutline { outline, .. } = &mut ops[1] else {
+            unreachable!()
+        };
+        outline.svg_glyph.as_mut().unwrap().font_em_box = Some(invalid);
+        assert_eq!(
+            analyze_text_variant_selection(&tree, options)[0].selected_variant_kind,
+            Some(TextVariantKind::TextRun)
+        );
+        assert_eq!(
+            analyze_canvaskit_replay_plan(&tree, CanvasKitReplayMode::Default)
+                .required_font_families,
+            ["Test"]
+        );
+    }
+}
+
+#[test]
+fn shared_svg_mapping_checks_the_explicit_font_em_viewport() {
+    for (compatibility_width, em_width, expected) in [
+        (f64::from(f32::MAX), 1.0, TextVariantKind::GlyphOutline),
+        (1.0, f64::from(f32::MAX), TextVariantKind::TextRun),
+    ] {
+        let mut tree = monochrome_selector_tree();
+        let svg_ref = tree
+            .resources
+            .intern_svg_fragment("<path d=\"M0 0H10V10Z\"/>");
+        let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
+            unreachable!()
+        };
+        let PaintOp::GlyphOutline { bbox, outline } = &mut ops[1] else {
+            unreachable!()
+        };
+        *bbox = BoundingBox::new(0.0, 0.0, compatibility_width, 1.0);
+        outline.payload_kind = GlyphOutlinePayloadKind::SvgGlyph;
+        outline.paths.clear();
+        outline.svg_glyph = Some(SvgGlyphPayload {
+            svg_ref,
+            view_box: BoundingBox::new(0.0, 0.0, 0.001, 1.0),
+            font_em_box: Some(BoundingBox::new(0.0, 0.0, em_width, 1.0)),
+            ..svg()
+        });
+        let options = TextVariantSelectionOptions {
+            allow_svg_glyph: true,
+            ..TextVariantSelectionOptions::canvaskit_strict_outline()
+        };
+        assert_eq!(
+            analyze_text_variant_selection(&tree, options)[0].selected_variant_kind,
+            Some(expected)
+        );
+        let plan = analyze_canvaskit_replay_plan(&tree, CanvasKitReplayMode::Default);
+        assert_eq!(
+            plan.required_font_families.is_empty(),
+            expected == TextVariantKind::GlyphOutline
+        );
+        assert!(plan.required_font_families_complete);
+    }
+}
+
+#[test]
 fn shared_selector_preserves_fonts_when_positive_six_decimal_scalars_disappear() {
     for family in ["stroke", "radial"] {
         for (value, admitted) in [
@@ -999,7 +1133,7 @@ fn shared_selector_preserves_fonts_when_positive_six_decimal_scalars_disappear()
             (1e-7, false),
             (1e-6, true),
         ] {
-            let mut tree = strict_outline_tree();
+            let mut tree = monochrome_selector_tree();
             let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
                 unreachable!()
             };
@@ -1072,7 +1206,7 @@ fn shared_selector_requires_full_circle_sweep_on_the_decimal_wire() {
         (0.000_000_499_8, 360.000_000_500_2, false),
         (0.000_001, 360.000_001, true),
     ] {
-        let mut tree = strict_outline_tree();
+        let mut tree = monochrome_selector_tree();
         let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
             unreachable!()
         };
@@ -1112,42 +1246,6 @@ fn shared_selector_requires_full_circle_sweep_on_the_decimal_wire() {
         assert_eq!(plan.required_font_families.is_empty(), admitted);
         if !admitted {
             assert_eq!(plan.required_font_families, ["Test"]);
-        }
-    }
-}
-
-#[test]
-fn strict_outline_selector_obeys_the_portable_command_limit() {
-    let mut tree = strict_outline_tree();
-    for (command_count, expected) in [
-        (4096, TextVariantKind::GlyphOutline),
-        (4097, TextVariantKind::TextRun),
-    ] {
-        let LayerNodeKind::Leaf { ops } = &mut tree.root.kind else {
-            unreachable!("leaf fixture")
-        };
-        let PaintOp::GlyphOutline { outline, .. } = &mut ops[1] else {
-            unreachable!("outline fixture")
-        };
-        outline.paths[0]
-            .commands
-            .resize(command_count, PathCommand::LineTo(0.0, 0.0));
-        let reports = analyze_text_variant_selection(
-            &tree,
-            TextVariantSelectionOptions::canvaskit_strict_outline(),
-        );
-        assert_eq!(reports.len(), 1);
-        let report = &reports[0];
-        assert_eq!(report.selected_variant_kind, Some(expected));
-        assert_eq!(report.fallback_required, command_count > 4096);
-        if command_count > 4096 {
-            assert_eq!(report.rejected_variants.len(), 1);
-            assert_eq!(
-                report.rejected_variants[0].reasons,
-                vec![VariantRejectReason::UnsupportedOutlinePayload]
-            );
-        } else {
-            assert!(report.rejected_variants.is_empty());
         }
     }
 }

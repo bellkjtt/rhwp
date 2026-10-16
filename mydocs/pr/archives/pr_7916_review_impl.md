@@ -12,3 +12,11 @@
 - `324b330f50a1bffb2596e5fb14ee0b6a29656662`
 - `cb1bc8899e1bf4fbb39446ddb0a523c1d866546f`
 - `db2af7602b85825bca30b7d6ff22e6e89e0334b2`
+
+## 실제 적용 결과
+
+- 원 `324b330f50a1bffb2596e5fb14ee0b6a29656662` → 통합 `973ec5052e1c06a8f5491eecc98c7c70be12e0d1` (applied).
+- 원 `cb1bc8899e1bf4fbb39446ddb0a523c1d866546f` → 통합 `2cbbfbacce02877699810ed9a16bb69a18e05e3f` (applied).
+- 원 `db2af7602b85825bca30b7d6ff22e6e89e0334b2` → 통합 `b6853731545ccdd335e6ac8b51ae19c0670bee62` (applied).
+
+[충돌·원 merge 해소 대조](../../working/task_m100_536_integration_review_stage1.md). 필수 검증은 진행 중이다.

@@ -10,3 +10,9 @@
 ## 원 commit 순서
 
 - `8fa5961ab579edee0cb267cb89a832b3236ace8c`
+
+## 실제 적용 결과
+
+- 원 `8fa5961ab579edee0cb267cb89a832b3236ace8c` → 통합 `753f176d3a7835adcf8e04904717b286f07c1624` (applied).
+
+[충돌·원 merge 해소 대조](../../working/task_m100_536_integration_review_stage1.md). 필수 검증은 진행 중이다.

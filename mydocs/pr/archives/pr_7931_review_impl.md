@@ -24,3 +24,13 @@
 - `f5fd95c51e5e7a13bb8fec1568940a4e6dbca306`
 - `862957ec2ad738a3f3446e7e7fbee63eaab98a3f`
 - `1b40b1ce1b1ad1e6064d6d3e478a009ae8aa0912`
+
+## 실제 적용 결과
+
+- 원 `2522f686c8d157a74fb1cb45bc07d0e02eea4b4d` → 통합 `eb2b92e8059c304498df18a14c1e497a5d927f82` (applied).
+- 원 `d9687ef02f7b6e147a422ae5c997632042363cda` → 통합 `695fbbdbe196a0e6ffc3097102751d6398d4637b` (applied).
+- 원 `bfa642725592d3eb672ae8202bad1b149e57f90d` → 통합 `baf3efb6428c62d38db07c15838eb3b0b8bbd38d` (applied).
+- 원 `56e05b8c0146722756930579adc1b00d05a83324` → 통합 `52ee9a9ff1aac16a58857da9bc558a79eb6b128b` (applied).
+- 원 `a619b9cc8e5fe42c3d6c662c436a9ff761588350` → 통합 `52ee9a9ff1aac16a58857da9bc558a79eb6b128b` (empty-preserved-by-current-tree).
+
+[충돌·원 merge 해소 대조](../../working/task_m100_536_integration_review_stage1.md). 필수 검증은 진행 중이다.

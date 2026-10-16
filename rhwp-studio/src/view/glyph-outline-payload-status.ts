@@ -448,6 +448,7 @@ function hasBitmapGlyphContract(op: LayerGlyphOutlineOp): boolean {
 
 function hasSvgGlyphContract(op: LayerGlyphOutlineOp): boolean {
   const glyph = op.svgGlyph;
+  const destination = glyph?.fontEmBox ?? op.bbox;
   return !!glyph
     && typeof glyph.svgRef === 'number'
     && glyph.staticSanitized === true
@@ -457,11 +458,11 @@ function hasSvgGlyphContract(op: LayerGlyphOutlineOp): boolean {
     && glyph.interactivityAllowed !== true
     && glyph.viewBox !== undefined
     && isPositiveBounds(glyph.viewBox)
+    && destination !== undefined
+    && isPositiveBounds(destination)
+    && isPortableSvgViewBoxMapping(glyph.viewBox, destination)
+    && isPortableSvgViewBoxMapping(wireBounds(glyph.viewBox), wireBounds(destination))
     && isOptionalFiniteAffine(glyph.transformToRun)
-    && op.bbox !== undefined
-    && isPositiveBounds(op.bbox)
-    && isPortableSvgViewBoxMapping(glyph.viewBox, op.bbox)
-    && isPortableSvgViewBoxMapping(wireBounds(glyph.viewBox), wireBounds(op.bbox))
     && (glyph.intrinsicSize === undefined || (glyph.intrinsicSize !== null
       && isPortableGlyphScalar(glyph.intrinsicSize.width) && Math.fround(glyph.intrinsicSize.width) > 0
       && isPortableGlyphScalar(glyph.intrinsicSize.height) && Math.fround(glyph.intrinsicSize.height) > 0

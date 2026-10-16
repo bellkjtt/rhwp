@@ -15,3 +15,14 @@
 - `30e97062dc32e200150dd81618df90ae53954eb1`
 - `762b7d2fd709dd205cd28a6a21c069c69b05da3d`
 - `a28d839311d2e7fe88824b7afe2df08a33c58a35`
+
+## 실제 적용 결과
+
+- 원 `7444b97280caa96a318f90880486437af3c9cff1` → 통합 `ff92aceacc3d6315e447b1668232413cd8e65b2a` (applied).
+- 원 `e28961dde6c99023f41cd637db8a1422171d295b` → 통합 `73063a7532a9707d3b95bc53f60c4430662a55c7` (applied).
+- 원 `69a1347db41a9f94d2a31c2003f6612d75048784` → 통합 `73063a7532a9707d3b95bc53f60c4430662a55c7` (empty-preserved-by-current-tree).
+- 원 `30e97062dc32e200150dd81618df90ae53954eb1` → 통합 `73063a7532a9707d3b95bc53f60c4430662a55c7` (empty-preserved-by-current-tree).
+- 원 `762b7d2fd709dd205cd28a6a21c069c69b05da3d` → 통합 `73063a7532a9707d3b95bc53f60c4430662a55c7` (empty-preserved-by-current-tree).
+- 원 `a28d839311d2e7fe88824b7afe2df08a33c58a35` → 통합 `73063a7532a9707d3b95bc53f60c4430662a55c7` (empty-preserved-by-current-tree).
+
+[충돌·원 merge 해소 대조](../../working/task_m100_536_integration_review_stage1.md). 필수 검증은 진행 중이다.

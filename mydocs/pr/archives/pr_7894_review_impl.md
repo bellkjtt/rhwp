@@ -11,3 +11,10 @@
 
 - `cb6d0861b06cabcf04981737b3285f3a876bfff6`
 - `1a8711c18bd9315251d50d5e88ea702406db1875`
+
+## 실제 적용 결과
+
+- 원 `cb6d0861b06cabcf04981737b3285f3a876bfff6` → 통합 `1c84cbd893c8408b26248829583e322370e71cc9` (applied).
+- 원 `1a8711c18bd9315251d50d5e88ea702406db1875` → 통합 `585d8857a7bfad94046ce2f6308cb42dc24a1090` (applied).
+
+[충돌·원 merge 해소 대조](../../working/task_m100_536_integration_review_stage1.md). 필수 검증은 진행 중이다.
