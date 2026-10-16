@@ -1,0 +1,83 @@
+//! 한컴 Print에서 확인한 그림의 인코딩 RGB 색조. 모든 출력 경로가 같은 픽셀을 쓴다.
+
+use super::{decode_image_with_format_limited, memoized, Conversion, Cursor, ImageEffect};
+
+/// 일반 raster/회색조의 밝기·대비를 원본 해상도에서 한 번 적용한다.
+/// 워터마크 프리셋 등 이미 bake된 결과는 호출자가 제외한다.
+pub(crate) fn adjusted_picture_bytes(
+    data: &[u8],
+    effect: ImageEffect,
+    brightness: i8,
+    contrast: i8,
+) -> Option<Vec<u8>> {
+    if (brightness == 0 && contrast == 0)
+        || !matches!(effect, ImageEffect::RealPic | ImageEffect::GrayScale)
+    {
+        return None;
+    }
+    let brightness = brightness.clamp(-100, 100);
+    let contrast = contrast.clamp(-100, 100);
+    memoized(
+        Conversion::PictureAdjustment {
+            effect: effect as u8,
+            brightness,
+            contrast,
+        },
+        data,
+        || {
+            let format = image::guess_format(data).ok()?;
+            let mut pixels = decode_image_with_format_limited(data, format)?.to_rgba8();
+            for pixel in pixels.pixels_mut() {
+                if effect == ImageEffect::GrayScale {
+                    // 한컴은 회색조를 먼저 바이트로 확정한 뒤 밝기·대비를 적용한다.
+                    let gray = (299 * u32::from(pixel[0])
+                        + 587 * u32::from(pixel[1])
+                        + 114 * u32::from(pixel[2]))
+                        / 1000;
+                    pixel.0[..3].fill(gray as u8);
+                }
+                for channel in &mut pixel.0[..3] {
+                    *channel = adjusted_channel(*channel, brightness, contrast);
+                }
+            }
+            let mut png = Vec::new();
+            pixels
+                .write_to(&mut Cursor::new(&mut png), image::ImageFormat::Png)
+                .ok()?;
+            Some(png)
+        },
+    )
+}
+
+fn adjusted_channel(channel: u8, brightness: i8, contrast: i8) -> u8 {
+    let value = i64::from(channel);
+    let b = i64::from(brightness);
+    let c = i64::from(contrast);
+    // a = c>=0 ? 1/(1-c) : 1+c
+    // d = (1-a)/2 + b*(1+a)/2, 인코딩 RGB의 a*x + 255*d.
+    // 정수 유리식으로 계산해 마지막 floor 전에 부동소수점 반올림을 피한다.
+    // 독립 Print의 부호 교차8조건×11색은 이 식과±1 이내다(2단계 실행 기록).
+    // 끝값은 중간 범위 선형식의 극한이 아니다. 실제 한컴 Print의 별도
+    // 양자화 결과(2단계 boundary job)를 보존한 뒤 밝기를 적용한다.
+    let (numerator, denominator) = if c == 100 || c == -100 {
+        let quantized = if c == -100 {
+            1
+        } else if channel > 128 {
+            255
+        } else {
+            0
+        };
+        return ((quantized * 100 + b * 255) / 100).clamp(0, 255) as u8;
+    } else if c >= 0 {
+        (
+            20000 * value + 255 * (b * (200 - c) - 100 * c),
+            200 * (100 - c),
+        )
+    } else {
+        (
+            200 * (100 + c) * value + 255 * (b * (200 + c) - 100 * c),
+            20000,
+        )
+    };
+    (numerator / denominator).clamp(0, 255) as u8
+}

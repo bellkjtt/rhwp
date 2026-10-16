@@ -849,7 +849,22 @@ impl WebCanvasRenderer {
             } else {
                 std::borrow::Cow::Borrowed(&img.data[..])
             };
-            let filter_str = if preserve_color_watermark {
+            let (brightness, contrast) = img.display_brightness_contrast();
+            let adjusted = (!preserve_color_watermark)
+                .then(|| {
+                    crate::renderer::image_resolver::adjusted_picture_bytes(
+                        &render_data,
+                        img.effect,
+                        brightness,
+                        contrast,
+                    )
+                })
+                .flatten();
+            let adjustments_baked = adjusted.is_some();
+            let render_data = adjusted.map_or(render_data, std::borrow::Cow::Owned);
+            let filter_str = if adjustments_baked {
+                None
+            } else if preserve_color_watermark {
                 if baked_color_watermark {
                     None
                 } else {
@@ -1091,7 +1106,7 @@ impl WebCanvasRenderer {
         }
         if let Some(ref data) = img.data {
             let preserve_color_watermark = img.is_real_picture_watermark_tone_preset();
-            let is_watermark_image = img.is_watermark();
+            let is_watermark_image = crate::renderer::image_resolver::is_watermark_image(img);
             let mut baked_watermark = false;
             let render_data: std::borrow::Cow<[u8]> = if preserve_color_watermark {
                 match crate::renderer::image_resolver::real_picture_watermark_fill_bytes_to_hancom_tone_png_bytes(
@@ -1118,7 +1133,19 @@ impl WebCanvasRenderer {
             } else {
                 std::borrow::Cow::Borrowed(&data[..])
             };
-            let filter_str = if baked_watermark {
+            let adjusted = (!(baked_watermark || preserve_color_watermark))
+                .then(|| {
+                    crate::renderer::image_resolver::adjusted_picture_bytes(
+                        &render_data,
+                        img.effect,
+                        img.brightness,
+                        img.contrast,
+                    )
+                })
+                .flatten();
+            let adjustments_baked = adjusted.is_some();
+            let render_data = adjusted.map_or(render_data, std::borrow::Cow::Owned);
+            let filter_str = if baked_watermark || adjustments_baked {
                 None
             } else if preserve_color_watermark {
                 Some(real_picture_watermark_tone_filter())

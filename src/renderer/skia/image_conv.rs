@@ -193,6 +193,30 @@ pub fn draw_image_bytes(
     };
     let encoded_bytes = normalized_bytes.as_deref().unwrap_or(bytes);
 
+    if let Some(adjusted) = crate::renderer::image_resolver::adjusted_picture_bytes(
+        encoded_bytes,
+        effect,
+        brightness,
+        contrast,
+    ) {
+        return draw_image_bytes(
+            canvas,
+            &adjusted,
+            x,
+            y,
+            width,
+            height,
+            fill_mode,
+            original_size,
+            crop,
+            crop_reference_size,
+            ImageEffect::RealPic,
+            0,
+            0,
+            sampling,
+        );
+    }
+
     let Some(image) = Image::from_encoded(Data::new_copy(encoded_bytes)) else {
         draw_missing_image_placeholder(x, y, width, height);
         return false;

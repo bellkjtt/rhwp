@@ -14,6 +14,9 @@ use crate::renderer::render_tree::{
     REAL_PICTURE_WATERMARK_WHITE_BLEND,
 };
 
+mod picture_adjustments;
+pub(crate) use picture_adjustments::adjusted_picture_bytes;
+
 // ── 변환 결과 메모 ──
 //
 // 편집 한 번에 레이어 트리가 여러 벌 만들어지고(본문 캔버스 / overlay / JSON),
@@ -36,7 +39,7 @@ const MAX_MEMO_BYTES: usize = 16 * 1024 * 1024;
 const MAX_MEMO_ENTRIES: usize = 64;
 
 /// 변환 종류. 같은 바이트라도 어떤 변환을 거쳤느냐에 따라 결과가 다르다.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 enum Conversion {
     Bmp,
     CmykJpeg,
@@ -47,6 +50,11 @@ enum Conversion {
     RealPictureTone,
     RealPictureFillTone,
     BlackWhite,
+    PictureAdjustment {
+        effect: u8,
+        brightness: i8,
+        contrast: i8,
+    },
 }
 
 #[derive(Default)]
@@ -123,7 +131,7 @@ fn conversion_key(conversion: Conversion, data: &[u8]) -> u64 {
     use std::hash::{Hash, Hasher};
 
     let mut hasher = DefaultHasher::new();
-    (conversion as u8).hash(&mut hasher);
+    conversion.hash(&mut hasher);
     data.hash(&mut hasher);
     hasher.finish()
 }
