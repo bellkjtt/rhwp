@@ -32,3 +32,30 @@
 `p74-character-origin-comparison.json`에 있다.3단계 커밋의 집중33건은 통과했으며
 필수 fmt·Native/WASM Clippy·workspace build도 완료했다.4단계 코드 변경 뒤에는
 그 결과로 새 head의 완료를 주장하지 않는다.
+
+## 선행 보정과 직접 판독
+
+KoPub 폭 선택에 U+203B의900/1000em 값을 공급했다. 나머지 반각·좁은 구두점·
+한글 폭과 적용 face의 범위는 바꾸지 않았다. 설치된 Dotum/Batang3굵기 및 World
+대조군까지12파일의 해당 cmap+hmtx가 모두900/1000임을 확인했다. 원시 경로·파일
+SHA·메트릭은 ignored `kopub-reference-mark-metrics.json`에 있다.
+
+Native 빌드는 jobs8·공용 release-test target에서5분08초, exit0이다.
+영향4쪽과 기존 정상5쪽의 새 비교 실행은9쪽 모두 완료·gate passed·exit0이다.
+
+| 쪽 | devel Native | 보정 Native |
+| --- | ---: | ---: |
+| 74 | 98.39268% | 98.67385% |
+| 206 | 97.82183% | 98.09712% |
+| 209 | 98.93952% | 99.15035% |
+| 297 | 99.22918% | 99.40264% |
+
+Native3/130/241/289/290쪽은100/99.10104/98.39116/99.74010/99.18776%로
+3단계 보정값을 유지한다. 영향4쪽의 새 review PNG를 직접 열어 주의표 뒤의 글자·
+숫자·따옴표 진행을 Print와 대조했다. 큰 표 외곽·내용 줄 수·앞뒤 순서를 보존한다.
+74쪽에서 잘못된 반각 주의표 폭 때문에 남았던 약5px 진행 오차를 함께 보정했다.
+
+기존 devel 대비 하락4쪽이 선행 Native에서는 모두 개선됐으나, 전383쪽 Native와
+최종 fresh WASM·전체 회귀·새 소스 lint는 아직 진행 대상이다. 이 선행 실행만으로
+최종 PR 준비나 이슈 종료를 선언하지 않는다. 원시 로그·PNG·소스 patch/producer SHA는
+`reference-mark-native-*` 이름으로 ignored 검증 폴더에 보존한다.

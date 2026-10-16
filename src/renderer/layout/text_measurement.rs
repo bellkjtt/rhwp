@@ -1126,6 +1126,11 @@ fn kopub_char_width(primary_name: &str, c: char, font_size: f64) -> Option<f64> 
             return Some(quantize_hwp_px(font_size * f64::from(units) / 1000.0));
         }
     }
+    // KoPub Dotum/Batang의 세 굵기 모두 U+203B cmap+hmtx 전진폭은900/1000em이다.
+    // 한컴 Print의 장평98%·자간-3%에서도11.36px로 같으며 반각 fallback이 아니다.
+    if c == '※' {
+        return Some(quantize_hwp_px(font_size * 0.9));
+    }
     if is_narrow_punctuation(c) {
         return Some(quantize_hwp_px(font_size * 0.3));
     }
