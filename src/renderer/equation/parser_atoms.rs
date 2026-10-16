@@ -28,16 +28,26 @@ impl EqParser {
             }
             TokenType::Symbol => {
                 self.pos += 1;
+                let attach_scripts = self.document_terms
+                    || (!val.is_ascii() && super::super::symbols::is_binary_symbol(&val));
                 // 한컴의 붙은 ASCII 화살표 축약을 의미 기호로 보존한다.
-                if matches!(val.as_str(), "->" | "<-") {
+                let node = if matches!(val.as_str(), "->" | "<-") {
                     EqNode::MathSymbol(if val == "->" { "→" } else { "←" }.to_string())
                 } else if !val.is_ascii() && super::super::symbols::is_binary_symbol(&val) {
                     // 새 기호 토큰도 기존 Text/명령 경로의 첨자 결합을 유지한다.
-                    self.try_parse_scripts(EqNode::MathSymbol(val))
+                    EqNode::MathSymbol(val)
                 } else if !val.is_ascii() && super::super::symbols::is_relation_symbol(&val) {
                     EqNode::MathSymbol(val)
                 } else {
                     EqNode::Symbol(val)
+                };
+                if attach_scripts {
+                    // 표시 기호도 뒤 첨자의 기저다. 첨자를 남겨 두면 다음 항에서
+                    // orphan 오류로 중단되어 정상 저장본의 뒤 수식 전체를 잃는다.
+                    // 처음부터 기저가 없는 첨자의 중단 계약은 아래에서 유지한다.
+                    self.try_parse_scripts(node)
+                } else {
+                    node
                 }
             }
             TokenType::Text => {
