@@ -4491,7 +4491,14 @@ impl LayoutEngine {
                     _ => continue,
                 };
 
-                // TopAndBottom 모드만 본문 밀어내기 처리
+                if col_area.width < body_area.width {
+                    if let Some(bottom) = crate::renderer::float_placement::stored_square_top_band(
+                        para, ctrl, body_area, self.dpi,
+                    ) {
+                        result.push((*para_index, bottom));
+                        continue;
+                    }
+                }
                 if !matches!(common.text_wrap, TextWrap::TopAndBottom) {
                     continue;
                 }
@@ -4517,7 +4524,7 @@ impl LayoutEngine {
                 // Table: common.height는 실제 렌더링 높이(셀 콘텐츠 포함)보다 작을 수 있음
                 // 셀 내 LINE_SEG 기반 실제 높이를 사용하여 보정
                 let effective_common = if let Control::Table(t) = ctrl {
-                    let measured_h = self.measure_table_actual_height(t);
+                    let measured_h = crate::renderer::float_placement::table_reserved_height_hu(t);
                     if measured_h > common.height {
                         let mut c = common.clone();
                         c.height = measured_h;
@@ -4678,6 +4685,12 @@ impl LayoutEngine {
                     Control::Picture(p) if !p.common.treat_as_char => &p.common,
                     _ => continue,
                 };
+                if let Some(bottom) = crate::renderer::float_placement::stored_square_top_band(
+                    para, ctrl, body_area, self.dpi,
+                ) {
+                    result.push((*para_index, bottom));
+                    continue;
+                }
                 if !matches!(common.text_wrap, TextWrap::TopAndBottom) || common.treat_as_char {
                     continue;
                 }
@@ -4733,47 +4746,6 @@ impl LayoutEngine {
         }
 
         result
-    }
-
-    /// 표의 실제 렌더링 높이를 계산 (셀 콘텐츠 + 패딩 포함)
-    fn measure_table_actual_height(&self, table: &crate::model::table::Table) -> u32 {
-        let row_count = table.row_count as usize;
-        if row_count == 0 {
-            return table.common.height;
-        }
-        let mut row_heights = vec![0u32; row_count];
-        for cell in &table.cells {
-            if cell.row_span == 1 && (cell.row as usize) < row_count {
-                let r = cell.row as usize;
-                if cell.height < 0x80000000 && cell.height > row_heights[r] {
-                    row_heights[r] = cell.height;
-                }
-            }
-        }
-        // 셀 내 LINE_SEG 기반 콘텐츠 높이로 보정
-        for cell in &table.cells {
-            if cell.row_span == 1 && (cell.row as usize) < row_count {
-                let r = cell.row as usize;
-                let (pad_top, pad_bottom) = if cell.apply_inner_margin {
-                    (cell.padding.top as u32, cell.padding.bottom as u32)
-                } else {
-                    (table.padding.top as u32, table.padding.bottom as u32)
-                };
-                let content_h: i32 = cell
-                    .paragraphs
-                    .iter()
-                    .flat_map(|p| p.line_segs.last())
-                    .map(|s| s.vertical_pos.saturating_add(s.line_height))
-                    .max()
-                    .unwrap_or(0);
-                let required = content_h as u32 + pad_top + pad_bottom;
-                if required > row_heights[r] {
-                    row_heights[r] = required;
-                }
-            }
-        }
-        let total: u32 = row_heights.iter().sum();
-        total.max(table.common.height)
     }
 
     /// 개체가 단 영역과 수평으로 겹치는지 확인

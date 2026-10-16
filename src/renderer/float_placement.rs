@@ -46,6 +46,11 @@ use super::layout::picture_flow_frame_size_hu;
 use super::layout_frame::{FrameExclusion, FrameExclusionPolicy, LayoutFrame};
 use super::page_layout::LayoutRect;
 
+mod stored_square_top_band;
+pub(crate) use stored_square_top_band::{
+    stored_empty_line_has_closed_source_box, stored_square_top_band, table_reserved_height_hu,
+};
+
 /// Required box for saved text in a cell. The declaration already owns its
 /// padding when the saved line box fills it; otherwise actual text plus active
 /// padding must fit, independently of the number of rows in the table.
