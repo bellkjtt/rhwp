@@ -108,3 +108,26 @@ Skia3종은 이14건 집중 결과와 구분해 실제 종료 뒤 갱신한다. 
 기준 devel의 기존3문서 쪽수 차이로 생기는 전쪽 일대일 TSV 누락 보류는 유지한다.
 독립 Print와 일치하는 페이지 복구와 현행 gate의 충족 여부를 구분하며, 높은 점수로 면제하지 않는다.
 PR/push는 사용자 별도 승인 전까지 수행하지 않는다.
+
+
+## 최종 전체 회귀 완료
+
+회귀 추가 head `9f464aa2c1e19bb7f7b852db0b65e8515effad48`에서 release-test 전체가
+**10,449pass/실패0/45skip**으로 끝났다. 최종 summary는713.108초, 빌드11분18초,
+명령 전체1398.2초다. 이전 Native 소유·셀 넘침·off-canvas 실패3개와 현재14개도 모두 통과했다.
+그 뒤 문서-only `11579b9b6`은 Rust·검사·Cargo 변경이 없다. 새 전체 실행을 추가하지 않고
+기록한 source의 결과를 보존한다. 이어서 필수 lint와 Native Skia3종을 같은 공용 target에서
+순차 실행한다. 원시 로그 `full-nextest.log`, exit/head 기록 `full-validation.json`,
+검사별 확인 `full-summary.json`은 위 `mixed-storage-fix/`에 있다.
+
+
+## 추가 upstream 변경과 리베이스 전 고정
+
+사용자 재확인 시점에 원격 devel이 `cdef0073bb24512daf0622dec5051ac62cb8d57e`
+(#7948 Square 표 보정)로 바뀌었다. fetch 뒤 이 head를 기준으로 리베이스한다.
+완료된10,449건 전체 성공과 fmt/Native Clippy/WASM Clippy 성공은 **리베이스 전** 결과다.
+당시 진행하던 workspace build에서 소유 process group3298153에 SIGINT를 보내 pipeline
+exit130으로 정리했다. 해당 Cargo 명령의 개별 exit는 기록되지 않았으며 통과/제품 실패로 세지 않는다.
+남은 workspace Clippy·suite 확인·Native Skia3종은 미실행이다. 새 base와 통합 head에서
+영향 경계·Native/fresh WASM·필수 게이트를 다시 판정하며 과거 성공을 소급 적용하지 않는다.
+증거는 `stop-for-rebase.json`, `full-summary.json`, `{lint,full}-validation.json`에 보존한다.

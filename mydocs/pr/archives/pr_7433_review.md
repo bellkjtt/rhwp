@@ -10,6 +10,8 @@ last_verified: 2026-10-16
 ## 판정
 
 **머지 보류 — devel 대비3문서의 전쪽 일대일 TSV 대응 미검증, 최종 전체 게이트 진행 중.**
+원격 devel이 추가로 `cdef0073b`(#7948)로 바뀌어 현재 기록을 커밋한 뒤 리베이스한다.
+아래10,449건 및 시각 결과는 새 리베이스 전의 증거이며 새 head의 통과로 표시하지 않는다.
 기존 저장 줄 혼재 반례의 겹침은 보정했고, 양쪽 전쪽100% 및 수정 전 FAIL/후 PASS를 확인했다.
 독립 Print와 일치하는 쪽수 복구를 base TSV 누락의 자동 예외로 처리하지 않는다.
 PR/push는 사용자의 별도 승인 전까지 수행하지 않는다.
@@ -94,7 +96,8 @@ partial eager/lazy paint가 같은 결과를 소비하며, 같은 줄과 여러 
   수용을 넓힌 원인을 고쳤으며 기존 기대값·baseline·허용치를 바꾸지 않았다.
 - 59d의 lint6종과 집중15개 통과는 과거 source 증거다. 새 혼재 실패를 확인해59d 전체 빌드는
   테스트 시작 전에 SIGINT로 중단했다(pipeline exit130, test summary 없음).
-- **현재9f464aa2c의 release-test 전체 → lint6종 → Native Skia3종을 공용 target에서 순차 실행 중**이다.
+- **9f464aa2c의 release-test 전체10,449pass/실패0/45skip을 확인했다**(실행713.108초, 빌드11분18초).
+  이전 실패3개와 이번14개도 모두 통과했다. 이어서 lint6종 → Native Skia3종을 공용 target에서 순차 실행 중이다.
   집중14개와 이전 source 결과를 합산해 현재 전체 통과로 표시하지 않는다.
 - `CARGO_BUILD_JOBS=8`, `/home/tsjang/rhwp/target/pr-review`를 사용한다. 다른 Cargo를 동시에 실행하지 않는다.
 - Studio 원본2개의 Canvas2D/CanvasKit compat/default software6캡처는59d 당시의 추가 증거다.
@@ -134,7 +137,7 @@ partial eager/lazy paint가 같은 결과를 소비하며, 같은 줄과 여러 
 현재 증거는 ignored `output/pr-review/pr7433-current-20261016/mixed-storage-fix/`에 있다.
 `native-build.json`, `wasm-build.json`, `focused.json`, `before-after.json`,
 `mixed-visual-evidence.json`, `final-direct-read.json`, `final-devel-comparison.json`,
-`all-saved-comparison.json`, `review-assets.json`, `final-pipeline.log`,
+`all-saved-comparison.json`, `review-assets.json`, `full-summary.json`, `final-pipeline.log`,
 `{full,lint,native}-validation.json`을 사용한다. 파일 존재 자체를 완료 근거로 쓰지 않는다.
 이전 source 증거는 `regression-fix/`에서 보존한다. TSV·로그·중간 JSON은 커밋하지 않는다.
 주 작업공간 Studio JS의 사용자 dirty 변경은 보존했다.
