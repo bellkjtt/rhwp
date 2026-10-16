@@ -1633,16 +1633,31 @@ fn char_width_decision_with_hft_tracking<'a>(
             && embedded.metric.is_some_and(|found| {
                 found.metric.bold == style.bold
                     && found.metric.italic == style.italic
-                    && font_metrics_data::verified_program_has_glyph(found.metric, c) == Some(false)
+                    && font_metrics_data::verified_metric_has_glyph(found.metric, c) == Some(false)
             });
+        // 표 전체를 신뢰하는지는 cmap 결측을 확인했는지와 별개의 계약이다.
+        // KoPub처럼 별도 부분 표를 쓰는 face도 실제 프로그램의 결측을 조회하되,
+        // HFT 원본이나 다른 측정 face의 계약을 표시 TTF의 cmap으로 대체하지 않는다.
+        let verified_primary_missing = verified_primary_missing
+            || (!style.source_font_is_hft
+                && measured_family == display_family
+                && font_metrics_data::verified_named_program_has_glyph(
+                    measured_family,
+                    style.bold,
+                    style.italic,
+                    c,
+                ) == Some(false));
         // DB가 수집하지 않은 구간은 glyph 부재의 증거가 아니다. 확인한 프로그램의
         // cmap이 실제 결측을 입증한 경우만 다음 face로 측정한다. 나머지는 기존
         // backend 보충 측정에 남기며, 다른 weight 프로그램의 부재도 추정하지 않는다.
-        if embedded.width_source == "metricCharacterMiss"
+        if matches!(embedded.width_source, "metricCharacterMiss" | "metricMiss")
             && verified_primary_missing
             && !c.is_whitespace()
         {
-            let paint_family = latin.map_or(&style.font_family, |l| &l.font_family);
+            let paint_family = crate::renderer::render_font_family_chain_for_weight(
+                display_family,
+                style.is_visually_bold(),
+            );
             for family in paint_family.split(',').skip(1).map(str::trim) {
                 let fallback = measure_char_width_embedded_decision_for_font(
                     family,
@@ -1657,11 +1672,22 @@ fn char_width_decision_with_hft_tracking<'a>(
                     && fallback.metric.is_some_and(|found| {
                         found.metric.bold == style.bold
                             && found.metric.italic == style.italic
-                            && font_metrics_data::verified_program_has_glyph(found.metric, c)
+                            && font_metrics_data::verified_metric_has_glyph(found.metric, c)
                                 == Some(true)
                     })
                 {
-                    embedded = fallback;
+                    // 생성한 paint 체인의 임시 문자열을 진단 결과에 빌려주지 않는다.
+                    // 확인된 프로그램의 정적 DB 이름으로 같은 폭과 메트릭을 조회한다.
+                    let program = fallback.metric.expect("확인한 대체 프로그램").metric.name;
+                    embedded = measure_char_width_embedded_decision_for_font(
+                        program,
+                        style.bold,
+                        style.italic,
+                        c,
+                        font_size,
+                        false,
+                        false,
+                    );
                     embedded.width_source = "declaredGlyphFallbackMetric";
                     break;
                 }
