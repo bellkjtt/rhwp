@@ -1,7 +1,27 @@
 //! 문단 테두리가 소비하는 실제 줄 점유와 문단 할당 영역.
 
+use super::super::render_tree::{RenderNode, RenderNodeType};
 use super::super::style_resolver::ResolvedParaStyle;
 use super::LayoutRect;
+
+/// 어울림 표의 추정 위치가 아니라 같은 단에 방출한 실제 테두리 끝을 소비한다.
+/// 분할 표도 현재 조각의 원본 소유자가 일치할 때만 문단 외곽 확장의 근거가 된다.
+pub(super) fn rendered_table_right_edge(
+    column: &RenderNode,
+    section_index: usize,
+    para_index: usize,
+    control_index: usize,
+) -> Option<f64> {
+    column.children.iter().rev().find_map(|node| {
+        let RenderNodeType::Table(table) = &node.node_type else {
+            return None;
+        };
+        (table.section_index == Some(section_index)
+            && table.para_index == Some(para_index)
+            && table.control_index == Some(control_index))
+        .then_some(node.bbox.x + node.bbox.width)
+    })
+}
 
 /// 문단 테두리의 간격 확장 전 세로 범위와 확장된 가로 범위를 구한다.
 /// 앞뒤 테두리 간격은 연결 그룹의 첫/마지막 조각에서만 적용한다.

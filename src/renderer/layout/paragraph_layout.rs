@@ -9216,19 +9216,19 @@ impl LayoutEngine {
                             );
                             // [#6606] 상자(도형 + 위아래 여백)를 baseline 에 앉히고 도형은
                             // 상자의 (왼쪽, 위) 여백 안쪽에 둔다 — TAC 그림(#6603)과 같은 계약.
-                            let (margin_left, _, margin_top, margin_bottom) =
+                            let (margin_left, _, margin_top, _) =
                                 tac_object_outer_margins_px(common, self.dpi);
-                            // 측정과 캡션 출력이 예약한 전체 상자로 기준선에 맞춘다.
-                            let box_h = tac_object_box_height_px(
-                                shape_h,
-                                &super::shape_layout::shape_caption_for_layout(shape),
-                                self.dpi,
-                            ) + margin_top
-                                + margin_bottom;
                             let shape_y = if label_extra > 0.0 {
                                 y + label_extra + margin_top
                             } else {
-                                (y + baseline - box_h).max(y) + margin_top
+                                self.inline_shape_top(
+                                    para,
+                                    styles,
+                                    line_tac_offsets,
+                                    y,
+                                    baseline,
+                                    shape,
+                                ) + margin_top
                             };
                             // 인라인 좌표 등록 → shape_layout.rs에서 이 Shape를 스킵
                             tree.set_inline_shape_position(
@@ -10473,7 +10473,7 @@ impl LayoutEngine {
             .is_some_and(|next| next.char_start == comp_line.char_start && !next.runs.is_empty());
         let empty_line_tac_allowed =
             cell_ctx.is_none() || is_caption_cell_context(cell_ctx.as_ref()) || owns_boundary_tac;
-        if empty_line_tac_allowed && !line_tac_offsets.is_empty() {
+        if !line_tac_offsets.is_empty() {
             if let (Some(p), Some(bdc)) = (para, bin_data_content) {
                 // TAC 이미지 전체 폭 계산 후 문단 정렬 적용
                 let total_tac_width: f64 = line_tac_offsets.iter().map(|(_, w, _)| *w).sum();
@@ -10492,7 +10492,6 @@ impl LayoutEngine {
                         // #476 의 fallback 차단 분기로 박스가 누락된다.
                         if let Control::Shape(shape) = ctrl {
                             let common = shape.common();
-                            let shape_h = hwpunit_to_px(shape.flow_height_hu(), self.dpi);
                             // [#5789] 빈 run 줄은 max_fs=0 이라 vars.baseline 이 0 으로
                             // 접힌다 — TAC 개체는 글자처럼 baseline 에 앉아야 하므로
                             // 저장 줄의 baseline_distance 로 폴백한다 (3143955 이중선:
@@ -10504,16 +10503,18 @@ impl LayoutEngine {
                             };
                             // [#6606] 상자(도형 + 위아래 여백)를 baseline 에 앉히고 도형은
                             // 상자의 (왼쪽, 위) 여백 안쪽에 둔다 — TAC 그림(#6603)과 같은 계약.
-                            let (margin_left, _, margin_top, margin_bottom) =
+                            let (margin_left, _, margin_top, _) =
                                 tac_object_outer_margins_px(common, self.dpi);
-                            // 빈 개체 줄도 캡션을 포함한 같은 상자를 소비한다.
-                            let box_h = tac_object_box_height_px(
-                                shape_h,
-                                &super::shape_layout::shape_caption_for_layout(shape),
-                                self.dpi,
-                            ) + margin_top
-                                + margin_bottom;
-                            let shape_y = (vars.y + baseline - box_h).max(vars.y) + margin_top;
+                            // 셀의 빈 줄도 실제 글줄이 확정한 원점과 정렬점을 등록한다.
+                            // 뒤의 셀 도형 출력은 이 좌표를 소비하고 이전 문단 y를 추측하지 않는다.
+                            let shape_y = self.inline_shape_top(
+                                para,
+                                styles,
+                                line_tac_offsets,
+                                vars.y,
+                                baseline,
+                                shape,
+                            ) + margin_top;
                             tree.set_inline_shape_position(
                                 vars.section_index,
                                 vars.para_index,
@@ -10525,6 +10526,12 @@ impl LayoutEngine {
                             img_x += tac_w;
                             empty_line_mark_x = img_x;
                             empty_line_logical_end += 1;
+                            continue;
+                        }
+                        // 셀의 그림·표는 기존 소유 경로가 출력한다. 앞 도형의 가로
+                        // 줄 소속만 공유하고, 다른 개체를 여기서 중복 출력하지 않는다.
+                        if !empty_line_tac_allowed {
+                            img_x += tac_w;
                             continue;
                         }
                         // [#6754] 빈 문단의 인라인 TAC **표** — 종전에는 이 루프가

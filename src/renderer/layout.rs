@@ -13844,9 +13844,13 @@ impl LayoutEngine {
                         )
                     })
                     .unwrap_or((wrap_text_x, wrap_text_width));
-                // Task #463: 인라인 floating 표 우측 x 계산 (paragraph border box 확장용).
-                // table_layout::compute_table_x_position 와 동일 공식.
-                let tbl_x_right = compute_square_wrap_tbl_x_right(t, col_area, self.dpi);
+                // 문단 테두리는 실제 출력한 표 조각의 오른쪽 끝을 소비한다.
+                let tbl_x_right = paragraph_border::rendered_table_right_edge(
+                    col_node,
+                    page_content.section_index,
+                    para_index,
+                    control_index,
+                );
                 let host_plan = ctx
                     .inline_flow_plans
                     .get(&para_index)
@@ -13890,7 +13894,7 @@ impl LayoutEngine {
                         && paint_host_text_in_band,
                     0.0,
                     bin_data_content,
-                    Some(tbl_x_right),
+                    tbl_x_right,
                 );
                 // [#1218] 어울림(Square) 호스트 본문이 표보다 길면 커서를 본문 하단까지
                 // 전진시킨다. 그렇지 않으면 다음 단락이 표 하단(=현재 y_offset)에서 시작해
@@ -15728,7 +15732,12 @@ impl LayoutEngine {
                     } else {
                         0.0
                     };
-                    let tbl_x_right = compute_square_wrap_tbl_x_right(t, col_area, self.dpi);
+                    let tbl_x_right = paragraph_border::rendered_table_right_edge(
+                        col_node,
+                        page_content.section_index,
+                        para_index,
+                        control_index,
+                    );
                     self.layout_wrap_around_paras(
                         tree,
                         col_node,
@@ -15748,7 +15757,7 @@ impl LayoutEngine {
                         strip.is_none(),
                         content_offset,
                         bin_data_content,
-                        Some(tbl_x_right),
+                        tbl_x_right,
                     );
                 }
             }
@@ -16733,33 +16742,6 @@ impl LayoutEngine {
 /// TAC 문단에 `PageItem::FullParagraph` 가 발행되지 않아 `paragraph_layout`
 /// 가 호출되지 않는 경우(선행 공백만 있는 TAC 표 등)에 `layout_table_item`
 /// 에서 표 inline x 좌표를 복원하기 위해 사용한다.
-/// Task #463: 인라인 wrap=Square floating 표의 우측 끝 x 좌표 계산.
-/// `table_layout::compute_table_x_position` 의 depth=0 + Column-relative
-/// 경로와 동일한 공식을 사용하여, paragraph border box 가 표를 둘러쌀 수
-/// 있도록 한다. 인용 따옴표 ｢｣ 처럼 col_area 우측을 horizontal_offset 만큼
-/// 넘는 표를 정확히 처리한다.
-fn compute_square_wrap_tbl_x_right(
-    t: &crate::model::table::Table,
-    col_area: &LayoutRect,
-    dpi: f64,
-) -> f64 {
-    use crate::model::shape::HorzAlign;
-    let tbl_w = crate::renderer::hwpunit_to_px(t.common.width as i32, dpi);
-    let h_offset = crate::renderer::hwpunit_to_px(t.common.horizontal_offset as i32, dpi);
-    let tbl_x = match t.common.horz_align {
-        // table_layout.rs:966 와 동일: ref_x + (ref_w - table_width) - h_offset.
-        // 이후 inline_x_override 경로(line 924-925)에서 +h_offset 가산되어
-        // 최종 x = ref_x + (ref_w - table_width). h_offset 효과는 상쇄됨.
-        // 그러나 실제 렌더된 좌표(empirical: 526.93) 는 ref_x+(ref_w-tw)+h_offset 임.
-        // 여기서는 tbl_inline_x(line 2218)와 일관되게 단순 우측정렬 후
-        // h_offset 가산식을 사용한다.
-        HorzAlign::Right | HorzAlign::Outside => col_area.x + col_area.width - tbl_w + h_offset,
-        HorzAlign::Center => col_area.x + (col_area.width - tbl_w) / 2.0 + h_offset,
-        _ => col_area.x + h_offset,
-    };
-    tbl_x + tbl_w
-}
-
 /// [Issue #6167] 저장 사다리가 자리차지(TAC) 표에 **자기 줄**을 준 문단인지.
 ///
 /// 한글이 `linesegarray` 에 `textpos = 표의 char 위치` · `horzpos = 0` 인 줄을 적어
