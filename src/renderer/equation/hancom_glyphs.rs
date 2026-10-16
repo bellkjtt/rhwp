@@ -87,6 +87,9 @@ fn glyph(ch: char, role: Role) -> Option<(char, u16)> {
             '≤' => (0x2264, 1024),
             '≥' => (0x2265, 1024),
             ',' => (0xe052, 283),
+            // 독립 Print의 일반 괄호는 ASCII glyph가 아닌 수학 PUA다.
+            '(' => (0xe044, 398),
+            ')' => (0xe045, 398),
             _ => return None,
         },
         Role::Greek => {
