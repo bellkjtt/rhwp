@@ -10266,6 +10266,7 @@ impl LayoutEngine {
                         item,
                         PageItem::FullParagraph { .. }
                             | PageItem::Shape { .. }
+                            | PageItem::Table { .. }
                             | PageItem::PartialTable { .. }
                     )
                 {
@@ -10274,8 +10275,12 @@ impl LayoutEngine {
                         // lazy 기준이 아직 없거나 다른 기준으로 재생성될 수 있다.
                         // 그 기준으로 저장 사다리를 다시 투영하지 않는다.
                         let resolved_end = col_area.y + end;
-                        if !matches!(item, PageItem::Shape { .. } | PageItem::PartialTable { .. })
-                            || resolved_end >= new_y
+                        if !matches!(
+                            item,
+                            PageItem::Shape { .. }
+                                | PageItem::Table { .. }
+                                | PageItem::PartialTable { .. }
+                        ) || resolved_end >= new_y
                         {
                             new_y = resolved_end;
                         }

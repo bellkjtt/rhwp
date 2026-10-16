@@ -54,3 +54,35 @@ fresh WASM build까지 확인했다. #7751 배치·색조 해결이나 전체 �
 `output/pr-review/pr7494-20261016/`. 기존 결과를 보존하고 #7751 단계별 출력을 분리한다.
 Cargo는 공용 `target/pr-review`·jobs8로 순차 실행한다. 폰트는 설치된 원본5경로를
 직접 공급하며 폰트 프로그램을 Git에 추가하거나 패밀리 이름을 바꾸지 않는다.
+
+## 1단계 배치 보정과 선행 실행
+
+- `RowBlockQuery::required_height`가 블록 원래 행 수로 간격을 더해, 이미 앞 조각이
+  소비한 높이0 행 두 개의 간격6.8px를 다시 예약했다. `fragment_extent`가 실제
+  남은 행의 높이와 간격을 함께 반환하고 요구 높이도 이를 소비한다. 배치는 기존부터
+  높이0 행을 제외했다. 컷·텍스트 유닛을 더 소비하거나 실제 외곽 공간을 지우지 않는다.
+- `host_spacing::resolve`의 `after_for_fit`는 빈 호스트 하단여백을 fit에서 면제한다.
+  통째 RowBreak 순차 수용에서 별도 프레임이 없는 경우 이 몫이 사라졌다.
+  `block::entry`가 수용 후 흐름에 한 번 포함하고 저장된 흐름 끝을 기록한다.
+  `layout_column`의 온전한 Table도 같은 끝을 소비한다. 독립 원점/상자를 소유한
+  분기와 비RowBreak 표의 기존 계약은 유지한다.
+- 수정 전 p241 pi405 흐름204.3733px/그림197.5733px, p290 pi29 뒤566HU가
+  빠진 사실은 `logs/7751-flow-before.log`에 있다. 원본의 pi29→30 저장 델타는
+  `13997+566=14563HU`로 표 본체와 바깥 하단여백을 함께 포함한다.
+- Native CLI `cargo build --profile release-test --features native-skia --bin rhwp
+  --target-dir /home/tsjang/rhwp/target/pr-review`, jobs8, exit0(5분05초).
+  처음 지정한 존재하지 않는 `cli` feature 실패와 불필요한 release 프로필 중단은
+  성공으로 세지 않는다. 수정한 공용 release-test 산출물의 SHA·소스 patch는
+  `7751-layout-provenance.json`·`7751-layout-source.patch`에 고정했다.
+- 동일 Print·글꼴·96DPI로 물리240/241/242/289/290/291쪽 선행 비교:
+  95.11115/98.39116/98.55568/99.56775/99.18776/99.33859%.
+  p241은83.54043→98.39116%, p290은86.23862→99.18776%다.
+  두 review PNG에서 표 뒤 제목·다음 표와 Q16 시작 높이의 개선을 직접 확인했다.
+  전383쪽·fresh WASM·정상 대조·정식 회귀는 아직 완료하지 않았다.
+
+다음은3쪽의 속성/색상·재조판 보정이다. 실제 한컴2024 HWP→HWPX job
+`23013efe-fbdd-463a-8c3b-e6d6e4653773`(13.0.0.3901)은 같은 그림을
+`bright=8,contrast=0`으로 읽는다. 현재 parser는 반대로 읽는다. 한컴의 첫 문단
+줄 시작은0/42/87이며 원본 저장 캐시0/39/80/116과 다르다. 새 한컴 Print 합성
+색상 입력으로 조정 부호·회색조 순서를 추가 대조한다. 기존 SVG와 일치하는 것만으로
+한컴 색상 계약이 맞는다고 판단하지 않는다.
