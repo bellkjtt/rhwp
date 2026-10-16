@@ -588,18 +588,23 @@ mod tests {
 
         image.effect = ImageEffect::GrayScale;
         image.brightness = 1;
-        assert_eq!(
-            source_image_key(3, &image).as_deref(),
-            Some("bin:3:7:wmpng")
-        );
+        // 한쪽 축만 있는 일반 회색조는 원본 신원을 유지한다. 독립 Print RGB
+        // 대조군은 tests/cases/issue_7751_raster_picture_tones.rs에서 검사한다.
+        assert_eq!(source_image_key(3, &image).as_deref(), Some("bin:3:7:src"));
 
-        // 밝기와 명암 중 하나만 바뀌어도 기존 bake 술어는 같은 variant를 발급한다.
         image.brightness = 0;
         image.contrast = 1;
+        assert_eq!(source_image_key(3, &image).as_deref(), Some("bin:3:7:src"));
+
+        // 실제 워터마크의 두 축과 JPEG 형식이 함께 있을 때만 전용 bake다.
+        image.brightness = 1;
         assert_eq!(
             source_image_key(3, &image).as_deref(),
             Some("bin:3:7:wmpng")
         );
+        image.effect = ImageEffect::RealPic;
+        assert_eq!(source_image_key(3, &image).as_deref(), Some("bin:3:7:src"));
+        image.effect = ImageEffect::GrayScale;
 
         // JPEG 이 아니면 효과 필드는 별도 JSON 속성일 뿐 base64 payload는 바뀌지 않는다.
         image.data = Some(vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a]);
