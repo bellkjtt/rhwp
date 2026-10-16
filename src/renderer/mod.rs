@@ -50,7 +50,7 @@ pub mod layout;
 pub(crate) mod layout_frame;
 pub(crate) mod legacy_font_advances;
 pub(crate) mod line_style;
-mod metafile_geometry;
+pub(crate) mod metafile_geometry;
 pub(crate) mod note_separator;
 pub(crate) mod object_alignment;
 pub mod page_layout;

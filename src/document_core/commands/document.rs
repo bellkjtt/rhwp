@@ -2,6 +2,7 @@
 
 mod hft_outline_fonts;
 mod initial_fields;
+mod metafile_fonts;
 mod reflowed_table_frames;
 
 use crate::document_core::validation::{
@@ -312,6 +313,7 @@ impl DocumentCore {
             styles,
             canvas_metrics: None,
             hft_outline_fonts: Default::default(),
+            metafile_fonts: Default::default(),
             font_environment: None,
             composed: Vec::new(),
             body_page_field_error: None,

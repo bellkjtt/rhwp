@@ -45,7 +45,7 @@ rhwp 프로젝트가 사용하는 서드파티 라이브러리 및 리소스의 
 | pdf-writer | 0.12.1 | MIT OR Apache-2.0 | typst/pdf-writer | PDF 출력 |
 | rhwp-pdf-import-backend | 0.3.78-rhwp.1 | MIT OR Apache-2.0 | edwardkim/rhwp | `pdf-import` optional; `pdf_oxide 0.3.78` 기반 내부 보안 패치, 코드 import alias `pdf_oxide` |
 | quick-xml | 0.41.0 | MIT | tafia/quick-xml | HWPX XML 파싱 |
-| resvg | 0.47.0 | Apache-2.0 OR MIT | linebender/resvg | native-skia SVG raster (optional) |
+| resvg | 0.47.0 | Apache-2.0 OR MIT | linebender/resvg | Native/WASM 공통 WMF Print surface, native-skia SVG raster |
 | roxmltree | 0.21.1 | MIT OR Apache-2.0 | RazrFalcon/roxmltree | XML 검증·정규화 |
 | serde | 1.0.229 | MIT OR Apache-2.0 | serde-rs/serde | 직렬화 |
 | serde_json | 1.0.151 | MIT OR Apache-2.0 | serde-rs/json | JSON 직렬화 |
@@ -62,7 +62,7 @@ rhwp 프로젝트가 사용하는 서드파티 라이브러리 및 리소스의 
 | unicode-properties | 0.1.4 | MIT OR Apache-2.0 | unicode-rs/unicode-properties | 유니코드 문자 분류 |
 | unicode-segmentation | 1.13.3 | MIT OR Apache-2.0 | unicode-rs/unicode-segmentation | grapheme/word segmentation |
 | unicode-width | 0.2.2 | MIT OR Apache-2.0 | unicode-rs/unicode-width | 문자 폭 계산 |
-| usvg | 0.45.1 | Apache-2.0 OR MIT | linebender/resvg | SVG 파싱 |
+| usvg | 0.45.1 / 0.47.0 | Apache-2.0 OR MIT | linebender/resvg | Native SVG 파싱 / 공통 WMF surface의 resvg 파싱 |
 | wasm-bindgen | 0.2.125 | MIT OR Apache-2.0 | rustwasm/wasm-bindgen | WASM binding |
 | wasm-bindgen-test | 0.3.75 | MIT OR Apache-2.0 | rustwasm/wasm-bindgen | WASM 테스트 |
 | web-sys | 0.3.102 | MIT OR Apache-2.0 | rustwasm/wasm-bindgen | Web API binding |

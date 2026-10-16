@@ -8,15 +8,33 @@ use crate::renderer::render_tree::{BoundingBox, ImageNode, RawSvgNode};
 /// 1픽셀 cosmetic 선을 확인했다. 한컴 2020의 벡터 경로에는 적용하지 않는다.
 pub(crate) const HANCOM_2024_PRINT_DEVICE_DPI: f64 = 600.0;
 
+pub(crate) fn has_wmf(node: &crate::renderer::render_tree::RenderNode) -> bool {
+    if !node.visible {
+        return false;
+    }
+    matches!(&node.node_type, crate::renderer::render_tree::RenderNodeType::Image(image)
+        if image.data.as_deref().is_some_and(|data|
+            crate::renderer::image_resolver::detect_image_mime_type(data) == "image/x-wmf"))
+        || node.children.iter().any(has_wmf)
+}
+
 pub(super) fn image_payload(
     image: &ImageNode,
     bbox: BoundingBox,
     device_pixel_width: Option<f64>,
+    fonts: &super::metafile_fonts::MetafileFonts,
 ) -> Option<ResolvedImagePayload> {
     let Some(pixel) = device_pixel_width else {
         return crate::renderer::image_resolver::resolve_image_payload(image);
     };
     let data = image.data.as_deref()?;
+    if image.hancom2024_print_bitmap
+        && crate::renderer::image_resolver::detect_image_mime_type(data) == "image/x-wmf"
+    {
+        if let Some(payload) = super::metafile_surface::payload(image, bbox, pixel, fonts) {
+            return Some(payload);
+        }
+    }
     if crate::renderer::image_resolver::detect_image_mime_type(data) != "image/x-emf" {
         return crate::renderer::image_resolver::resolve_image_payload(image);
     }

@@ -21,6 +21,7 @@ pub struct LayerBuilder {
     page_context: Option<PagePaintContext>,
     metafile_device_pixel_width: Option<f64>,
     hancom2024_print_bitmap: bool,
+    metafile_fonts: super::metafile_fonts::MetafileFonts,
 }
 
 impl LayerBuilder {
@@ -32,6 +33,7 @@ impl LayerBuilder {
             page_context: None,
             metafile_device_pixel_width: None,
             hancom2024_print_bitmap: false,
+            metafile_fonts: Default::default(),
         }
     }
 
@@ -57,6 +59,14 @@ impl LayerBuilder {
         self
     }
 
+    pub(crate) fn with_metafile_fonts(
+        mut self,
+        fonts: &super::metafile_fonts::MetafileFonts,
+    ) -> Self {
+        self.metafile_fonts = fonts.clone();
+        self
+    }
+
     pub fn build(&mut self, tree: &PageRenderTree) -> PageLayerTree {
         self.build_with_embedded_fonts(tree, &[])
     }
@@ -66,6 +76,19 @@ impl LayerBuilder {
         tree: &PageRenderTree,
         fonts: &[EmbeddedFontFace<'_>],
     ) -> PageLayerTree {
+        if self.hancom2024_print_bitmap && !fonts.is_empty() && super::metafile::has_wmf(&tree.root)
+        {
+            for font in fonts {
+                let _ = self
+                    .metafile_fonts
+                    .register(font.family, font.bytes, font.face_index);
+                if let Some(alias) = font.alternate_family {
+                    let _ = self
+                        .metafile_fonts
+                        .register(alias, font.bytes, font.face_index);
+                }
+            }
+        }
         let (page_width, page_height) = match &tree.root.node_type {
             RenderNodeType::Page(page) => (page.width, page.height),
             _ => (tree.root.bbox.width, tree.root.bbox.height),
@@ -188,6 +211,7 @@ impl LayerBuilder {
                     &image,
                     node.bbox,
                     self.metafile_device_pixel_width,
+                    &self.metafile_fonts,
                 );
                 let mut ops = vec![PaintOp::image(frame, image, resolved)];
                 if self.output_options.show_control_codes {

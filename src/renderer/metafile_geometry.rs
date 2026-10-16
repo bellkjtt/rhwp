@@ -12,7 +12,7 @@ pub(super) fn wmf_crop_reference(declared: Option<(u32, u32)>) -> Option<(u32, u
 /// 변환기가 만든 SVG의 논리 viewport 크기. 정수 픽셀로 반올림하지 않는다.
 /// WMF 변환기의 width/height도 이 viewport와 같으므로 Canvas source rect와
 /// 중첩 SVG의 source rect가 같은 좌표계를 소비한다.
-pub(super) fn svg_viewport(data: &[u8]) -> Option<(f64, f64)> {
+pub(crate) fn svg_viewport(data: &[u8]) -> Option<(f64, f64)> {
     let xml = roxmltree::Document::parse(std::str::from_utf8(data).ok()?).ok()?;
     let root = xml.root_element();
     if root.tag_name().name() != "svg" {
