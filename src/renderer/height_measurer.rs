@@ -4812,12 +4812,12 @@ impl HeightMeasurer {
                         let mut comp =
                             crate::renderer::composer::compose_paragraph_in_context(p, styles);
                         if cell.text_direction == 0 && !self.is_native_hwp5
-                            && !self.legacy_hwp3_stored_geometry
+                            && !self.stored_geometry_policy.preserve_hwp3_origins
                             && crate::renderer::para_has_no_stored_line_segs(p)
                         {
                             crate::renderer::composer::recompose_cell_lines_with_nested_tables(
                                 &mut comp, p, inner_width, styles, self.dpi,
-                                self.legacy_hwp3_stored_geometry, self.is_native_hwp5,
+                                self.stored_geometry_policy, self.is_native_hwp5,
                                 &self.single_line_overflow_cache,
                                 |nested| {
                                     let stretch = self.render_normalization.nested_table_width_scale(nested);
