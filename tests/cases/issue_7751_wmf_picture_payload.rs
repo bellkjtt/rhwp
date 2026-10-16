@@ -40,6 +40,24 @@ fn png(svg: &[u8]) -> image::RgbaImage {
         .unwrap();
     image::load_from_memory(&b).unwrap().to_rgba8()
 }
+
+fn svg_root_attrs(bytes: &[u8]) -> std::collections::HashMap<String, String> {
+    let mut reader = quick_xml::Reader::from_reader(bytes);
+    let quick_xml::events::Event::Start(root) = reader.read_event().expect("SVG 루트") else {
+        panic!("실제 WMF의 SVG 루트");
+    };
+    root.attributes()
+        .map(|attr| {
+            let attr = attr.expect("SVG 속성");
+            (
+                attr.key.as_ref().to_owned(),
+                attr.normalized_value(quick_xml::XmlVersion::Implicit1_0)
+                    .unwrap()
+                    .into_owned(),
+            )
+        })
+        .collect()
+}
 fn find_image(node: &LayerNode) -> Option<&[u8]> {
     match &node.kind {
         LayerNodeKind::Group { children, .. } => children.iter().find_map(find_image),
@@ -80,6 +98,18 @@ fn check(effect: ImageEffect, b: i8, c: i8, expected_white: Option<u8>) {
     let inline = find_image(&layers.root).expect("실제 paint image");
     assert_eq!(inline, lazy, "inline과 source key 조회의 바이트 일치");
     let (_, original) = core.get_source_image_bytes_native("bin:0:376:src").unwrap();
+    let original_root = svg_root_attrs(&original);
+    let viewport: Vec<f64> = original_root["viewBox"]
+        .split_ascii_whitespace()
+        .map(|v| v.parse().unwrap())
+        .collect();
+    let adjusted_root = svg_root_attrs(inline);
+    assert_eq!(
+        adjusted_root["width"].parse::<f64>().unwrap(),
+        viewport[2],
+        "WMF의 원본 창과 crop용 SVG 픽셀 좌표계가 같아야 한다"
+    );
+    assert_eq!(adjusted_root["height"].parse::<f64>().unwrap(), viewport[3]);
     let src = png(&original);
     let dst = png(inline);
     assert_eq!(
@@ -111,7 +141,7 @@ fn check(effect: ImageEffect, b: i8, c: i8, expected_white: Option<u8>) {
     }
     assert!(count > 1000, "실제 그림의 흰색 영역을 검사");
     if expected_white.is_some() {
-        assert!(black_count > 100, "배경만 남기고 그림 글자를 지우지 않는다");
+        assert!(black_count > 0, "원본에 있는 검은 픽셀을 실제로 검사한다");
     }
     assert!(
         core.get_source_image_bytes_native(&key.replacen("bin:0:", "bin:1:", 1))

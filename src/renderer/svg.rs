@@ -4102,7 +4102,7 @@ fn parse_image_dimensions(data: &[u8]) -> Option<(u32, u32)> {
         return Some((w, h.unsigned_abs()));
     }
 
-    None
+    super::svg_fragment::svg_intrinsic_pixel_dimensions(data)
 }
 
 /// 폰트명 → local() 별칭 매핑 (한글명 + 영문명)

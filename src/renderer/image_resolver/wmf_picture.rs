@@ -9,7 +9,9 @@ use std::collections::HashSet;
 use base64::Engine;
 
 use super::{decode_image_with_format_limited, memoized, Conversion, Cursor};
-use crate::renderer::svg_fragment::{decode_base64_data_url, try_parse_single_image_data_url};
+use crate::renderer::svg_fragment::{
+    decode_base64_data_url, find_svg_attr_value, try_parse_single_image_data_url,
+};
 
 /// 단일 raster WMF의 색 조정을 공통 바이트에 적용한다.
 /// 소스 조정색이256색을 넘는 경로에는 RGB555 평균도 반영한다.
@@ -85,11 +87,31 @@ pub(super) fn adjusted_wmf_picture_svg(
                 .write_to(&mut Cursor::new(&mut adjusted), image::ImageFormat::Png)
                 .ok()?;
             let encoded = base64::engine::general_purpose::STANDARD.encode(adjusted);
-            // viewBox·image 사각형·변환·crop을 보존하고 색만 공유한다.
-            Some(
-                svg.replacen(url, &format!("data:image/png;base64,{encoded}"), 1)
-                    .into_bytes(),
-            )
+            // viewBox·image 사각형을 유지하고, 새 payload의 원본 픽셀 좌표계를 명시한다.
+            // 크기가 없는 SVG의 natural size로 crop하면 브라우저에서 다른 영역이 확대된다.
+            let root = &svg[..svg.find('>')? + 1];
+            let adjusted = svg.replacen(url, &format!("data:image/png;base64,{encoded}"), 1);
+            let adjusted = if find_svg_attr_value(root, "width").is_none()
+                && find_svg_attr_value(root, "height").is_none()
+            {
+                let view_box: Vec<i32> = find_svg_attr_value(root, "viewBox")?
+                    .split_ascii_whitespace()
+                    .map(str::parse)
+                    .collect::<Result<_, _>>()
+                    .ok()?;
+                let [_, _, width, height]: [i32; 4] = view_box.try_into().ok()?;
+                if width <= 0 || height <= 0 {
+                    return None;
+                }
+                adjusted.replacen(
+                    "<svg ",
+                    &format!("<svg width=\"{width}\" height=\"{height}\" "),
+                    1,
+                )
+            } else {
+                adjusted
+            };
+            Some(adjusted.into_bytes())
         },
     )
 }

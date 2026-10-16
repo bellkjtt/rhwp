@@ -304,7 +304,9 @@ fn parse_image_dimensions_canvas(data: &[u8]) -> Option<(u32, u32)> {
         return Some((w, h.unsigned_abs()));
     }
 
-    None
+    // 변환된 WMF의 SVG도 명시된 원본 픽셀 좌표로 crop한다.
+    // 크기를 추측해 natural size와 viewBox를 혼용하지 않는다.
+    super::svg_fragment::svg_intrinsic_pixel_dimensions(data)
 }
 
 /// Web Canvas 2D 렌더러
