@@ -16,6 +16,7 @@ use crate::renderer::render_tree::{
 
 mod picture_adjustments;
 pub(crate) use picture_adjustments::adjusted_picture_bytes;
+mod wmf_picture;
 
 // ── 변환 결과 메모 ──
 //
@@ -54,6 +55,11 @@ enum Conversion {
         effect: u8,
         brightness: i8,
         contrast: i8,
+    },
+    WmfPictureTone {
+        brightness: i8,
+        contrast: i8,
+        grayscale: bool,
     },
 }
 
@@ -181,6 +187,18 @@ pub(crate) fn emitted_source_image_bytes(
     data: &[u8],
     variant: crate::paint::SourceImageVariant,
 ) -> (&'static str, std::borrow::Cow<'_, [u8]>) {
+    if let crate::paint::SourceImageVariant::WmfPictureTone {
+        brightness,
+        contrast,
+        grayscale,
+    } = variant
+    {
+        if let Some(bytes) =
+            wmf_picture::adjusted_wmf_picture_svg(data, brightness, contrast, grayscale)
+        {
+            return ("image/svg+xml", std::borrow::Cow::Owned(bytes));
+        }
+    }
     if variant == crate::paint::SourceImageVariant::BakedBlackWhitePng {
         if let Some(bytes) = blackwhite_bytes_to_png_bytes(data) {
             return ("image/png", std::borrow::Cow::Owned(bytes));
@@ -239,6 +257,18 @@ pub(crate) fn resolve_image_payload(image: &ImageNode) -> Option<ResolvedImagePa
         // `<img>` 경로(`getSourceImageBytes`·layer tree base64)는 여기를 지나므로 변환이
         // 여기에도 있어야 한다.
         "image/x-wmf" => {
+            if let Some((brightness, contrast, grayscale)) = wmf_picture_parameters(image) {
+                if let Some(data) =
+                    wmf_picture::adjusted_wmf_picture_svg(data, brightness, contrast, grayscale)
+                {
+                    return Some(ResolvedImagePayload {
+                        data,
+                        mime: "image/svg+xml",
+                        kind: ResolvedImageKind::FormatConverted,
+                        suppress_effects: true,
+                    });
+                }
+            }
             crate::renderer::svg::convert_wmf_to_svg(data).map(|data| ResolvedImagePayload {
                 data,
                 mime: "image/svg+xml",
@@ -352,6 +382,11 @@ pub(crate) fn image_node_with_resolved_payload(
     image: &ImageNode,
     resolved: Option<&ResolvedImagePayload>,
 ) -> ImageNode {
+    let fallback = resolved
+        .is_none()
+        .then(|| resolve_image_payload(image))
+        .flatten();
+    let resolved = resolved.or(fallback.as_ref());
     let mut image = image.clone();
     if let Some(payload) = resolved {
         image.data = Some(payload.data.clone());
@@ -362,6 +397,17 @@ pub(crate) fn image_node_with_resolved_payload(
         }
     }
     image
+}
+
+/// 공통 producer와 지연 로딩 키가 같은 WMF 실사 효과를 선택하는 단일 판정.
+pub(crate) fn wmf_picture_parameters(image: &ImageNode) -> Option<(i8, i8, bool)> {
+    (matches!(image.effect, ImageEffect::RealPic | ImageEffect::GrayScale)
+        && detect_image_mime_type(image.data.as_deref()?) == "image/x-wmf")
+        .then_some((
+            image.brightness,
+            image.contrast,
+            image.effect == ImageEffect::GrayScale,
+        ))
 }
 
 /// 워터마크 bake 대상 판정. `paint::source_image_key` 의 variant 결정과 같은 술어를 써야

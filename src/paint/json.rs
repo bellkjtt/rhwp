@@ -953,6 +953,11 @@ impl PaintOp {
             } => {
                 buf.push('{');
                 buf.push_str("\"type\":\"image\",\"bbox\":");
+                let fallback = resolved
+                    .is_none()
+                    .then(|| crate::renderer::image_resolver::resolve_image_payload(image))
+                    .flatten();
+                let resolved = resolved.as_deref().or(fallback.as_ref());
                 // [#7193] 소비자가 그리는 자리 — 틀에서 그림 안쪽 여백을 뺀 사각형.
                 write_bbox(buf, image.paint_bbox(bbox));
                 // [#3315] 키가 있는 op 만 base64 를 생략할 수 있다 — 소비자가 그 키로

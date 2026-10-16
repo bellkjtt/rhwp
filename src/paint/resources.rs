@@ -322,13 +322,28 @@ pub fn source_image_key(
         SourceImageVariant::BakedBlackWhitePng
     } else if bakes_watermark {
         SourceImageVariant::BakedWatermarkPng
+    } else if let Some((brightness, contrast, grayscale)) =
+        crate::renderer::image_resolver::wmf_picture_parameters(image)
+    {
+        SourceImageVariant::WmfPictureTone {
+            brightness,
+            contrast,
+            grayscale,
+        }
     } else {
         SourceImageVariant::Source
     };
+    let tag = match variant {
+        SourceImageVariant::WmfPictureTone {
+            brightness,
+            contrast,
+            grayscale,
+        } => format!("wmftone_{brightness}_{contrast}_{}", u8::from(grayscale)),
+        _ => variant.as_str().to_owned(),
+    };
     Some(format!(
         "bin:{bin_data_epoch}:{}:{}",
-        image.bin_data_id,
-        variant.as_str()
+        image.bin_data_id, tag
     ))
 }
 
@@ -341,6 +356,12 @@ pub enum SourceImageVariant {
     BakedWatermarkPng,
     /// 원본 해상도에서 흑백을 확정한 PNG.
     BakedBlackWhitePng,
+    /// WMF 색 처리. producer의 밝기·명암·회색조 결과를 재현한다.
+    WmfPictureTone {
+        brightness: i8,
+        contrast: i8,
+        grayscale: bool,
+    },
 }
 
 impl SourceImageVariant {
@@ -349,6 +370,7 @@ impl SourceImageVariant {
             SourceImageVariant::Source => "src",
             SourceImageVariant::BakedWatermarkPng => "wmpng",
             SourceImageVariant::BakedBlackWhitePng => "bwpng",
+            SourceImageVariant::WmfPictureTone { .. } => "wmftone",
         }
     }
 
@@ -373,6 +395,24 @@ pub fn parse_source_image_key(key: &str) -> Option<(u32, u16, SourceImageVariant
         "src" => SourceImageVariant::Source,
         "wmpng" => SourceImageVariant::BakedWatermarkPng,
         "bwpng" => SourceImageVariant::BakedBlackWhitePng,
+        tag if tag.starts_with("wmftone_") => {
+            let mut values = tag.strip_prefix("wmftone_")?.split('_');
+            let brightness = values.next()?.parse::<i8>().ok()?;
+            let contrast = values.next()?.parse::<i8>().ok()?;
+            let grayscale = match values.next()? {
+                "0" => false,
+                "1" => true,
+                _ => return None,
+            };
+            if values.next().is_some() {
+                return None;
+            }
+            SourceImageVariant::WmfPictureTone {
+                brightness,
+                contrast,
+                grayscale,
+            }
+        }
         _ => return None,
     };
     if parts.next().is_some() {

@@ -49,7 +49,7 @@ pub(crate) fn adjusted_picture_bytes(
     )
 }
 
-fn adjusted_channel(channel: u8, brightness: i8, contrast: i8) -> u8 {
+pub(super) fn adjusted_channel(channel: u8, brightness: i8, contrast: i8) -> u8 {
     let value = i64::from(channel);
     let b = i64::from(brightness);
     let c = i64::from(contrast);

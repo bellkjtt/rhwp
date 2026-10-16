@@ -1539,6 +1539,13 @@ impl SkiaLayerRenderer {
                             image,
                             resolved,
                         } => {
+                            let fallback = resolved
+                                .is_none()
+                                .then(|| {
+                                    crate::renderer::image_resolver::resolve_image_payload(image)
+                                })
+                                .flatten();
+                            let resolved = resolved.as_deref().or(fallback.as_ref());
                             let effective_bbox = image
                                 .transform
                                 .effective_image_bbox(&image.paint_bbox(bbox));
