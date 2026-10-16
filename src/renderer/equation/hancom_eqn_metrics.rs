@@ -729,6 +729,12 @@ static ADVANCES: [[u16; 175]; 64] = [
 ];
 
 pub(super) fn advance(code: char, fs: f64, dpi: f64) -> Option<f64> {
+    // 정상 Save/Print의 6/9/12/18pt ∴·∵는 모두 논리 1em이다.
+    // 설치 HancomEQN의 hmtx도 두 기호 모두 1024/1024이며 표시 face를 유지한다.
+    if matches!(code, '∴' | '∵') {
+        let logical_size = (fs * 48.0 / dpi).round().max(1.0) * 2.0;
+        return Some(logical_size * dpi / 96.0);
+    }
     // 독립 Print의 수학 콜론 U+E04F와 쉼표 U+E052는 같은 전진폭이다.
     // Windows GDI의 논리 크기 2..128 전체에서도 동일함을 확인했다.
     // 표시 글리프와 쉼표의 별도 문장부호 간격은 공유하지 않는다.
