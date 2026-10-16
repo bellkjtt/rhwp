@@ -729,6 +729,10 @@ const ADVANCES: [[u16; 175]; 64] = [
 ];
 
 pub(super) fn advance(code: char, fs: f64, dpi: f64) -> Option<f64> {
+    // 독립 Print의 수학 콜론 U+E04F와 쉼표 U+E052는 같은 전진폭이다.
+    // Windows GDI의 논리 크기 2..128 전체에서도 동일함을 확인했다.
+    // 표시 글리프와 쉼표의 별도 문장부호 간격은 공유하지 않는다.
+    let code = if code == '\u{e04f}' { '\u{e052}' } else { code };
     let index = CODES.binary_search(&u32::from(code)).ok()?;
     let logical_size = (fs * 48.0 / dpi).round().max(1.0) * 2.0;
     let width = if logical_size <= 128.0 {

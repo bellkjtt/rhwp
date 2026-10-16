@@ -14,7 +14,8 @@ pub(crate) fn is_binary_symbol(symbol: &str) -> bool {
 pub(crate) fn is_relation_symbol(symbol: &str) -> bool {
     matches!(
         symbol,
-        "=" | "<"
+        "=" | ":"
+            | "<"
             | ">"
             | "≤"
             | "≥"
