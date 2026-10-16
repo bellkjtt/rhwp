@@ -88,12 +88,22 @@ impl EqParser {
                     self.try_parse_scripts(group)
                 } else {
                     self.pos += 1;
-                    EqNode::Symbol(val)
+                    let node = EqNode::Symbol(val);
+                    if self.document_terms {
+                        self.try_parse_scripts(node)
+                    } else {
+                        node
+                    }
                 }
             }
             TokenType::RParen | TokenType::LBracket | TokenType::RBracket => {
                 self.pos += 1;
-                EqNode::Symbol(val)
+                let node = EqNode::Symbol(val);
+                if self.document_terms {
+                    self.try_parse_scripts(node)
+                } else {
+                    node
+                }
             }
             TokenType::Subscript | TokenType::Superscript => {
                 if self.document_terms {
