@@ -113,7 +113,7 @@ fn host_rows(rows: &[&RenderNode], source: &Paragraph, owner: (usize, usize), ta
         "물리 줄의 순서·중복 방지"
     );
     assert!(
-        rows.len() >= source.text.chars().filter(|c| *c == '\n').count() + 1,
+        rows.len() > source.text.chars().filter(|c| *c == '\n').count(),
         "빈 연속 개행도 실제 줄을 점유"
     );
     if let Some(bottom) = visible_bottom {
