@@ -9,7 +9,8 @@ autotests = false
 autoexamples = false
 
 [workspace]
-members = [".", "crates/*", "tools/rhwp-subsecond", "bindings/Native", "tools/batch-convert", "tools/llm_verifier/verdict_protocol", "tools/llm_verifier/claim_bind", "tools/llm_verifier/criteria_decomp"]
+exclude = ["vendor/rhwp-pdf-import-backend", "vendor/rhwp-zune-jpeg", "vendor/rhwp-jpeg-decoder"]
+members = ["crates/*", "tools/rhwp-subsecond", "bindings/Native", "tools/batch-convert", "tools/llm_verifier/verdict_protocol", "tools/llm_verifier/claim_bind", "tools/llm_verifier/criteria_decomp"]
 default-members = [".", "crates/*"]
 resolver = "2"
 
@@ -229,6 +230,10 @@ path = "tests/overflow_cell_baseline.rs"
 rhwp-contracts = { path = "crates/rhwp-contracts" }
 rhwp-ooxml-chart = { path = "crates/rhwp-ooxml-chart" }
 rhwp-password-crypto = { path = "crates/rhwp-password-crypto" }
+pdf_oxide = { package = "rhwp-pdf-import-backend", path = "vendor/rhwp-pdf-import-backend", version = "=0.3.78-rhwp.1", default-features = false, optional = true }
+# pdf_oxide 0.3.78's DocumentIR initializer is incompatible with office_oxide 0.1.13.
+# Keep the compatibility constraint for library consumers that do not use our lockfile.
+office_oxide = { version = "=0.1.9", default-features = false, optional = true }
 wasm-bindgen = "0.2"
 cfb = "0.15"
 crc32fast = "1"
@@ -301,6 +306,7 @@ subsecond = { version = "=0.7.10", optional = true }
 
 [features]
 default = ["console_error_panic_hook"]
+pdf-import = ["dep:pdf_oxide", "dep:office_oxide"]
 native-skia = ["dep:resvg", "dep:skia-safe", "dep:icy_sixel"]
 subsecond-dev = ["dep:subsecond"]
 

@@ -4547,6 +4547,7 @@ fn parse_draw_text_body(
                         text_box.paragraphs.push(para);
                     }
                     b"textMargin" => {
+                        text_box.text_margin_explicit = true;
                         for attr in ce.attributes().flatten() {
                             match attr.key.as_ref().as_bytes() {
                                 b"left" => text_box.margin_left = parse_i16(&attr),
