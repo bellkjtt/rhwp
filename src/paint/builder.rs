@@ -20,6 +20,7 @@ pub struct LayerBuilder {
     bin_data_epoch: u32,
     page_context: Option<PagePaintContext>,
     metafile_device_pixel_width: Option<f64>,
+    hancom2024_print_bitmap: bool,
 }
 
 impl LayerBuilder {
@@ -30,12 +31,19 @@ impl LayerBuilder {
             bin_data_epoch: 0,
             page_context: None,
             metafile_device_pixel_width: None,
+            hancom2024_print_bitmap: false,
         }
     }
 
     /// 원본 형식과 분리된 출력 장치 픽셀의 레이아웃 단위 크기다.
     pub fn with_metafile_device_pixel_width(mut self, width: Option<f64>) -> Self {
         self.metafile_device_pixel_width = width.filter(|v| v.is_finite() && *v > 0.0);
+        self
+    }
+
+    /// 그림 색의 출력 세대를 장치 픽셀 값과 독립적으로 전달한다.
+    pub fn with_hancom2024_print_bitmap(mut self, enabled: bool) -> Self {
+        self.hancom2024_print_bitmap = enabled && self.profile == RenderProfile::Print;
         self
     }
 
@@ -174,15 +182,14 @@ impl LayerBuilder {
                 let frame = self
                     .page_context
                     .map_or(node.bbox, |context| context.image_frame(node, image));
-                let mut ops = vec![PaintOp::image(
-                    frame,
-                    image.clone(),
-                    crate::paint::metafile::image_payload(
-                        image,
-                        node.bbox,
-                        self.metafile_device_pixel_width,
-                    ),
-                )];
+                let mut image = image.clone();
+                image.hancom2024_print_bitmap = self.hancom2024_print_bitmap;
+                let resolved = crate::paint::metafile::image_payload(
+                    &image,
+                    node.bbox,
+                    self.metafile_device_pixel_width,
+                );
+                let mut ops = vec![PaintOp::image(frame, image, resolved)];
                 if self.output_options.show_control_codes {
                     ops.push(PaintOp::control_label(frame, "[그림]"));
                 }

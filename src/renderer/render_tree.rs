@@ -1454,6 +1454,9 @@ pub struct ImageNode {
     /// 이미지 데이터 (캐시용, JSON 직렬화 시 제외)
     #[serde(skip)]
     pub data: Option<Vec<u8>>,
+    /// 원본 IR이 아닌 출력 문맥이다. 한컴 2024 Print의 bitmap 색 전달에만 사용한다.
+    #[serde(skip)]
+    pub hancom2024_print_bitmap: bool,
     /// 소속 구역 인덱스
     pub section_index: Option<usize>,
     /// 이미지 컨트롤을 소유한 문단 인덱스
@@ -1561,6 +1564,7 @@ impl ImageNode {
         Self {
             bin_data_id,
             data,
+            hancom2024_print_bitmap: false,
             section_index: None,
             para_index: None,
             control_index: None,

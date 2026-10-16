@@ -1,6 +1,9 @@
 use std::cell::RefCell;
 use std::io::Cursor;
 
+mod print_tone;
+pub(crate) use print_tone::{is_print_bitmap_candidate, print_bitmap_payload};
+
 use crate::model::image::ImageEffect;
 use crate::paint::{ResolvedImageKind, ResolvedImagePayload};
 #[path = "png_sampling.rs"]
@@ -63,6 +66,7 @@ enum Conversion {
         contrast: i8,
         grayscale: bool,
     },
+    Hancom2024Bitmap,
 }
 
 #[derive(Default)]
@@ -217,12 +221,57 @@ pub(crate) fn emitted_source_image_bytes(
             return ("image/svg+xml", std::borrow::Cow::Owned(bytes));
         }
     }
+    if variant == crate::paint::SourceImageVariant::Hancom2024Bitmap {
+        if let Some(bytes) = print_tone::bitmap_bytes_to_png(data) {
+            return ("image/png", std::borrow::Cow::Owned(bytes));
+        }
+    }
     if variant == crate::paint::SourceImageVariant::BakedBlackWhitePng {
         if let Some(bytes) = blackwhite_bytes_to_png_bytes(data) {
             return ("image/png", std::borrow::Cow::Owned(bytes));
         }
     }
     emitted_image_bytes(data, variant.bakes_watermark())
+}
+
+/// 이미지 신원과 inline 바이트가 같은 출력 변형을 선택한다.
+pub(crate) fn source_image_variant(image: &ImageNode) -> crate::paint::SourceImageVariant {
+    use crate::paint::SourceImageVariant;
+    if is_baked_blackwhite_image(image) {
+        SourceImageVariant::BakedBlackWhitePng
+    } else if is_print_bitmap_candidate(image) {
+        SourceImageVariant::Hancom2024Bitmap
+    } else if image.data.as_deref().is_some_and(|data| {
+        detect_image_mime_type(data) == "image/jpeg" && is_watermark_image(image)
+    }) {
+        SourceImageVariant::BakedWatermarkPng
+    } else if let Some((brightness, contrast, grayscale)) = wmf_picture_parameters(image) {
+        SourceImageVariant::WmfPictureTone {
+            brightness,
+            contrast,
+            grayscale,
+        }
+    } else if let Some((brightness, contrast, effect)) = picture_tone_parameters(image) {
+        SourceImageVariant::PictureTone {
+            brightness,
+            contrast,
+            effect,
+        }
+    } else {
+        SourceImageVariant::Source
+    }
+}
+
+pub(crate) fn emitted_image_node_bytes<'a>(
+    image: &ImageNode,
+    data: &'a [u8],
+) -> (&'static str, std::borrow::Cow<'a, [u8]>) {
+    let variant = source_image_variant(image);
+    if variant == crate::paint::SourceImageVariant::Hancom2024Bitmap {
+        emitted_source_image_bytes(data, variant)
+    } else {
+        emitted_image_bytes(data, is_watermark_image(image))
+    }
 }
 
 /// 이미 바이트에 적용한 효과는 출력 필터에서 다시 적용하지 않는다.
@@ -247,6 +296,9 @@ pub(crate) fn resolve_image_payload(image: &ImageNode) -> Option<ResolvedImagePa
 }
 
 fn resolve_unadjusted_image_payload(image: &ImageNode) -> Option<ResolvedImagePayload> {
+    if let Some(payload) = print_bitmap_payload(image) {
+        return Some(payload);
+    }
     let data = image.data.as_deref()?;
     let mime = detect_image_mime_type(data);
 
@@ -418,6 +470,8 @@ pub(crate) fn image_node_with_resolved_payload(
     image.original_size_hu = image_crop_reference(&image);
     if let Some(payload) = resolved {
         image.data = Some(payload.data.clone());
+        // payload는 이미 출력 색을 가진다. 내부 재생에서 다시 확장하지 않는다.
+        image.hancom2024_print_bitmap = false;
         if payload.suppress_effects {
             image.effect = ImageEffect::RealPic;
             image.brightness = 0;

@@ -1512,6 +1512,7 @@ impl DocumentCore {
             );
             let mut builder = LayerBuilder::new(profile)
                 .with_metafile_device_pixel_width(metafile_pixel)
+                .with_hancom2024_print_bitmap(self.hangul2024_compat)
                 .with_output_options(output_options)
                 .with_bin_data_epoch(self.bin_data_epoch);
             Ok(builder.build_with_embedded_fonts(tree, &embedded_fonts))

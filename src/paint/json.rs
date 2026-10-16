@@ -1094,10 +1094,7 @@ impl PaintOp {
                     // [#3315] 변환 사슬의 단일 권위는 `emitted_image_bytes` 다 — 키로 바이트를
                     // 되돌려주는 경로가 같은 함수를 써야 두 결과가 갈라지지 않는다.
                     let (final_mime, final_data) =
-                        crate::renderer::image_resolver::emitted_image_bytes(
-                            data,
-                            crate::renderer::image_resolver::is_watermark_image(image),
-                        );
+                        crate::renderer::image_resolver::emitted_image_node_bytes(image, data);
                     if omit_bytes {
                         let _ = write!(
                             buf,
