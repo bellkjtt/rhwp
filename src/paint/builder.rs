@@ -4,6 +4,7 @@ use crate::paint::layer_tree::{
     CacheHint, ClipKind, GroupKind, LayerNode, LayerNodeKind, LayerOutputOptions, PageLayerTree,
 };
 use crate::paint::paint_op::{PaintOp, TextDecorationKind};
+use crate::paint::paper_viewport::PagePaintContext;
 use crate::paint::profile::RenderProfile;
 use crate::paint::shaping_glyph::lower_horizontal_shaping_page_sidecars;
 use crate::paint::shaping_glyph_vertical::lower_vertical_shaping_page_sidecars;
@@ -17,6 +18,7 @@ pub struct LayerBuilder {
     profile: RenderProfile,
     output_options: LayerOutputOptions,
     bin_data_epoch: u32,
+    page_context: Option<PagePaintContext>,
 }
 
 impl LayerBuilder {
@@ -25,6 +27,7 @@ impl LayerBuilder {
             profile,
             output_options: LayerOutputOptions::default(),
             bin_data_epoch: 0,
+            page_context: None,
         }
     }
 
@@ -52,15 +55,9 @@ impl LayerBuilder {
             _ => (tree.root.bbox.width, tree.root.bbox.height),
         };
 
-        // 한컴 Print의 물리 MediaBox는 정수 point다. 배치가 끝난 논리 종이와
-        // root/자식 좌표는 유지하고 모든 출력 backend에 같은 종이 경계를 전달한다.
-        // HU에서 변환한 정확한 정수 point가 부동소수점 오차로 한 단계 내려가지 않게 한다.
-        let (page_width, page_height) = if self.profile == RenderProfile::Print {
-            let physical_extent = |px: f64| (px * 0.75 + 1e-9).floor() / 0.75;
-            (physical_extent(page_width), physical_extent(page_height))
-        } else {
-            (page_width, page_height)
-        };
+        let context = PagePaintContext::new(self.profile, page_width, page_height);
+        let (page_width, page_height) = context.output_size();
+        self.page_context = Some(context);
 
         let root = LayerNode::group(
             tree.root.bbox,
@@ -166,13 +163,16 @@ impl LayerBuilder {
             }
             RenderNodeType::Path(path) => Some(vec![PaintOp::path(node.bbox, path.clone())]),
             RenderNodeType::Image(image) => {
+                let frame = self
+                    .page_context
+                    .map_or(node.bbox, |context| context.image_frame(node, image));
                 let mut ops = vec![PaintOp::image(
-                    node.bbox,
+                    frame,
                     image.clone(),
                     crate::renderer::image_resolver::resolve_image_payload(image),
                 )];
                 if self.output_options.show_control_codes {
-                    ops.push(PaintOp::control_label(node.bbox, "[그림]"));
+                    ops.push(PaintOp::control_label(frame, "[그림]"));
                 }
                 Some(ops)
             }
@@ -194,7 +194,8 @@ impl LayerBuilder {
         };
 
         if let Some(ops) = own_ops {
-            let own_leaf = LayerNode::leaf(node.bbox, Some(node.id), ops).with_layer(node.layer);
+            let own_bounds = ops.first().map_or(node.bbox, PaintOp::bounds);
+            let own_leaf = LayerNode::leaf(own_bounds, Some(node.id), ops).with_layer(node.layer);
             // 내부 문단이 없는 사각형도 원본 컨트롤 부호를 출력해야 한다.
             let has_source_marker = self.output_options.show_control_codes
                 && matches!(node.control_code, ControlCode::Rectangle(_));
