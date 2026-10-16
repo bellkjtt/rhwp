@@ -52,6 +52,17 @@ WASM은 미검증으로 유지한다. 기존3문서의 일대일 TSV 보류와 P
 후보를 되돌리면 Print 일치가 깨진다. **현재 후보 출력 보정은 완료, 엄격한 기준 일대일 조건은
 미충족**으로 구분하며 PR/승인/통합 보류를 해제하지 않는다.
 
+### 사용자 요청에 따른 MCP Print PDF 재산출
+
+세 HWPX를 매뉴얼의 start/status/download로 다시 변환했다. 새 job 모두 성공했으며 실제
+한컴13.0.0.3901·PrintMethod0·frame_print_to_pdf_ex_one_up을 확인했다. 새 PDF는3/2/2쪽이고
+전체7쪽의96dpi 픽셀이 기존 기준과 동일하다. 현재 Native/host fresh WASM 출력 PNG를
+재사용해 새 PDF와 전쪽 TSV를 다시 산출했고 양 경로 모두 최저100%다. 새 대표 review와
+standalone overlay도 생성했다. 새 기준 PDF3개는 기존 추적 경로에 반영했고, 이전 PDF와
+기존 source의 검증 기록은 보존했다. job·새 PDF SHA·실제 검증 범위는
+[Stage7](../../working/task_m100_7419_stage7.md)에 연결한다. 순수 devel의2/1/1쪽은 그대로여서
+기존 일대일 보류를 예외 처리하거나 PR/push를 수행하지 않았다.
+
 ### 직전 cdef source의 판정
 
 **머지 보류 — devel 대비3문서의 전쪽 일대일 TSV 대응 미검증. 전체 회귀·lint·Native 통과.**
