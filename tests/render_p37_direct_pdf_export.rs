@@ -163,9 +163,9 @@ fn rhwp_bin() -> String {
     std::env::var("CARGO_BIN_EXE_rhwp").unwrap_or_else(|_| env!("CARGO_BIN_EXE_rhwp").to_string())
 }
 
-// These pixel regressions run in the existing Native Skia CI target.
+// #7494·#7751: 독립 한컴 Print의 색상·기존 미지원 경계를 검사한다.
+#[cfg(feature = "native-skia")]
 mod image_adjustment_regressions {
-    #[cfg(feature = "native-skia")]
     fn issue_4764_png_rgba(width: u32, height: u32, rgba: [u8; 4]) -> Vec<u8> {
         let pixels = image::RgbaImage::from_pixel(width, height, image::Rgba(rgba));
         let mut bytes = std::io::Cursor::new(Vec::new());
@@ -175,45 +175,32 @@ mod image_adjustment_regressions {
         bytes.into_inner()
     }
 
-    #[cfg(feature = "native-skia")]
-    fn issue_4764_adjusted_rgb(rgb: [u8; 3], brightness: i8, contrast: i8) -> [u8; 3] {
-        // Independent sRGB transfer equations from CSS Color 4. SVG filter
-        // primitives use linearRGB by default (Filter Effects 1 section 10).
-        let brightness = brightness.clamp(-100, 100) as f64 / 100.0;
-        let slope = (100.0 + contrast.clamp(-100, 100) as f64) / 100.0;
-        let intercept = (0.5 - 0.5 * slope) + brightness;
-        rgb.map(|channel| {
-            let encoded = channel as f64 / 255.0;
-            let linear = if encoded <= 0.04045 {
-                encoded / 12.92
-            } else {
-                ((encoded + 0.055) / 1.055).powf(2.4)
-            };
-            let adjusted = (linear * slope + intercept).clamp(0.0, 1.0);
-            let encoded = if adjusted <= 0.0031308 {
-                adjusted * 12.92
-            } else {
-                1.055 * adjusted.powf(1.0 / 2.4) - 0.055
-            };
-            (encoded * 255.0).round().clamp(0.0, 255.0) as u8
-        })
+    fn issue_4764_hancom_rgb(brightness: i8, contrast: i8) -> [u8; 3] {
+        // RGB(80,100,120)을 독립 한컴 Print에서 관측한 값이다.
+        // 출처·입력/PDF SHA·job은 pdf/issue7751/README.md에 고정한다.
+        match (brightness, contrast) {
+            (0, 0) => [80, 100, 120],
+            (8, 0) => [100, 120, 140],
+            (0, 8) => [76, 97, 119],
+            (20, 0) => [131, 151, 171],
+            (0, 20) => [68, 93, 118],
+            (20, 20) => [125, 150, 175],
+            _ => panic!("한컴 Print 관측표에 없는 조건: {brightness}/{contrast}"),
+        }
     }
 
-    #[cfg(feature = "native-skia")]
     struct Issue4764PdfImageStream {
         width: usize,
         height: usize,
         pixels: Vec<u8>,
     }
 
-    #[cfg(feature = "native-skia")]
     fn issue_4764_rfind(haystack: &[u8], needle: &[u8]) -> Option<usize> {
         haystack
             .windows(needle.len())
             .rposition(|window| window == needle)
     }
 
-    #[cfg(feature = "native-skia")]
     fn issue_4764_pdf_dict_usize(dict: &[u8], key: &str) -> Option<usize> {
         let dict = String::from_utf8_lossy(dict);
         let start = dict.find(key)? + key.len();
@@ -223,7 +210,6 @@ mod image_adjustment_regressions {
             .and_then(|value| value.parse::<usize>().ok())
     }
 
-    #[cfg(feature = "native-skia")]
     fn issue_4764_pdf_rgb_color_space(pdf: &[u8], dict: &[u8]) -> bool {
         let dict = String::from_utf8_lossy(dict);
         if dict.contains("/ColorSpace /DeviceRGB") {
@@ -254,11 +240,9 @@ mod image_adjustment_regressions {
         issue_4764_pdf_dict_usize(&object[..end], "/N") == Some(3)
     }
 
-    #[cfg(feature = "native-skia")]
     fn issue_4764_pdf_image_streams(pdf: &[u8]) -> Vec<Issue4764PdfImageStream> {
         use flate2::read::ZlibDecoder;
         use std::io::Read;
-
         let mut images = Vec::new();
         let mut cursor = 0;
         while let Some(relative_start) = pdf[cursor..]
@@ -333,7 +317,6 @@ mod image_adjustment_regressions {
         images
     }
 
-    #[cfg(feature = "native-skia")]
     fn issue_4764_pdf_images_contain_rgb(
         images: &[Issue4764PdfImageStream],
         expected: [u8; 3],
@@ -349,13 +332,11 @@ mod image_adjustment_regressions {
         })
     }
 
-    #[cfg(feature = "native-skia")]
     fn issue_4764_direct_pdf_image_tree(
         image: rhwp::renderer::render_tree::ImageNode,
     ) -> rhwp::paint::PageLayerTree {
         use rhwp::paint::{LayerNode, PaintOp, RenderProfile};
         use rhwp::renderer::render_tree::BoundingBox;
-
         let page = BoundingBox::new(0.0, 0.0, 32.0, 32.0);
         rhwp::paint::PageLayerTree::with_profile(
             32.0,
@@ -373,13 +354,11 @@ mod image_adjustment_regressions {
         )
     }
 
-    #[cfg(feature = "native-skia")]
     fn issue_4764_direct_pdf_page_background_tree(
         image: rhwp::renderer::render_tree::PageBackgroundImage,
     ) -> rhwp::paint::PageLayerTree {
         use rhwp::paint::{LayerNode, PaintOp, RenderProfile};
         use rhwp::renderer::render_tree::{BoundingBox, PageBackgroundNode};
-
         let page = BoundingBox::new(0.0, 0.0, 32.0, 32.0);
         rhwp::paint::PageLayerTree::with_profile(
             32.0,
@@ -402,13 +381,11 @@ mod image_adjustment_regressions {
         )
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
     fn issue_4764_direct_pdf_embeds_adjusted_normal_image_pixels() {
         use rhwp::model::style::ImageFillMode;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::ImageNode;
-
         let source = [80, 100, 120];
         for (brightness, contrast) in [(20, 0), (0, 20), (0, 8)] {
             let mut image = ImageNode::new(
@@ -422,15 +399,13 @@ mod image_adjustment_regressions {
             image.fill_mode = Some(ImageFillMode::FitToSize);
             image.brightness = brightness;
             image.contrast = contrast;
-
             let pdf = layer_trees_to_pdf(&[issue_4764_direct_pdf_image_tree(image)])
                 .expect("direct PDF export");
             let images = issue_4764_pdf_image_streams(&pdf);
-
             assert!(
                 issue_4764_pdf_images_contain_rgb(
                     &images,
-                    issue_4764_adjusted_rgb(source, brightness, contrast)
+                    issue_4764_hancom_rgb(brightness, contrast)
                 ),
                 "PDF image streams should contain brightness/contrast adjusted pixels"
             );
@@ -441,14 +416,11 @@ mod image_adjustment_regressions {
         }
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
     fn issue_4764_native_adjustments_preserve_alpha_and_object_opacity() {
         use rhwp::renderer::layer_renderer::RasterRenderOptions;
         use rhwp::renderer::render_tree::ImageNode;
         use rhwp::renderer::skia::SkiaLayerRenderer;
-
-        let source = [80, 100, 120];
         for (brightness, contrast, opacity) in [
             (20, 0, 1.0),
             (0, 20, 1.0),
@@ -473,7 +445,7 @@ mod image_adjustment_regressions {
                 .expect("decode PNG")
                 .to_rgba8();
             let pixel = rgba.get_pixel(16, 16).0;
-            let expected = issue_4764_adjusted_rgb(source, brightness, contrast);
+            let expected = issue_4764_hancom_rgb(brightness, contrast);
             assert!(
                 pixel[..3]
                     .iter()
@@ -486,24 +458,74 @@ mod image_adjustment_regressions {
         }
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
-    fn issue_4764_direct_pdf_applies_linear_contrast_before_outer_grayscale() {
+    fn issue_7751_native_contrast_endpoints_match_independent_print_pixels() {
+        use rhwp::renderer::layer_renderer::RasterRenderOptions;
+        use rhwp::renderer::render_tree::ImageNode;
+        use rhwp::renderer::skia::SkiaLayerRenderer;
+        // boundary Print의 실측값. 중간 범위의 식으로 기대값을 다시 계산하지 않는다.
+        let cases = [
+            ([80, 100, 120], -100, -100, [0, 0, 0]),
+            ([80, 100, 120], -20, -100, [0, 0, 0]),
+            ([80, 100, 120], 0, -100, [1, 1, 1]),
+            ([80, 100, 120], 20, -100, [52, 52, 52]),
+            ([80, 100, 120], 100, -100, [255, 255, 255]),
+            ([80, 100, 120], -100, 100, [0, 0, 0]),
+            ([80, 100, 120], -20, 100, [0, 0, 0]),
+            ([80, 100, 120], 0, 100, [0, 0, 0]),
+            ([80, 100, 120], 20, 100, [51, 51, 51]),
+            ([80, 100, 120], 100, 100, [255, 255, 255]),
+            ([128, 128, 128], 0, 100, [0, 0, 0]),
+            ([170, 170, 170], 0, 100, [255, 255, 255]),
+        ];
+        for (source, brightness, contrast, expected) in cases {
+            let mut image = ImageNode::new(
+                1,
+                Some(issue_4764_png_rgba(
+                    4,
+                    4,
+                    [source[0], source[1], source[2], 255],
+                )),
+            );
+            image.brightness = brightness;
+            image.contrast = contrast;
+            let output = SkiaLayerRenderer::new()
+                .render_raster_with_options(
+                    &issue_4764_direct_pdf_image_tree(image),
+                    RasterRenderOptions {
+                        transparent: true,
+                        ..Default::default()
+                    },
+                )
+                .expect("대비 끝값 Native PNG");
+            let rgba = image::load_from_memory(&output.bytes)
+                .expect("PNG")
+                .to_rgba8();
+            let pixel = rgba.get_pixel(16, 16).0;
+            assert_eq!(
+                &pixel[..3],
+                &expected,
+                "독립 Print 대비 끝값: 원본{source:?}, B{brightness}/C{contrast}"
+            );
+            assert_eq!(pixel[3], 255, "원본 alpha 보존");
+        }
+    }
+
+    #[test]
+    fn issue_4764_direct_pdf_applies_grayscale_before_hancom_encoded_contrast() {
         use rhwp::model::image::ImageEffect;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::ImageNode;
-
         let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [80, 100, 120, 255])));
         image.effect = ImageEffect::GrayScale;
         image.contrast = 50;
         let pdf = layer_trees_to_pdf(&[issue_4764_direct_pdf_image_tree(image)])
             .expect("grayscale then contrast PDF export");
-        // SVG는 바깥 회색조 <g> 안에 밝기·대비 <g>를 둔다. 따라서 대비와
-        // 채널별 clamp 뒤 회색조를 적용한다. Chrome155에서 같은 SVG의
-        // 중앙 픽셀은 RGB(12,12,12)다. 순서를 뒤집으면 RGB(0,0,0)이 된다.
+        // 실제 한컴 Print의 회색조→대비50 출력은64다. 기존 SVG의
+        // linearRGB·바깥 회색조 중첩 결과12를 한컴의 기대값으로 쓰지 않는다.
         assert!(issue_4764_pdf_images_contain_rgb(
             &issue_4764_pdf_image_streams(&pdf),
-            [12, 12, 12]
+            [64, 64, 64]
         ));
     }
 
@@ -513,7 +535,6 @@ mod image_adjustment_regressions {
         use rhwp::model::style::ImageFillMode;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::{ImageNode, PageBackgroundImage};
-
         let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [170, 170, 170, 255])));
         image.effect = ImageEffect::BlackWhite;
         image.brightness = 10;
@@ -546,53 +567,45 @@ mod image_adjustment_regressions {
         }
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
     fn issue_4764_direct_pdf_embeds_adjusted_page_background_pixels_in_display_order() {
         use rhwp::model::image::ImageEffect;
         use rhwp::model::style::ImageFillMode;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::PageBackgroundImage;
-
-        // Keep the displayed linearRGB adjustment away from clipping all channels
-        // to black so an incorrectly scaled offset cannot pass this regression.
-        let source = [180, 190, 200];
+        // 배경의 기존 저장 IR은 뒤집혀 있으며 의미 투영 뒤 밝기8·대비0이다.
+        // 같은 입력의 밝기0·대비8은 독립 Print에서도 다른 RGB가 나온다.
+        let source = [80, 100, 120];
         let image = PageBackgroundImage {
             data: issue_4764_png_rgba(4, 4, [source[0], source[1], source[2], 255]),
             fill_mode: ImageFillMode::FitToSize,
-            brightness: 35,
-            contrast: -10,
+            brightness: 0,
+            contrast: 8,
             effect: ImageEffect::RealPic,
         };
-
         let pdf = layer_trees_to_pdf(&[issue_4764_direct_pdf_page_background_tree(image)])
             .expect("direct PDF export");
         let images = issue_4764_pdf_image_streams(&pdf);
-
         assert!(
-            issue_4764_pdf_images_contain_rgb(&images, issue_4764_adjusted_rgb(source, -10, 35)),
+            issue_4764_pdf_images_contain_rgb(&images, issue_4764_hancom_rgb(8, 0)),
             "page background must apply display brightness/contrast order"
         );
         assert!(
-            !issue_4764_pdf_images_contain_rgb(&images, issue_4764_adjusted_rgb(source, 35, -10)),
+            !issue_4764_pdf_images_contain_rgb(&images, issue_4764_hancom_rgb(0, 8)),
             "page background must not use the raw stored brightness/contrast order"
         );
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
     fn issue_4764_direct_pdf_still_rejects_pattern8x8_images() {
         use rhwp::model::image::ImageEffect;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::ImageNode;
-
         let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [80, 100, 120, 255])));
         image.effect = ImageEffect::Pattern8x8;
         image.brightness = 0;
         image.contrast = 20;
-
         let error = layer_trees_to_pdf(&[issue_4764_direct_pdf_image_tree(image)]).unwrap_err();
-
         assert!(
             error.contains("Pattern8x8 effect"),
             "unexpected error: {error}"
@@ -603,18 +616,15 @@ mod image_adjustment_regressions {
         );
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
     fn issue_4764_direct_pdf_still_rejects_unbaked_image_watermark_tone_or_opacity() {
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::ImageNode;
-
         for (brightness, contrast) in [(70, -50), (20, 20)] {
             let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [80, 100, 120, 255])));
             image.brightness = brightness;
             image.contrast = contrast;
             assert!(image.is_watermark());
-
             let error = layer_trees_to_pdf(&[issue_4764_direct_pdf_image_tree(image)]).unwrap_err();
             assert!(
                 error.contains("unbaked image watermark tone or opacity"),
@@ -623,14 +633,12 @@ mod image_adjustment_regressions {
         }
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
     fn issue_4764_direct_pdf_still_rejects_unbaked_background_watermark_tone() {
         use rhwp::model::image::ImageEffect;
         use rhwp::model::style::ImageFillMode;
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::PageBackgroundImage;
-
         let image = PageBackgroundImage {
             data: issue_4764_png_rgba(4, 4, [80, 100, 120, 255]),
             fill_mode: ImageFillMode::FitToSize,
@@ -647,13 +655,11 @@ mod image_adjustment_regressions {
         );
     }
 
-    #[cfg(feature = "native-skia")]
     #[test]
     fn issue_4764_direct_pdf_does_not_adjust_baked_watermark_pixels_twice() {
         use rhwp::paint::{LayerNodeKind, PaintOp, ResolvedImageKind, ResolvedImagePayload};
         use rhwp::renderer::pdf::layer_trees_to_pdf;
         use rhwp::renderer::render_tree::ImageNode;
-
         let baked = [80, 100, 120];
         let mut image = ImageNode::new(1, Some(issue_4764_png_rgba(4, 4, [20, 30, 40, 255])));
         image.brightness = 70;
@@ -671,13 +677,9 @@ mod image_adjustment_regressions {
             kind: ResolvedImageKind::BakedWatermark,
             suppress_effects: true,
         }));
-
         let pdf = layer_trees_to_pdf(&[tree]).expect("baked watermark PDF export");
         let images = issue_4764_pdf_image_streams(&pdf);
         assert!(issue_4764_pdf_images_contain_rgb(&images, baked));
-        assert!(!issue_4764_pdf_images_contain_rgb(
-            &images,
-            issue_4764_adjusted_rgb(baked, 70, -50)
-        ));
+        assert!(!issue_4764_pdf_images_contain_rgb(&images, [20, 30, 40]));
     }
 }

@@ -1,0 +1,316 @@
+//! #7751: 독립 KoPub 한컴2024 Print와 대조한 편람의 완료 페이지 경계.
+#![cfg(not(target_arch = "wasm32"))]
+
+use rhwp::document_core::DocumentCore;
+use rhwp::model::control::Control;
+use rhwp::model::shape::ShapeObject;
+use rhwp::renderer::render_tree::{RenderNode, RenderNodeType};
+use std::path::Path;
+
+const INPUT: &str = "samples/2025 행정업무운영 편람(최종).hwp";
+
+fn bytes() -> Vec<u8> {
+    std::fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join(INPUT)).expect("편람 원본")
+}
+
+fn open() -> DocumentCore {
+    let mut core = DocumentCore::from_bytes(&bytes()).expect("편람 로드");
+    core.set_hangul2024_compat(true);
+    core
+}
+
+fn text(node: &RenderNode) -> String {
+    let mut out = match &node.node_type {
+        RenderNodeType::TextRun(run) => run.text.clone(),
+        _ => String::new(),
+    };
+    for child in &node.children {
+        out.push_str(&text(child));
+    }
+    out
+}
+
+fn compact(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+fn descendants(node: &RenderNode) -> Vec<&RenderNode> {
+    let mut result = vec![node];
+    for child in &node.children {
+        result.extend(descendants(child));
+    }
+    result
+}
+
+fn table(root: &RenderNode, section: usize, para: usize) -> &RenderNode {
+    let matches: Vec<_> = descendants(root)
+        .into_iter()
+        .filter(|n| {
+            matches!(&n.node_type, RenderNodeType::Table(t)
+            if t.section_index == Some(section) && t.para_index == Some(para))
+        })
+        .collect();
+    assert_eq!(
+        matches.len(),
+        1,
+        "표 소유는 한 곳이어야 한다: {section}.{para}"
+    );
+    matches[0]
+}
+
+// 본문 문자열에서 분리 저장되는 중첩 표·묶음 글상자의 내용도 원본에서 수집한다.
+fn source_paragraph_text(para: &rhwp::model::paragraph::Paragraph) -> String {
+    let mut result = para.text.clone();
+    for control in &para.controls {
+        match control {
+            Control::Table(table) => {
+                for cell in &table.cells {
+                    for para in &cell.paragraphs {
+                        result.push_str(&source_paragraph_text(para));
+                    }
+                }
+            }
+            Control::Shape(shape) => result.push_str(&source_shape_text(shape)),
+            _ => {}
+        }
+    }
+    result
+}
+
+fn source_shape_text(shape: &ShapeObject) -> String {
+    let mut result = String::new();
+    if let Some(tb) = shape.drawing().and_then(|d| d.text_box.as_ref()) {
+        for para in &tb.paragraphs {
+            result.push_str(&source_paragraph_text(para));
+        }
+    }
+    if let ShapeObject::Group(group) = shape {
+        for child in &group.children {
+            result.push_str(&source_shape_text(child));
+        }
+    }
+    result
+}
+
+// 이어받기는 반복 머리글 외의 모든 원본 셀 내용을 앞뒤 조각에서 정확히 한 번 보존한다.
+fn assert_cells_preserved(section: usize, para: usize, fragments: &[&RenderNode]) {
+    let parsed = rhwp::parser::parse_hwp(&bytes()).expect("원본 셀 내용");
+    let source = parsed.sections[section].paragraphs[para]
+        .controls
+        .iter()
+        .find_map(|control| {
+            if let Control::Table(table) = control {
+                Some(table.as_ref())
+            } else {
+                None
+            }
+        })
+        .expect("원본 표");
+    for cell in &source.cells {
+        let expected = compact(
+            &cell
+                .paragraphs
+                .iter()
+                .map(source_paragraph_text)
+                .collect::<String>(),
+        );
+        let mut actual = String::new();
+        let mut repeated_header = 0;
+        for fragment in fragments {
+            let matches: Vec<_> = fragment
+                .children
+                .iter()
+                .filter(|n| {
+                    matches!(&n.node_type, RenderNodeType::TableCell(c)
+                    if c.row == cell.row && c.col == cell.col)
+                })
+                .collect();
+            assert!(
+                matches.len() <= 1,
+                "한 조각의 셀 중복: {}.{}",
+                cell.row,
+                cell.col
+            );
+            for node in matches {
+                let part = compact(&text(node));
+                if cell.is_header && source.repeat_header {
+                    assert_eq!(part, expected, "반복 머리글 내용 보존");
+                    repeated_header += 1;
+                } else {
+                    actual.push_str(&part);
+                }
+            }
+        }
+        if cell.is_header && source.repeat_header {
+            assert_eq!(repeated_header, fragments.len(), "각 조각의 반복 머리글");
+        } else {
+            assert_eq!(
+                actual, expected,
+                "원본 셀 전체 내용·순서·누락·중복: {}.{}",
+                cell.row, cell.col
+            );
+        }
+    }
+}
+
+fn near(actual: f64, expected: f64, label: &str) {
+    assert!(
+        (actual - expected).abs() <= 2.0,
+        "{label}: 실제 {actual:.3}, 독립 Print {expected:.3}, 허용 ±2px"
+    );
+}
+
+#[test]
+fn issue_7751_intro_reflow_preserves_three_paragraphs_and_print_origins() {
+    let core = open();
+    assert_eq!(core.page_count(), 383);
+    let page = core.build_page_render_tree(2).expect("3쪽");
+    let boxes: Vec<_> = descendants(&page.root)
+        .into_iter()
+        .filter(|n| {
+            matches!(n.node_type, RenderNodeType::TextBox) && text(n).contains("이 편람은 1991년")
+        })
+        .collect();
+    assert_eq!(boxes.len(), 1, "서문 글상자의 중복·누락");
+    let tb = boxes[0];
+    let parsed = rhwp::parser::parse_hwp(&bytes()).expect("원본 내용");
+    let Control::Shape(shape) = &parsed.sections[0].paragraphs[4].controls[0] else {
+        panic!("묶음")
+    };
+    let ShapeObject::Group(group) = shape.as_ref() else {
+        panic!("묶음")
+    };
+    let original = group.children[2]
+        .drawing()
+        .unwrap()
+        .text_box
+        .as_ref()
+        .unwrap();
+    assert_eq!(original.paragraphs.len(), 3);
+
+    // PDF -bbox-layout의 첫 행 xMin/yMin을 72pt→96dpi로 환산한다.
+    let origins = [
+        (200.262813, 536.665688),
+        (200.262813, 613.954599),
+        (200.262813, 690.426951),
+    ];
+    let mut previous_bottom = tb.bbox.y;
+    for (pi, para) in original.paragraphs.iter().enumerate() {
+        let lines: Vec<_> = descendants(tb)
+            .into_iter()
+            .filter(
+                |n| matches!(&n.node_type, RenderNodeType::TextLine(l) if l.para_index == Some(pi)),
+            )
+            .collect();
+        assert_eq!(lines.len(), 3, "한컴 서문의 문단{pi}는3줄");
+        assert_eq!(
+            compact(&lines.iter().map(|n| text(n)).collect::<String>()),
+            compact(&para.text),
+            "문단{pi}의 내용·순서·중복 보존"
+        );
+        assert!(lines[0].bbox.y >= previous_bottom);
+        for line in &lines {
+            assert!(line.bbox.y >= tb.bbox.y);
+            assert!(line.bbox.y + line.bbox.height <= tb.bbox.y + tb.bbox.height);
+        }
+        near(lines[0].bbox.x, origins[pi].0, "서문 시작 x");
+        near(lines[0].bbox.y, origins[pi].1, "서문 시작 y");
+        previous_bottom = lines.last().unwrap().bbox.y + lines.last().unwrap().bbox.height;
+    }
+    let images: Vec<_> = descendants(&page.root)
+        .into_iter()
+        .filter_map(|n| {
+            if let RenderNodeType::Image(i) = &n.node_type {
+                Some(i)
+            } else {
+                None
+            }
+        })
+        .filter(|i| i.bin_data_id == 354)
+        .collect();
+    assert_eq!(images.len(), 1);
+    assert_eq!(
+        (images[0].brightness, images[0].contrast),
+        (8, 0),
+        "한컴 HWP→HWPX의 bright=8, contrast=0"
+    );
+}
+
+#[test]
+fn issue_7751_continuation_end_keeps_heading_and_next_table_in_print_order() {
+    let core = open();
+    let page = core.build_page_render_tree(240).expect("241쪽");
+    let fragment = table(&page.root, 7, 405);
+    let next = table(&page.root, 7, 408);
+    let previous = core.build_page_render_tree(239).expect("240쪽");
+    assert_cells_preserved(7, 405, &[table(&previous.root, 7, 405), fragment]);
+    let headings: Vec<_> = descendants(&page.root)
+        .into_iter()
+        .filter(|n| {
+            matches!(&n.node_type, RenderNodeType::TextLine(l) if l.para_index == Some(407))
+                && text(n).contains("점검지표별")
+        })
+        .collect();
+    assert_eq!(headings.len(), 1);
+    let heading = headings[0];
+    assert!(fragment.bbox.y + fragment.bbox.height <= heading.bbox.y);
+    assert!(heading.bbox.y + heading.bbox.height <= next.bbox.y);
+    // 독립 PDF의 제목 yMin=282.336pt, 다음 표 첫 행 괘선 y=314.249pt.
+    near(heading.bbox.y, 376.448, "이어받기 뒤 제목");
+    let cells: Vec<_> = next
+        .children
+        .iter()
+        .filter(|n| matches!(&n.node_type, RenderNodeType::TableCell(c) if c.row == 0))
+        .collect();
+    assert_eq!(cells.len(), 3);
+    for cell in cells {
+        near(cell.bbox.y, 418.998667, "다음 표 시작 괘선");
+    }
+    let body = compact(&text(fragment));
+    for marker in [
+        "⑥연구결과활용의적정성",
+        "⑦전년도귄익위",
+        "국민집단지성활용사례정성평가",
+    ] {
+        assert_eq!(
+            body.matches(marker).count(),
+            1,
+            "이어받기 말미 내용의 누락·중복: {marker}"
+        );
+    }
+}
+
+#[test]
+fn issue_7751_whole_table_tail_margin_preserves_qa_sequence_and_print_frames() {
+    let core = open();
+    let previous = core.build_page_render_tree(288).expect("289쪽");
+    let page = core.build_page_render_tree(289).expect("290쪽");
+    let q13 = table(&previous.root, 10, 27);
+    let q14_start = table(&previous.root, 10, 28);
+    let q14_end = table(&page.root, 10, 28);
+    let q15 = table(&page.root, 10, 29);
+    let q16 = table(&page.root, 10, 30);
+    assert_cells_preserved(10, 28, &[q14_start, q14_end]);
+    assert_cells_preserved(10, 29, &[q15]);
+    assert_cells_preserved(10, 30, &[q16]);
+    assert!(q13.bbox.y + q13.bbox.height < q14_start.bbox.y);
+    assert!(q14_end.bbox.y + q14_end.bbox.height < q15.bbox.y);
+    assert!(q15.bbox.y + q15.bbox.height < q16.bbox.y);
+    assert!(text(q15).contains("협조의 순서"));
+    assert!(text(q16).contains("문서 수정이나 반려"));
+    // PDF의 배경 이미지 cm과 실제 표 괘선의 동일한 top-left(96dpi).
+    near(q14_start.bbox.y, 397.081333, "Q13 뒤 Q14 시작");
+    near(q15.bbox.y, 279.333333, "Q15 시작");
+    near(q16.bbox.y, 473.553333, "Q15 종료 여백 뒤 Q16 시작");
+    near(q16.bbox.x, 113.317333, "Q16 왼쪽 괘선");
+    for (owner, marker) in [
+        (q15, "협조의순서는어떻게되는지요"),
+        (q16, "협조자는문서수정이나반려를할수없습니다"),
+    ] {
+        assert_eq!(
+            compact(&text(owner)).matches(marker).count(),
+            1,
+            "Q&A 내용의 누락·중복: {marker}"
+        );
+    }
+}
