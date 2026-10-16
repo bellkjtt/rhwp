@@ -1,7 +1,7 @@
 //! 한컴 2024 Print의 보정 없는 원본색 bitmap 전달.
 //!
-//! 256/257색 경계와 BMP·PNG·JPEG·2020/2024 Print의 독립 대조는
-//! mydocs/working/task_m100_7642_stage2025.md에 있다. 그림 효과 합성은 별도 계약이다.
+//! BMP·PNG·JPEG·2020/2024 Print의 독립 대조는 stage2025,
+//! 흑백 예약색·indexed 형식의 추가 경계는 stage2101에 있다. 그림 효과 합성은 별도 계약이다.
 
 use std::collections::HashSet;
 use std::io::Cursor;
@@ -42,10 +42,12 @@ pub(super) fn bitmap_bytes_to_png(data: &[u8]) -> Option<Vec<u8>> {
             _ => return None,
         };
         let mut decoded = decode_image_with_format_limited(data, format)?.to_rgba8();
-        // 한컴의 팔레트 전달과 full-color 전달을 원본 RGB 색 수로 구분한다.
+        // 한컴의 팔레트 전달은 흑백 두 예약색을 포함한 RGB 색 수로 구분한다.
+        // 원본이 255/256색이어도 빠진 예약색을 더하면 팔레트 용량을 넘을 수 있다.
         // 알파는 별도의 투명도이며 RGB 팔레트의 색 수에 합산하지 않는다.
         const PALETTE_CAPACITY: usize = 1 << 8;
         let mut colors = HashSet::with_capacity(PALETTE_CAPACITY + 1);
+        colors.extend([[0, 0, 0], [255, 255, 255]]);
         for pixel in decoded.pixels() {
             colors.insert([pixel[0], pixel[1], pixel[2]]);
             if colors.len() > PALETTE_CAPACITY {
