@@ -195,12 +195,11 @@ impl TypesetEngine {
         // 이어받기는 paint가 여는 같은 프레임 여백을 한 번만 예약한다.
         // 단일 셀/후속 본문 엄격 예산은 partial_rowbreak_fragment_spacing_px에서
         // 이미 예약하며, 종료 컷과 일반 프레임 술어가 동시에 참이어도 중복하지 않는다.
-        let terminal_fragment_opens_outer_top =
-            crate::renderer::float_placement::native_terminal_multirow_rowbreak_reopens_outer_top(
+        let grid_fragment_opens_outer_top =
+            crate::renderer::float_placement::native_multirow_rowbreak_reopens_outer_top(
                 self.profile.get().hwp5_stored_pagination_layout(),
                 table,
                 is_continuation,
-                cursor_row,
                 start_cut,
             );
         let host_before_overhead = host_before_overhead
@@ -211,7 +210,7 @@ impl TypesetEngine {
             }
             + if is_continuation
                 && (fragment_opens_outer_top
-                    || terminal_fragment_opens_outer_top
+                    || grid_fragment_opens_outer_top
                     || source_cut_opens_outer_top
                     || (input.start.stored_fragment_outer_frame
                         && st.current_height <= 0.5
@@ -275,7 +274,7 @@ impl TypesetEngine {
         let host_before_overhead = host_before_overhead
             + if (empty_opening_continuation
                 || (parallel_picture_opening_continuation
-                    && !terminal_fragment_opens_outer_top
+                    && !grid_fragment_opens_outer_top
                     && !single_cell_page_fragment
                     && !strict_following_plain_text_fit))
                 && !fragment_opens_outer_top
@@ -1723,6 +1722,25 @@ impl TypesetEngine {
             source_frame_bottom,
             fragment_placement: fragment_placement
                 .or_else(|| self.stored_header_fragment_placement(st, input, host_before_overhead))
+                .or_else(|| {
+                    grid_fragment_opens_outer_top.then(|| {
+                        // 예산에서 연 같은 바깥 원점을 실제 배치에 전달한다.
+                        // paint가 행 컷이나 현재 높이로 다시 추측하지 않는다.
+                        let top = st.current_height
+                            + caption_extra
+                            + host_before_overhead
+                            + vert_offset_overhead;
+                        crate::renderer::float_placement::ParagraphFloatPlacement {
+                            flow: crate::renderer::float_placement::ParagraphFloatFlow::NextLine,
+                            anchor_y: st.current_height,
+                            stored_host_origin: None,
+                            stored_successor_line_origin: None,
+                            table_left: None,
+                            table_top: top,
+                            occupied_bottom: top,
+                        }
+                    })
+                })
                 .or_else(|| {
                     empty_square_outer_top.map(|_| {
                         let top = st.current_height

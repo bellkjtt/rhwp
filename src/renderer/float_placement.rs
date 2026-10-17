@@ -6013,25 +6013,26 @@ pub(crate) fn native_single_cell_rowbreak_page_fragment(
 /// 저장된 native RowBreak 표는 새 쪽에서 잘린 셀을 마칠 수 있다. 호스트의 양수
 /// 개체 오프셋이 없어도 한컴은 바깥 위 여백을 다시 연다(86712 p28: 141HU,
 /// PDF 첫 괘선 77.5px, 본문 상단 75.6px).
-/// #2097에서 반증한 광범위한 빈 호스트 여백 규칙과 구분한다. 확인된 계약은
-/// 다열 표의 마지막 행 내부 컷이다. 한 열의 거대 셀(#2214)은 이 여백을
+/// #2097에서 반증한 광범위한 빈 호스트 여백 규칙과 구분한다. 다열 격자의
+/// 새 조각은 중간 행 내부 컷에서도 독립 프레임을 연다. 원본의 위 여백만
+/// 0·141·282 HU로 바꾼 한컴 Print는 모두74쪽이며, 중간 행에서 이어지는
+/// 조각의 위 괘선도 선언 여백에 따라 이동했다. 마지막 행인지로 바깥
+/// 프레임 소유를 제한하지 않는다. 한 열의 거대 셀(#2214)은 이 여백을
 /// 다시 열지 않아야 PDF와 맞는다.
 /// [#7418] 두 열 표도 여백을 다시 연다. 76076 p34의 첫 괘선은 77.3px(HWP
 /// 2020) / 77.5px(2024), 78494 p20·p21은 77.5px이다. 모두 본문 상단
 /// 75.6px에 141HU를 더한 값이다. 이전 `col_count > 2` 조건은 76076 p34가
 /// 여백 없이 정렬된 것으로 잘못 판단했다.
-pub(crate) fn native_terminal_multirow_rowbreak_reopens_outer_top(
+pub(crate) fn native_multirow_rowbreak_reopens_outer_top(
     native_hwp5_layout: bool,
     table: &Table,
     is_continuation: bool,
-    start_row: usize,
     start_cut: &[usize],
 ) -> bool {
     native_hwp5_layout
         && is_continuation
         && table.row_count > 1
         && table.col_count > 1
-        && start_row + 1 == table.row_count as usize
         && !start_cut.is_empty()
         && table.outer_margin_top > 0
         && is_para_topbottom_float(&table.common)

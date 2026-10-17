@@ -5591,12 +5591,11 @@ impl LayoutEngine {
                 .parallel_picture_row_opening_height(table, start_row, &[], start_cut, styles)
                 .is_some();
         // 처음과 이어받기 조각은 예산이 이미 예약한 같은 바깥 위 여백을 연다.
-        let terminal_multirow_reopens_outer_top = enclosing_cell_ctx.is_none()
-            && crate::renderer::float_placement::native_terminal_multirow_rowbreak_reopens_outer_top(
+        let multirow_reopens_outer_top = enclosing_cell_ctx.is_none()
+            && crate::renderer::float_placement::native_multirow_rowbreak_reopens_outer_top(
                 self.profile.get().hwp5_stored_pagination_layout(),
                 table,
                 is_continuation,
-                start_row,
                 start_cut,
             );
         // 저장된 자리차지 RowBreak 표는 저장 앵커(첫 조각) 또는
@@ -5695,7 +5694,7 @@ impl LayoutEngine {
             && (y_start - col_area.y).abs() <= 0.5;
         let y_start = if (single_cell_page_fragment
             || generic_continuation_outer_top
-            || terminal_multirow_reopens_outer_top
+            || multirow_reopens_outer_top
             || rowbreak_reopens_outer_top
             || stored_body_frame_opens_outer_top
             || source_cut_reopens_outer_top
