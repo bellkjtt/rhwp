@@ -12,7 +12,10 @@ use sha2::{Digest, Sha256};
 const PREFIX: &[u8] = b"2:natural-page-ownership\n";
 
 pub(crate) fn digest(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 #[derive(Deserialize, Serialize)]
