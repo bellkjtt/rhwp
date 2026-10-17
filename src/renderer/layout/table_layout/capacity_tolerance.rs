@@ -19,9 +19,34 @@ pub(super) fn for_next_unit(
         && cell.paragraphs.get(unit.para_idx).is_some_and(|para| {
             para.controls.is_empty() && crate::renderer::para_has_no_stored_line_segs(para)
         });
-    if !composed_text {
-        return ROW_CUT_CAPACITY_FP_EPSILON_PX;
-    }
     let operations = unit_count.saturating_add(1) as f64;
-    (next_height.abs() + available.abs()) * f64::EPSILON * operations
+    let tolerance = if composed_text {
+        (next_height.abs() + available.abs()) * f64::EPSILON * operations
+    } else {
+        ROW_CUT_CAPACITY_FP_EPSILON_PX
+    };
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        static TRACE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        if *TRACE.get_or_init(|| std::env::var_os("RHWP_DIAG_REFLOW_CAPACITY").is_some())
+            && (next_height - available).abs() <= unit.height.abs()
+        {
+            let paragraph = cell.paragraphs.get(unit.para_idx);
+            eprintln!(
+                "DIAG_REFLOW_CAPACITY row={} col={} para={} no_ls={} controls={:?} nested={:?} mixed={} topbottom={} next={:.12} available={:.12} tolerance={:.12}",
+                cell.row,
+                cell.col,
+                unit.para_idx,
+                paragraph.is_some_and(crate::renderer::para_has_no_stored_line_segs),
+                paragraph.map(|para| para.controls.len()),
+                unit.nested_row,
+                unit.mixed_nested_fragment,
+                unit.top_and_bottom_flow,
+                next_height,
+                available,
+                tolerance,
+            );
+        }
+    }
+    tolerance
 }
