@@ -4,9 +4,7 @@ use skia_safe::{
 use std::collections::HashMap;
 
 use super::font_catalog::TypefaceCatalog;
-use super::font_lookup::{
-    match_supplied_family, match_system_family_style, SystemFontFamilies,
-};
+use super::font_lookup::{match_supplied_family, match_system_family_style, SystemFontFamilies};
 mod glyphs;
 use glyphs::{draw_stretch_bracket, draw_text, draw_text_with_family};
 

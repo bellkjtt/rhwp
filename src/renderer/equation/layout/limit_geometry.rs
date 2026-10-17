@@ -16,14 +16,20 @@ impl EqLayout {
         let name = if is_upper { "Lim" } else { "lim" };
         let baseline = name_font_size * 0.8;
         // upstream의 실제 한컴 이름 글리프도 같은 크기와 기준선을 소비한다.
-        let name_box = self.layout_hancom_glyphs(
-            name,
-            super::super::hancom_glyphs::Role::Variable { italic: false },
-            name_font_size,
-            0.0,
-        ).map(|mut name| { name.baseline = baseline; name });
+        let name_box = self
+            .layout_hancom_glyphs(
+                name,
+                super::super::hancom_glyphs::Role::Variable { italic: false },
+                name_font_size,
+                0.0,
+            )
+            .map(|mut name| {
+                name.baseline = baseline;
+                name
+            });
         let name_w = name_box.as_ref().map_or_else(
-            || estimate_text_width(name, name_font_size, false), |name| name.width,
+            || estimate_text_width(name, name_font_size, false),
+            |name| name.width,
         );
         let mut sub_box = sub.as_ref().map(|s| self.layout_node(s, sub_font_size));
         let width = name_w.max(sub_box.as_ref().map_or(0.0, |b| b.width));
