@@ -1633,8 +1633,12 @@ impl TypesetEngine {
                 let row = end_row.checked_sub(1)?;
                 // 블록 컷은 여러 행의 셀 슬롯이다. 마지막 일반 행의 최소와
                 // 빼서 시작 행 잔여로 넘기면 이미 소비한 행의 빈 띠를 재생성한다.
+                // 끝 컷의 일반 내용이 모두 소비되면 걸침 칸의 잔여는
+                // 그 칸의 독립 장부가 소유한다. 완료 행의 최소 높이 차이로
+                // 다음 쪽에 같은 일반 행을 다시 만들지 않는다.
                 if split_block_start.is_some()
                     || split_end_limit <= 0.0
+                    || (complete_physical_end_cut && crossing_span_owns_tail)
                     || !layout_engine.row_uses_reflow_physical_frame(table, row)
                 {
                     return None;
