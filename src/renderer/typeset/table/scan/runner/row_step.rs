@@ -1582,6 +1582,7 @@ fn ordinary_band_content_fits(
     rest: f64,
 ) -> bool {
     !end_cut.is_empty()
-        && (content_height >= MIN_TOP_KEEP_PX || (complete_plain_reflow && rest >= MIN_TOP_KEEP_PX))
+        && (content_height >= MIN_TOP_KEEP_PX
+            || (complete_plain_reflow && content_height <= rest + 0.5))
         && aligned_content_bottom <= rest + 0.5
 }
