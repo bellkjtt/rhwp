@@ -27,6 +27,7 @@ mod marks;
 
 pub(super) struct SkiaTextReplay<'a> {
     pub(super) canvas: &'a Canvas,
+    pub(super) raster_target: bool,
     pub(super) hft_outline_enabled: bool,
     pub(super) font_mgr: &'a FontMgr,
     pub(super) text_shaper: &'a std::cell::OnceCell<Option<skia_safe::Shaper>>,
@@ -683,6 +684,7 @@ impl SkiaTextReplay<'_> {
                                         &font,
                                         (char_x, char_y),
                                         glyph_paint,
+                                        self.raster_target,
                                     ) {
                                         canvas.draw_str(
                                             cluster,
@@ -726,6 +728,7 @@ impl SkiaTextReplay<'_> {
                                     &font,
                                     (char_x, char_y),
                                     glyph_paint,
+                                    self.raster_target,
                                 ) {
                                     canvas.draw_str(cluster, (char_x, char_y), &font, glyph_paint);
                                 }

@@ -1046,6 +1046,7 @@ impl SkiaLayerRenderer {
             tree,
             fallback_raster_scale,
             strict_resource_failures,
+            canvas.image_info().color_type() != skia_safe::ColorType::Unknown,
             &diagnostics,
         );
         let setup_time = setup_start.elapsed();
@@ -1252,6 +1253,7 @@ impl SkiaLayerRenderer {
         };
         let text_replay = SkiaTextReplay {
             canvas,
+            raster_target: cache_context.raster_target,
             hft_outline_enabled,
             font_mgr: &self.font_mgr,
             text_shaper: &self.text_shaper,

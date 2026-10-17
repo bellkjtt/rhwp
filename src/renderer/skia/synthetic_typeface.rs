@@ -17,6 +17,7 @@ pub(super) fn draw_synthetic_bold_paths(
     font: &Font,
     origin: (f32, f32),
     paint: &Paint,
+    raster_target: bool,
 ) -> bool {
     let mut path_font = font.clone();
     path_font.set_hinting(skia_safe::FontHinting::None);
@@ -34,10 +35,33 @@ pub(super) fn draw_synthetic_bold_paths(
     };
     let mut positions = vec![Point::default(); glyphs.len()];
     path_font.get_pos(&glyphs, &mut positions, Some(origin.into()));
+    let raster_paints = raster_target.then(|| {
+        let mut fill = paint.clone();
+        fill.set_style(skia_safe::paint::Style::Fill);
+        let mut stroke = paint.clone();
+        stroke.set_style(skia_safe::paint::Style::Stroke);
+        // PDF의 얇은 획은 raster 장치의 한 단위보다 작게 소비하지 않는다.
+        // 조판 좌표나 원래 em 획은 바꾸지 않고 현재 장치 변환만 사용한다.
+        if let Some(inverse) = canvas.local_to_device_as_3x3().invert() {
+            let x_unit = inverse.map_vector((1.0, 0.0)).length();
+            let y_unit = inverse.map_vector((0.0, 1.0)).length();
+            let device_unit = x_unit.min(y_unit);
+            if device_unit.is_finite() && device_unit > 0.0 {
+                stroke.set_stroke_width(stroke.stroke_width().max(device_unit));
+            }
+        }
+        (fill, stroke)
+    });
     for (path, position) in paths.iter().zip(positions) {
         canvas.save();
         canvas.translate((position.x, position.y));
-        canvas.draw_path(path, paint);
+        if let Some((fill, stroke)) = &raster_paints {
+            canvas.draw_path(path, fill);
+            canvas.draw_path(path, stroke);
+        } else {
+            // Vector 출력의 획은 출력 장치의 해상도가 정해질 때까지 em 단위로 보존한다.
+            canvas.draw_path(path, paint);
+        }
         canvas.restore();
     }
     true
