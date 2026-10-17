@@ -3,9 +3,9 @@
 use crate::model::{control::Control, paragraph::Paragraph};
 
 impl super::LayoutEngine {
-    /// 끝 행을 지나기 전에 아직 남은 병합 칸의 실제 최소와 내용 유닛을 보존한다.
-    /// 일반 칸의 완료나 작은 빈 꼬리 흡수는 다른 칸의 이 공간을 없애지 않는다.
-    pub(crate) fn reflow_ending_span_remainder(
+    /// 내용이 끝난 종료 병합 칸의 미소비 최소 공간만 보존한다.
+    /// 남은 글줄은 기존 유닛 원장과 이어받기 요구가 소유한다.
+    pub(crate) fn reflow_ending_span_minimum_remainder(
         &self,
         table: &crate::model::table::Table,
         end_row: usize,
@@ -26,23 +26,22 @@ impl super::LayoutEngine {
                 let physical = owner.accepted_physical_height?;
                 let units = self.cell_units(cell, table, styles);
                 let end = owner.fragment_cut?.1.min(units.len());
-                let remaining_content =
-                    self.cell_cut_visible_height(cell, table, styles, end, units.len());
+                if end != units.len() {
+                    return None;
+                }
                 let minimum = if cell.height < 0x8000_0000 {
                     super::hwpunit_to_px(cell.height as i32, self.dpi)
                 } else {
                     0.0
                 };
-                let remaining = (minimum - physical).max(remaining_content);
+                let remaining = minimum - physical;
                 // 종료 병합 칸도 자기 내용이 모두 끝난 작은 빈 꼬리는 흡수한다.
                 // 일반 칸에서 흡수한 공간을 이 원장에서 다시 만들지 않는다.
-                if end == units.len()
-                    && blank_tail_is_line_sliver(
-                        remaining,
-                        units.last().map_or(0.0, |unit| unit.height),
-                        self.dpi,
-                    )
-                {
+                if blank_tail_is_line_sliver(
+                    remaining,
+                    units.last().map_or(0.0, |unit| unit.height),
+                    self.dpi,
+                ) {
                     return None;
                 }
                 (remaining > 0.5).then_some(remaining)

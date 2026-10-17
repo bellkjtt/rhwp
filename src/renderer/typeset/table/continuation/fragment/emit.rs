@@ -1863,7 +1863,7 @@ impl TypesetEngine {
         // 완료 일반 칸의 잔여와 같은 끝 행에 걸친 병합 칸의 잔여는 별도 소유다.
         let next_start_row_height_override = match (
             next_start_row_height_override,
-            layout_engine.reflow_ending_span_remainder(
+            layout_engine.reflow_ending_span_minimum_remainder(
                 row_geometry_table,
                 end_row,
                 &accepted_straddle_cells,
