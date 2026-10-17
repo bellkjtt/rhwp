@@ -56,3 +56,9 @@ bounded cache 관측을 유지했다. 지원하지 않는 색조의 필터 합�
 
 `latest-rebase-audit.json`에 이전/현재164개 SHA mapping과 tree 대조를 보존한다.
 이전 전체 회귀는 source751/baseb7 결과이며 최신 리베이스 결과의 회귀 통과로 표시하지 않는다.
+
+## 실제 Native lint 오류와 보정
+
+producer `8af3e72bde9e62cfb4daa1e9f7663bb3a244c282`에서 Native 집중288PASS, Skia lib4043PASS/12ignored와 fresh Studio10종을 확인했다. 이후 feature-on FFI Clippy는 `renderer/skia/renderer.rs`의 `needless_option_as_deref` 2곳으로 exit101이었다. 리베이스 자동 병합 뒤 `resolved.as_deref().or(fallback.as_ref())`가 이미 `Option<&ResolvedImagePayload>`를 생산하므로 다음 `as_deref()`는 같은 타입을 다시 역참조한다. 두 호출만 제거하고 동일 `map`/`is_some_and` 소비와 fallback·효과 억제 동작을 유지한다. lint 경고를 허용하지 않는다.
+
+이 변경은 같은 payload 참조를 소비하는 타입상 항등 정리지만 실제 source가 바뀌므로 이전288PASS·4043PASS를 새 commit 실행으로 표시하지 않는다. 완료한 base9415 산출물은 재사용하고, 후보 Native/fresh WASM·시각 증거 및 영향 gate를 새 producer에 연결한 뒤 남은 전체 회귀·lint를 진행한다. 전체 회귀는 아직 이번 base에서 실행 전이었다. 이전 source751/baseb7의10770PASS는 역사적 결과로 유지한다.

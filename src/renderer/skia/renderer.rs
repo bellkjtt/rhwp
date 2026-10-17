@@ -1983,13 +1983,11 @@ impl SkiaLayerRenderer {
                                 open_shape_transform(image.transform, &effective_bbox);
                             }
                             let data = resolved
-                                .as_deref()
                                 .map(|payload| &payload.data[..])
                                 .or(image.data.as_deref());
                             if let Some(data) = data {
-                                let suppress_effects = resolved
-                                    .as_deref()
-                                    .is_some_and(|payload| payload.suppress_effects);
+                                let suppress_effects =
+                                    resolved.is_some_and(|payload| payload.suppress_effects);
                                 let effect = if suppress_effects {
                                     ImageEffect::RealPic
                                 } else {
