@@ -71,3 +71,25 @@
 - 이전 통합 `5eab754737a8a80a4f4a7680338a398c8fba49ed` → 현재 `7d0f672785e9053ba73a09747e39cf93487b0d5b`.
 - 이전 통합 `978d7e3dd7f68fe7ece6adde8096cb72bf497cf8` → 현재 `0960547757c5caccbef71749e848bfdef3887744`.
 - 이전 통합 `1c41caaa96bd4d580940783c55a467c63bb4959a` → 현재 `c7f928e2aa65bb6706142d30a303c7257ea876da`.
+
+## 최종 source의 원 commit 연결
+
+- 원 `2766cf6aeeddf4171c974d795fe579b9db141f64` → 현재 `3a61a552364196f28c6a026cb7c065e624e586bf`.
+- 원 `e619ac08e0dbb70642543bba15aa5a1c0392c198` → 현재 `6e670daa87e208bca4d2a611eaa3c654f2155742`.
+- 원 `1580d078c387b55eebf211a04c95242bfea6d508` → 현재 `f63847f36d17046c3648d8c12aebff2de5247dba`.
+- 원 `02f39d0fc294fe4d1b0027cb97a6942fe0c7aec2` → 현재 `c5bd505fa461e84fe93cf632a374e8a294e45587`.
+- 원 `0c167cf6cf1aa1bfff7222e1ce98c52b7adf9126` → 현재 `3d12162250a9605b10abb80cc1bb25c2ae68fdb9`.
+- 원 `90a407b393c32372dbaada1b69f103e04bfa2e76` → 현재 `add60c778715fbf7b128bc23e58c848e95fe84e1`.
+- 원 `77cf734cec6464e3e36ac8980ae88dd169ffc9b9` → 현재 `6d48fb0d3a150db70e9038e89fee7a0ace0f6219`.
+- 원 `d7ae3de95bfcc85d5deec1c773b8ceb5d703cf22` → 현재 `5ef0bdd6630d298bc3a2ee4306a80121c60442a0`.
+- 원 `7bf446974c06cef72966f15afc9b42f48c034f65` → 현재 `89b9b9c67b9bef1eed0b6defb238a59ce92075ba`.
+- 원 `2ea7173b420809e36dcbef455c39fdea0ff21e03` → 현재 `ae5f0a4ae9896ecacadec1fcbf4ca683fe7dd9cc`.
+- 원 `c6864b49c1d2134a55f45cca1756d0ef8d0d11f8` → 현재 `4c7c00e649aa3f9176125844c468f8ceb07e6915`.
+- 원 `24a453f889a7d28ac8fddb59dec87603bc1d27cb` → 현재 `1f0a1bc393f64d59b81e750f7221837f69c19857`.
+- 원 `5a91f5ff67c12ac51e1e9eca3e56c82b7c3bbce5` → 현재 `f0f0c78621faadab84079bebe2b5fa998921b148`.
+- 원 `a860adef06c679ff49a31f8a0c4a2c8011098788` → 현재 `e9c7ebbed8899adf76178c0d743bbc74bec9fecf`.
+- 원 `5476fcea7b46ee7ad190f103b681ead3c3badc9c` → 현재 `804d2b6fc81a7ec5c28d5386333d95c68acf4bef`.
+
+## 최신 devel 통합 검증
+
+현재 producer `3535106051394672e93ca8401ff9eae8b449ec20` /base `9415b920c8dec299e8ada69b01dbd1c3c044f1f1`의 전체 회귀10779PASS와 실제 소비 경로 검증은 [8단계](../../working/task_m100_536_integration_review_stage8.md)를 따른다.원 contributor author와164개 리베이스 commit의 순서·제목을 보존했다.원격 CI·merge 결과는 실제 확인 뒤 같은 PR trailing 기록에 추가한다.

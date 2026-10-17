@@ -29,3 +29,11 @@
 새 base `b7a5388034ee66f58a7e1d5363974e83b6374f57`, 직후 head `a7aac1a9ce5b2b902471ecd8f234f7d72834812d`. [7단계](../../working/task_m100_536_integration_review_stage7.md)의 새 head 검증은 진행 중이다. 위 실제 적용 SHA는 리베이스 전 기록이며 아래는 현재 대응이다.
 
 - 이전 통합 `753f176d3a7835adcf8e04904717b286f07c1624` → 현재 `a3bc178d31312b0494732368626a4c79414f9552`.
+
+## 최종 source의 원 commit 연결
+
+- 원 `8fa5961ab579edee0cb267cb89a832b3236ace8c` → 현재 `a3d572c1578a74cedbf6ee54aa18613984119803`.
+
+## 최신 devel 통합 검증
+
+현재 producer `3535106051394672e93ca8401ff9eae8b449ec20` /base `9415b920c8dec299e8ada69b01dbd1c3c044f1f1`의 전체 회귀10779PASS와 실제 소비 경로 검증은 [8단계](../../working/task_m100_536_integration_review_stage8.md)를 따른다.원 contributor author와164개 리베이스 commit의 순서·제목을 보존했다.원격 CI·merge 결과는 실제 확인 뒤 같은 PR trailing 기록에 추가한다.

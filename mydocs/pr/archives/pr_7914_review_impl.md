@@ -32,3 +32,12 @@
 
 - 이전 통합 `d2edf15e32cd906e0c3dbb921b075a98142d85db` → 현재 `6bc26eaf8a35956e3a43a1596ef431ca0f21c720`.
 - 이전 통합 `139dbd26b177fafc9e5419eda418eb094623e9ce` → 현재 `49ce2eb5d6a6ecd6a89e946c698abbc57e693248`.
+
+## 최종 source의 원 commit 연결
+
+- 원 `cb615cf016bf238465954c38806980cfa1e9b720` → 현재 `19d2fb9b9bd5b00984022cdf627a699d84fa978d`.
+- 원 `b12b453ea97803a7bd38ccd3e0ebca59c51a919d` → 현재 `63e0e9c58e9251989dd9380e8f42a095fa36231d`.
+
+## 최신 devel 통합 검증
+
+현재 producer `3535106051394672e93ca8401ff9eae8b449ec20` /base `9415b920c8dec299e8ada69b01dbd1c3c044f1f1`의 전체 회귀10779PASS와 실제 소비 경로 검증은 [8단계](../../working/task_m100_536_integration_review_stage8.md)를 따른다.원 contributor author와164개 리베이스 commit의 순서·제목을 보존했다.원격 CI·merge 결과는 실제 확인 뒤 같은 PR trailing 기록에 추가한다.
