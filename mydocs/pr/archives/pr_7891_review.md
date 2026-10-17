@@ -2,7 +2,9 @@
 
 ## 최종 판정
 
-**메인터너 보정 후 수용 가능 — 최신 통합 source의 로컬 필수 검증 완료.** 원 contributor head 직접 merge 대상이 아니며 실제 통합 PR의 code/trailing head CI 확인 전 merge하지 않는다.
+**승인 — 메인터너 보정한 통합 PR #7969의 code head 검증 완료.**
+
+검토 대상은 통합 code head `c5b99e2c2825f1c56e9750134fc5722f916a8a8b`와 production source `3535106051394672e93ca8401ff9eae8b449ec20`다. 원 contributor head `8273ece22860b5793767b9888dd320b3bdc414b8`의 변경은 보정한 통합 head에서 수용한다. 실제 code CI와 로컬·시각 검증을 완료했다. merge 전 조건은 같은 PR의 review·오늘할일 trailing head CI 성공과 최신 mergeability 재확인이다.
 
 ## 접수 정보
 
@@ -32,7 +34,7 @@
 원본·독립 Print PDF·직접 판독과 metadata/합성 계약을 구분한다. Native IME 저장본은 실제 host 조합·undo/redo·저장·재열기 후 한컴 Print와 양쪽 100%를 확인했다. [최종 실행 기록](../../working/task_m100_536_integration_review_stage6.md)에 연결한다. 별도 단독 극한 진단 입력은 90% 미만으로
 정상 fixture로 등록하지 않았고 완료로 표시하지 않는다. 새로운 절대 px 핀·baseline 완화는 없다.
 쪽 분할·이어받기·저장 LineSeg 수용 규칙을 이 통합의 새 기능으로 변경하지 않는다.
-1–6단계 당시 로컬 필수 검사는 완료했다. 전체 nextest 10,643 PASS / 0 FAIL / 45 skipped, Native 집중 277 PASS, Native Skia lib 4,043 PASS이며 format·Native/WASM/workspace lint·workspace build·doc test·실제 feature-off ABI·기존 HFT Native 검사도 통과했다. 원격 exact-head CI는 아직 미실행이다. source SHA·명령·한계는 위 최종 실행 기록에서 구분한다.
+1–6단계 당시 로컬 필수 검사는 완료했다. 전체 nextest 10,643 PASS / 0 FAIL / 45 skipped, Native 집중 277 PASS, Native Skia lib 4,043 PASS이며 format·Native/WASM/workspace lint·workspace build·doc test·실제 feature-off ABI·기존 HFT Native 검사도 통과했다. 그 당시 원격 CI는 미실행이었으며 현재 결과는 아래 통합 PR CI 절을 따른다. source SHA·명령·한계는 위 최종 실행 기록에서 구분한다.
 
 ## Merge 후 contributor PR comment 계획
 
@@ -70,4 +72,10 @@ producer `3535106051394672e93ca8401ff9eae8b449ec20`, base `9415b920c8dec299e8ada
 | 기준값 변경 | 기존 golden·baseline 기대값·래칫을 완화하지 않았다. 새 wire/API 합성 계약과 기존 정상 출력 증거를 구분한다. | 비해당(기존 기준값 완화 없음) |
 | 회귀 추가·변경의 선행 조건 | 추가한 원본 극한 HWP 회귀는 5단계 양쪽90% 이상과 수정 전 FAIL/후 PASS 뒤 등록했다. 최신13개 입력 raw90% 이상을 재확인했다. 새 절대 px 핀은 추가하지 않았다. | 충족 |
 | 90% 통과 후 확대 판독 | 최신 동일 좌표 Print/Native/WASM을 직접 판독했다. 분자·괄호 간격·폼 bevel·raster/테두리의 기존 차이와 미달 단독 진단은 미해결로 남겼다. 8단계 판독 원장 참조. | 충족(판독 수행; 남은 차이 별도 명시) |
-| 주장과 검증 범위 | 최신 source·명령·실제 PASS와 원 PR별 고유 검사, 실제 ABI·browser 소비를 8단계에 연결했다. 단일 예제·Linux 결과를 전체 문서·OS 지원으로 일반화하지 않으며 원격 CI는 아직 미실행이다. | 충족(로컬 범위) / 미검증(원격 CI) |
+| 주장과 검증 범위 | 최신 source·명령·실제 PASS와 원 PR별 고유 검사, 실제 ABI·browser 소비를 8단계에 연결했다. 단일 예제·Linux 결과를 전체 문서·OS 지원으로 일반화하지 않으며 현재 code head CI는 아래 실제 URL로 확인했다. | 충족(검증한 code head); trailing CI는 남은 merge 조건 |
+
+## 통합 PR #7969 code head CI 완료
+
+검증한 통합 code head `c5b99e2c2825f1c56e9750134fc5722f916a8a8b`의 [CI](https://github.com/edwardkim/rhwp/actions/runs/39007700375) · [CodeQL](https://github.com/edwardkim/rhwp/actions/runs/39007700497) · [Render Diff](https://github.com/edwardkim/rhwp/actions/runs/39007700494) · [Adapter inter-diff](https://github.com/edwardkim/rhwp/actions/runs/39007700528) · [Proptest roundtrip](https://github.com/edwardkim/rhwp/actions/runs/39007700524) · [CI Impact Policy Controller](https://github.com/edwardkim/rhwp/actions/runs/39008935219)가 실제 성공했다. CodeQL의 JavaScript/TypeScript·Python·Rust·Actions Analyze와 GHAS CodeQL check도 성공했다. Full CI의 Native·lint·frontend, archive A/B/C/D builder·worker가 실제 성공했으며, 별도 WASM Build job의 skip과 frontend fresh WASM 성공을 구분한다.
+
+같은 PR의 문서-only trailing commit과 그 최신 CI는 이후 확인한다. 원 contributor PR을 직접 merge한 것으로 표시하지 않는다.

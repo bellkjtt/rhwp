@@ -268,3 +268,11 @@ Docker가 없어 fresh WASM은 host `--no-opt` 경로다. 실제 Apple SDK XCFra
 기준9415의 극한은 Native88.42676%, WASM89.77376%로 exit1이며 원 미달 증거로 보존했다. 후보353의90% 통과·무하락 판정과 구분한다. 동일 기준 산출물은 재실행하지 않고 binary·입력·PNG·TSV 해시를 대조해 재사용했다. `--silhouette-only`의 `not_evaluated`를 승인으로 간주하지 않았으며 전쪽/대표 판독과 구조·실제 API 검사를 별도로 수행했다.
 
 </details>
+
+## 통합 PR #7969 code head CI 완료
+
+검증한 통합 code head `c5b99e2c2825f1c56e9750134fc5722f916a8a8b`의 [CI](https://github.com/edwardkim/rhwp/actions/runs/39007700375) · [CodeQL](https://github.com/edwardkim/rhwp/actions/runs/39007700497) · [Render Diff](https://github.com/edwardkim/rhwp/actions/runs/39007700494) · [Adapter inter-diff](https://github.com/edwardkim/rhwp/actions/runs/39007700528) · [Proptest roundtrip](https://github.com/edwardkim/rhwp/actions/runs/39007700524) · [CI Impact Policy Controller](https://github.com/edwardkim/rhwp/actions/runs/39008935219)가 실제 성공했다. CodeQL의 JavaScript/TypeScript·Python·Rust·Actions Analyze와 GHAS CodeQL check도 성공했다. Full CI의 Native·lint·frontend, archive A/B/C/D builder·worker가 실제 성공했으며, 별도 WASM Build job의 skip과 frontend fresh WASM 성공을 구분한다.
+
+로컬 검증 producer `3535106051394672e93ca8401ff9eae8b449ec20` 뒤의 code/asset head `c5b99e2c2825f1c56e9750134fc5722f916a8a8b`는 문서·증거만 추가했다. 전쪽 raw·실제 ABI·브라우저 결과와 source의 동일성을 확인했다. 기존 로컬 실행을 다시 돌리지 않는다.
+
+원 PR20개의 review·적용 기록과 오늘할일을 같은 PR의 single-parent trailing commit으로 반영한다. 최신 devel의 오늘 기록은 merge-tree와 링크·기록 보존 검사로 확인한다. 아직 실행 전인 trailing CI·merge·후속 처리는 완료로 기록하지 않는다.
