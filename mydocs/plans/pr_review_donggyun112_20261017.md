@@ -81,3 +81,10 @@ Cargo는 공용 `target/pr-review`에서 jobs 8로 순차 실행한다. 기존 �
 [추가 PR 검토](../pr/archives/pr_7988_review.md)에 재실행한 전체 회귀·fresh WASM·실제 브라우저의
 최종 결과를 기록했다. 최초 base와 producer는 이력으로 보존한다. 사용자 원격 게시 승인은 받았고
 통합 PR의 실제 code CI·문서 trailing·최종 CI는 별도 원격 단계다.
+
+## 통합 PR code CI 완료
+
+통합 [PR #7997](https://github.com/edwardkim/rhwp/pull/7997)의 `fd3d97b0b9effa2d0d4a1f65f47e3475ba4ec5c8`에서 실제 CI·CodeQL·Render Diff·
+Adapter·Proptest와 정책 검사가 완료됐다. 사용자가 병합·후속 처리를 승인했으며 원 PR별 검토와
+2026-10-17 오늘할일을 같은 PR의 trailing 기록으로 반영한다. 최신 trailing CI·정상 merge와
+후속 이슈/원 PR 처리·소유 branch·root output 정리는 남은 조건이다.

@@ -24,8 +24,20 @@ manifest 충돌은 #7977 HF/FN 설명과 #7983 신규 항목을 모두 유지했
 검증 중 upstream의 #7995 바인딩·문서가 추가되어 clean 상태에서 rebase했다. Rust 입력 Git object는
 동일하다. 컴파일 중 중단한 이전 전체 회귀는 PASS로 계산하지 않았고 최신 head에서 다시 완료했다.
 
-## 남은 원격 단계
+## 통합 PR code CI와 남은 후속 처리
 
-사용자는 push·통합 PR 생성을 승인했다. 로컬 검증과 원격 code head CI는 구분한다.
-code CI 성공 뒤 같은 통합 PR의 원 PR별 review·오늘할일 trailing을 확정하고 최신 CI로 merge를 판단한다.
-원 PR 결과 댓글·close는 통합 merge 뒤 처리하며 contributor fork는 보존한다.
+[통합 PR #7997](https://github.com/edwardkim/rhwp/pull/7997)의 정확한 code head
+`fd3d97b0b9effa2d0d4a1f65f47e3475ba4ec5c8`에서 [CI](https://github.com/edwardkim/rhwp/actions/runs/39041517840) · [CodeQL](https://github.com/edwardkim/rhwp/actions/runs/39041517836) · [Render Diff](https://github.com/edwardkim/rhwp/actions/runs/39041517829) · [Adapter](https://github.com/edwardkim/rhwp/actions/runs/39041517834) · [Proptest](https://github.com/edwardkim/rhwp/actions/runs/39041517854) · [Controller](https://github.com/edwardkim/rhwp/actions/runs/39042954892)를 확인했다.
+집계 Build & Test·언어별 CodeQL·Canvas·Adapter·Proptest와 정책 status가 완료됐고
+실패·진행 중 check는 없다. GHAS CodeQL의 neutral과 영향 정책상 skip을 실제 성공 worker와 구분한다.
+PR 생성 전 source PR CI를 재사용한 결과가 아닌 이 통합 PR의 실제 실행이다.
+
+사용자는 CI 모니터링 이후 병합·후속 처리를 승인했다. 이 기록은 동일 PR의 문서-only trailing이며
+제품·테스트·workflow·fixture·baseline은 변경하지 않는다. 최신 base와 merge tree의 문서 링크·
+오늘할일 보존을 확인하고 push한 뒤, trailing head의 실제 fast-pass·required aggregate·mergeability를
+다시 확인한다. 아직 실행 전인 trailing CI·merge·이슈 종료·정리는 완료로 표시하지 않는다.
+
+원본 로컬 영수증·로그의 종료 후 보존 경로는 `/home/tsjang/rhwp-pr-evidence/pr-7997/`다.
+저장소의 ignored `output/pr-review/donggyun112-20261017/`는 실행 당시 경로이며,
+최종 보존 파일을 해시 확인한 뒤 `post_merge.md`에 따라 root `output/` 전체를 정리한다.
+공용 `target/pr-review`와 contributor fork는 보존한다.

@@ -2,9 +2,10 @@
 
 ## 최종 판정
 
-**승인 — #7977의 원 변경을 최신 devel에 통합한 후보에서 로컬 검증 완료.**
-검증한 최신 통합 code 후보는 `2dee7730306dcc7f57615c87c25cb09af3c90f63`다. 사용자는 원격 게시를 승인했다.
-통합 PR code CI·문서 trailing·최종 CI는 남은 조건이며 원 PR CI와 구분한다.
+**승인 — 원 기여와 정식 회귀를 반영한 통합 head의 로컬 검증과 실제 code CI 완료.**
+code CI head는 `fd3d97b0b9effa2d0d4a1f65f47e3475ba4ec5c8`이며 로컬 제품·테스트 producer와의 차이는 검토 문서뿐이다.
+원 contributor head의 직접 merge 승인과 구분한다. 사용자 병합·후속 처리 승인은 받았고
+문서 trailing head의 최신 CI·mergeability가 남은 병합 조건이다.
 
 ## 접수 정보
 
@@ -97,3 +98,21 @@ Native/Print PDF Visual Sweep은 비해당이다. 바뀐 값은 HF/FN 편집기�
 분리하고 통합 PR·개별 기록·실제 CI URL을 direct link로 연결한다. 게시 뒤 UTF-8 원문·선두
 BOM·URL을 API로 확인하고 원 PR을 close한다. contributor fork는 보존한다.
 시각 피델리티 수치나 미실행 Native/Print·OS IME 검사를 통과로 적지 않는다.
+
+## 통합 PR code CI와 남은 후속 처리
+
+[통합 PR #7997](https://github.com/edwardkim/rhwp/pull/7997)의 정확한 code head
+`fd3d97b0b9effa2d0d4a1f65f47e3475ba4ec5c8`에서 [CI](https://github.com/edwardkim/rhwp/actions/runs/39041517840) · [CodeQL](https://github.com/edwardkim/rhwp/actions/runs/39041517836) · [Render Diff](https://github.com/edwardkim/rhwp/actions/runs/39041517829) · [Adapter](https://github.com/edwardkim/rhwp/actions/runs/39041517834) · [Proptest](https://github.com/edwardkim/rhwp/actions/runs/39041517854) · [Controller](https://github.com/edwardkim/rhwp/actions/runs/39042954892)를 확인했다.
+집계 Build & Test·언어별 CodeQL·Canvas·Adapter·Proptest와 정책 status가 완료됐고
+실패·진행 중 check는 없다. GHAS CodeQL의 neutral과 영향 정책상 skip을 실제 성공 worker와 구분한다.
+PR 생성 전 source PR CI를 재사용한 결과가 아닌 이 통합 PR의 실제 실행이다.
+
+사용자는 CI 모니터링 이후 병합·후속 처리를 승인했다. 이 기록은 동일 PR의 문서-only trailing이며
+제품·테스트·workflow·fixture·baseline은 변경하지 않는다. 최신 base와 merge tree의 문서 링크·
+오늘할일 보존을 확인하고 push한 뒤, trailing head의 실제 fast-pass·required aggregate·mergeability를
+다시 확인한다. 아직 실행 전인 trailing CI·merge·이슈 종료·정리는 완료로 표시하지 않는다.
+
+원본 로컬 영수증·로그의 종료 후 보존 경로는 `/home/tsjang/rhwp-pr-evidence/pr-7997/`다.
+저장소의 ignored `output/pr-review/donggyun112-20261017/`는 실행 당시 경로이며,
+최종 보존 파일을 해시 확인한 뒤 `post_merge.md`에 따라 root `output/` 전체를 정리한다.
+공용 `target/pr-review`와 contributor fork는 보존한다.
