@@ -404,20 +404,24 @@ class SelectedRasterTests(unittest.TestCase):
             Path("reference.pdf"), 144, Path("out/pdf"), [1, 3]
         )
 
-        self.assertEqual(len(commands), 2)
-        self.assertEqual(commands[0][1:5], ["-f", "1", "-l", "1"])
-        self.assertEqual(commands[1][1:5], ["-f", "3", "-l", "3"])
-        self.assertEqual(commands[0][0], "pdftocairo")
-        self.assertEqual(commands[1][0], "pdftocairo")
-        self.assertEqual(commands[0][5:10], ["-r", "144", "-antialias", "none", "-png"])
-        self.assertEqual(commands[0][-2:], ["reference.pdf", str(Path("out") / "pdf")])
+        self.assertEqual(len(commands), 1)
+        command = commands[0]
+        self.assertEqual(command[0], sys.executable)
+        self.assertEqual(Path(command[1]).name, "visual_sweep_pdf.py")
+        self.assertEqual(command[2:], ["--pdf", "reference.pdf", "--dpi", "144",
+                                      "--prefix", str(Path("out") / "pdf"), "--pages", "1,3"])
 
     def test_pdf_raster_commands_keeps_full_document_default(self) -> None:
         commands = SWEEP.pdf_raster_commands(
             Path("reference.pdf"), 144, Path("out/pdf"), None
         )
 
-        self.assertEqual(commands, [["pdftocairo", "-r", "144", "-antialias", "none", "-png", "reference.pdf", str(Path("out") / "pdf")]])
+        self.assertEqual(len(commands), 1)
+        self.assertEqual(commands[0][0], sys.executable)
+        self.assertEqual(Path(commands[0][1]).name, "visual_sweep_pdf.py")
+        self.assertEqual(commands[0][2:], ["--pdf", "reference.pdf", "--dpi", "144",
+                                         "--prefix", str(Path("out") / "pdf")])
+
 
 
 class EmbeddedFontPreflightTests(unittest.TestCase):

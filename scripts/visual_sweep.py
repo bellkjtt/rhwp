@@ -313,6 +313,8 @@ def ensure_tools(svg_rasterizer: str = "webfont") -> None:
     elif svg_rasterizer != "native-skia":
         required.append("node")
     missing = [tool for tool in required if shutil.which(tool) is None]
+    if not pdf_rasterizer_provenance()["available"]:
+        missing.append("pypdfium2 (PDFium 라이브러리 포함)")
     if missing:
         raise SystemExit("필수 도구가 없습니다: " + ", ".join(missing))
 
