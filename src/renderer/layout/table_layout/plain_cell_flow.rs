@@ -34,6 +34,17 @@ impl super::LayoutEngine {
                     0.0
                 };
                 let remaining = (minimum - physical).max(remaining_content);
+                // 종료 병합 칸도 자기 내용이 모두 끝난 작은 빈 꼬리는 흡수한다.
+                // 일반 칸에서 흡수한 공간을 이 원장에서 다시 만들지 않는다.
+                if end == units.len()
+                    && blank_tail_is_line_sliver(
+                        remaining,
+                        units.last().map_or(0.0, |unit| unit.height),
+                        self.dpi,
+                    )
+                {
+                    return None;
+                }
                 (remaining > 0.5).then_some(remaining)
             })
             .reduce(f64::max)
@@ -59,7 +70,7 @@ impl super::LayoutEngine {
                 })
             })
             .fold(0.0, f64::max);
-        line > 0.0 && tail <= line + super::hwpunit_to_px(1, self.dpi)
+        blank_tail_is_line_sliver(tail, line, self.dpi)
     }
 
     /// 현재 행을 넘어 계속되는 병합 칸의 독립적인 빈 최소 공간.
@@ -229,6 +240,11 @@ impl super::CellUnit {
     pub(in crate::renderer::layout) fn has_visible_line(&self) -> bool {
         !self.empty_spacer && self.vis_start < self.vis_end
     }
+}
+
+/// 흡수 기준은 소유 칸의 마지막 줄과 원본 1HU 반올림이다.
+fn blank_tail_is_line_sliver(tail: f64, line: f64, dpi: f64) -> bool {
+    line > 0.0 && tail <= line + super::hwpunit_to_px(1, dpi)
 }
 
 /// 한 단 설정은 이미 선택한 셀 프레임을 바꾸거나 내용 상자를 추가하지 않는다.
