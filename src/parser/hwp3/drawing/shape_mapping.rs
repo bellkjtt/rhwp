@@ -353,6 +353,13 @@ pub(super) fn map_to_shape_object(
             s.drawing = drawing_attr;
         }
         ShapeObject::Rectangle(ref mut s) => {
+            // HWP3 사각형과 글상자는 공통 헤더의 크기로 윤곽을 정의한다.
+            // 이 암묵 기하를 IR에 남겨야 HWPX의 명시적인 네 꼭짓점도
+            // 같은 면을 그린다. default의 네 원점은 퇴화 사각형이다.
+            let width = common.width.min(i32::MAX as u32) as i32;
+            let height = common.height.min(i32::MAX as u32) as i32;
+            s.x_coords = [0, width, width, 0];
+            s.y_coords = [0, 0, height, height];
             s.common = common;
             s.drawing = drawing_attr;
             // HWP3 기본 속성의 모서리 옵션을 공통 사각형 계약에 보존한다.
@@ -366,6 +373,21 @@ pub(super) fn map_to_shape_object(
             };
         }
         ShapeObject::Ellipse(ref mut s) => {
+            // 보통 타원의 중심과 두 축도 같은 로컬 개체 상자에서 정한다.
+            // 변형 타원의 추가 정보는 이 보통 타원 계약으로 대체하지 않는다.
+            if header.object_type == 3 {
+                let width = common.width.min(i32::MAX as u32) as i32;
+                let height = common.height.min(i32::MAX as u32) as i32;
+                s.center = crate::model::Point {
+                    x: width / 2,
+                    y: height / 2,
+                };
+                s.axis1 = crate::model::Point { x: width / 2, y: 0 };
+                s.axis2 = crate::model::Point {
+                    x: width,
+                    y: height / 2,
+                };
+            }
             s.common = common;
             s.drawing = drawing_attr;
         }
