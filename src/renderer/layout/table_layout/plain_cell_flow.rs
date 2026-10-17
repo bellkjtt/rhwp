@@ -2,6 +2,13 @@
 
 use crate::model::{control::Control, paragraph::Paragraph};
 
+impl super::CellUnit {
+    /// 빈 간격 유닛을 제외하고 실제 가시 줄 범위의 존재만 공유한다.
+    pub(in crate::renderer::layout) fn has_visible_line(&self) -> bool {
+        !self.empty_spacer && self.vis_start < self.vis_end
+    }
+}
+
 /// 한 단 설정은 이미 선택한 셀 프레임을 바꾸거나 내용 상자를 추가하지 않는다.
 /// 다단 설정이나 독립 개체의 흐름 계약까지 이 판정으로 확대하지 않는다.
 pub(super) fn paragraph_has_plain_flow(paragraph: &Paragraph) -> bool {

@@ -145,8 +145,7 @@ impl LayoutEngine {
                 }
                 CutSource::Reflow => {
                     if !(table_reflowed || crate::renderer::para_has_no_stored_line_segs(paragraph))
-                        || closing.empty_spacer
-                        || closing.vis_end <= closing.vis_start
+                        || !closing.has_visible_line()
                     {
                         return false;
                     }
