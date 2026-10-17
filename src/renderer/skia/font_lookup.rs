@@ -330,7 +330,7 @@ mod tests {
     #[test]
     fn missing_family_is_filtered_before_system_lookup() {
         let font_mgr = FontMgr::default();
-        let system_families = SystemFontFamilies::default();
+        let mut system_families = SystemFontFamilies::default();
 
         assert!(match_system_family_style(
             &font_mgr,
@@ -339,24 +339,6 @@ mod tests {
             FontStyle::normal(),
         )
         .is_none());
-    }
-
-    #[test]
-    fn system_family_membership_matches_skia_family_lookup() {
-        let mut system_families = SystemFontFamilies::default();
-        system_families.names.insert("AppleGothic".to_string());
-
-        assert!(has_system_family(&system_families, "AppleGothic"));
-        assert!(has_system_family(&system_families, "applegothic"));
-        assert!(has_system_family(&system_families, "APPLEGOTHIC"));
-        assert!(!has_system_family(&system_families, "AppleGothic Extra"));
-        assert!(!has_system_family(&system_families, "Missing Family"));
-    }
-
-    #[test]
-    fn non_postscript_missing_names_do_not_enumerate_system_programs() {
-        let font_mgr = FontMgr::default();
-        let mut system_families = SystemFontFamilies::default();
         system_families
             .names
             .insert("RHWP membership witness".into());
@@ -376,5 +358,17 @@ mod tests {
         }
         // 사양상 ID 6일 수 없는 요청은 실제 시스템 색인을 시작하지 않는다.
         assert!(system_families.postscript_faces.get().is_none());
+    }
+
+    #[test]
+    fn system_family_membership_matches_skia_family_lookup() {
+        let mut system_families = SystemFontFamilies::default();
+        system_families.names.insert("AppleGothic".to_string());
+
+        assert!(has_system_family(&system_families, "AppleGothic"));
+        assert!(has_system_family(&system_families, "applegothic"));
+        assert!(has_system_family(&system_families, "APPLEGOTHIC"));
+        assert!(!has_system_family(&system_families, "AppleGothic Extra"));
+        assert!(!has_system_family(&system_families, "Missing Family"));
     }
 }
