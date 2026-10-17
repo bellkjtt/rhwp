@@ -84,7 +84,7 @@ impl TypesetEngine {
         let ordinary_row_can_split = !rowspan_touched[r]
             || (mt.allows_row_break_split() && can_intra_split && mt.is_row_splittable(r));
         let owns_plain_row_frame = ordinary_row_can_split
-            && reflow_minimum.is_some()
+            && (reflow_minimum.is_some() || layout_engine.row_has_continuing_reflow_span(table, r))
             && layout_engine.row_has_plain_reflow_line_units(table, r, styles);
         let avail_for_rows = if owns_plain_row_frame {
             reflow_frame_avail_for_rows.map_or(avail_for_rows, |height| avail_for_rows.min(height))
@@ -1455,7 +1455,7 @@ impl TypesetEngine {
             // 실제 수용한 높이만 소유하며 예약과 paint가 이 같은 상자를 쓴다.
             end_row_height_override = Some(consumed);
         }
-        // 선언 최소 높이를 이어받는 행의 앞 상자도 실제 수용한 높이다.
+        // 재조판 행의 선언 최소와 이어지는 병합 칸의 앞 상자는 실제 수용한 높이다.
         // 같은 값을 예약 결과와 PageItem에 실어 paint가 더 작은 상자로
         // 다시 계산한 뒤 잔여에서 더 큰 높이를 빼는 일을 막는다.
         if !keep_scanning
@@ -1465,25 +1465,26 @@ impl TypesetEngine {
             && split_block_start.is_none()
             && end_row == scan_start_row + 1
         {
-            if let Some(minimum) = reflow_minimum {
-                let accepted_height = consumed - consumed_before_row - cs_before;
-                if accepted_height > 0.0 {
-                    let available = (avail_for_rows - consumed_before_row - cs_before).max(0.0);
-                    let remaining = if scan_start_row == cursor_row {
-                        start_row_height_override.unwrap_or(minimum)
-                    } else {
-                        minimum
-                    };
-                    // 빈 물리 띠도 이 행이 소유한다. 내용 컷 뒤의 여백을
-                    // 공통 하단까지 예약하고 같은 앞 상자에서 잔여를 뺀다.
-                    let frame_height = if accepted_height <= available {
-                        remaining.min(available).max(accepted_height)
-                    } else {
-                        accepted_height
-                    };
-                    consumed += frame_height - accepted_height;
-                    end_row_height_override = Some(frame_height);
-                }
+            let accepted_height = consumed - consumed_before_row - cs_before;
+            if accepted_height > 0.0 {
+                let available = (avail_for_rows - consumed_before_row - cs_before).max(0.0);
+                // 별도 선언 최소가 없어도 뒤 행까지 이어지는 병합 칸은
+                // 현재 쪽의 물리 하단까지 소유한다. 남은 글줄 컷은 늘리지 않는다.
+                let minimum = reflow_minimum.unwrap_or(available);
+                let remaining = if scan_start_row == cursor_row {
+                    start_row_height_override.unwrap_or(minimum)
+                } else {
+                    minimum
+                };
+                // 빈 물리 띠도 이 행이 소유한다. 내용 컷 뒤의 여백을
+                // 공통 하단까지 예약하고 같은 앞 상자에서 잔여를 뺀다.
+                let frame_height = if accepted_height <= available {
+                    remaining.min(available).max(accepted_height)
+                } else {
+                    accepted_height
+                };
+                consumed += frame_height - accepted_height;
+                end_row_height_override = Some(frame_height);
             }
         }
         // 높이를 다시 추정하지 않고 이번 일반 행이 실제 수용한 증분을 보존한다.
