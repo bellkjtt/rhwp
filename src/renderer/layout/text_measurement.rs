@@ -1390,12 +1390,15 @@ fn measure_char_width_embedded_decision_for_font<'a>(
                 character_match: "miss",
             };
         };
-        // HMKMM TrueType의 가운뎃점·따옴표는 원 프로그램의 전진폭을 쓴다.
+        // 검증된 TrueType의 가운뎃점·따옴표는 원 프로그램의 전진폭을 쓴다.
         // 독립 Print의 같은 glyph outline과 이웃 글자 원점도 전각 전진을 입증한다.
         // 같은 이름의 HFT 출력은 좁은 호환 폭을 쓰므로 확인된 프로그램 선택에서만
         // raw hmtx 값을 소비한다. 다른 face의 기존 계약은 유지한다.
-        let human_true_type_width = (font_metric_trusted
-            && matches!(primary_name, "휴먼명조" | "HumanMyeongJo")
+        let verified_true_type_width = (font_metric_trusted
+            && matches!(
+                primary_name,
+                "휴먼명조" | "HumanMyeongJo" | "HY중고딕" | "HYGothic-Medium"
+            )
             && matches!(
                 c,
                 '\u{00B7}' | '\u{2018}' | '\u{2019}' | '\u{201C}' | '\u{201D}'
@@ -1471,7 +1474,7 @@ fn measure_char_width_embedded_decision_for_font<'a>(
             && glyph_w >= mm.metric.em_size
             && !is_monospace_metric(mm.metric)
             && (!font_metric_trusted || latin1_table_is_uninformative(mm.metric));
-        if let Some(width) = human_true_type_width {
+        if let Some(width) = verified_true_type_width {
             (width, "metricTrueTypeGlyph")
         } else if hft_hangul_halfwidth_ascii {
             (mm.metric.em_size / 2, "metricHftHangulHalfwidthAscii")

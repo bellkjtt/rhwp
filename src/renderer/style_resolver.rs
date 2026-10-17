@@ -598,14 +598,19 @@ pub(crate) struct FontNameDecision {
 ///   682/2048em, 큰따옴표는 909/2048em으로 원래 좁은 글리프다. 이 TTF 선택을 신뢰하지
 ///   않으면 측정한 원 전진폭은 유지하면서 Canvas/Skia만 다시 절반으로 축소한다.
 ///
-/// 아직 넣지 않은 것 — `HY중고딕`(정본 5문서 n=41 이 전각이지만 저장소에 글꼴 파일이
-/// 없다) · `HY견고딕`·`HY그래픽`(글꼴 파일은 있으나 정본이 사실상 한 문서뿐) ·
+/// - `HY중고딕` — 공식 설치 H2GTRM.TTF의 `·‘’“”`는 1024/1024em이다.
+///   법령의 독립 한컴 Print와 내어쓰기 통제 복사본도 가운뎃점의 전각을 입증한다.
+///   글꼴 파일 자체를 저장소에 넣지 않고 프로그램 SHA와 추출 근거를 기록한다.
+///
+/// 아직 넣지 않은 것 — `HY견고딕`·`HY그래픽`(글꼴 파일은 있으나 정본이 사실상 한 문서뿐) ·
 /// `휴먼고딕`(정본 표본이 부족하다).
 fn metric_widths_verified_face(face: &str) -> bool {
     matches!(
         face.trim(),
         "HY신명조"
             | "HYSinMyeongJo-Medium"
+            | "HY중고딕"
+            | "HYGothic-Medium"
             | "HY헤드라인M"
             | "HYHeadLine-Medium"
             | "HY울릉도M"
