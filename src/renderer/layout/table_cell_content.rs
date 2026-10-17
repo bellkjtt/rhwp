@@ -720,10 +720,7 @@ impl LayoutEngine {
                 let para_style = styles.para_styles.get(para_shape_id as usize);
                 let left = para_style.map_or(0.0, |style| style.margin_left);
                 let right = para_style.map_or(0.0, |style| style.margin_right);
-                (
-                    inner_area.x + left,
-                    inner_area.width - left - right,
-                )
+                (inner_area.x + left, inner_area.width - left - right)
             } else {
                 (inner_area.x, inner_area.width)
             };
@@ -739,9 +736,7 @@ impl LayoutEngine {
             }
             let v_offset = hwpunit_to_px(vertical_offset, self.dpi);
             let x = match child_common.horz_align {
-                HorzAlign::Right | HorzAlign::Outside => {
-                    ref_x + ref_w - child_w - h_offset
-                }
+                HorzAlign::Right | HorzAlign::Outside => ref_x + ref_w - child_w - h_offset,
                 HorzAlign::Center => ref_x + (ref_w - child_w) / 2.0 + h_offset,
                 _ => ref_x + h_offset,
             };

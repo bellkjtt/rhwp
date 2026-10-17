@@ -62,3 +62,16 @@
 빌드 실패가 아닌 실제 배치 결함 재현이다. 명령·stdout·stderr는
 `stage15-origin-before-command.json`, `logs/stage15-origin-before-{build,test}.log`에 보존한다.
 새 정식 테스트 추가는 영향 페이지와 전쪽 Native/fresh WASM 확인 뒤 진행한다.
+
+## Native 첫 결과
+
+공용 target·jobs8의 release-test Native bin/lib 빌드가 모두exit0으로 끝났다.
+같은 독립 Print 좌표 검사는 컴파일exit0/실행exit0이며 첫 그룹 x259.133333
+(Print258.76, +0.373333px), 둘째x256.853333(Print256.5227, +0.330633px)다.
+이 결과만으로 시각 완료나 PR 준비를 선언하지 않으며 현재 영향 페이지를 캡처 중이다.
+
+첫 source commit 뒤 끝난 cargo fmt의 tuple 줄바꿈만 build 시작 전 적용돼 있었다.
+실제 producer는cef058e45 + `stage15-native-producer-format.diff`이고 세 생산 파일의
+실제SHA-256은 `stage15-native-producer-sources.json`으로 고정했다. 이 후속 커밋이
+같은 byte를 포함하며 소스 의미 변경을 추가하지 않는다. Frozen bin/rlib·명령·오류코드는
+`stage15-native-provenance.json`, `stage15-build-results.json`에 남겼다.
