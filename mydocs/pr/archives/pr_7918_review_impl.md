@@ -29,3 +29,12 @@
 - 런타임/검사 분리는 `456ac3585`, 독립 Print 근거의 공통 극한 이름은 `d9a0b1c79`, 정식 원본 회귀는 `1ed02ebff`, font-request 반례·Print 보존은 `068769e9d`에 연결한다. 이 보정들을 원 contributor가 작성한 것으로 표시하지 않는다.
 - 실제 실행 결과·source/binary/font/PDF hash와 직접 판독은 [5단계](../../working/task_m100_536_integration_review_stage5.md)·[6단계](../../working/task_m100_536_integration_review_stage6.md)에 있다. 기본 전체 nextest는 10,643 PASS / 0 FAIL / 45 skipped로 끝났다. Native 집중 277 PASS, 공식 Skia lib 4,043 PASS와 focused 2+4 PASS, format·Native/WASM/workspace lint·workspace build·doc test·실제 feature-off ABI·기존 HFT Native 검사도 완료했다. 원격 exact-head CI는 미실행이며 이후 실제 결과로 trailing 기록을 갱신한다.
 - 최종 판정과 merge 후 원 PR comment 계획은 같은 번호의 개별 review에 유지한다. 통합 PR 번호의 별도 review를 만들거나 contributor branch를 rewrite하지 않는다.
+
+## 최신 base 리베이스
+
+새 base `b7a5388034ee66f58a7e1d5363974e83b6374f57`, 직후 head `a7aac1a9ce5b2b902471ecd8f234f7d72834812d`. [7단계](../../working/task_m100_536_integration_review_stage7.md)의 새 head 검증은 진행 중이다. 위 실제 적용 SHA는 리베이스 전 기록이며 아래는 현재 대응이다.
+
+- 이전 통합 `5f1870dea2c74a5711cefe6be66d82387d5cf057` → 현재 `cce873d7b43a7ffafca68201f7179c25709a4f6e`.
+- 이전 통합 `a21352cc281d44ca0896c9e41bab009234c7dd7b` → 현재 `abab898fb4593617ee98ec87816e0befb700883d`.
+- 이전 통합 `fa5c20aa5f533fd6843f3dfc1a70880439a172fe` → 현재 `15cc94b9151e16283f9fcfacb527bdcb029ec20a`.
+- 이전 통합 `511a660f9d281f7446526bd2bee1a1711817cf8f` → 현재 `6b11e381454cbd1eb7ddc7488c3b95eb8305a814`.

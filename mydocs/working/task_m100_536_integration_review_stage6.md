@@ -152,7 +152,7 @@ profile로 빌드한 뒤 별도 복사본의 해시와 source SHA를 기록했�
 `output/pr-review/seo-rii-20261017/final-rust-gates.json`, `final-extra-contracts.json`,
 `logs/final-*.log`와 각 summary JSON에 있다. TSV 원본은 base/head × Native/WASM × 8개 입력의
 32개를 바이트 그대로 별도 제출 묶음에 복사하고 해시를 대조했다. ZIP·Git commit으로 대체하지 않는다.
-외부 원본 다운로드 링크의 게시 방법은 별도 질문의 답변을 기다리고 있으며 아직 게시했다고 표시하지 않는다.
+이후 사용자가 원문을 PR 본문에 직접 넣도록 지시했다. 실제 제출 형식과 최신 base 재검증은 [7단계](task_m100_536_integration_review_stage7.md)를 따른다.
 
 로컬 구현·필수 검증은 완료해 원 PR별 판정은 **메인터너 보정 후 수용 가능**으로 갱신한다.
 이 판정은 원 contributor head를 직접 merge하는 승인이 아니다. 실제 통합 PR 생성 전 최신 devel/source
@@ -160,3 +160,7 @@ head와 원본 TSV 제출 조건을 확인하고, 정확한 통합 PR head CI가
 commit으로 실제 CI·오늘할일을 추가한다. trailing head CI 확인 전 merge하지 않는다.
 Docker 없는 host `--no-opt` fresh WASM이며 Docker 최적화 배포 검증·Apple SDK·C# runtime은 미검증이다.
 부모 #536 전체나 낮은 별도 극한 진단을 해결·종료로 표시하지 않는다.
+
+## 후속 base 변경
+
+이 단계의 통과는 위 SHA 기준이다. PR 직전 #7953이 병합되어 리베이스했으며 현재 검증 상태는 [7단계](task_m100_536_integration_review_stage7.md)를 우선한다.

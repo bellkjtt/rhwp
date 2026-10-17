@@ -2,7 +2,7 @@
 
 ## 최종 판정
 
-**메인터너 보정 후 수용 가능 — 통합 후보의 로컬 필수 회귀·lint·시각 검증 완료.** 원 contributor head 직접 merge 대상이 아니며, 실제 통합 PR의 exact-head CI와 문서 trailing head CI 확인 전 merge하지 않는다.
+**머지 보류 — 최신 devel의 PDF 기본 feature 변경을 리베이스했고 새 head 검증 중.** 이전 head의 로컬 통과 결과는 역사적 증거이며 현재 head 완료로 표시하지 않는다.
 
 ## 접수 정보
 
@@ -41,3 +41,7 @@
 3. 직접 비교한 전체 입력은 8개·각 1쪽이며 Native/fresh WASM 모두 90% 이상, 고정 devel 대비 0.01%p 이상 하락·누락·쪽수 차이가 없음을 기록한다. Direct PDF 실제 ABI의 vector shading·이미지 객체 부재 및 독립 Print 전체 1쪽 100%도 함께 기재한다. stable `direct-pdf/shape-group-02_review.png`와 `_overlay.png`를 사용한다.
 4. 대표 stable 경로는 `mydocs/pr/assets/issue_536_seo_rii_20261017/{native,wasm}/shape-group-02_{review,overlay}.png`다. 실제 merge SHA로 `https://raw.githubusercontent.com/edwardkim/rhwp/<merge-commit-sha>/mydocs/pr/assets/issue_536_seo_rii_20261017/<backend>/shape-group-02_<panel>.png`를 만들어 **Markdown 이미지**로 표시한다. [Visual Sweep 정본](../../manual/verification/visual_sweep_guide.md#github-merge-comment)을 direct link로 함께 남긴다.
 5. 알려진 원래 분수/폼 차이와 미해결 단독 극한 진단을 전체 해결로 표시하지 않는다. 부모 #536은 종료하지 않는다. 실제 결과 본문은 UTF-8 `--body-file`로 게시하고 API로 한글·선두 BOM·본문·merge SHA·asset URL을 재조회한다. 게시 성공 뒤 이 원 PR을 통합 링크와 함께 close하고 contributor fork branch는 보존한다.
+
+## PR 직전 base 갱신
+
+새 base `b7a5388034ee66f58a7e1d5363974e83b6374f57`와 통합 head `a7aac1a9ce5b2b902471ecd8f234f7d72834812d`의 [7단계 재검증](../../working/task_m100_536_integration_review_stage7.md)을 따른다. 원 head와 1–6단계 실행 기록은 그대로 보존한다. TSV 원본은 사용자 지시에 따라 PR 본문에 그대로 넣는다.

@@ -79,3 +79,37 @@
 - 런타임/검사 분리는 `456ac3585`, 독립 Print 근거의 공통 극한 이름은 `d9a0b1c79`, 정식 원본 회귀는 `1ed02ebff`, font-request 반례·Print 보존은 `068769e9d`에 연결한다. 이 보정들을 원 contributor가 작성한 것으로 표시하지 않는다.
 - 실제 실행 결과·source/binary/font/PDF hash와 직접 판독은 [5단계](../../working/task_m100_536_integration_review_stage5.md)·[6단계](../../working/task_m100_536_integration_review_stage6.md)에 있다. 기본 전체 nextest는 10,643 PASS / 0 FAIL / 45 skipped로 끝났다. Native 집중 277 PASS, 공식 Skia lib 4,043 PASS와 focused 2+4 PASS, format·Native/WASM/workspace lint·workspace build·doc test·실제 feature-off ABI·기존 HFT Native 검사도 완료했다. 원격 exact-head CI는 미실행이며 이후 실제 결과로 trailing 기록을 갱신한다.
 - 최종 판정과 merge 후 원 PR comment 계획은 같은 번호의 개별 review에 유지한다. 통합 PR 번호의 별도 review를 만들거나 contributor branch를 rewrite하지 않는다.
+
+## 최신 base 리베이스
+
+새 base `b7a5388034ee66f58a7e1d5363974e83b6374f57`, 직후 head `a7aac1a9ce5b2b902471ecd8f234f7d72834812d`. [7단계](../../working/task_m100_536_integration_review_stage7.md)의 새 head 검증은 진행 중이다. 위 실제 적용 SHA는 리베이스 전 기록이며 아래는 현재 대응이다.
+
+- 이전 통합 `a50c25b3aa332a46a14a1f349d03fe82b8ad5053` → 현재 `d7d9cd163fb8bf7753c710eaf67d67f58466a27b`.
+- 이전 통합 `991701fa59b4575fa8be45a0d0f7a6280d95c122` → 현재 `4036fe0621779bc5ca1613665d9dc3dbc8e6eae9`.
+- 이전 통합 `5e550e12b679403ba11fa6d4299791234f1d5758` → 현재 `c028112d58bac4dd8c15598a12d58f76a3032d1b`.
+- 이전 통합 `4707a41a973ab272784a5c3f991e1bbf15728fa8` → 현재 `4771ca54eb997150eda6da005d72bc0fc194b338`.
+- 이전 통합 `e467f08c4daa7f5db9b0fe73850795180ad698b5` → 현재 `cc5580b383f2fcd3035389198410a6d15031c189`.
+- 이전 통합 `b72a5f2f67acff72238feadd110857d00eb5ac2c` → 현재 `8f7928b2018b38b87aa595a731d8a88f0173f583`.
+- 이전 통합 `bda7a209a8b9c2a068f2b78488120042180a3ac9` → 현재 `11ec3a822a0552b65a8b4584c55c3d6ac95ca2ef`.
+- 이전 통합 `1677240efaf4be79c6bebb75b1358b423220326f` → 현재 `c6710f16152e808573d2887c165a5c5983624bfd`.
+- 이전 통합 `caa893cd846a38da65cbc906e67bc6d5d3236879` → 현재 `674dcedd33062df9253e85a912bd21964c9be39f`.
+- 이전 통합 `fc2335062aba5ebe847a21861121e27968ecd7ef` → 현재 `d121dccfbb4809bb28edc9488a8854dba5702bf0`.
+- 이전 통합 `b3af1d45f6fa989e43753ab04ce30e72e3da243f` → 현재 `aad4fa8e2f860aeceb4b8aeb470aaa56b0c52075`.
+- 이전 통합 `9060f3d5af21eb3a2fd8f749e7054fddb1a65ade` → 현재 `2e28a1e408bfd4a7cf1ea5f8f7547f534a12df07`.
+- 이전 통합 `a566d272936f7ab52a7d650ee544330761312688` → 현재 `ab248b3a5717813286f4f19cdf40f793d8df152b`.
+- 이전 통합 `5880e26495c31c4bac7fceb93ede75c0632c81f2` → 현재 `9ddf26f62ab919db2c19552021a24e432062c4a5`.
+- 이전 통합 `e57e38e1a0c3e18cd6907e2b9defa22f3a32e9d9` → 현재 `47ad9166df438734d01404a41545cfcf355dfb2c`.
+- 이전 통합 `b56c132beccf4d14a82b3a0f68ad3a5d631a6729` → 현재 `ef47e7d0418a00f27b3e42944e03596fd626ce12`.
+- 이전 통합 `3b06b73a0c2ff9392cb4ee34dcdba2bd04829ee0` → 현재 `f28c546c6c3b555af66a3e770e24f8222048b435`.
+- 이전 통합 `eb1fc7a32c1728d946d6cd28ac66396e4619187d` → 현재 `a7f25b5320aa6819b0065debd9be66bdd1b7d8d5`.
+- 이전 통합 `56c2f1a984d87d46e4b9b9366b4a74cf38b3a070` → 현재 `cb728c1ce26ac4a48a4809311a143f25e944bb6c`.
+- 이전 통합 `c840bc89fd85a592f51cee9d79e86ace20f9c8a1` → 현재 `5bda16181e4f9754e35d213990125aaa7efc7c6e`.
+- 이전 통합 `8c270745c966a0a9c67853fdd790959fa61669d7` → 현재 `efdf4604165ad4581f79fc2d42c1a6c393692eb0`.
+- 이전 통합 `e4f63853c0205a1489e832d2f84219ca1e2a33fa` → 현재 `81f72349bd59a2c48414bac4540ac04484de0f57`.
+- 이전 통합 `420aa5d2a7e33c403a1bc257820217dad8f7223e` → 현재 `2b3e3a063dff34a7b7b8dbc12161d01ebd7db343`.
+- 이전 통합 `36ceb87890b4134e5df64890156753c1f86485fa` → 현재 `396ae6ab0573e7068fd052891d3af331dcce72ba`.
+- 이전 통합 `dc282d4b42cea652ad5239401c2ecf39b707d1b6` → 현재 `557e3b767c30d2cfb7f87ae4a0ec684fbca72c41`.
+- 이전 통합 `cbcdeb7e5a266fdce4399b4c4f78239c3354518d` → 현재 `ad966934ed79742b5fa6046012e6fcf2fe8e1daf`.
+- 이전 통합 `3c73244f7a0906d9997bf931d22472df7cc22a58` → 현재 `3d8dfd9bd1942972751b78d09d10ad104e9c0e68`.
+- 이전 통합 `5d6ff65610cc142be8a84a586ae8cff66cf9980b` → 현재 `b78b8904dcacfae984da67abda8fa745ec01b6de`.
+- 이전 통합 `c67a3c2d5e7db31ab934c1c7b8aefeff746d8356` → 현재 `b7bcf211f9e204b896a3d42b9ffa6d768a90abcc`.
