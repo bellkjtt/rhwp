@@ -3660,6 +3660,7 @@ mod picture_footnote;
 mod shape_layout;
 mod stored_shape_host;
 mod table_cell_content;
+mod table_grid_width;
 mod table_host_flow;
 mod table_inline_picture_origin;
 pub(crate) mod table_layout;

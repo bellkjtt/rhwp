@@ -6332,10 +6332,17 @@ impl LayoutEngine {
             Err(_) => return y_start,
         };
 
-        let table_width = row_col_x
-            .iter()
-            .map(|rx| rx.last().copied().unwrap_or(0.0))
-            .fold(col_x.last().copied().unwrap_or(0.0), f64::max);
+        let declared_table_width = if table.common.width > 0 {
+            hwpunit_to_px(table.common.width as i32, self.dpi)
+                * self.render_table_width_scale(table)
+        } else {
+            0.0
+        };
+        let table_width = super::table_grid_width::resolved_table_width(
+            &row_col_x,
+            col_x.last().copied().unwrap_or(0.0),
+            declared_table_width,
+        );
 
         // ── 표 수평 위치 (table_layout 공유 메서드) ──
         let pw = self.current_paper_width.get();
