@@ -42,6 +42,8 @@ use super::super::height_measurer::{
     MeasuredTable,
 };
 use super::super::page_layout::LayoutRect;
+mod capacity_tolerance;
+
 use super::super::render_tree::*;
 use super::super::style_resolver::{ResolvedBorderStyle, ResolvedStyleSet};
 use crate::model::bin_data::BinDataContent;
@@ -21240,7 +21242,14 @@ impl LayoutEngine {
                         );
                     }
                 }
-                if j > start && h + u.height > avail_height + ROW_CUT_CAPACITY_FP_EPSILON_PX {
+                let capacity_tolerance = capacity_tolerance::for_next_unit(
+                    cell,
+                    u,
+                    j.saturating_sub(start) + 1,
+                    h + u.height,
+                    avail_height,
+                );
+                if j > start && h + u.height > avail_height + capacity_tolerance {
                     if std::env::var("RHWP_DIAG_6368").is_ok() {
                         let over = h + u.height - avail_height;
                         if over <= 2.0 {
@@ -21522,7 +21531,14 @@ impl LayoutEngine {
                         );
                     }
                 }
-                if j > start && h + u.height > avail_height + ROW_CUT_CAPACITY_FP_EPSILON_PX {
+                let capacity_tolerance = capacity_tolerance::for_next_unit(
+                    cell,
+                    u,
+                    j.saturating_sub(start) + 1,
+                    h + u.height,
+                    avail_height,
+                );
+                if j > start && h + u.height > avail_height + capacity_tolerance {
                     if std::env::var("RHWP_DIAG_6368").is_ok() {
                         let over = h + u.height - avail_height;
                         if over <= 2.0 {
