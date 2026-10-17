@@ -15592,19 +15592,6 @@ impl LayoutEngine {
                                     }
                                 }
                             }
-                            // [#7418] 저장 줄이 없는 host 는 증명할 사다리가 없다 — 그 줄의
-                            // 줄간격을 글자 크기로 잰 값을 계상한다(측정 행 높이·조각 배치와
-                            // 같은 `no_ls_tac_table_host_trailing_spacing_px`). 칸의 마지막
-                            // 문단이면 뒤에 이을 줄이 없어 더하지 않는다.
-                            if pi + 1 < cell.paragraphs.len() {
-                                if let Some(spacing) =
-                                    crate::renderer::height_measurer::no_ls_tac_table_host_trailing_spacing_px(
-                                        p, styles, self.dpi,
-                                    )
-                                {
-                                    uh += spacing;
-                                }
-                            }
                         }
                         units.push(CellUnit {
                             height: uh,
@@ -15644,6 +15631,21 @@ impl LayoutEngine {
                             host_trailing_spacing_charged,
                         });
                         unit_cum += uh;
+                    }
+                    // 일반 행과 성장한 행의 재귀 컷이 같은 호스트 종료 간격을 쓴다.
+                    // 부모 흐름만 전진하며 자식 viewport에는 이 간격을 포함하지 않는다.
+                    if pi + 1 < cell.paragraphs.len() {
+                        if let Some(spacing) =
+                            crate::renderer::height_measurer::no_ls_tac_table_host_trailing_spacing_px(
+                                p, styles, self.dpi,
+                            )
+                        {
+                            if let Some(last) = units.last_mut().filter(|unit| unit.para_idx == pi) {
+                                last.height += spacing;
+                                last.nested_host_closing_line_height += spacing;
+                                unit_cum += spacing;
+                            }
+                        }
                     }
                     // 마지막 저장 호스트 줄이 자식 표의 종료를 증명하면 마지막 자식 유닛과
                     // 같은 예산으로 예약한다. 줄만 따로 이월해 빈 후속 페이지를 만들지 않는다.
