@@ -2,7 +2,8 @@
 import { resolve } from 'node:path';
 import { runTest, assert } from './helpers.mjs';
 
-const moduleUrl = `/@fs${resolve(import.meta.dirname, '../../npm/editor/index.js')}`;
+const modulePath = resolve(import.meta.dirname, '../../npm/editor/index.js').replace(/\\/g, '/');
+const moduleUrl = modulePath.startsWith('/') ? `/@fs${modulePath}` : `/@fs/${modulePath}`;
 const viteUrl = process.env.VITE_URL || 'http://localhost:7700';
 
 runTest('중첩 셀 캐럿 소유', async ({ page }) => {

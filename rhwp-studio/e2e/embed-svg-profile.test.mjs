@@ -3,7 +3,8 @@ import { resolve } from 'node:path';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { runTest, assert } from './helpers.mjs';
 
-const moduleUrl = `/@fs${resolve(import.meta.dirname, '../../npm/editor/index.js')}`;
+const modulePath = resolve(import.meta.dirname, '../../npm/editor/index.js').replace(/\\/g, '/');
+const moduleUrl = modulePath.startsWith('/') ? `/@fs${modulePath}` : `/@fs/${modulePath}`;
 const viteUrl = process.env.VITE_URL || 'http://localhost:7700';
 
 runTest('SDK SVG 인쇄 profile', async ({ page }) => {
