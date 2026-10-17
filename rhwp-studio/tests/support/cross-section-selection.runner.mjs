@@ -46,4 +46,37 @@ assert.equal(host.textarea.value, '');
 assert.equal(host.cursor.hasSelection(), true);
 host.cursor.getSelectionOrdered = () => ({ start, end: { ...end, sectionIndex: 0 } });
 assert.equal(host.canDeleteSelectionInFormMode(), true, 'same-section edit stays supported');
+
+// 빈 누름틀의 위치 정규화도 선택을 지우므로, 거절 검사보다 먼저 실행하면 안 된다.
+let guideSelection = { start, end };
+let guidePreparations = 0;
+let guideMutations = 0;
+const guideHost = {
+  ...host,
+  cursor: {
+    ...host.cursor,
+    getSelectionOrdered: () => guideSelection,
+    hasSelection: () => guideSelection !== null,
+    clearSelection: () => { guideSelection = null; },
+    moveTo() {},
+  },
+  wasm: {
+    getFieldInfoAt: () => ({ inField: true, fieldType: 'clickhere', isGuide: true, startCharIdx: 0 }),
+    setActiveField: () => { guidePreparations++; },
+  },
+  textarea: { value: 'X' },
+  canInsertTextInFormMode: () => true,
+  executeOperation: () => { guideMutations++; },
+};
+guideHost.canDeleteSelectionInFormMode = () => InputHandler.prototype.canDeleteSelectionInFormMode.call(guideHost);
+guideHost.prepareClickHereInputPosition = () => InputHandler.prototype.prepareClickHereInputPosition.call(guideHost);
+onInput.call(guideHost);
+assert.deepEqual(guideSelection, { start, end }, '누름틀 진입 전 교차 구역 선택 보존');
+assert.equal(guidePreparations, 0, '거절된 입력은 누름틀 활성화를 준비하지 않는다');
+assert.equal(guideMutations, 0, '거절된 입력은 삽입 command를 실행하지 않는다');
+guideSelection = null;
+guideHost.textarea.value = 'X';
+onInput.call(guideHost);
+assert.equal(guidePreparations, 1, '선택 없는 정상 누름틀 입력은 위치를 정규화한다');
+assert.equal(guideMutations, 1, '선택 없는 정상 누름틀 입력은 삽입을 유지한다');
 console.log('CROSS_SECTION_SELECTION_OK');

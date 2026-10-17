@@ -37,6 +37,15 @@ runTest('#7983 교차 구역 선택 변경은 문서·선택·히스토리를 �
       const ih = window.__inputHandler;
       ih.cursor.exitHeaderFooterMode(); ih.cursor.exitFootnoteMode();
       ih.history.clear(w);
+      if (endSection !== 0) {
+        const { InsertTextCommand } = await import('/src/engine/command.ts');
+        ih.history.execute(new InsertTextCommand({ sectionIndex: 0, paragraphIndex: 0, charOffset: 4 }, 'U'), w);
+        ih.history.execute(new InsertTextCommand({ sectionIndex: 1, paragraphIndex: 0, charOffset: 4 }, 'V'), w);
+        ih.history.undo(w);
+        if (!ih.history.undoStack.length || !ih.history.redoStack.length) {
+          throw new Error('비어 있지 않은 undo/redo 대조군 준비 실패');
+        }
+      }
       if (!ih.cursor.selectRange(
         { sectionIndex: 0, paragraphIndex: 0, charOffset: 1 },
         { sectionIndex: endSection, paragraphIndex: 0, charOffset: 3 },
@@ -56,11 +65,38 @@ runTest('#7983 교차 구역 선택 변경은 문서·선택·히스토리를 �
         window.__inputHandler.textarea.dispatchEvent(new ClipboardEvent(action, { clipboardData: data, bubbles: true, cancelable: true }));
       }, action);
     } else if (action === 'composition') {
-      await page.evaluate(() => window.__inputHandler.textarea.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true })));
+      await page.evaluate(() => {
+        const textarea = window.__inputHandler.textarea;
+        textarea.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+        textarea.value = '가';
+        textarea.dispatchEvent(new InputEvent('input', { data: '가', inputType: 'insertCompositionText', isComposing: true, bubbles: true }));
+        textarea.dispatchEvent(new CompositionEvent('compositionend', { data: '가', bubbles: true }));
+      });
     } else await page.keyboard.press(action);
     assert(JSON.stringify(await read()) === JSON.stringify(before), `${action}: 문서·선택·undo/redo 보존`);
     assert(await page.evaluate(() => !!document.querySelector('#rhwp-toast-container')), '지원 범위 안내 표시');
   }
+
+  setTestCase('#7983 누름틀 정규화보다 먼저 교차 구역 입력 거절');
+  await setup();
+  await page.evaluate(async () => {
+    const w = window.__wasm;
+    const ih = window.__inputHandler;
+    const pos = { sectionIndex: 1, paragraphIndex: 0, charOffset: 4 };
+    const inserted = w.insertClickHereField(pos, '입력', '', 'cross-section-guide', true);
+    if (!inserted.ok) throw new Error('빈 누름틀 준비 실패');
+    await window.__canvasView.loadDocument();
+    const end = [4, 5, 6].map(charOffset => ({ ...pos, charOffset }))
+      .find(candidate => w.getFieldInfoAt(candidate).isGuide);
+    if (!end || !ih.cursor.selectRange({ sectionIndex: 0, paragraphIndex: 0, charOffset: 1 }, end)) {
+      throw new Error('누름틀에서 끝나는 교차 구역 선택 준비 실패');
+    }
+    ih.textarea.focus();
+  });
+  const beforeGuide = await read();
+  await page.keyboard.type('X');
+  assert(JSON.stringify(await read()) === JSON.stringify(beforeGuide), '빈 누름틀에서도 문서·선택·기존 undo/redo 보존');
+
   setTestCase('#7983 same-section control');
   await setup(0);
   await page.keyboard.press('Delete');

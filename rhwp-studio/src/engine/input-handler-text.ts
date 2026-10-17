@@ -767,16 +767,18 @@ export function onInput(this: any, e?: InputEvent): void {
     return;
   }
 
+  // 누름틀 정규화는 선택을 해제할 수 있으므로 지원 범위를 먼저 검사한다.
+  if (this.cursor.hasSelection() && !this.canDeleteSelectionInFormMode?.()) {
+    this.textarea.value = '';
+    return;
+  }
+
   // 선택 영역이 있으면 먼저 삭제
   let insertPos = this.prepareClickHereInputPosition?.() ?? this.cursor.getPosition();
   let refreshClickHereGuide = this.isClickHereGuidePosition?.(insertPos) === true;
   // 선택 영역은 삽입 모드와 똑같이 입력으로 바뀌고, 뒤 글자를 더 덮어쓰지 않는다.
   const hadSelection = this.cursor.hasSelection();
   if (hadSelection) {
-    if (!this.canDeleteSelectionInFormMode?.()) {
-      this.textarea.value = '';
-      return;
-    }
     this.deleteSelection();
     insertPos = this.prepareClickHereInputPosition?.() ?? this.cursor.getPosition();
     refreshClickHereGuide = this.isClickHereGuidePosition?.(insertPos) === true;
