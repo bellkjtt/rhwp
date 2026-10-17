@@ -80,3 +80,11 @@ PDF 글리프 baseline origin을 검사하며, layout 글리프 원점과 같은
 
 이 입력은 실제 시험지 원본이 아니라 명시적으로 재생성한 합성 경계다.
 실물 문서·다른 저장 줄 경로·전체 브랜치 검증 완료를 대신하지 않는다.
+
+## 정식 Rust 실행 확인
+
+source `60e35888c79c130b0d50b230a66e2cda67618255`에서 새 검사 2개가 모두 통과했다.
+`stage2297-printed-alignment-nextest.log`의 2 tests run/2 passed와 exit 0을
+확인했다. 빌드 21.31초, 실제 검사 0.023초다. 공용 target/pr-review에서
+논리 기호 before/after가 끝난 뒤 순차 실행했고 build jobs 8/test threads 12를
+사용했다. 이 결과는 전체 브랜치의 lint·회귀·시각 gate 통과를 대신하지 않는다.

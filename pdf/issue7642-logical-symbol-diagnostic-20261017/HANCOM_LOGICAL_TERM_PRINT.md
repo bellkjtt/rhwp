@@ -55,3 +55,12 @@ q와 같은 분자에 소유시킨다. `THEREFORE~{q} over {p}={39} over {108}={
 떨어지면 회귀다. 원본 입력 보정 전의 구조 실패는 stage2216/2231에 보존했다.
 새 정식 검사 자체의 수정 전 FAIL/수정 후 PASS 실행은 공유 Cargo 작업이 끝난 뒤
 별도로 수행해야 하며, 현재 이 문서만으로 완료를 주장하지 않는다.
+
+## 정식 Rust 실행 확인
+
+수정 전 source `769535d7dcb1100701ca68f33091279296aad089`에서 3개 모두 assertion으로
+실패했다(exit 100). 수정 후 `d019cd23d3a335b1dc1cc38d348aaefdd1af2ad2`에서
+같은 테스트 source SHA의 3개 모두 통과했다(exit 0). stage2282 receipt의
+`test_source_unchanged`와 before/after nextest summary를 확인했다.
+전체 Rust 검증의 통과라는 뜻은 아니다. 로그는 같은 ignored output의
+`stage2282-before-logical-regression.log`와 `stage2282-after-logical-regression.log`다.
