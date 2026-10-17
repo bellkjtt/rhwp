@@ -2709,6 +2709,9 @@ pub fn base_family_without_weight_suffix(font_family: &str) -> Option<String> {
 /// face 가 있다. 아래 중고딕 arm 의 주석을 볼 것.
 pub(crate) fn installed_render_font_aliases(font_family: &str) -> &'static [&'static str] {
     match font_family {
+        // 같은 SFNT의 PostScript 이름(name 6)과 실제 family 이름(name 1)이다.
+        "HCRBatang" => &["HCR Batang"],
+        "HCRDotum" => &["HCR Dotum"],
         // 공식 설치 글꼴의 한국어 이름과 영문 family 이름을 함께 조회한다.
         "굴림" => &["Gulim"],
         "굴림체" => &["GulimChe"],

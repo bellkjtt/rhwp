@@ -16,17 +16,21 @@ impl<'a> ReductionQuality<'a> {
         width: f64,
         height: f64,
     ) -> Self {
-        let reduced = context.get_transform().is_ok_and(|matrix| {
+        let needs_wider_filter = context.get_transform().is_ok_and(|matrix| {
             let scale_x = matrix.a().hypot(matrix.b());
             let scale_y = matrix.c().hypot(matrix.d());
+            // 선형 필터의 축별 두 source 표본 범위 안에서는 기존 필터를 쓴다.
+            // 이 범위를 넘는 축소에만 넓은 저역 통과 필터가 필요하다.
+            let linear_source_support = 2.0;
             scale_x.is_finite()
                 && scale_y.is_finite()
-                && (source_width > width * scale_x || source_height > height * scale_y)
+                && (source_width > width * scale_x * linear_source_support
+                    || source_height > height * scale_y * linear_source_support)
         });
         // 현재 web-sys는 imageSmoothingQuality 접근자를 제공하지 않는다.
         // 브라우저가 실제로 제공하는 속성만 바꾸고 원래 값을 보관한다.
         let key = JsValue::from_str("imageSmoothingQuality");
-        let previous = reduced
+        let previous = needs_wider_filter
             .then(|| js_sys::Reflect::get(context.as_ref(), &key).ok())
             .flatten()
             .filter(JsValue::is_string)
