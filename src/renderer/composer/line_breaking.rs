@@ -22,6 +22,7 @@ use crate::renderer::{hwpunit_to_px, px_to_hwpunit};
 use std::ops::Range;
 
 mod inline_frame_input;
+mod list_marker_metrics;
 mod stored_external_geometry;
 use stored_external_geometry::stored_rows_require_external_geometry;
 
@@ -3519,9 +3520,7 @@ fn layout_paragraph_in_frame_impl(
     };
     // 저장 기록이 끄는 것은 문단 들여쓰기뿐이다. 마커의 첫/후속 줄 차이는 유지한다.
     let (marker_hang_px, indent_px) = list_marker_breaker_box(para, styles, indent_px);
-    let marker_font_size = crate::renderer::layout::list_marker_geometry(para, styles)
-        .filter(|geometry| geometry.marker_visible)
-        .map_or(0.0, |geometry| geometry.font_size_px);
+    let marker_font_size = list_marker_metrics::include_marker(para, styles, true, 0.0);
     let tab_fill = TabFill::for_paragraph(
         para_style,
         indent_px,
@@ -4038,7 +4037,7 @@ pub(crate) fn stored_row_metrics(
         .fold(0.0f64, f64::max);
 
     Some(frame_metrics_for_line(
-        max_font_size,
+        list_marker_metrics::include_marker(para, styles, span_start == 0, max_font_size),
         fallback_font_size,
         line_spacing_type,
         line_spacing_value,
@@ -4596,6 +4595,8 @@ fn reflow_line_segs_impl(
     // 줄별 max_font_size에 따라 line_height/text_height/baseline_distance를 계산
     // 한컴은 줄마다 최대 폰트 크기에 맞게 다른 치수를 사용
     let make_line_seg = |utf16_start: u32, max_font_size: f64| -> LineSeg {
+        let max_font_size =
+            list_marker_metrics::include_marker(para, styles, utf16_start == 0, max_font_size);
         let fs = if max_font_size > 0.0 {
             max_font_size
         } else {
