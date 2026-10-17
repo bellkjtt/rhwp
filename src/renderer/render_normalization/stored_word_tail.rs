@@ -5,7 +5,7 @@ use crate::model::{
     paragraph::{ColumnBreakType, LineSeg, Paragraph},
 };
 use crate::renderer::{
-    composer::{project_stored_word_tail, ParagraphBox},
+    composer::{project_stored_soft_wraps, ParagraphBox},
     page_layout::PageLayoutInfo,
     px_to_hwpunit,
     style_resolver::ResolvedStyleSet,
@@ -96,7 +96,7 @@ pub(crate) fn normalize(
                 let first = paragraph.line_segs[0].vertical_pos;
                 let frame = box_.frame(first);
                 if let Some((lines, spaces)) =
-                    project_stored_word_tail(&paragraph, &frame, styles, dpi, false)
+                    project_stored_soft_wraps(&paragraph, &frame, styles, dpi, false)
                 {
                     let old_advance = frame_advance(&paragraph.line_segs)?;
                     let new_advance = frame_advance(&lines)?;

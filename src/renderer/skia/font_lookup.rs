@@ -18,6 +18,15 @@ pub(super) struct SystemFontFamilies {
 
 impl SystemFontFamilies {
     fn postscript_face(&self, font_mgr: &FontMgr, requested: &str) -> Option<Typeface> {
+        // OpenType name ID 6은 공백·비ASCII·PostScript 구분 문자를 허용하지 않는다.
+        // 일반 family의 이름 수용과 구별하며 없는 한국어 family를 색인하지 않는다.
+        if requested.is_empty()
+            || !requested
+                .bytes()
+                .all(|byte| (33..=126).contains(&byte) && !b"[](){}<>/%".contains(&byte))
+        {
+            return None;
+        }
         // family와 다른 식별자다. FULL_NAME이나 추측한 접미사를 색인하지 않는다.
         self.postscript_faces
             .get_or_init(|| {
@@ -103,6 +112,25 @@ pub(super) fn text_family_candidates(requested: &str) -> Vec<String> {
 }
 
 fn text_family_candidates_for_weight(requested: &str, bold: bool) -> Vec<String> {
+    let mut families = declared_family_candidates(requested);
+    let requested_members = internal_font_family_members(requested);
+    // SVG/Canvas와 같은 서체 분류·굵기 계약을 소비한다. 원 바탕 face가
+    // 없다는 이유로 고딕을 우선하거나 굵은 본문에 ExtraLight를 고르지 않는다.
+    // 공통 정책의 정적 CSS 이름만 해제하며 사용자 요청 이름은 아래에서 보존한다.
+    let fallback =
+        generic_fallback_for_weight(requested_members.first().copied().unwrap_or(""), bold);
+    for family in fallback
+        .split(',')
+        .map(|name| name.trim().trim_matches('\''))
+    {
+        if !families.iter().any(|candidate| candidate == family) {
+            families.push(family.to_string());
+        }
+    }
+    families
+}
+
+fn declared_family_candidates(requested: &str) -> Vec<String> {
     let mut families = Vec::new();
     // CSS 체인을 하나의 family 이름으로 조회하면 설치된 첫 face도 놓친다.
     // SVG/Canvas와 같은 원본 순서·설치 별칭·굵기 접미사 해소를 소비한다.
@@ -123,19 +151,6 @@ fn text_family_candidates_for_weight(requested: &str, bold: bool) -> Vec<String>
             }
         }
     }
-    // SVG/Canvas와 같은 서체 분류·굵기 계약을 소비한다. 원 바탕 face가
-    // 없다는 이유로 고딕을 우선하거나 굵은 본문에 ExtraLight를 고르지 않는다.
-    // 공통 정책의 정적 CSS 이름만 해제하며 사용자 요청 이름은 위에서 보존한다.
-    let fallback =
-        generic_fallback_for_weight(requested_members.first().copied().unwrap_or(""), bold);
-    for family in fallback
-        .split(',')
-        .map(|name| name.trim().trim_matches('\''))
-    {
-        if !families.iter().any(|candidate| candidate == family) {
-            families.push(family.to_string());
-        }
-    }
     families
 }
 
@@ -154,6 +169,7 @@ pub(super) fn text_typeface_candidates(
         custom_typefaces,
         bundled_typefaces,
         &families,
+        &declared_family_candidates(requested),
         style,
     );
     (families, chain)
@@ -166,6 +182,7 @@ pub(super) fn typeface_candidates_for_families(
     custom_typefaces: &TypefaceCatalog,
     bundled_typefaces: &TypefaceCatalog,
     families: &[String],
+    postscript_requests: &[String],
     style: FontStyle,
 ) -> Vec<TypefaceCandidate> {
     let mut chain = Vec::new();
@@ -182,7 +199,12 @@ pub(super) fn typeface_candidates_for_families(
         }
         // 원 face의 system 프로그램보다 뒤 face의 custom 프로그램을 먼저
         // 고르면 선언 순서를 뒤집는다. 공급 출처는 각 face 내부에서 우선한다.
-        if let Some(typeface) = match_system_family_style(font_mgr, system_families, family, style)
+        // 생성 fallback은 family 요청이다. 원본/설치 별칭의 명시 ID 6만
+        // 별도 프로그램으로 해석하며 같은 family의 문자 fallback은 유지한다.
+        if let Some(typeface) = (has_system_family(system_families, family)
+            || postscript_requests.contains(family))
+        .then(|| match_system_family_style(font_mgr, system_families, family, style))
+        .flatten()
         {
             push(typeface, "system");
         }
@@ -329,5 +351,30 @@ mod tests {
         assert!(has_system_family(&system_families, "APPLEGOTHIC"));
         assert!(!has_system_family(&system_families, "AppleGothic Extra"));
         assert!(!has_system_family(&system_families, "Missing Family"));
+    }
+
+    #[test]
+    fn non_postscript_missing_names_do_not_enumerate_system_programs() {
+        let font_mgr = FontMgr::default();
+        let mut system_families = SystemFontFamilies::default();
+        system_families
+            .names
+            .insert("RHWP membership witness".into());
+        for name in [
+            "없는 가족",
+            "Missing Family",
+            "Missing/Program",
+            "Font[Face]",
+        ] {
+            assert!(match_system_family_style(
+                &font_mgr,
+                &system_families,
+                name,
+                FontStyle::normal(),
+            )
+            .is_none());
+        }
+        // 사양상 ID 6일 수 없는 요청은 실제 시스템 색인을 시작하지 않는다.
+        assert!(system_families.postscript_faces.get().is_none());
     }
 }

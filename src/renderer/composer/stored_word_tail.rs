@@ -42,36 +42,8 @@ pub(super) fn can_rejoin_stored_word_tail(
     dpi: f64,
     supported_inline_picture: bool,
 ) -> bool {
-    project_stored_word_tail(para, frame, styles, dpi, supported_inline_picture).is_some()
-}
-
-pub(crate) fn project_stored_word_tail(
-    para: &Paragraph,
-    frame: &LayoutFrame,
-    styles: &ResolvedStyleSet,
-    dpi: f64,
-    supported_inline_picture: bool,
-) -> Option<(Vec<LineSeg>, Vec<(u32, SpaceMetric)>)> {
-    if para.line_segs.len() < 2
-        || (!para.controls.is_empty() && !supported_inline_picture)
-        || para.text.contains('\n')
-        || para.stored_text_partition_is_dirty()
-        || super::stored_row_fragments::crosses_physical_frame(para)
-        || frame.models_exclusions()
-        || para
-            .line_segs
-            .iter()
-            .any(|line| line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0)
-    {
-        return None;
-    }
-    let last = para.line_segs.last().unwrap();
-    let previous = &para.line_segs[para.line_segs.len() - 2];
-    if last.is_first_line_of_page()
-        || last.is_first_line_of_column()
-        || last.vertical_pos <= previous.vertical_pos
-    {
-        return None;
+    if para.line_segs.len() < 2 {
+        return false;
     }
     let chars: Vec<_> = para.text.chars().collect();
     let (start, _) = utf16_range_to_text_range(
@@ -94,6 +66,57 @@ pub(crate) fn project_stored_word_tail(
             .iter()
             .copied()
             .all(char::is_alphanumeric)
+    {
+        return false;
+    }
+    project_stored_soft_wraps(para, frame, styles, dpi, supported_inline_picture).is_some()
+}
+
+/// 같은 frame에서 자동 줄을 다시 구성한다. 어절 조각은 캐시 유효성의 근거가 아니다.
+/// 호출자는 본문 후속 축까지 함께 발행하거나 기존 지역 어절 계약을 입증한다.
+pub(crate) fn project_stored_soft_wraps(
+    para: &Paragraph,
+    frame: &LayoutFrame,
+    styles: &ResolvedStyleSet,
+    dpi: f64,
+    supported_inline_picture: bool,
+) -> Option<(Vec<LineSeg>, Vec<(u32, SpaceMetric)>)> {
+    if para.line_segs.len() < 2
+        || (!para.controls.is_empty() && !supported_inline_picture)
+        || para.text.contains('\n')
+        || para.stored_text_partition_is_dirty()
+        || super::stored_row_fragments::crosses_physical_frame(para)
+        || frame.models_exclusions()
+        || para
+            .line_segs
+            .iter()
+            .any(|line| line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0)
+    {
+        return None;
+    }
+    let last = para.line_segs.last()?;
+    let previous = &para.line_segs[para.line_segs.len() - 2];
+    if last.is_first_line_of_page()
+        || last.is_first_line_of_column()
+        || last.vertical_pos <= previous.vertical_pos
+    {
+        return None;
+    }
+    let count = para.text.chars().count();
+    let (last_start, _) = utf16_range_to_text_range(
+        &para.char_offsets,
+        para.line_seg_text_start(para.line_segs.len() - 1),
+        u32::MAX,
+        count,
+    );
+    // 빈 문단·마지막 빈 예약 행의 물리 점유를 자동 어절 줄로 바꾸지 않는다.
+    if last_start == 0
+        || last_start >= count
+        || !para
+            .text
+            .chars()
+            .skip(last_start)
+            .any(|ch| !ch.is_whitespace())
     {
         return None;
     }

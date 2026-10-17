@@ -28,7 +28,7 @@ mod inline_picture_metrics;
 mod resolved_fields;
 mod stored_word_tail;
 pub(crate) use inline_picture_metrics::{inline_picture_ascent_ratio, inline_picture_size_hu};
-pub(crate) use stored_word_tail::project_stored_word_tail;
+pub(crate) use stored_word_tail::project_stored_soft_wraps;
 mod punctuation_slots;
 
 /// 글자겹침(CharOverlap) 렌더링 정보

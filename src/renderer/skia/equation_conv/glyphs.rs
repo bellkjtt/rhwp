@@ -56,6 +56,7 @@ pub(super) fn draw_text_with_family(
         .map(str::trim)
         .map(str::to_owned)
         .collect();
+    let postscript_requests = families.clone();
     // Match the web equation's serif CJK fallback before general body fallbacks.
     if has_cjk {
         families.extend(
@@ -79,6 +80,7 @@ pub(super) fn draw_text_with_family(
         fonts.custom_typefaces,
         fonts.bundled_typefaces,
         &families,
+        &postscript_requests,
         font_style,
     );
     // Preserve shaping within consecutive characters using the same face. Use
