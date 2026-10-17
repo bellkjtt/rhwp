@@ -5,7 +5,7 @@ canonical: mydocs/manual/pr_review_workflow.md
 last_verified: 2026-10-17
 ---
 
-# donggyun112 열린 PR 2개 누적 검토 계획
+# donggyun112 열린 PR 3개 누적 검토 계획
 
 ## 승인 범위와 시작점
 
@@ -18,6 +18,7 @@ last_verified: 2026-10-17
 | --- | --- | --- |
 | [#7978](https://github.com/edwardkim/rhwp/pull/7978) | `5558cbcfb8e0d2cb30422e12aa719288371164a5` | [#7977](https://github.com/edwardkim/rhwp/issues/7977): HF/FN 문자 위치의 Unicode scalar 계약 |
 | [#7985](https://github.com/edwardkim/rhwp/pull/7985) | `5dd0c86ac1a86c977e9d80a7fe263ac60358f720` | [#7983](https://github.com/edwardkim/rhwp/issues/7983): 단일 구역 코어 계약 밖의 선택 변경 사전 거절 |
+| [#7988](https://github.com/edwardkim/rhwp/pull/7988) | `a7c884a79efed47ad59d0fbf78227cc5dbe46624` | [#7984](https://github.com/edwardkim/rhwp/issues/7984): 대소문자 무시 검색·치환의 원문 문자 범위 |
 
 원 기여자는 기존 기여자로, 첫 기여자 절차를 새로 적용하지 않는다.
 원 author와 `cherry-pick -x` 연결을 보존하며 fork source를 수정하지 않는다.
@@ -51,8 +52,25 @@ last_verified: 2026-10-17
 실행 로그와 원본 API 응답은 ignored `output/pr-review/donggyun112-20261017/`에 기록한다.
 필수 증거가 남으면 완료·승인으로 표시하지 않는다.
 
-## 로컬 검토 완료
+## 초기 2개 PR의 로컬 검토 완료 이력
 
 통합 code 후보 `a7c9e30ffebc843d5f5763f349f79ad3ea93cfb1`에서 로컬 필수 검증과 실제 브라우저 검사를 완료했다.
 [PR #7978 검토](../pr/archives/pr_7978_review.md)와 [PR #7985 검토](../pr/archives/pr_7985_review.md)에
 원 기여·보정·증거·남은 원격 단계를 구분했다. 원격 게시 승인과 통합 head CI는 아직 남아 있다.
+
+## #7988 추가 통합과 재검증
+
+사용자가 PR 생성을 승인한 뒤, 게시 전에 #7988을 추가하여 다시 검증하도록 요청했다.
+원격 브랜치·통합 PR은 아직 생성하지 않았다. #7988도 reviewer `jangster77`을 먼저 요청하고
+API로 확인했다. 원 기능·검사 6개 커밋을 앞선 후보 위에 누적 적용한다.
+
+독립 계약은 검색·치환의 위치와 길이가 원문의 Unicode scalar 범위를 표현해야 한다는 것이다.
+`find_in_text → SearchHit/GrepMatch → replace_one/all/nth → 실제 본문·셀·글상자·수식 변경`을
+추적한다. 소문자 확장 양방향에서 후속 X 보존, search/grep의 원문 길이와 대소문자 구분
+대조군을 확인한다. 일부 확장 문자만 매치하거나 매치가 겹치는 기존 정책은 별도로 구분한다.
+
+이번에는 Rust source·정식 회귀가 추가되므로 앞선 Studio 전용 검증 범위를 확대한다.
+정식 4개 회귀의 수정 전 FAIL/후 PASS, Rust lint 묶음·workspace build·전체 release-test,
+fresh WASM과 실제 Chrome의 검색·모두 바꾸기 및 앞선 두 PR E2E를 재검증한다.
+Cargo는 공용 `target/pr-review`에서 jobs 8로 순차 실행한다. 기존 성공을 새 Rust 후보의
+통과로 바꾸지 않고 source SHA·명령·종료 코드·로그를 새 원장으로 구분한다.
