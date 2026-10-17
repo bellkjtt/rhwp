@@ -846,8 +846,35 @@ impl TypesetEngine {
                 } else {
                     row_total
                 };
+                let physical_band = (avail_for_rows - consumed - cs_before).max(0.0);
+                let fresh_reflow_minimum_band = r == cursor_row
+                    && owns_plain_row_frame
+                    && reflow_minimum.is_some()
+                    && row_total > physical_band
+                    && physical_band > 0.0
+                    && ordinary_band_content_fits(
+                        &res.end_cut,
+                        res.consumed_height,
+                        true,
+                        layout_engine.row_aligned_content_bottom(
+                            table,
+                            r,
+                            res.consumed_height + padding,
+                            physical_band,
+                            styles,
+                        ),
+                        physical_band,
+                    );
+                if fresh_reflow_minimum_band {
+                    // 내용 완료와 물리 최소 완료는 다르다. 빈 꼬리도 같은 행의
+                    // 실제 수용 상자로 나누고 다음 조각에서 정확한 잔여를 소비한다.
+                    end_row = r + 1;
+                    split_end_cut = res.end_cut.clone();
+                    split_end_limit = physical_band;
+                    end_row_height_override = Some(physical_band);
+                    consumed += cs_before + physical_band;
                 // 단일 유닛 행 — 분할 불가, 페이지 시작이면 강제, 아니면 다음으로.
-                if r == cursor_row {
+                } else if r == cursor_row {
                     consumed += cs_before + row_total;
                     end_row = r + 1;
                 } else if layout_engine.stored_single_line_row_is_fragmentable(table, r, styles)

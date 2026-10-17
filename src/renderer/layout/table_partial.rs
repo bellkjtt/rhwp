@@ -6595,12 +6595,12 @@ impl LayoutEngine {
             body_filling_source_frame,
         );
         let page_cap_fold = (table_y + partial_table_height - page_cap).max(0.0);
-        let owns_declared_row_frame = end_row_height_override.is_some()
+        let owns_accepted_row_frame = end_row_height_override.is_some()
             && end_row.checked_sub(1).is_some_and(|row| {
                 self.native_stored_row_has_text_frame_boundary(table, row, styles)
-                    // 재조판 행의 선언 최소 높이도 수용한 빈 물리 띠를 소유한다.
+                    // 재조판 행은 선언 최소의 대소와 무관하게 수용한 빈 띠도 소유한다.
                     // 예약과 잔여가 쓴 끝 행 상자를 paint에서 다시 접지 않는다.
-                    || (self.reflow_row_physical_minimum(table, row, styles).is_some()
+                    || (self.row_uses_reflow_physical_frame(table, row)
                         && self.row_has_plain_reflow_line_units(table, row, styles))
                     || (self.profile.get().hwpx_stored_layout()
                         && self
@@ -6679,7 +6679,7 @@ impl LayoutEngine {
                     && source_first_row_frame.as_ref().is_some_and(|(cut, _, remaining)| {
                         cut.as_slice() == start_cut && start_row_height_override == Some(*remaining)
                     }))
-                && !owns_declared_row_frame
+                && !owns_accepted_row_frame
                 && !accepted_body_closed_frame
                 && !(end_row_height_override.is_some()
                     && !is_block_split
