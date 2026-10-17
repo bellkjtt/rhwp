@@ -59,3 +59,32 @@ venv/bin/python scripts/visual_sweep.py --silhouette-only \
 
 일반 PNG 판독은 서로 다른 `--out`에 `--silhouette-only`를 빼고 `--pages 2`로 실행한다.
 정식 Rust 회귀는 `node scripts/run-rust-test.mjs issue_7710_initial_field_container -- --cargo-profile release-test --target-dir /home/tsjang/rhwp/target/pr-review`다.
+
+## 실제 Studio 소비 경로 대조
+
+같은 현재 frontend에서 기준/보정 WASM producer만 alias로 분리해 사용했다. 공용 pkg나
+작업 소스는 덮어쓰지 않았다. 실제 초기 WASM HTTP 응답12건(각6건)의 바이트 해시는 각각
+기준 `3daf35122ef497f05e4927a85ee449a564d7f615b0eccfdffbf6c838f0674229`,
+보정 `71d3aae4bb7f9079645e4173d8cdf30b8987ec2aef7e93310097b430bdab8d2e`와 모두 같다.
+Chrome155.0.8059.79·DPR1·zoom1에서 실제 PageRenderer의 DOM/앞뒤 레이어를 포함해 캡처했다.
+
+Canvas2D·CanvasKit compat/default software의 Screen PNG는 모두 전후 바이트 동일하다.
+세 Print 경로의 변경 픽셀은03/04/05 안내문 영역에만 있다. CanvasKit은 실제software surface,
+준비Typeface1·미등록font fallback0·pending image0·unsupported op0·render completed를 확인했다.
+GPU surface는 실행하지 않았다. 독립 PDF에 대한2쪽 보조 raw값은 다음과 같다.
+
+| 실제 Studio Print | 기준 | 보정 |
+| --- | ---: | ---: |
+| Canvas2D | 98.67136 | 99.97856 |
+| CanvasKit compat/default software | 96.01535 | 97.23343 |
+
+이 값은 실제 Studio의 메트릭·레이어 context이며 위 표준 Native/fresh WASM export와 섞어
+무회귀를 판정하지 않는다. 각 경로의 기준 대비 하락은 없다. CanvasKit의 기존 글상자 윤곽선과
+Print 캡처높이1px 차이는 기준에도 존재한다. 일반 backend parity 예산의 초과·크기 불일치도
+남아 있어 전체 backend parity 통과로 기록하지 않는다. 이번 해결은 공개SVG profile와 초기
+안내문의 인쇄 분류이며, 기존 CanvasKit 윤곽선 차이의 해결은 포함하지 않는다.
+CanvasKit97% 쪽의 물리 좌표를 새 px golden으로 고정하지 않았다.
+
+- [실제 Native Skia Print](native_print_002.png)
+- [Studio Canvas2D Screen](studio_canvas2d_screen_002.png) · [Print](studio_canvas2d_print_002.png)
+- [Studio CanvasKit software Screen](studio_canvaskit_software_screen_002.png) · [Print](studio_canvaskit_software_print_002.png)
