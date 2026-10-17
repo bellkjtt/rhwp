@@ -148,3 +148,20 @@ fn cli_insert_reports_normalized_text_including_dry_run() {
     }
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+/// CRLF/CR은 기존 LF와 같은 문서·줄 구성·이벤트를 생산해야 한다.
+#[test]
+fn newline_forms_share_the_existing_lf_document_and_event_contract() {
+    let seed = document("앞뒤😀").export_hwp_native().unwrap();
+    let mut lf = DocumentCore::from_bytes(&seed).unwrap();
+    lf.insert_text_native(0, 0, 1, "일정\n예산\n끝").unwrap();
+    let expected = format!("{:?}", lf.document());
+    let events = lf.serialize_event_log();
+    for input in ["일정\r\n예산\r\n끝", "일정\r예산\r끝"] {
+        let mut doc = DocumentCore::from_bytes(&seed).unwrap();
+        doc.insert_text_native(0, 0, 1, input).unwrap();
+        assert_eq!(format!("{:?}", doc.document()), expected);
+        assert_eq!(doc.serialize_event_log(), events);
+        check_saved(doc, "앞일정\n예산\n끝뒤😀");
+    }
+}
