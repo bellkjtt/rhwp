@@ -284,7 +284,7 @@ impl TypesetEngine {
                     source_first_fragment_row_end,
                     ordinary_declared_band_can_split: mt.allows_row_break_split()
                         && r > cursor_row
-                        && !rowspan_touched[r]
+                        && (!rowspan_touched[r] || physical_minimum_splittable)
                         && row_start_cut.is_empty()
                         && table::scan::row::ordinary_band_row_shape(table, r, row_total, self.dpi)
                         // 닫힌 저장 프레임의 가운데·아래 정렬은 상자 높이를
@@ -919,7 +919,7 @@ impl TypesetEngine {
                     end_row = row_count;
                 } else if mt.allows_row_break_split()
                     && r > cursor_row
-                    && !rowspan_touched[r]
+                    && (!rowspan_touched[r] || physical_minimum_splittable)
                     && table::scan::row::ordinary_band_row_shape(table, r, row_total, self.dpi)
                     && ordinary_band_content_fits(
                         &res.end_cut,
@@ -1521,8 +1521,10 @@ impl TypesetEngine {
                 } else {
                     accepted_height
                 };
-                consumed += frame_height - accepted_height;
-                end_row_height_override = Some(frame_height);
+                if frame_height > accepted_height {
+                    consumed += frame_height - accepted_height;
+                    end_row_height_override = Some(frame_height);
+                }
             }
         }
         // 높이를 다시 추정하지 않고 이번 일반 행이 실제 수용한 증분을 보존한다.

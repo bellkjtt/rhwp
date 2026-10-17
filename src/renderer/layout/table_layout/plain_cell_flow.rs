@@ -3,6 +3,29 @@
 use crate::model::{control::Control, paragraph::Paragraph};
 
 impl super::LayoutEngine {
+    /// 내용이 끝난 뒤 한 줄도 되지 않는 최소 공간만 남으면 빈 조각을 만들지 않는다.
+    /// 줄이 남은 컷에는 적용하지 않으며, 큰 빈 최소는 기존 물리 원장으로 이어진다.
+    pub(crate) fn reflow_blank_tail_is_line_sliver(
+        &self,
+        table: &crate::model::table::Table,
+        row: usize,
+        tail: f64,
+        styles: &crate::renderer::style_resolver::ResolvedStyleSet,
+    ) -> bool {
+        let line = Self::row_cut_cell_order(table, row)
+            .into_iter()
+            .filter_map(|index| {
+                let cell = &table.cells[index];
+                self.cell_uses_plain_reflow_units(cell, table).then(|| {
+                    self.cell_units(cell, table, styles)
+                        .last()
+                        .map_or(0.0, |unit| unit.height)
+                })
+            })
+            .fold(0.0, f64::max);
+        line > 0.0 && tail <= line + super::hwpunit_to_px(1, self.dpi)
+    }
+
     /// 현재 행을 넘어 계속되는 병합 칸의 독립적인 빈 최소 공간.
     /// 글줄이 재조판된다는 사실만으로 쪽 끝의 빈 띠를 소유하지 않는다.
     pub(crate) fn row_has_continuing_reflow_minimum(

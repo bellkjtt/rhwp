@@ -1643,7 +1643,6 @@ impl TypesetEngine {
                 // 빼서 시작 행 잔여로 넘기면 이미 소비한 행의 빈 띠를 재생성한다.
                 if split_block_start.is_some()
                     || split_end_limit <= 0.0
-                    || (complete_physical_end_cut && crossing_span_owns_tail)
                     || (!layout_engine.row_uses_reflow_physical_frame(table, row)
                         && minimum.is_none())
                 {
@@ -1663,6 +1662,13 @@ impl TypesetEngine {
                     layout_engine.row_cut_content_height(table, row, start, &next_cut, styles)
                 });
                 let tail = (full - used).max(0.0);
+                // 독립적인 일반 칸의 큰 잔여는 병합 칸의 원장과 별도로 보존한다.
+                // 내용까지 끝난 한 줄 이하의 빈 꼬리는 쪽 경계에서 흡수한다.
+                if complete_physical_end_cut
+                    && layout_engine.reflow_blank_tail_is_line_sliver(table, row, tail, styles)
+                {
+                    return None;
+                }
                 #[cfg(not(target_arch = "wasm32"))]
                 if std::env::var_os("RHWP_DIAG_ROW_TAIL").is_some() {
                     eprintln!(
@@ -1806,6 +1812,7 @@ impl TypesetEngine {
                 table, end_row.saturating_sub(1),
                 if end_row - 1 == cursor_row { start_cut } else { &[] }, &next_cut, styles,
             ) && !closes_original_body_frame && !complete_source_row_frame && !first_fragment_blank_band && !source_frame_trailing_trim_applied && stored_row_frame.is_none()
+                && layout_engine.reflow_row_physical_minimum(table, end_row.saturating_sub(1), styles).is_none()
                 && !(complete_physical_end_cut && crossing_span_owns_tail)
                 && (!layout_engine.row_uses_reflow_physical_frame(table, end_row.saturating_sub(1))
                     || crossing_span_owns_tail))
@@ -1869,9 +1876,7 @@ impl TypesetEngine {
         };
         // 완료 일반 행을 다시 열지 않는다. 계속되는 병합 칸의 실제 공간은 공통 행 계획이 예약한다.
         let has_intra_row_tail = split_end_limit > 0.0
-            && !(complete_physical_end_cut
-                && crossing_span_owns_tail
-                && next_start_row_height_override.is_none());
+            && !(complete_physical_end_cut && next_start_row_height_override.is_none());
         continuation.straddle_page_bands =
             crate::renderer::layout::LayoutEngine::straddle_page_bands_after_fragment(
                 row_geometry_table,

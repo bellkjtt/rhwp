@@ -25350,26 +25350,26 @@ impl LayoutEngine {
         row: usize,
         styles: &ResolvedStyleSet,
     ) -> Option<f64> {
-        let reflow_row = self.row_uses_reflow_physical_frame(table, row);
         let table_reflowed = self
             .render_normalization
             .borrow()
             .table_text_reflowed(table);
-        let cells: Vec<_> = table
+        table
             .cells
             .iter()
             .filter(|cell| cell.row as usize == row && cell.row_span == 1)
-            .collect();
-        let minimum = cells
-            .iter()
             .filter(|cell| {
-                reflow_row || Self::cell_has_plain_reflow_paragraphs(cell, table_reflowed)
+                cell.height < 0x8000_0000
+                    && Self::cell_has_plain_reflow_paragraphs(cell, table_reflowed)
             })
-            .map(|cell| hwpunit_to_px(cell.height as i32, self.dpi))
-            .fold(0.0, f64::max);
-        // 선언 최소를 포함하는 행 프레임 대신 전체 내용 유닛의 점유와 비교한다.
-        let content = self.row_complete_cut_content_height(table, row, styles);
-        (minimum > content + 0.5).then_some(minimum)
+            .filter_map(|cell| {
+                let minimum = hwpunit_to_px(cell.height as i32, self.dpi);
+                let end = self.cell_units(cell, table, styles).len();
+                let content = self.cell_cut_visible_height(cell, table, styles, 0, end);
+                // 다른 칸의 긴 내용이 이 칸의 독립 최소를 지우지 않는다.
+                (minimum > content + 0.5).then_some(minimum)
+            })
+            .reduce(f64::max)
     }
 
     /// 분할 행의 컷 범위에 속하는 내용과 셀 패딩의 높이. 온전한 행은 선언 높이도 보존한다.

@@ -6285,11 +6285,13 @@ impl LayoutEngine {
             // 늘리지 않는다 — 늘린 상자 안에서 칸 `valign` 을 적용하면 내용이 14~18px 내려간다.
             // `valign=Top` 칸은 저장 높이가 작아도 정본이 상자를 쪽에 둔다(synam-001 `pi=163`
             // h 282HU: 20쪽 내용 끝 1032 ↔ 상자 1054) — 위 #6923 갈래는 그대로 둔다.
-            let stored_cell_spans_page_box = content_is_top_anchored
-                || table.cells.first().is_some_and(|cell| {
-                    hwpunit_to_px(cell.height.min(i32::MAX as u32) as i32, self.dpi) + 0.5
+            let stored_cell_spans_page_box = table.cells.first().is_some_and(|cell| {
+                // 일반 재조판 줄에는 저장된 전쪽 상자가 없다. 위 정렬만으로
+                // 스캔의 내용 컷을 쪽 하단까지 다시 늘리지 않는다.
+                (content_is_top_anchored && !self.cell_uses_plain_reflow_units(cell, table))
+                    || hwpunit_to_px(cell.height.min(i32::MAX as u32) as i32, self.dpi) + 0.5
                         >= pinned_height
-                });
+            });
             if stored_cell_spans_page_box && !projected_content {
                 // 내용 행 높이에는 조각 마지막 줄 뒤 줄간격이 들어 있어 상자보다 클 수 있다
                 // (30269 10쪽: 줄 바닥 1010.2 + 줄간격 → 1032.1, 정본 상자 1022.9). 한/글은 그
@@ -6604,7 +6606,9 @@ impl LayoutEngine {
                     // 독립 최소를 가진 칸이 수용한 빈 띠만 보존한다.
                     // scan과 같은 소유 판정으로 일반 내용 행의 여백을 늘리지 않는다.
                     || ((self.row_has_continuing_reflow_minimum(table, row, styles)
-                        || self.reflow_row_physical_minimum(table, row, styles).is_some())
+                        || self.reflow_row_physical_minimum(table, row, styles).is_some_and(
+                            |minimum| end_row_height_override.is_some_and(|height| height <= minimum + 0.5),
+                        ))
                         && self.row_has_plain_reflow_line_units(table, row, styles))
                     || (self.profile.get().hwpx_stored_layout()
                         && self
