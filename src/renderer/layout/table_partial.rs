@@ -6603,7 +6603,8 @@ impl LayoutEngine {
                 self.native_stored_row_has_text_frame_boundary(table, row, styles)
                     // 재조판 행은 선언 최소의 대소와 무관하게 수용한 빈 띠도 소유한다.
                     // 예약과 잔여가 쓴 끝 행 상자를 paint에서 다시 접지 않는다.
-                    || (self.row_uses_reflow_physical_frame(table, row)
+                    || ((self.row_uses_reflow_physical_frame(table, row)
+                        || self.reflow_row_physical_minimum(table, row, styles).is_some())
                         && self.row_has_plain_reflow_line_units(table, row, styles))
                     || (self.profile.get().hwpx_stored_layout()
                         && self

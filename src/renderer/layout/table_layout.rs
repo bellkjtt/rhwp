@@ -5376,6 +5376,8 @@ impl LayoutEngine {
             }
         }
 
+        let initial_span_rows = row_heights.clone();
+        let mut span_content_requirements = Vec::new();
         // 2단계: 병합 셀에서 미지 행 높이를 반복적으로 해결
         {
             let mut constraints: Vec<(usize, usize, f64)> = Vec::new();
@@ -5415,7 +5417,7 @@ impl LayoutEngine {
         }
 
         // 2-b단계: 병합 셀 컨텐츠 높이 > 결합 행 높이이면 마지막 행 확장
-        for cell in &table.cells {
+        for (cell_index, cell) in table.cells.iter().enumerate() {
             let r = cell.row as usize;
             let span = cell.row_span as usize;
             if span > 1 && r + span <= row_count {
@@ -5475,6 +5477,7 @@ impl LayoutEngine {
                     0.0
                 };
                 let required_height = line_req.max(object_req);
+                span_content_requirements.push((cell_index, required_height));
                 let combined: f64 = (r..r + span).map(|i| row_heights[i]).sum::<f64>()
                     + hwpunit_to_px(1, self.dpi) * table.inner_cell_spacing_hu(span) as f64;
                 #[cfg(not(target_arch = "wasm32"))]
@@ -5490,6 +5493,20 @@ impl LayoutEngine {
                     row_heights[r + span - 1] += deficit;
                 }
             }
+        }
+
+        if let Some(heights) = Self::resolve_reflow_span_requirements(
+            table,
+            &span_content_requirements,
+            &initial_span_rows,
+            &content_row_floor,
+            &self.indexed_rowspan_declared_overflow_shrink(table),
+            self.dpi,
+            self.render_normalization
+                .borrow()
+                .table_text_reflowed(table),
+        ) {
+            row_heights = heights;
         }
 
         // 3단계: 높이 0인 행에 기본값
@@ -25333,9 +25350,11 @@ impl LayoutEngine {
         row: usize,
         styles: &ResolvedStyleSet,
     ) -> Option<f64> {
-        if !self.row_uses_reflow_physical_frame(table, row) {
-            return None;
-        }
+        let reflow_row = self.row_uses_reflow_physical_frame(table, row);
+        let table_reflowed = self
+            .render_normalization
+            .borrow()
+            .table_text_reflowed(table);
         let cells: Vec<_> = table
             .cells
             .iter()
@@ -25343,6 +25362,9 @@ impl LayoutEngine {
             .collect();
         let minimum = cells
             .iter()
+            .filter(|cell| {
+                reflow_row || Self::cell_has_plain_reflow_paragraphs(cell, table_reflowed)
+            })
             .map(|cell| hwpunit_to_px(cell.height as i32, self.dpi))
             .fold(0.0, f64::max);
         let zero_cut = vec![0; cells.len()];

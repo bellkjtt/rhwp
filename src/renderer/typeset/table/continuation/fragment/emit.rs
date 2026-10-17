@@ -1638,12 +1638,14 @@ impl TypesetEngine {
             })
             .or_else(|| {
                 let row = end_row.checked_sub(1)?;
+                let minimum = layout_engine.reflow_row_physical_minimum(table, row, styles);
                 // 블록 컷은 여러 행의 셀 슬롯이다. 마지막 일반 행의 최소와
                 // 빼서 시작 행 잔여로 넘기면 이미 소비한 행의 빈 띠를 재생성한다.
                 if split_block_start.is_some()
                     || split_end_limit <= 0.0
                     || (complete_physical_end_cut && crossing_span_owns_tail)
-                    || !layout_engine.row_uses_reflow_physical_frame(table, row)
+                    || (!layout_engine.row_uses_reflow_physical_frame(table, row)
+                        && minimum.is_none())
                 {
                     return None;
                 }
@@ -1654,7 +1656,7 @@ impl TypesetEngine {
                     // 최소 높이가 전체 내용의 점유 높이보다 클 때만 물리 잔여가 생긴다.
                     // 내용에서 비롯된 높이는 이미 남은 유닛으로 표현되므로,
                     // 이중으로 이어받지 않는다.
-                    layout_engine.reflow_row_physical_minimum(table, row, styles)?
+                    minimum?
                 };
                 let start = if row == cursor_row { start_cut.as_slice() } else { &[] };
                 let used = end_row_height_override.unwrap_or_else(|| {

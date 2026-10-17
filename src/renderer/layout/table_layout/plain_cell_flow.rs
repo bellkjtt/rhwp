@@ -3,6 +3,76 @@
 use crate::model::{control::Control, paragraph::Paragraph};
 
 impl super::LayoutEngine {
+    /// 실제 재조판 요구가 선언을 넘으면 미지 행의 옛 배분을 버리고 같은 제약을 다시 푼다.
+    /// 저장 프레임의 요구는 기존 순서대로 마지막 걸침 행에서 계속 보존한다.
+    pub(crate) fn resolve_reflow_span_requirements(
+        table: &crate::model::table::Table,
+        requirements: &[(usize, f64)],
+        initial_rows: &[f64],
+        content_floors: &[f64],
+        declared_shrink_hu: &[u32],
+        dpi: f64,
+        table_reflowed: bool,
+    ) -> Option<Vec<f64>> {
+        let is_plain_reflow = |cell: &crate::model::table::Cell| {
+            cell.text_direction == 0 && Self::cell_has_plain_reflow_paragraphs(cell, table_reflowed)
+        };
+        if !requirements.iter().any(|&(index, height)| {
+            let cell = &table.cells[index];
+            cell.height < 0x8000_0000
+                && is_plain_reflow(cell)
+                && height > super::hwpunit_to_px(cell.height as i32, dpi)
+        }) {
+            return None;
+        }
+        let mut required = vec![0.0f64; table.cells.len()];
+        for &(index, height) in requirements {
+            required[index] = height;
+        }
+        let mut constraints: Vec<(usize, usize, f64)> = Vec::new();
+        for (index, cell) in table.cells.iter().enumerate() {
+            let row = usize::from(cell.row);
+            let span = usize::from(cell.row_span);
+            if span <= 1 || row + span > initial_rows.len() || cell.height >= 0x8000_0000 {
+                continue;
+            }
+            let declared = super::hwpunit_to_px(cell.height as i32, dpi);
+            let total = if is_plain_reflow(cell) {
+                declared.max(required[index])
+            } else {
+                declared
+            } - super::hwpunit_to_px(1, dpi) * table.inner_cell_spacing_hu(span) as f64;
+            if let Some(prior) = constraints
+                .iter_mut()
+                .find(|value| value.0 == row && value.1 == span)
+            {
+                prior.2 = prior.2.max(total);
+            } else {
+                constraints.push((row, span, total));
+            }
+        }
+        constraints.sort_by_key(|&(_, span, _)| span);
+        let mut heights = initial_rows.to_vec();
+        crate::renderer::height_measurer::solve_rowspan_row_heights(&constraints, &mut heights);
+        for (row, &shrink) in declared_shrink_hu.iter().enumerate().take(heights.len()) {
+            if shrink != 0 {
+                heights[row] = (heights[row] - super::hwpunit_to_px(shrink as i32, dpi))
+                    .max(content_floors[row]);
+            }
+        }
+        for &(index, required) in requirements {
+            let cell = &table.cells[index];
+            let row = usize::from(cell.row);
+            let span = usize::from(cell.row_span);
+            let combined = heights[row..row + span].iter().sum::<f64>()
+                + super::hwpunit_to_px(1, dpi) * table.inner_cell_spacing_hu(span) as f64;
+            if required > combined {
+                heights[row + span - 1] += required - combined;
+            }
+        }
+        Some(heights)
+    }
+
     /// 저장 프레임을 높이 컷으로 다시 해석하지 않는 일반 재조판 출처.
     pub(crate) fn cell_has_plain_reflow_paragraphs(
         cell: &crate::model::table::Cell,

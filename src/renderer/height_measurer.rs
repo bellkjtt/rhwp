@@ -4013,6 +4013,8 @@ impl HeightMeasurer {
             }
         }
 
+        let initial_span_rows = row_heights.clone();
+        let mut span_content_requirements = Vec::new();
         // 2-b단계: 병합 셀에서 미지 행 높이를 반복적으로 해결
         {
             let mut constraints: Vec<(usize, usize, f64)> = Vec::new();
@@ -4424,6 +4426,7 @@ impl HeightMeasurer {
                         )
                     })
                     .unwrap_or(required_height);
+                span_content_requirements.push((cell_index, required_height));
                 let combined: f64 = (r..r + span).map(|i| row_heights[i]).sum::<f64>()
                     + hwpunit_to_px(1, self.dpi) * table.inner_cell_spacing_hu(span) as f64;
                 #[cfg(not(target_arch = "wasm32"))]
@@ -4439,6 +4442,20 @@ impl HeightMeasurer {
                     row_heights[r + span - 1] += deficit;
                 }
             }
+        }
+
+        if let Some(heights) =
+            crate::renderer::layout::LayoutEngine::resolve_reflow_span_requirements(
+                table,
+                &span_content_requirements,
+                &initial_span_rows,
+                &content_row_floor,
+                &table.rowspan_declared_overflow_shrink(),
+                self.dpi,
+                self.render_normalization.table_text_reflowed(table),
+            )
+        {
+            row_heights = heights;
         }
 
         // 3단계: 높이가 0인 행은 기본값 적용
