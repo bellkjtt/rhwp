@@ -16,12 +16,14 @@ use crate::renderer::{boxed_pua_char_overlap_semantics, clamp_tab_leader_end_x, 
 
 use super::font_catalog::TypefaceCatalog;
 use super::font_lookup::{
-    font_style_for_text, legacy_typeface_for_style, match_supplied_family,
-    match_system_family_style, select_typeface_for_character, text_typeface_candidates,
-    SystemFontFamilies,
+    font_style_for_text, match_supplied_family, match_system_family_style,
+    select_typeface_for_character, text_typeface_candidates, SystemFontFamilies,
 };
 use super::renderer::colorref_to_skia;
-use super::synthetic_typeface::unemboldened_typeface;
+use super::synthetic_typeface::{draw_synthetic_bold_paths, unemboldened_typeface};
+
+mod fonts;
+mod marks;
 
 pub(super) struct SkiaTextReplay<'a> {
     pub(super) canvas: &'a Canvas,
@@ -53,7 +55,6 @@ impl SkiaTextReplay<'_> {
         render_marks: bool,
     ) {
         let canvas = self.canvas;
-        let output_options = self.output_options;
         let draw_text =
             |text: &str,
              bbox: crate::renderer::render_tree::BoundingBox,
@@ -106,56 +107,8 @@ impl SkiaTextReplay<'_> {
                     super::hft_outline::HftOutlineReplay::new(&face)
                 })
                 .flatten();
-                let primary_typeface = typeface_chain
-                    .first()
-                    .map(|candidate| candidate.typeface.clone());
-                // 한글은 bold face 가 없는 폰트(휴먼명조 등 단일 400 페이스)에
-                // 동일 정규 페이스 + stroke 로 합성 굵게를 적용한다 (오라클
-                // PDF 실측: 굵은 헤더가 정규 휴먼명조 임베드로 방출). custom
-                // catalog 또는 시스템 매칭이 진짜 bold 페이스를 반환한 경우는
-                // weight 조건에서 제외돼 이중 굵게가 없다.
-                let want_synthetic_bold = style.is_visually_bold();
-                let finish_font = |tf: Typeface, size: f32| -> Font {
-                    let is_bold_face = *tf.font_style().weight() >= 600;
-                    let is_slanted_face =
-                        tf.font_style().slant() != skia_safe::font_style::Slant::Upright;
-                    let mut font = Font::new(tf, size);
-                    font.set_edging(font::Edging::AntiAlias);
-                    // 글줄이 정한 소수 원점을 glyph raster에서도 보존한다.
-                    font.set_subpixel(true);
-                    // 원본 폭과 기준선으로 배치한 생성 번호의 소수 원점을
-                    // 정수로 반올림하지 않는다. Canvas도 이 원점에서 그린다.
-                    if style.fixed_glyph_advances {
-                        font.set_baseline_snap(false);
-                    }
-                    if want_synthetic_bold && !is_bold_face {
-                        font.set_embolden(true);
-                    }
-                    // strict glyph replay와 PDF가 쓰는 같은 합성 기울임이다.
-                    // 실제 기울임 face에는 중복 shear를 적용하지 않는다.
-                    if style.italic && !is_slanted_face {
-                        font.set_skew_x(-0.25);
-                    }
-                    font
-                };
-                let font_for_text = |sample: &str, size: f32| -> Option<Font> {
-                    if let Some(ch) = sample.chars().find(|ch| !ch.is_whitespace()) {
-                        if let Some(candidate) = select_typeface_for_character(&typeface_chain, ch)
-                        {
-                            return Some(finish_font(candidate.typeface.clone(), size));
-                        }
-                        return None;
-                    }
-                    if let Some(tf) = primary_typeface.clone() {
-                        Some(finish_font(tf, size))
-                    } else {
-                        let mut font = Font::default();
-                        font.set_size(size);
-                        font.set_edging(font::Edging::AntiAlias);
-                        font.set_subpixel(true);
-                        Some(font)
-                    }
-                };
+                let font_for_text =
+                    |sample: &str, size: f32| fonts::for_text(&typeface_chain, sample, size, style);
                 let baseline_y = if baseline > 0.0 {
                     bbox.y + baseline
                 } else {
@@ -697,6 +650,7 @@ impl SkiaTextReplay<'_> {
                                 let mut paint = text_paint.clone();
                                 paint.set_style(paint::Style::StrokeAndFill);
                                 paint.set_stroke_width(font_size * 0.02);
+                                paint.set_stroke_miter(10.0);
                                 paint
                             });
                             let glyph_paint = bold_paint.as_ref().unwrap_or(&text_paint);
@@ -720,6 +674,25 @@ impl SkiaTextReplay<'_> {
                                     )
                             }) && !has_ratio;
                             if needs_halfwidth_scale {
+                                if synthetic_bold {
+                                    // 글자 윤곽선만 반각으로 하고 사용자 좌표 획은 유지한다.
+                                    font.set_scale_x(0.5);
+                                    if !draw_synthetic_bold_paths(
+                                        canvas,
+                                        cluster,
+                                        &font,
+                                        (char_x, char_y),
+                                        glyph_paint,
+                                    ) {
+                                        canvas.draw_str(
+                                            cluster,
+                                            (char_x, char_y),
+                                            &font,
+                                            glyph_paint,
+                                        );
+                                    }
+                                    continue;
+                                }
                                 canvas.save();
                                 canvas.translate((char_x, char_y));
                                 canvas.scale((0.5, 1.0));
@@ -744,12 +717,18 @@ impl SkiaTextReplay<'_> {
                                     )
                                 })
                                 .unwrap_or(1.0) as f32;
-                            if synthetic_bold
-                                && (has_ratio || (fit_scale - 1.0).abs() > f32::EPSILON)
-                            {
+                            if synthetic_bold {
                                 // 글리프의 장평·원본 폭만 맞추고 합성 획의 사용자 좌표 폭은 유지한다.
                                 font.set_scale_x(ratio * fit_scale);
-                                canvas.draw_str(cluster, (char_x, char_y), &font, glyph_paint);
+                                if !draw_synthetic_bold_paths(
+                                    canvas,
+                                    cluster,
+                                    &font,
+                                    (char_x, char_y),
+                                    glyph_paint,
+                                ) {
+                                    canvas.draw_str(cluster, (char_x, char_y), &font, glyph_paint);
+                                }
                                 continue;
                             }
                             if has_ratio || (fit_scale - 1.0).abs() > f32::EPSILON {
@@ -968,97 +947,6 @@ impl SkiaTextReplay<'_> {
                     canvas.restore();
                 }
             };
-        let draw_text_marks = |text: &str,
-                               bbox: crate::renderer::render_tree::BoundingBox,
-                               style: &crate::renderer::TextStyle,
-                               baseline: f64,
-                               rotation: f64,
-                               _is_vertical: bool,
-                               is_marker: bool,
-                               is_para_end: bool,
-                               is_line_break_end: bool| {
-            if !output_options.show_paragraph_marks && !output_options.show_control_codes {
-                return;
-            }
-            let font_size = style.effective_font_size() as f32;
-            let make_mark_font = |size: f32| {
-                let mut font = match_system_family_style(
-                    self.font_mgr,
-                    self.system_families,
-                    "DejaVu Sans",
-                    FontStyle::normal(),
-                )
-                .or_else(|| legacy_typeface_for_style(self.font_mgr, FontStyle::normal()))
-                .map(|tf| Font::new(tf, size))
-                .unwrap_or_else(|| {
-                    let mut font = Font::default();
-                    font.set_size(size);
-                    font
-                });
-                font.set_edging(font::Edging::AntiAlias);
-                font
-            };
-            let font = make_mark_font(font_size * 0.5);
-            let mut mark_paint = Paint::default();
-            mark_paint.set_anti_alias(true);
-            mark_paint.set_color(Color::from_argb(255, 0, 102, 255));
-            let y = if baseline > 0.0 {
-                bbox.y + baseline
-            } else {
-                bbox.y + bbox.height
-            };
-            let effective_rotation = rotation;
-            if effective_rotation != 0.0 {
-                canvas.save();
-                canvas.rotate(
-                    effective_rotation as f32,
-                    Some(
-                        (
-                            (bbox.x + bbox.width / 2.0) as f32,
-                            (bbox.y + bbox.height / 2.0) as f32,
-                        )
-                            .into(),
-                    ),
-                );
-            }
-            if !text.is_empty() && !is_marker {
-                let char_positions =
-                    crate::renderer::replay_positions_or_compute(text, style, layout_positions);
-                for (index, ch) in text.chars().enumerate() {
-                    if ch == ' ' {
-                        let x = bbox.x + char_positions.get(index).copied().unwrap_or(0.0);
-                        let next_x = if index + 1 < char_positions.len() {
-                            bbox.x + char_positions[index + 1]
-                        } else {
-                            bbox.x + bbox.width
-                        };
-                        let mark_x = ((x + next_x) / 2.0) as f32 - font_size * 0.125;
-                        canvas.draw_str("\u{2228}", (mark_x, y as f32), &font, &mark_paint);
-                    } else if ch == '\t' {
-                        let mark_x = bbox.x as f32
-                            + char_positions.get(index).copied().unwrap_or(0.0) as f32;
-                        canvas.draw_str("\u{2192}", (mark_x, y as f32), &font, &mark_paint);
-                    }
-                }
-            }
-            if is_para_end || is_line_break_end {
-                let end_font = make_mark_font(font_size);
-                let mark = if is_line_break_end {
-                    "\u{2193}"
-                } else {
-                    "\u{21B5}"
-                };
-                let mark_x = if text.is_empty() {
-                    bbox.x as f32
-                } else {
-                    (bbox.x + bbox.width) as f32
-                };
-                canvas.draw_str(mark, (mark_x, y as f32), &end_font, &mark_paint);
-            }
-            if effective_rotation != 0.0 {
-                canvas.restore();
-            }
-        };
 
         draw_text(
             text,
@@ -1070,16 +958,17 @@ impl SkiaTextReplay<'_> {
             char_overlap,
         );
         if render_marks {
-            draw_text_marks(
+            marks::draw(
+                self,
                 text,
                 bbox,
                 style,
                 baseline,
                 rotation,
-                is_vertical,
                 is_marker,
                 is_para_end,
                 is_line_break_end,
+                layout_positions,
             );
         }
     }

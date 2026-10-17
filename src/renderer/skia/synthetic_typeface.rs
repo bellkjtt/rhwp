@@ -1,9 +1,46 @@
-use skia_safe::{font_arguments::VariationPosition, Data, FontArguments, FontMgr, Typeface};
+use skia_safe::{
+    font_arguments::VariationPosition, Canvas, Data, Font, FontArguments, FontMgr, Paint, Point,
+    Typeface,
+};
 use std::cell::RefCell;
 use std::collections::HashMap;
 
 thread_local! {
     static UNEMBOLDENED_TYPEFACES: RefCell<HashMap<u32, Option<Typeface>>> = RefCell::new(HashMap::new());
+}
+
+/// 합성 굵기는 장치 격자에 맞춘 글자 mask 대신 원 프로그램의 윤곽선을 채우고 그린다.
+/// 모든 path를 먼저 확인하므로 fallback 전에 일부 글자만 그리는 경우는 없다.
+pub(super) fn draw_synthetic_bold_paths(
+    canvas: &Canvas,
+    text: &str,
+    font: &Font,
+    origin: (f32, f32),
+    paint: &Paint,
+) -> bool {
+    let mut path_font = font.clone();
+    path_font.set_hinting(skia_safe::FontHinting::None);
+    path_font.set_baseline_snap(false);
+    let glyphs = path_font.str_to_glyphs_vec(text);
+    if glyphs.is_empty() {
+        return false;
+    }
+    let Some(paths) = glyphs
+        .iter()
+        .map(|glyph| path_font.get_path(*glyph))
+        .collect::<Option<Vec<_>>>()
+    else {
+        return false;
+    };
+    let mut positions = vec![Point::default(); glyphs.len()];
+    path_font.get_pos(&glyphs, &mut positions, Some(origin.into()));
+    for (path, position) in paths.iter().zip(positions) {
+        canvas.save();
+        canvas.translate((position.x, position.y));
+        canvas.draw_path(path, paint);
+        canvas.restore();
+    }
+    true
 }
 
 /// 시스템의 합성 weight를 제거하되 같은 font program·collection·가변 축을 보존한다.
