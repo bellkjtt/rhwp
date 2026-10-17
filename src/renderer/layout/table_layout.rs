@@ -1,6 +1,7 @@
 //! 표 레이아웃 (layout_table + 셀 높이/줄범위 계산)
 
 mod nested_header_frame;
+mod plain_cell_flow;
 mod reflowed_nested_row;
 mod row_block_cut;
 mod stored_body_closed_frame;
@@ -18233,7 +18234,7 @@ impl LayoutEngine {
         };
         // 원본 NO_LS와 정규화한 synthetic 줄은 같은 재조판 컷이다.
         // 저장 줄이 없는 입력만 예약에서 뒤 간격을 남기면 paint와 높이가 달라진다.
-        if !para.controls.is_empty()
+        if !plain_cell_flow::paragraph_has_plain_flow(para)
             || !crate::renderer::para_has_no_stored_line_segs(para)
             || !self.row_has_plain_reflow_line_units(table, usize::from(cell.row), styles)
         {
@@ -25416,7 +25417,9 @@ impl LayoutEngine {
         !owners.is_empty()
             && owners.iter().all(|&index| {
                 let cell = &table.cells[index];
-                cell.paragraphs.iter().all(|p| p.controls.is_empty())
+                cell.paragraphs
+                    .iter()
+                    .all(plain_cell_flow::paragraph_has_plain_flow)
                     && self.cell_units(cell, table, styles).iter().all(|unit| {
                         unit.nested_row.is_none()
                             && unit.nested_table_fragment.is_none()
