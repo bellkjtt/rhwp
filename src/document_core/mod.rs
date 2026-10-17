@@ -485,6 +485,7 @@ impl DocumentCore {
             &self.document,
             self.dpi,
             self.font_environment.as_ref(),
+            self.effective_layout_profile(),
         )
     }
 
@@ -510,6 +511,7 @@ impl DocumentCore {
     pub fn set_hangul2024_compat(&mut self, enabled: bool) {
         if self.hangul2024_compat != enabled {
             self.hangul2024_compat = enabled;
+            self.rebuild_resolved_styles();
             for d in self.dirty_sections.iter_mut() {
                 *d = true;
             }

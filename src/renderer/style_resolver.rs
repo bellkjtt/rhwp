@@ -19,6 +19,7 @@ use crate::renderer::font_rule_layout_name_projection::{
 pub const LANG_COUNT: usize = 7;
 
 mod ascii_punctuation;
+mod page_number;
 mod resolved;
 pub use resolved::{
     ResolvedBorderStyle, ResolvedCharStyle, ResolvedImageFill, ResolvedParaStyle, ResolvedStyleSet,
@@ -109,8 +110,13 @@ pub(crate) fn resolve_styles_with_environment(
     document: &Document,
     dpi: f64,
     environment: Option<&super::font_environment::FontEnvironment>,
+    profile: crate::model::provenance::LayoutCompatibilityProfile,
 ) -> ResolvedStyleSet {
     let mut styles = resolve_styles_for_document(document, dpi);
+    (
+        styles.page_number_char_style_id,
+        styles.page_number_font_is_hft,
+    ) = page_number::resolve(&document.doc_info, profile.hangul2024_layout());
     if environment.is_some() {
         for (style, shape) in styles
             .char_styles
@@ -169,17 +175,8 @@ pub fn resolve_styles_with_variant(
     let border_styles = resolve_border_styles(doc_info, dpi);
     let numberings = doc_info.numberings.clone();
     let bullets = doc_info.bullets.clone();
-    let page_number_char_style_id = doc_info
-        .styles
-        .iter()
-        .find(|style| {
-            style.local_name == "쪽 번호" || style.english_name.eq_ignore_ascii_case("Page Number")
-        })
-        .map(|style| style.char_shape_id as usize);
-    let page_number_font_is_hft = page_number_char_style_id
-        .and_then(|id| doc_info.char_shapes.get(id))
-        .and_then(|shape| doc_info.font_faces.get(1)?.get(shape.font_ids[1] as usize))
-        .is_some_and(|face| face.alt_type == 2);
+    let (page_number_char_style_id, page_number_font_is_hft) =
+        page_number::resolve(doc_info, false);
 
     ResolvedStyleSet {
         resolved_dpi: Some(dpi),
