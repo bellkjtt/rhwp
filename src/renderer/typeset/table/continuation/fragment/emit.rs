@@ -1653,6 +1653,12 @@ impl TypesetEngine {
                     layout_engine.row_cut_content_height(table, row, start, &next_cut, styles)
                 });
                 let tail = (full - used).max(0.0);
+                #[cfg(not(target_arch = "wasm32"))]
+                if std::env::var_os("RHWP_DIAG_ROW_TAIL").is_some() {
+                    eprintln!(
+                        "DIAG_ROW_TAIL reflow pi={para_idx} row={row} complete={complete_physical_end_cut} full={full:.6} used={used:.6} tail={tail:.6} carried={carried:?} cut={next_cut:?}"
+                    );
+                }
                 (tail > 0.5).then_some(tail)
             })
             .or_else(|| {
@@ -1837,6 +1843,13 @@ impl TypesetEngine {
             // 늘리지 않는다. 다음 스캔이 이 컷에서 실제 수용할 유닛을 선택한다.
             (tail > 0.5 && tail_band_continues).then_some(tail)
         }));
+        #[cfg(not(target_arch = "wasm32"))]
+        if std::env::var_os("RHWP_DIAG_ROW_TAIL").is_some() {
+            eprintln!(
+                "DIAG_ROW_TAIL selected pi={para_idx} cursor={cursor_row} end={end_row} complete={complete_physical_end_cut} crossing_span={crossing_span_owns_tail} reflow={} override={next_start_row_height_override:?} cut={next_cut:?}",
+                layout_engine.row_uses_reflow_physical_frame(table, end_row.saturating_sub(1))
+            );
+        }
         // 이미 예약한 띠와 이번 조각의 미예약 띠를 각각 한 번만 이어받는다.
         // 미예약 띠는 실제 행 상자를 늘리기 전에 계산해 예약과 paint가 공유한다.
         let page_end_band = if split_block_start.is_some() {
