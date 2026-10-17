@@ -50,3 +50,9 @@ last_verified: 2026-10-17
 
 실행 로그와 원본 API 응답은 ignored `output/pr-review/donggyun112-20261017/`에 기록한다.
 필수 증거가 남으면 완료·승인으로 표시하지 않는다.
+
+## 로컬 검토 완료
+
+통합 code 후보 `a7c9e30ffebc843d5f5763f349f79ad3ea93cfb1`에서 로컬 필수 검증과 실제 브라우저 검사를 완료했다.
+[PR #7978 검토](../pr/archives/pr_7978_review.md)와 [PR #7985 검토](../pr/archives/pr_7985_review.md)에
+원 기여·보정·증거·남은 원격 단계를 구분했다. 원격 게시 승인과 통합 head CI는 아직 남아 있다.
