@@ -32,7 +32,9 @@ pub(super) fn source(
         return None;
     }
     let position = *para.control_text_positions().get(control)?;
-    let offset = *para.char_offsets.get(position)?;
+    // 가시 문자열 뒤의 컨트롤은 char_offsets에 별도 글자 항목이 없다.
+    // 저장 줄과 같은 원본 UTF-16 축에서 컨트롤 슬롯의 시작을 읽는다.
+    let offset = *para.control_utf16_positions().get(control)?;
     let owner = para.line_segs.len().checked_sub(1)?;
     let row = para.line_segs.get(owner)?;
     if owner == 0
