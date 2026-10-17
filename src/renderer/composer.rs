@@ -112,6 +112,7 @@ mod auto_number_projection;
 mod equation_line_metrics;
 mod mapped_symbol_fonts;
 mod stored_row_fragments;
+pub(crate) use stored_row_fragments::crosses_physical_frame as stored_rows_cross_physical_frame;
 pub(crate) mod stored_row_projection;
 pub(crate) mod supplemental_clusters;
 

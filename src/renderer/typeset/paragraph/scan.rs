@@ -381,6 +381,9 @@ pub(in crate::renderer::typeset) fn stored_body_reset_fragment_matches_current_f
                         | crate::model::shape::TextWrap::InFrontOfText))
         });
     if page.profile.session_edited()
+        // 앞선 내용의 재조판으로 달라진 흐름은 저장 reset의 물리 쪽 소유를
+        // 입증하지 않는다. 명시적 page-start는 별도 경계 경로가 계속 소유한다.
+        || page.vpos_ladder_dirty
         || para.stored_text_partition_is_dirty()
         || para.cell_format_vpos_dirty
         || page.col_count != 1

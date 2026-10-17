@@ -784,7 +784,7 @@ pub(crate) fn plan_plain_text(
     })
 }
 
-/// Resolve the text beside a single Square table once, before fit and paint.
+/// 실제 단일 어울림 표의 배제 영역으로 호스트 줄을 fit·paint 전에 한 번 확정한다.
 /// Inline controls and other object owners keep their existing transaction.
 pub(crate) fn plan_square_table_host(
     para: &Paragraph,
@@ -797,7 +797,16 @@ pub(crate) fn plan_square_table_host(
     use super::float_placement::{signed_hwpunit, ParagraphFloatFlow, ParagraphFloatPlacement};
     use super::layout_frame::FrameExclusionPolicy;
     use crate::model::shape::{HorzAlign, HorzRelTo, TextFlow, VertAlign, VertRelTo};
-    if !super::is_no_lineseg_visible_text_host(para) {
+    let uncached = super::is_no_lineseg_visible_text_host(para);
+    if !uncached
+        && (!para
+            .text
+            .chars()
+            .any(|ch| ch > '\u{001F}' && ch != '\u{FFFC}' && !ch.is_whitespace())
+            || styles.hwp3_variant
+            || super::composer::stored_rows_cross_physical_frame(para))
+    {
+        // 하나의 배제 프레임은 다른 쪽/단에 속한 저장 줄을 재구성하지 않는다.
         return None;
     }
     let control = para.controls.iter().position(|c| {
@@ -899,6 +908,16 @@ pub(crate) fn plan_square_table_host(
     text_exclusion.vertical.end -= spacing_hu;
     let mut frame = box_.frame_with(0, vec![text_exclusion]);
     let rows = super::composer::layout_paragraph_in_frame(&text, &mut frame, styles, dpi)?;
+    if !uncached
+        && rows.len() == para.line_segs.len()
+        && rows.iter().zip(&para.line_segs).all(|(row, source)| {
+            row.column_start == source.column_start && row.segment_width == source.segment_width
+        })
+    {
+        // 유효한 저장 줄은 기존 소유자에게 남긴다. 줄 수가 더 적다는 추정이 아니라
+        // 같은 실제 표 배제 영역에서 계산한 전체 행·구간 key가 달라야 재구성한다.
+        return None;
+    }
     // Following paragraphs can use the free side of the same object. The
     // object remains an exclusion and fit budget; it is not a text advance.
     let end = spacing_before + hwpunit_to_px(frame.top, dpi) + style.spacing_after;
