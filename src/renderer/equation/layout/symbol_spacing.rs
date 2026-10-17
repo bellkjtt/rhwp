@@ -120,7 +120,7 @@ fn before_operator_gap(
 ) -> f64 {
     if (operator(boundary_element(previous, false)) && adjacent)
         || opening_delimiter(previous)
-        || (source && reserves_operator_gap(previous, hancom_eqn))
+        || (source && adjacent && reserves_operator_gap(previous, hancom_eqn))
     {
         0.0
     } else if source && ends_with_script(previous) {

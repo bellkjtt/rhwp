@@ -35,6 +35,7 @@ mod source_glyph_runs;
 mod source_greek_symbol;
 mod source_italic_advance;
 mod source_roman_advance;
+pub(super) use source_roman_advance::measured as measured_roman_advance;
 mod source_variable_style;
 mod symbol_advances;
 mod symbol_spacing;

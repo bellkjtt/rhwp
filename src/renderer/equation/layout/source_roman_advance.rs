@@ -58,7 +58,7 @@ const ADVANCES: [[u8; 54]; 11] = [
     ],
 ];
 
-pub(super) fn measured(text: &str, fs: f64, dpi: f64) -> Option<f64> {
+pub(in crate::renderer::equation) fn measured(text: &str, fs: f64, dpi: f64) -> Option<f64> {
     let size = super::super::font_frame_metrics::base_unit_at_dpi(fs, dpi);
     // 독립 22pt ∠·GEQ·LEQ의 논리 em. 미측정 정체 문자 전진은 발행하지 않는다.
     if text == "∠" && size == 2200 {

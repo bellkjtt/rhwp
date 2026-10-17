@@ -145,6 +145,12 @@ pub(super) fn measure(
         glyphs.push(rendered);
         width += if font_family == "HancomEQN" {
             super::hancom_eqn_metrics::advance(rendered, fs, dpi)?
+        } else if matches!(role, Role::Variable { italic: false }) {
+            // 같은 face의 기존 독립 GDI 전진을 실제 glyph 원점에도 소비한다.
+            // hmtx의 단순 반올림은 힌팅된 정체 D 등의 다음 글자를 앞당긴다.
+            super::layout::measured_roman_advance(&ch.to_string(), fs, dpi).unwrap_or_else(|| {
+                (logical_size * f64::from(advance) / 1024.0).round() * dpi / 96.0
+            })
         } else {
             (logical_size * f64::from(advance) / 1024.0).round() * dpi / 96.0
         };
