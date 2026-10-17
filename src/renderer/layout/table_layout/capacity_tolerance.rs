@@ -1,6 +1,6 @@
 //! 저장 줄 복원 관용과 새로 조판한 텍스트 줄의 합산 오차를 구분한다.
 
-use super::{CellUnit, ROW_CUT_CAPACITY_FP_EPSILON_PX};
+use super::CellUnit;
 use crate::model::table::Cell;
 
 /// 재조판 줄은 실제 내용 예산을 넘겨 수용하지 않는다. 부동소수 합산의
@@ -12,6 +12,7 @@ pub(super) fn for_next_unit(
     unit_count: usize,
     next_height: f64,
     available: f64,
+    stored_tolerance: f64,
 ) -> f64 {
     let composed_text = unit.nested_row.is_none()
         && !unit.mixed_nested_fragment
@@ -23,7 +24,7 @@ pub(super) fn for_next_unit(
     let tolerance = if composed_text {
         (next_height.abs() + available.abs()) * f64::EPSILON * operations
     } else {
-        ROW_CUT_CAPACITY_FP_EPSILON_PX
+        stored_tolerance
     };
     #[cfg(not(target_arch = "wasm32"))]
     {

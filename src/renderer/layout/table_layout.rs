@@ -21248,6 +21248,7 @@ impl LayoutEngine {
                     j.saturating_sub(start) + 1,
                     h + u.height,
                     avail_height,
+                    ROW_CUT_CAPACITY_FP_EPSILON_PX,
                 );
                 if j > start && h + u.height > avail_height + capacity_tolerance {
                     if std::env::var("RHWP_DIAG_6368").is_ok() {
@@ -21283,7 +21284,16 @@ impl LayoutEngine {
                         j + 1,
                         styles,
                     );
-                    if trailing_trim > 0.0 && h + u.height - trailing_trim <= avail_height + 0.5 {
+                    let trimmed_height = h + u.height - trailing_trim;
+                    let trimmed_tolerance = capacity_tolerance::for_next_unit(
+                        cell,
+                        u,
+                        j.saturating_sub(start) + 1,
+                        trimmed_height,
+                        avail_height,
+                        0.5,
+                    );
+                    if trailing_trim > 0.0 && trimmed_height <= avail_height + trimmed_tolerance {
                         applied_trailing_trim = trailing_trim.min(u.height);
                         h += u.height - applied_trailing_trim;
                         j += 1;
@@ -21537,6 +21547,7 @@ impl LayoutEngine {
                     j.saturating_sub(start) + 1,
                     h + u.height,
                     avail_height,
+                    ROW_CUT_CAPACITY_FP_EPSILON_PX,
                 );
                 if j > start && h + u.height > avail_height + capacity_tolerance {
                     if std::env::var("RHWP_DIAG_6368").is_ok() {
