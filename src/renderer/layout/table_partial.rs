@@ -3091,7 +3091,10 @@ impl LayoutEngine {
                         Control::Table(t) => Some(t.row_count as usize),
                         _ => None,
                     });
-                    let mut nested_table_continues = nested_cursor_split.is_some()
+                    let mut nested_table_continues = nested_cursor_split
+                        .as_ref()
+                        .zip(nested_row_count)
+                        .is_some_and(|(split, rows)| !split.terminal || split.end_row < rows)
                         || nested_cut_rows
                             .zip(nested_row_count)
                             .is_some_and(|((_, end), rows)| end < rows);
@@ -4288,10 +4291,9 @@ impl LayoutEngine {
                                             content_offset: 0.0,
                                             force_source_start_cut: false,
                                             replay_terminal_boundary_unit: false,
-                                            // [#3658] per-중첩행 컷 경로도 마지막 유닛까지
-                                            // 포함한 컷(end_cut=[])이면 종료 조각이다.
-                                            terminal: cut_units
-                                                .is_some_and(|(_, eu)| eu == usize::MAX),
+                                            // 행 컷은 자식의 마지막 행을 소유하면 종료다.
+                                            // 부모 셀의 end_unit 센티널과 구분한다.
+                                            terminal: end_row == nrow,
                                             offset_within_start: 0.0,
                                             recursive_cut: None,
                                         })
@@ -4345,7 +4347,9 @@ impl LayoutEngine {
                                     }
                                     if split_ref.is_some_and(|s| {
                                         s.end_row < nested_table.row_count as usize
-                                            || s.visible_height + 0.5 < nested_h
+                                            || (nested_cursor_split.is_none()
+                                                && nested_cut_rows.is_none()
+                                                && s.visible_height + 0.5 < nested_h)
                                     }) {
                                         nested_table_continues = true;
                                     }
@@ -4770,12 +4774,20 @@ impl LayoutEngine {
                                 para_y = para_y_before_lines + advance;
                             }
                         }
+                        // 재귀·혼합 컷은 CellUnit의 종료 간격을 flow_height에
+                        // 이미 담는다. scalar 행 컷의 본체 높이에만 호스트의
+                        // 줄 뒤·문단 뒤 간격을 한 번 더한다.
                         if let Some(spacing) =
                             crate::renderer::height_measurer::no_ls_tac_table_host_trailing_spacing_px(
                                 para, styles, self.dpi,
                             )
+                            .filter(|_| nested_cursor_split.is_none() && mixed_nested_split.is_none())
                         {
-                            para_y += spacing;
+                            para_y += spacing
+                                + styles
+                                    .para_styles
+                                    .get(para.para_shape_id as usize)
+                                    .map_or(0.0, |style| style.spacing_after);
                         }
                     }
                     // [#6122] 폭 초과로 내린 개체는 composed 줄 높이에 없다 — 그 아래로
