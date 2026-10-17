@@ -56,8 +56,18 @@ fn check(basis: &str) {
             let svg = std::fs::read_to_string(&files[0]).unwrap();
             std::fs::remove_dir_all(&temporary).unwrap();
             let root_tag = svg.split('>').next().unwrap();
-            let width = number(root_tag, "width");
-            let height = number(root_tag, "height");
+            // 선과 Studio 정보는 저장 용지의 논리 좌표다. Print viewport만 정수 pt로
+            // 자르므로 그 물리 크기로 나눠 원문의 경계 비율을 바꾸지 않는다.
+            let width = f64::from(page.width) * 96.0 / 7200.0;
+            let height = f64::from(page.height) * 96.0 / 7200.0;
+            for (name, source_hu) in [("width", page.width), ("height", page.height)] {
+                let physical_pt = number(root_tag, name) * 72.0 / 96.0;
+                let stored_pt = f64::from(source_hu) / 100.0;
+                assert!(
+                    (physical_pt - stored_pt.floor()).abs() < 1e-8,
+                    "독립 Print의 물리 종이는 정수 point이고 조판의 논리 용지는 보존한다"
+                );
+            }
             let lines: Vec<_> = svg.split('<').filter(|s| s.starts_with("line ")).collect();
             let count = if kind == "double" { 2 } else { 1 };
             assert_eq!(lines.len(), count * 4, "네 변의 선 묶음 누락·중복");
