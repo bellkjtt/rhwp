@@ -1061,12 +1061,26 @@ static KOPUB_BATANG_LATIN_0: [u16; 95] = [
 enum KoPubFamily {
     Dotum,
     Batang,
+    WorldDotum,
+    WorldBatang,
 }
 
 impl KoPubFamily {
     fn from_primary(primary_name: &str) -> Option<Self> {
         let lower = primary_name.to_lowercase();
-        if primary_name.contains("KoPub돋움체") || lower.contains("kopub dotum") {
+        // World 배포본은 이름을 달리하지만 독립 Print의 cmap/hmtx와 설치
+        // 프로그램의 윤곽·전진이 같다. 바탕 한글은 반올림한0.94 대신936/1000이다.
+        if primary_name.contains("KoPubWorld바탕체")
+            || lower.contains("kopubworld batang")
+            || lower.contains("kopubworldbatang")
+        {
+            Some(Self::WorldBatang)
+        } else if primary_name.contains("KoPubWorld돋움체")
+            || lower.contains("kopubworld dotum")
+            || lower.contains("kopubworlddotum")
+        {
+            Some(Self::WorldDotum)
+        } else if primary_name.contains("KoPub돋움체") || lower.contains("kopub dotum") {
             Some(Self::Dotum)
         } else if primary_name.contains("KoPub바탕체") || lower.contains("kopub batang") {
             Some(Self::Batang)
@@ -1078,8 +1092,8 @@ impl KoPubFamily {
     /// 기본 라틴 문자(U+0020~U+007E) 전진폭 표, 1000em 기준.
     fn latin_table(self) -> &'static [u16; 95] {
         match self {
-            Self::Dotum => &KOPUB_DOTUM_LATIN_0,
-            Self::Batang => &KOPUB_BATANG_LATIN_0,
+            Self::Dotum | Self::WorldDotum => &KOPUB_DOTUM_LATIN_0,
+            Self::Batang | Self::WorldBatang => &KOPUB_BATANG_LATIN_0,
         }
     }
 }
@@ -1101,7 +1115,7 @@ pub(crate) fn kopub_declared_space_em(primary_name: &str) -> Option<f64> {
         .map(|family| f64::from(family.latin_table()[0]) / 1000.0)
 }
 
-fn kopub_char_width(primary_name: &str, c: char, font_size: f64) -> Option<f64> {
+fn kopub_char_width(primary_name: &str, bold: bool, c: char, font_size: f64) -> Option<f64> {
     let family = KoPubFamily::from_primary(primary_name)?;
     // KoPub 전용 전각 표가 공통 반각 판정(#6023)을 가리지 않아야 한다.
     // ｢｣ 등은 한컴 Print에서도 반각이며, 해당 글리프는 실제 메트릭 조회와
@@ -1141,6 +1155,22 @@ fn kopub_char_width(primary_name: &str, c: char, font_size: f64) -> Option<f64> 
         if units > 0 {
             return Some(quantize_hwp_px(font_size * f64::from(units) / 1000.0));
         }
+    }
+    if matches!(family, KoPubFamily::WorldDotum | KoPubFamily::WorldBatang) {
+        // World의 ASCII·현대 한글만 실제 여섯 프로그램에서 확인했다.
+        // 다른 기호·CJK 블록에 한글의 고정 전진폭을 확대 적용하지 않는다.
+        if !('\u{AC00}'..='\u{D7A3}').contains(&c) {
+            return None;
+        }
+        let effective_bold = bold || primary_name.to_ascii_lowercase().contains("bold");
+        let units = match family {
+            KoPubFamily::WorldBatang => 936.0,
+            KoPubFamily::WorldDotum if effective_bold && matches!(c, '\u{C88B}' | '\u{CC27}') => {
+                1000.0
+            }
+            _ => 872.0,
+        };
+        return Some(quantize_hwp_px(font_size * units / 1000.0));
     }
     // KoPub Dotum/Batang의 세 굵기 모두 U+203B cmap+hmtx 전진폭은900/1000em이다.
     // 한컴 Print의 장평98%·자간-3%에서도11.36px로 같으며 반각 fallback이 아니다.
@@ -1311,7 +1341,7 @@ fn measure_char_width_embedded_decision_for_font<'a>(
         .trim()
         .trim_matches('\'')
         .trim_matches('"');
-    if let Some(w) = kopub_char_width(primary_name, c, font_size) {
+    if let Some(w) = kopub_char_width(primary_name, bold, c, font_size) {
         return EmbeddedWidthDecision {
             width_px: Some(w),
             em_fraction: None,
