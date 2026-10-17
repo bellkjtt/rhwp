@@ -106,7 +106,7 @@ import { CENTER_ZOOM_ANCHOR } from '@/view/zoom-anchor';
 import { withBusyCursor } from '@/view/busy-cursor';
 import { formatPageIndicator } from '@/view/page-indicator';
 import { installEmbedRuntime } from '@/embed/runtime';
-import { createFieldChangeForwarder } from '@/embed/field-events';
+import { subscribeFieldChanges } from '@/embed/field-events';
 import type { EmbedRendererRuntimeRequestV1 } from '@/embed/rpc-router';
 import { enrichFontDecisionTrace } from '@/core/font-decision-trace';
 import { DocumentAgentController } from '@/document-agent/controller';
@@ -2025,17 +2025,13 @@ installEmbedRuntime({
   subscribeDocumentChanged: (listener) => eventBus.on('document-agent-changed', listener),
   subscribeFieldChanged: (listener) => {
     // 연결마다 새로 센다 — 직전 누름틀 기억이 다른 세션으로 새지 않게.
-    const forward = createFieldChangeForwarder((fieldId) => {
+    return subscribeFieldChanges(eventBus, (fieldId) => {
       try {
         return wasm.getFieldList().find((field) => field.fieldId === fieldId && !field.cellField)?.name ?? '';
       } catch {
         return '';
       }
-    });
-    return eventBus.on('field-info-changed', (info) => {
-      const event = forward(info);
-      if (event) listener(event);
-    });
+    }, listener);
   },
   handlers: {
     async ready() {

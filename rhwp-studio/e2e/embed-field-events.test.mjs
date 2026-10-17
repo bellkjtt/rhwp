@@ -56,14 +56,33 @@ runTest('누름틀 진입·이탈 이벤트', async ({ page }) => {
     off();
     await moveTo(company.location.paraIndex, company.startCharIdx);
 
+    // 같은 연결에서 문서를 교체하면 이전 필드의 이탈과 같은 ID의 재진입을 알린다.
+    const reloadEvents = [];
+    const reloadOff = editor.onFieldChanged((event) => reloadEvents.push(event));
+    await moveTo(writer.location.paraIndex, writer.startCharIdx);
+    await editor.loadFile(sample.slice(0), 'field-01.hwp', { skipUnsavedGuard: true });
+    await settle();
+    const afterReload = reloadEvents.slice();
+    await moveTo(writer.location.paraIndex, writer.startCharIdx);
+    await moveTo(company.location.paraIndex, company.startCharIdx);
+    reloadOff();
+    await editor.loadFile(sample.slice(0), 'field-01.hwp', { skipUnsavedGuard: true });
+    await settle();
+    const reloadFinalCount = reloadEvents.length;
+
     const studioCapabilities = [...editor._transport._peerCapabilities];
     editor.destroy();
     return {
       events, afterEnter, afterSame, beforeOff, finalCount: events.length,
-      studioCapabilities, company, writer,
+      studioCapabilities, company, writer, reloadEvents, afterReload, reloadFinalCount,
     };
   }, EDITOR_MODULE_URL);
 
+  assert(result.afterReload.length === 2 && result.afterReload[1].inField === false,
+    `TC6: 문서 교체 시 이전 필드 이탈 (${JSON.stringify(result.afterReload)})`);
+  assert(result.reloadEvents[2]?.fieldId === result.writer.fieldId
+      && result.reloadEvents[3]?.fieldId === result.company.fieldId, 'TC6: 같은 ID와 다른 ID 모두 새 진입');
+  assert(result.reloadFinalCount === 4, 'TC7: 해지 후 문서 교체도 무알림');
   assert(result.studioCapabilities.includes('field-focus-events-v1'), 'TC1: studio 가 capability 광고');
   assert(result.afterEnter === 1, `TC2: 진입 이벤트 1건 (${result.afterEnter})`);
   const [enter, change, leave] = result.events;

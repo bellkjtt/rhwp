@@ -201,3 +201,20 @@ test('표 칸 캐럿은 그 칸의 리스트로 옮긴다', { skip: !hasWasm && 
     cellPath: [{ controlIndex: 99, cellIndex: 0, cellParaIndex: 0 }], charOffset: 0,
   }), null, '없는 표 칸은 null');
 });
+
+test('같은 모양의 중첩 표도 부모 셀 문단 소유를 보존해 모든 리스트가 왕복한다', {
+  skip: !hasWasm && 'pkg WASM 없음',
+}, async () => {
+  for (const name of ['table-001.hwp', 'issue1949_giant_cell_nested_tables_perf.hwp']) {
+    const doc = await openDoc(name);
+    try {
+      const m = model(doc);
+      const mismatches = m.lists.filter((entry) => entry.isCell)
+        .filter((entry) => studioToList(m, listToStudio(m, entry.listId)) !== entry.listId)
+        .map((entry) => entry.listId);
+      assert.deepEqual(mismatches, [], `${name}: 부모 문단이 다른 셀을 선택하면 안 된다`);
+    } finally {
+      doc.free();
+    }
+  }
+});

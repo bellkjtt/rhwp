@@ -1,3 +1,5 @@
+import type { EventBus } from '../core/event-bus';
+
 /**
  * 누름틀 진입·이탈 이벤트(`field-focus-events-v1`) — 부모 페이지에 보내는 값.
  *
@@ -50,5 +52,24 @@ export function createFieldChangeForwarder(
       name: lookupName(fi.fieldId),
       guide: fi.guideName ?? '',
     };
+  };
+}
+
+/** 문서 교체는 이전 문서의 필드 포커스도 끝낸다. 두 구독을 함께 해제한다. */
+export function subscribeFieldChanges(
+  bus: Pick<EventBus, 'on'>,
+  lookupName: (fieldId: number) => string,
+  listener: (payload: RhwpFieldChangedEventV1) => void,
+): () => void {
+  const forward = createFieldChangeForwarder(lookupName);
+  const send = (info: unknown) => {
+    const event = forward(info);
+    if (event) listener(event);
+  };
+  const offField = bus.on('field-info-changed', send);
+  const offDocument = bus.on('document-swapped', () => send(null));
+  return () => {
+    offField();
+    offDocument();
   };
 }

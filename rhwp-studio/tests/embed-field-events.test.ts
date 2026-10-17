@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { EventBus } from '../src/core/event-bus.ts';
 
-import { createFieldChangeForwarder } from '../src/embed/field-events.ts';
+import { createFieldChangeForwarder, subscribeFieldChanges } from '../src/embed/field-events.ts';
 import { installEmbedRuntime } from '../src/embed/runtime.ts';
 import type { EmbedRpcHandlers } from '../src/embed/rpc-router.ts';
 
@@ -22,17 +22,28 @@ test('누름틀 이벤트는 들어감·바뀜·나감에서만 나오고 같은
   assert.equal(forward(info(42))?.name, '', '이름을 못 찾으면 빈 문자열');
 });
 
-test('main.ts 는 field-info-changed 를 연결마다 새 forwarder 로 내보낸다', () => {
-  const source = readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
-  assert.match(
-    source,
-    /subscribeFieldChanged: \(listener\) => \{[\s\S]*?createFieldChangeForwarder\([\s\S]*?eventBus\.on\('field-info-changed'/,
-  );
+test('문서 교체는 필드 소유를 끝내며 재진입과 구독 해제를 보존한다', () => {
+  const bus = new EventBus();
+  const events: { inField: boolean; fieldId?: number }[] = [];
+  const off = subscribeFieldChanges(bus, () => '회사명', (event) => events.push(event));
+  const info = { fieldId: 7, fieldType: 'clickhere' };
+  bus.emit('field-info-changed', info);
+  bus.emit('field-info-changed', info);
+  bus.emit('document-swapped');
+  bus.emit('document-swapped');
+  bus.emit('field-info-changed', info);
+  bus.emit('field-info-changed', { ...info, fieldId: 9 });
+  assert.deepEqual(events.map((event) => event.inField ? event.fieldId : false), [7, false, 7, 9]);
+  off();
+  bus.emit('document-swapped');
+  bus.emit('field-info-changed', info);
+  assert.equal(events.length, 4, '해지 시 문서 교체 구독도 제거');
 });
 
 async function connect(capabilities: string[]) {
   let messageListener: (event: MessageEvent) => void = () => {};
   let emitField: (payload: unknown) => void = () => {};
+  let emitDocument: (payload: unknown) => void = () => {};
   let subscribed = 0;
   let unsubscribed = 0;
   const hostWindow = {
@@ -44,6 +55,11 @@ async function connect(capabilities: string[]) {
     hostWindow: hostWindow as unknown as Window,
     parentWindow: parentWindow as unknown as Window,
     handlers: {} as EmbedRpcHandlers,
+    subscribeDocumentChanged(listener) {
+      subscribed += 1;
+      emitDocument = listener;
+      return () => { unsubscribed += 1; };
+    },
     subscribeFieldChanged(listener) {
       subscribed += 1;
       emitField = listener;
@@ -69,6 +85,7 @@ async function connect(capabilities: string[]) {
   return {
     messages, cleanup, channel,
     emit: (payload: unknown) => emitField(payload),
+    emitDocument: (payload: unknown) => emitDocument(payload),
     counts: () => ({ subscribed, unsubscribed }),
   };
 }
@@ -89,4 +106,21 @@ test('embed runtime 은 field-focus-events-v1 을 협상한 연결에만 fieldCh
   assert.deepEqual(off.counts(), { subscribed: 0, unsubscribed: 0 }, '협상 안 하면 구독하지 않는다');
   off.cleanup();
   off.channel.port1.close();
+});
+
+test('documentChanged와 fieldChanged 동시 협상은 각각 배달하고 함께 해지한다', async () => {
+  const connection = await connect(['transferable-array-buffer', 'document-change-events-v1', 'field-focus-events-v1']);
+  try {
+    connection.emitDocument({ source: 'edit' });
+    connection.emit({ schemaVersion: 1, inField: false });
+    await new Promise(resolve => setTimeout(resolve, 10));
+    const events = connection.messages.filter((message) => (message as { type: string }).type === 'rhwp-event');
+    assert.deepEqual(events.map((message) => (message as { event: string }).event), ['documentChanged', 'fieldChanged']);
+    assert.deepEqual(connection.counts(), { subscribed: 2, unsubscribed: 0 });
+    connection.cleanup();
+    assert.deepEqual(connection.counts(), { subscribed: 2, unsubscribed: 2 });
+  } finally {
+    connection.cleanup();
+    connection.channel.port1.close();
+  }
 });

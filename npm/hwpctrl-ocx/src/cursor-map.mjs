@@ -69,7 +69,9 @@ export function studioToList(model, { sectionIndex = 0, parentParaIndex = 0, cel
     if (chain[0].sectionIndex !== sectionIndex || chain[0].hostPara !== parentParaIndex) continue;
 
     const same = chain.every((link, i) =>
-      link.controlIndex === cellPath[i].controlIndex && link.cellIndex === cellPath[i].cellIndex);
+      link.controlIndex === cellPath[i].controlIndex && link.cellIndex === cellPath[i].cellIndex
+      // 같은 셀의 다른 문단에도 같은 모양의 중첩 표가 있을 수 있다.
+      && (i === 0 || link.hostPara === cellPath[i - 1].cellParaIndex));
     if (same) return entry.listId;
   }
   return null;
