@@ -1104,6 +1104,13 @@ impl TypesetEngine {
                     row_start_cut,
                     &res.end_cut,
                     styles,
+                )
+                || layout_engine.reflow_row_cut_respects_plain_paragraph_keeps(
+                    table,
+                    r,
+                    row_start_cut,
+                    &res.end_cut,
+                    styles,
                 );
             // 저장된 물리 컷 근거가 없는 다줄 행에서 현재 쪽에 첫 유닛 하나만
             // 남고 행 전체가 새 쪽에 들어가면 행 경계에서 이월한다. 내용 높이가
