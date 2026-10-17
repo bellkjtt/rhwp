@@ -34,6 +34,7 @@ pub(super) mod order;
 pub(super) mod paragraph_flow;
 pub(super) mod physical_tac;
 pub(super) mod shape_flow;
+mod square_host_frame;
 pub(super) mod stored_tac;
 pub(super) mod table_entry;
 pub(super) mod tac_fit;

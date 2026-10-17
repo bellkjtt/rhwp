@@ -910,14 +910,11 @@ pub(crate) fn plan_square_table_host(
     let rows = super::composer::layout_paragraph_in_frame(&text, &mut frame, styles, dpi)?;
     if !uncached
         && rows.len() == para.line_segs.len()
-        && rows
-            .iter()
-            .zip(&para.line_segs)
-            .all(|(row, source)| row.text_start == source.text_start)
+        && rows.iter().zip(&para.line_segs).all(|(row, source)| {
+            row.column_start == source.column_start && row.segment_width == source.segment_width
+        })
     {
-        // 같은 프레임이 같은 문자 분할을 확인했으면 저장 줄 소유를 유지한다.
-        // 저장 구간과 hanging indent 적용 뒤의 새 구간은 좌표 표현이 다르다.
-        // 가로 좌표의 차이만으로 유효한 분할을 버리고 새 원점을 고정하지 않는다.
+        // 같은 물리 구간의 저장 줄은 기존 소유자에게 남긴다.
         return None;
     }
     // Following paragraphs can use the free side of the same object. The

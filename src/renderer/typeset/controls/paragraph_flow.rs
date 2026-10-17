@@ -131,6 +131,16 @@ pub(in crate::renderer::typeset) fn place(
         host_col_w,
         engine.dpi,
     ) {
+        if let Some(origin) = super::square_host_frame::stored_host_origin(
+            st,
+            para_idx,
+            paragraphs_all,
+            composed_all,
+            engine.dpi,
+        ) {
+            // fit 전에 같은 원점을 선택한다. 이월 뒤에는 새 프레임의 흐름을 사용한다.
+            st.align_flow_to(origin);
+        }
         fmt.use_square_host_plan(plan, engine.dpi);
     }
     if controls::try_place_stored_tac_paragraph(
