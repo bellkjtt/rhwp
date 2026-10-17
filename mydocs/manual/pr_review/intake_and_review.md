@@ -2,7 +2,7 @@
 kind: guide
 status: active
 canonical: mydocs/manual/pr_review_workflow.md
-last_verified: 2026-10-15
+last_verified: 2026-10-18
 ---
 
 # PR 접수와 리뷰 기록
@@ -33,12 +33,38 @@ merge, merge 후속 처리는 기본 경로 문서와 [merge 후속 처리](post
 먼저 reviewer를 assign한다. 대량 PR은 [다수 PR과 update branch](multi_pr_update_branch.md)의 사전 분류 뒤,
 각 원 PR마다 assign한다.
 
+순서는 **최소 사전 분류 → 원 PR별 reviewer 지정·API 재확인 → 상세 metadata·본문·파일·코멘트 조사 →
+local fetch·체리픽 → 검증·review 기록**이다. 사전 분류에서는 대상 PR 번호, 작성자, open/draft 상태,
+base와 통합 그룹을 식별하는 정보만 확인한다. 상세 조사를 끝낸 뒤 reviewer를 지정하지 않는다.
+체리픽 통합 PR을 따로 만들더라도 지정 대상은 **각 원 PR**이며, 통합 PR 하나의 지정으로 대신하지 않는다.
+
+작업지시자가 지정한 reviewer를 사용하고 기존 reviewer는 제거하지 않는다. 이미 지정돼 있으면 추가 요청을
+반복하지 않고 API로 확인한다. 명령 성공만으로 배정 완료를 단정하지 않으며, API 응답의 `users`에 대상
+login이 있어야 다음 단계로 진행한다. 지정 실패·확인 불가이면 해당 원 PR의 상세 조사·fetch·체리픽을 보류하고
+실패 이유를 보고한다. 승인된 검토 범위 안의 reviewer 지정 때문에 작업지시자 승인을 다시 요청하지 않는다.
+
 collaborator 자신의 self PR은 reviewer를 지정하지 않는다. 이 경우 review 문서에 작성자 self-review임을
 기록하고, 최신 CI와 merge 조건을 독립적으로 확인한다.
 
+`pr_number`와 `reviewer`는 실제 대상 값으로 바꾼다. 여러 PR은 원 PR마다 이 단계를 완료한다.
+
 ~~~bash
-gh pr edit N --repo edwardkim/rhwp --add-reviewer <reviewer>
+pr_number=N
+reviewer=REVIEWER_LOGIN
+assigned_reviewers=$(gh api "repos/edwardkim/rhwp/pulls/$pr_number/requested_reviewers") || exit 1
+if ! printf '%s\n' "$assigned_reviewers" \
+  | jq -e --arg reviewer "$reviewer" 'any(.users[]; .login == $reviewer)' >/dev/null; then
+  gh api --method POST "repos/edwardkim/rhwp/pulls/$pr_number/requested_reviewers" \
+    -f "reviewers[]=$reviewer" || exit 1
+fi
+# jq -e가 실패하면 다음 상세 조사·fetch·체리픽을 실행하지 않는다.
+gh api "repos/edwardkim/rhwp/pulls/$pr_number/requested_reviewers" \
+  | jq -e --arg reviewer "$reviewer" 'any(.users[]; .login == $reviewer)' || exit 1
 ~~~
+
+`gh pr edit --add-reviewer`를 사용했더라도 같은 API 재확인을 수행한다. Projects classic GraphQL 오류 등으로
+CLI 편집이 실패하면 위 REST POST 경로를 사용한다. reviewer login과 확인 결과를 검토 기록에 남기며,
+인증 토큰은 출력하지 않는다.
 
 ## 2.2 기본 metadata
 
