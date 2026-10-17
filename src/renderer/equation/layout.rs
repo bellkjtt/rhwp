@@ -654,7 +654,7 @@ impl EqLayout {
         let w = match kind {
             // 한컴의 명시적 ~는 반 em을 예약한다. 정상 저장한 A~...~M의
             // 전체 전진과 독립 Print의 글리프 원점 간격이 같은 결과를 쓴다.
-            SpaceKind::Normal if self.hancom_math_face => fs * 0.5,
+            SpaceKind::Normal if self.hancom_math_face || self.hancom_eqn => fs * 0.5,
             SpaceKind::Normal => fs * 0.33,
             SpaceKind::Thin if self.hancom_math_face => {
                 // 한컴의 명시적 Thin은 BaseUnit/8을 정수 HWPUNIT로 게시한다.
