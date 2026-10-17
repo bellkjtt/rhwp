@@ -1539,8 +1539,8 @@ impl TypesetEngine {
             });
         // 여러 행에 걸친 셀은 일반 행의 내용 유닛을 모두 소비했더라도
         // 이 조각 경계를 넘어 물리 공간을 소유한다.
-        // 재조판은 해당 블록 안에서 일반 셀의 최소 높이를 중복 반영하지 않지만,
-        // 여러 행에 걸친 셀이 소유한 잔여 밴드까지 없애서는 안 된다.
+        // 일반 칸의 독립 최소와 걸침 칸의 누적 공간은 각 장부가 소유한다.
+        // 내용을 소진했다는 이유로 어느 쪽의 잔여 밴드도 없애지 않는다.
         let crossing_span_owns_tail = table.cells.iter().any(|cell| {
             (cell.row as usize) < end_row
                 && cell.row as usize + (cell.row_span as usize).max(1) > end_row

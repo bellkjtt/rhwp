@@ -25425,18 +25425,16 @@ impl LayoutEngine {
     }
 
     /// Only the part of an independent declared minimum outside complete content
-    /// occupancy creates physical space without a content cursor. An earlier
-    /// rowspan owns its block's page bands; its interior rows do not own another
-    /// blank remainder. Scan and carry share this query.
+    /// occupancy creates physical space without a content cursor. A spanning
+    /// cell in another column does not erase the ordinary cell's independent
+    /// minimum. Scan and carry share the accepted box and its remainder.
     pub(crate) fn reflow_row_physical_minimum(
         &self,
         table: &crate::model::table::Table,
         row: usize,
         styles: &ResolvedStyleSet,
     ) -> Option<f64> {
-        if !self.row_uses_reflow_physical_frame(table, row)
-            || Self::row_has_prior_rowspan_cover(table, row)
-        {
+        if !self.row_uses_reflow_physical_frame(table, row) {
             return None;
         }
         let cells: Vec<_> = table
