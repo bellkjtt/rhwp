@@ -110,6 +110,14 @@ pub struct InlineFlowPlan {
 }
 
 impl InlineFlowPlan {
+    /// 확정한 행의 물리 하단. 다음 줄 전진과 문단 뒤 여백을 구분한다.
+    pub(crate) fn occupied_end(&self) -> f64 {
+        self.rows
+            .iter()
+            .map(|row| row.y + row.height)
+            .fold(self.start, f64::max)
+    }
+
     pub(crate) fn relative_to(&mut self, x: f64, y: f64) {
         self.start -= y;
         self.end -= y;

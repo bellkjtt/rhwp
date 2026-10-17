@@ -655,8 +655,10 @@ pub(crate) fn no_ls_tac_table_host_trailing_spacing_px(
     styles: &ResolvedStyleSet,
     dpi: f64,
 ) -> Option<f64> {
-    if !p.line_segs.is_empty()
-        || !p.text.trim().is_empty()
+    if !crate::renderer::para_has_no_stored_line_segs(p)
+        || p.text
+            .chars()
+            .any(|ch| ch > '\u{001F}' && ch != '\u{FFFC}' && !ch.is_whitespace())
         || p.controls.is_empty()
         || !p
             .controls

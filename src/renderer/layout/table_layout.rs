@@ -9485,18 +9485,27 @@ impl LayoutEngine {
             } else if rendered_top_and_bottom_non_inline {
                 para_y += self.paragraph_top_and_bottom_non_inline_flow_height(&source_controls);
             }
-            // [#7418] 저장 줄 없는 빈 host 의 TAC 표 줄 뒤에는 그 줄의 줄간격이 붙는다
-            // (`no_ls_tac_table_host_trailing_spacing_px`, 측정·조각 배치와 같은 값).
-            // 칸의 마지막 문단은 뒤에 이을 줄이 없어 더하지 않는다.
-            if cp_idx + 1 < cell.paragraphs.len() {
-                if let Some(spacing) =
-                    crate::renderer::height_measurer::no_ls_tac_table_host_trailing_spacing_px(
-                        para, styles, self.dpi,
-                    )
-                {
-                    para_y += spacing;
-                }
+            let tac_host_closing_spacing =
+                crate::renderer::height_measurer::no_ls_tac_table_host_trailing_spacing_px(
+                    para, styles, self.dpi,
+                );
+            // 실제 TAC 종료 문단에서만 원문 유닛 소유를 조회한다. 일반 글줄마다
+            // 셀 전체 유닛을 다시 순회하지 않는다.
+            let owns_tac_host_end = tac_host_closing_spacing.is_some()
+                && fragment_cut_units.is_none_or(|(start, end)| {
+                    self.cell_units(cell, table, styles)
+                        .iter()
+                        .rposition(|unit| unit.para_idx == cp_idx)
+                        .is_some_and(|last| start <= last && last < end)
+                });
+            // 칸의 마지막 문단에는 뒤에 이을 줄이 없다. 중간 조각에도 종료 간격을
+            // 붙이지 않으며 측정·CellUnit과 같은 합성 호스트 결과를 소비한다.
+            if let Some(spacing) = tac_host_closing_spacing
+                .filter(|_| cp_idx + 1 < cell.paragraphs.len() && owns_tac_host_end)
+            {
+                para_y += spacing;
             }
+
             if let Some(bottom) = tac_flow_bottom {
                 para_y = para_y.max(bottom);
             }
@@ -9660,22 +9669,7 @@ impl LayoutEngine {
                 // 커서를 갱신한다. 이때 앞서 계산한 문단 뒤 간격이 표 높이에
                 // 흡수되므로, CellUnit과 같이 표를 모두 그린 뒤 한 번만 더한다.
                 // 분할 조각에서는 마지막 원문 유닛을 소유한 조각에만 적용한다.
-                let owns_paragraph_end = fragment_cut_units.is_none_or(|(start, end)| {
-                    self.cell_units(cell, table, styles)
-                        .iter()
-                        .rposition(|unit| unit.para_idx == cp_idx)
-                        .is_some_and(|last| start <= last && last < end)
-                });
-                if !is_last_para
-                    && self.profile.get().hwp5_stored_pagination_layout()
-                    && crate::renderer::para_has_no_stored_line_segs(para)
-                    && composed.lines.is_empty()
-                    && para.text.trim().is_empty()
-                    && source_controls.iter().all(
-                        |control| matches!(control, Control::Table(t) if t.common.treat_as_char),
-                    )
-                    && owns_paragraph_end
-                {
+                if !is_last_para && owns_tac_host_end {
                     para_y += styles
                         .para_styles
                         .get(para.para_shape_id as usize)
