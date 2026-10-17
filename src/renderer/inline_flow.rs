@@ -12,6 +12,7 @@ mod table_rows;
 pub(crate) use table_rows::{standalone_table_fragment_owner, supports_table_text_rows};
 
 mod stored_host;
+mod stored_square_rows;
 pub(crate) use stored_host::{plan_stored_body_wide_host, plan_stored_empty_square_host};
 
 use crate::model::{control::Control, paragraph::Paragraph, style::Alignment};
@@ -871,44 +872,70 @@ pub(crate) fn plan_square_table_host(
         HorzAlign::Center => ref_left + (ref_width - object_width) / 2.0 + offset,
         HorzAlign::Right | HorzAlign::Outside => ref_left + ref_width - object_width - offset,
     };
-    let outer_top = hwpunit_to_px(signed_hwpunit(c.vertical_offset), dpi);
-    let table_top = outer_top + hwpunit_to_px(i32::from(table.outer_margin_top), dpi);
-    let occupied_bottom = table_top
-        + measured.total_height
-        + hwpunit_to_px(i32::from(table.outer_margin_bottom), dpi);
-    let placement = ParagraphFloatPlacement {
-        flow: ParagraphFloatFlow::Exclusion,
-        anchor_y: 0.0,
-        stored_host_origin: None,
-        stored_successor_line_origin: None,
-        table_left: Some(outer_left + ml),
-        table_top,
-        occupied_bottom,
-    };
+    let box_ = super::composer::ParagraphBox::body_for_style(column_width, Some(style), dpi);
+    let stored_rows = stored_square_rows::source(para, control, table, measured, &box_, dpi);
     let spacing_before =
         if para.line_segs.is_empty() && std::env::var("RHWP_EXP_BODY_FRESH").is_err() {
             0.0
         } else {
             style.spacing_before
         };
-    let exclusion = FrameExclusion {
-        horizontal: px_to_hwpunit(outer_left, dpi)..px_to_hwpunit(outer_left + object_width, dpi),
-        vertical: px_to_hwpunit(outer_top, dpi)..px_to_hwpunit(occupied_bottom, dpi),
-        policy: match c.text_flow {
-            TextFlow::BothSides => FrameExclusionPolicy::BothSides,
-            TextFlow::LargestOnly => FrameExclusionPolicy::LargestSide,
-            TextFlow::LeftOnly => FrameExclusionPolicy::LeftSide,
-            TextFlow::RightOnly => FrameExclusionPolicy::RightSide,
-        },
+    let geometry = |anchor_offset_hwp| {
+        let outer_top = hwpunit_to_px(
+            signed_hwpunit(c.vertical_offset).saturating_add(anchor_offset_hwp),
+            dpi,
+        );
+        let table_top = outer_top + hwpunit_to_px(i32::from(table.outer_margin_top), dpi);
+        let occupied_bottom = table_top
+            + measured.total_height
+            + hwpunit_to_px(i32::from(table.outer_margin_bottom), dpi);
+        let placement = ParagraphFloatPlacement {
+            flow: ParagraphFloatFlow::Exclusion,
+            anchor_y: 0.0,
+            stored_host_origin: None,
+            stored_successor_line_origin: None,
+            table_left: Some(outer_left + ml),
+            table_top,
+            occupied_bottom,
+        };
+        let exclusion = FrameExclusion {
+            horizontal: px_to_hwpunit(outer_left, dpi)
+                ..px_to_hwpunit(outer_left + object_width, dpi),
+            vertical: px_to_hwpunit(outer_top, dpi)..px_to_hwpunit(occupied_bottom, dpi),
+            policy: match c.text_flow {
+                TextFlow::BothSides => FrameExclusionPolicy::BothSides,
+                TextFlow::LargestOnly => FrameExclusionPolicy::LargestSide,
+                TextFlow::LeftOnly => FrameExclusionPolicy::LeftSide,
+                TextFlow::RightOnly => FrameExclusionPolicy::RightSide,
+            },
+        };
+        let mut text_exclusion = exclusion.clone();
+        let spacing_hu = px_to_hwpunit(spacing_before, dpi);
+        text_exclusion.vertical.start -= spacing_hu;
+        text_exclusion.vertical.end -= spacing_hu;
+        (
+            placement,
+            exclusion,
+            box_.frame_with(0, vec![text_exclusion]),
+        )
     };
-    let box_ = super::composer::ParagraphBox::body_for_style(column_width, Some(style), dpi);
-    let mut text_exclusion = exclusion.clone();
-    let spacing_hu = px_to_hwpunit(spacing_before, dpi);
-    text_exclusion.vertical.start -= spacing_hu;
-    text_exclusion.vertical.end -= spacing_hu;
-    let mut frame = box_.frame_with(0, vec![text_exclusion]);
-    let rows = super::composer::layout_paragraph_in_frame(&text, &mut frame, styles, dpi)?;
-    if !uncached
+    let (mut placement, mut exclusion, mut frame) = geometry(
+        stored_rows
+            .as_ref()
+            .map_or(0, |source| source.anchor_offset_hwp),
+    );
+    let projected = stored_rows
+        .as_ref()
+        .and_then(|source| stored_square_rows::project(para, source, &mut frame));
+    let uses_stored_rows = projected.is_some();
+    let rows = if let Some(rows) = projected {
+        rows
+    } else {
+        (placement, exclusion, frame) = geometry(0);
+        super::composer::layout_paragraph_in_frame(&text, &mut frame, styles, dpi)?
+    };
+    if !uses_stored_rows
+        && !uncached
         && rows.len() == para.line_segs.len()
         && rows.iter().zip(&para.line_segs).all(|(row, source)| {
             row.column_start == source.column_start && row.segment_width == source.segment_width
