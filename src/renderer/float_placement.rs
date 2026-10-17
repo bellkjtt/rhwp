@@ -2893,16 +2893,8 @@ pub(crate) fn stored_paragraph_successor_flow(
     // A single TAC shape owns its saved line box. A plain successor can prove
     // that the trailing band is real even when paint collapses the empty text
     // run and subsequently reserves the shape's box separately.
-    let inline_shape_before_text = matches!(para.controls.as_slice(), [Control::Shape(shape)]
-        if shape.common().treat_as_char
-            && matches!(para.line_segs.as_slice(), [line]
-                if i64::from(line.line_height) == i64::from(shape.flow_height_hu())
-                    + i64::from(shape.common().margin.top)
-                    + i64::from(shape.common().margin.bottom)))
-        && para
-            .text
-            .chars()
-            .all(|c| c.is_whitespace() || c <= '\u{001F}' || c == '\u{FFFC}')
+    let inline_shape_before_text = matches!(para.controls.as_slice(), [Control::Shape(_)])
+        && stored_column_spacing::closed_inline_object_line(para)
         && next.controls.is_empty()
         && !next.text.trim().is_empty()
         && next.column_type == crate::model::paragraph::ColumnBreakType::None;
