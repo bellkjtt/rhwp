@@ -1635,6 +1635,7 @@ impl TypesetEngine {
                 // 빼서 시작 행 잔여로 넘기면 이미 소비한 행의 빈 띠를 재생성한다.
                 if split_block_start.is_some()
                     || split_end_limit <= 0.0
+                    || (complete_physical_end_cut && crossing_span_owns_tail)
                     || !layout_engine.row_uses_reflow_physical_frame(table, row)
                 {
                     return None;
@@ -1796,6 +1797,7 @@ impl TypesetEngine {
                 table, end_row.saturating_sub(1),
                 if end_row - 1 == cursor_row { start_cut } else { &[] }, &next_cut, styles,
             ) && !closes_original_body_frame && !complete_source_row_frame && !first_fragment_blank_band && !source_frame_trailing_trim_applied && stored_row_frame.is_none()
+                && !(complete_physical_end_cut && crossing_span_owns_tail)
                 && (!layout_engine.row_uses_reflow_physical_frame(table, end_row.saturating_sub(1))
                     || crossing_span_owns_tail))
             .and_then(|limit| {
@@ -1856,11 +1858,16 @@ impl TypesetEngine {
         } else {
             source_frame_band.max(reserved_straddle_end_band) + unreserved_page_end_band
         };
+        // 완료 일반 행을 다시 열지 않는다. 계속되는 병합 칸의 실제 공간은 공통 행 계획이 예약한다.
+        let has_intra_row_tail = split_end_limit > 0.0
+            && !(complete_physical_end_cut
+                && crossing_span_owns_tail
+                && next_start_row_height_override.is_none());
         continuation.straddle_page_bands =
             crate::renderer::layout::LayoutEngine::straddle_page_bands_after_fragment(
                 row_geometry_table,
                 &accepted_straddle_cells,
-                if split_end_limit > 0.0 {
+                if has_intra_row_tail {
                     end_row.saturating_sub(1)
                 } else {
                     end_row
@@ -1871,7 +1878,7 @@ impl TypesetEngine {
             end_row,
             split_block_start,
             next_source_cut,
-            split_end_limit > 0.0,
+            has_intra_row_tail,
         );
         continuation.start_row_height_override = next_start_row_height_override;
         if let Some(((_, row, cut, height), _)) = stored_rowspan_frame {

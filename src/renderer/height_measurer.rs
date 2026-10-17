@@ -5603,8 +5603,13 @@ pub(crate) fn solve_rowspan_row_heights(
                 (r..r + span).filter(|&i| row_heights[i] == 0.0).collect();
             if unknown_rows.len() == 1 {
                 let remaining = (total_h - known_sum).max(0.0);
-                row_heights[unknown_rows[0]] = remaining;
-                progress = true;
+                if remaining > 0.0 {
+                    row_heights[unknown_rows[0]] = remaining;
+                    progress = true;
+                    // 이 행이 정해지면 앞의 짧은 제약도 미지 행 하나가 될 수
+                    // 있다. 긴 제약으로 다음 행을 채우기 전에 다시 확인한다.
+                    break;
+                }
             }
         }
         if !progress {
