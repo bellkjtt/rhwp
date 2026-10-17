@@ -498,10 +498,23 @@ pub(crate) fn resumes_inside_own_start_row(
     start_cut: &[usize],
     start_cut_is_block: bool,
     start_row_height_override: Option<f64>,
+    straddle_page_bands: &[crate::renderer::pagination::StraddleCellCarry],
 ) -> bool {
+    let accepted_source_start = table
+        .cells
+        .iter()
+        .position(|owner| std::ptr::eq(owner, cell))
+        .and_then(|index| {
+            straddle_page_bands
+                .iter()
+                .find(|carry| carry.cell_index == index)
+        })
+        .and_then(|carry| carry.next_unit)
+        .is_some_and(|unit| unit > 0);
     cell.row_span > 1
         && cell.row as usize == start_row
-        && ((!start_cut_is_block && !start_cut.is_empty())
+        && (accepted_source_start
+            || (!start_cut_is_block && !start_cut.is_empty())
             || (start_row_height_override.is_some()
                 && start_cut.is_empty()
                 && !table
@@ -1221,6 +1234,7 @@ impl LayoutEngine {
                     start_cut,
                     start_cut_is_block,
                     start_row_height_override,
+                    straddle_page_bands,
                 );
             let straddle_end_uncovered =
                 straddles_fragment_end && (!is_block_split || end_cut.is_empty());

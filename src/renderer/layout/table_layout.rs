@@ -24938,6 +24938,7 @@ impl LayoutEngine {
                 start_cut,
                 start_cut_is_block,
                 start_row_height_override,
+                straddle_page_bands,
             );
         let straddles_end = cell_row < end_row
             && (cell_end > end_row || (cell_end == end_row && !end_cut.is_empty()));
@@ -25178,6 +25179,7 @@ impl LayoutEngine {
                     start_cut,
                     start_cut_is_block,
                     start_row_height_override,
+                    straddle_page_bands,
                 );
                 cell.row_span > 1
                     && (cell_row < start_row || resumes_own_row)

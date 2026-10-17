@@ -1225,14 +1225,21 @@ impl TypesetEngine {
         let complete_physical_end_cut = split_block_start.is_none()
             && split_end_limit > 0.0
             && end_row_height_override.is_some()
-            && !split_end_cut.is_empty()
             && end_row > cursor_row
-            && layout_engine.row_cut_consumes_all_ordinary_units(
-                row_geometry_table,
-                end_row - 1,
-                &split_end_cut,
-                styles,
-            );
+            && ((!split_end_cut.is_empty()
+                && layout_engine.row_cut_consumes_all_ordinary_units(
+                    row_geometry_table,
+                    end_row - 1,
+                    &split_end_cut,
+                    styles,
+                ))
+                || (split_end_cut.is_empty()
+                    && layout_engine.row_band_completes_ending_reflow_spans(
+                        row_geometry_table,
+                        end_row - 1,
+                        &accepted_straddle_cells,
+                        styles,
+                    )));
         let complete_source_row_frame = split_block_start.is_none()
             && split_end_cut.is_empty()
             && split_end_limit <= 0.0
