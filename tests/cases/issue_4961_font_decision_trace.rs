@@ -81,8 +81,9 @@ fn assert_stage4_profile(trace: &serde_json::Value, profile: &serde_json::Value)
         expected["metricMatchKind"]
     );
     assert_eq!(
-        record["layoutMetric"]["characterMatch"],
-        expected["metricCharacterMatch"]
+        record["layoutMetric"]["characterMatch"], expected["metricCharacterMatch"],
+        "{}: 전용 폭 표의 문자 hit와 공통 메트릭 DB의 matchKind는 별개다",
+        profile["id"]
     );
     assert_eq!(
         record["layoutMetric"]["widthSource"],
