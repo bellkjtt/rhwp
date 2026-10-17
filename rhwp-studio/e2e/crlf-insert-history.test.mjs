@@ -10,6 +10,7 @@ runTest('CRLF 삽입·되돌리기 보존', async ({ page }) => {
     const bridge = new WasmBridge();
     await bridge.initialize();
     const cases = [];
+    const searches = [];
     try {
       for (const kind of ['body', 'cell', 'nested']) {
         for (const input of ['가\r\n😀\r\n끝', '가\r😀\r끝', '가\n😀\n끝']) {
@@ -72,6 +73,26 @@ runTest('CRLF 삽입·되돌리기 보존', async ({ page }) => {
             invalidation: command.getPageLocalTextEditOptions().insertedText });
         }
       }
+      // #7999도 같은 fresh package의 공개 검색·치환과 저장 경계에서 확인한다.
+      const Document = bridge.borrowDocumentHandle().constructor;
+      for (const [before, query, replacement, sensitive, expected, count] of [
+        ['검토......완료', '...', '…', true, '검토……완료', 2],
+        ['AAAA끝', 'AA', 'Z', true, 'ZZ끝', 2],
+        ['AaAa끝', 'aa', 'Z', false, 'ZZ끝', 2],
+        ['İİİ끝', 'i\u0307i\u0307', 'Z', false, 'Zİ끝', 1],
+      ]) {
+        const doc = Document.createEmpty();
+        try {
+          doc.createBlankDocument();
+          doc.insertText(0, 0, 0, before);
+          const hits = JSON.parse(doc.searchAllText(query, sensitive, true));
+          const replaced = JSON.parse(doc.replaceAll(query, replacement, sensitive));
+          const saved = new Document(doc.exportHwp());
+          try { searches.push({ before, expected, count, hits: hits.length,
+            replaced: replaced.count, reopened: saved.getTextRange(0, 0, 0, 100) }); }
+          finally { saved.free(); }
+        } finally { doc.free(); }
+      }
     } finally { bridge.releaseDocument(); }
 
     // 실제 InputHandler의 operation·history·dirty 경로도 대조한다.
@@ -89,7 +110,7 @@ runTest('CRLF 삽입·되돌리기 보존', async ({ page }) => {
     ui.undone = wasm.getTextRange(0, 0, 0, 100);
     handler.performRedo();
     ui.redone = wasm.getTextRange(0, 0, 0, 100);
-    return { cases, ui };
+    return { cases, searches, ui };
   });
   console.log(JSON.stringify(result));
   for (const row of result.cases) {
@@ -101,6 +122,10 @@ runTest('CRLF 삽입·되돌리기 보존', async ({ page }) => {
     assert(row.caret === 6 && row.redoCaret === 6, `${label}: 정규화된 scalar 커서`);
     assert(row.undone === '앞뒤😀' && row.redone === row.inserted, `${label}: Undo/Redo 보존`);
     assert(row.invalidation === '가\n😀\n끝', `${label}: repaint도 같은 입력 소비`);
+  }
+  for (const row of result.searches) {
+    assert(row.hits === row.count && row.replaced === row.count && row.reopened === row.expected,
+      `${JSON.stringify(row.before)}: 겹치지 않는 검색·치환·저장 보존`);
   }
   assert(result.ui.inserted === '앞가\n😀\n끝뒤😀' && result.ui.caret === 6 && result.ui.canUndo,
     '실제 InputHandler 삽입·캐럿·history 기록');

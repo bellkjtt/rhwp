@@ -15,6 +15,7 @@ registerHooks({ resolve(specifier, context, next) {
 } });
 const { InsertTextCommand } = await import(pathToFileURL(resolve(src, 'engine/command.ts')));
 const { CommandHistory } = await import(pathToFileURL(resolve(src, 'engine/history.ts')));
+const { onInput } = await import(pathToFileURL(resolve(src, 'engine/input-handler-text.ts')));
 
 for (const kind of ['body', 'cell', 'nested']) {
   for (const input of ['가\r\n😀\r\n끝', '가\r😀\r끝', '가\n😀\n끝']) {
@@ -58,6 +59,46 @@ for (const kind of ['body', 'cell', 'nested']) {
       assert.equal(value, '앞가\n😀\n끝뒤😀');
       assert.equal(redone.charOffset, 6);
     }
+  }
+}
+
+// 직접 코어를 호출한 뒤 명령을 기록하는 서브모드도 같은 입력을 사용해야 한다.
+for (const mode of ['header', 'footer', 'footnote']) {
+  for (const input of ['가\r\n😀\r\n끝', '가\r😀\r끝', '가\n😀\n끝']) {
+    let value = '앞뒤😀';
+    let offset = 1;
+    const history = new CommandHistory();
+    const insert = (...args) => {
+      const chars = [...value];
+      chars.splice(args.at(-2), 0, ...args.at(-1));
+      value = chars.join('');
+    };
+    const remove = (...args) => {
+      const chars = [...value];
+      chars.splice(args.at(-2), args.at(-1));
+      value = chars.join('');
+    };
+    const wasm = { snapshotCapacity: () => 100,
+      insertTextInHeaderFooter: insert, insertTextInFootnote: insert,
+      deleteTextInHeaderFooter: remove, deleteTextInFootnote: remove };
+    const cursor = {
+      isInHeaderFooter: () => mode !== 'footnote', isInFootnote: () => mode === 'footnote',
+      headerFooterMode: mode, hfSectionIdx: 0, hfApplyTo: 0, hfPreviewPage: 0, hfParaIdx: 0,
+      fnSectionIdx: 0, fnParaIdx: 0, fnControlIdx: 0, fnFootnoteIndex: 0, fnPageNum: 0, fnInnerParaIdx: 0,
+      get hfCharOffset() { return offset; }, get fnCharOffset() { return offset; },
+      setHfCursorPosition: (_, at) => { offset = at; },
+      setFnCursorPosition: (_, at) => { offset = at; },
+    };
+    const host = { active: true, textarea: { value: input }, cursor, wasm,
+      getNonEmptyHeaderFooterSelection: () => null, afterEdit() {},
+      executeOperation: ({ command }) => history.recordWithoutExecute(command, wasm) };
+    onInput.call(host);
+    assert.equal(value, '앞가\n😀\n끝뒤😀', `${mode}: 입력 경계 정규화`);
+    assert.equal(offset, 6, `${mode}: 정규화된 캐럿`);
+    history.undo(wasm);
+    assert.equal(value, '앞뒤😀');
+    history.redo(wasm);
+    assert.equal(value, '앞가\n😀\n끝뒤😀');
   }
 }
 console.log('CRLF_INSERT_HISTORY_OK');
