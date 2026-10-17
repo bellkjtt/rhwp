@@ -46,6 +46,11 @@ fn try_place_reflowed_table_rows(
     // Fragmented tables and footnote reservation retain their existing owner.
     // A fitting prefix must stay in this column, even if later rows need a cut.
     if plan.end > st.available_height() {
+        // 단독 행 나눔 표도 전체가 들어가면 공백과 같은 물리 줄을 공유한다.
+        // 들어가지 않는 조각은 상태를 바꾸기 전에 기존 분할 소유자에게 돌려준다.
+        if crate::renderer::inline_flow::standalone_table_fragment_owner(para) {
+            return false;
+        }
         if st.current_items.is_empty()
             || plan
                 .rows

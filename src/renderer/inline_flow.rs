@@ -8,6 +8,9 @@ use std::ops::Range;
 mod picture_rows;
 pub(crate) use picture_rows::supports_picture_rows;
 mod separator_spaces;
+mod table_rows;
+pub(crate) use table_rows::{standalone_table_fragment_owner, supports_table_text_rows};
+
 mod stored_host;
 pub(crate) use stored_host::{plan_stored_body_wide_host, plan_stored_empty_square_host};
 
@@ -907,76 +910,4 @@ pub(crate) fn plan_square_table_host(
         next_row_top: end,
         fallback_font_size: 12.0,
     })
-}
-
-/// Reflowed TAC rows also own the text preceding, separating and following
-/// their objects. Stored rows and controls with other owners retain that path.
-pub(crate) fn supports_table_text_rows(para: &Paragraph) -> bool {
-    // Keep a standalone multi-row RowBreak table with its fragment/host owner,
-    // including inputs without a LineSeg. A one-row table has no inter-row
-    // cut: reuse its existing owner only when composition already supplies
-    // the current object row, otherwise build the physical row here.
-    let flow_objects = para
-        .controls
-        .iter()
-        .filter(|control| matches!(control, Control::Table(_)))
-        .count();
-    let has_text = super::composer::expand_pua_display_text(&para.text)
-        .chars()
-        .any(|ch| ch > '\u{001F}' && ch != '\u{FFFC}' && !ch.is_whitespace());
-    let has_standalone_fragment_owner = flow_objects == 1
-        && !has_text
-        && para.controls.iter().any(|control| {
-            matches!(control, Control::Table(table)
-                if table.common.treat_as_char
-                && table.row_count > 1
-                && table.page_break == crate::model::table::TablePageBreak::RowBreak)
-        });
-    let has_composed_object_row = flow_objects == 1
-        && !has_text
-        && para.line_segs.len() == 1
-        && para.line_segs[0].tag & crate::model::paragraph::LineSeg::TAG_IMPLEMENTATION_PROPERTY
-            != 0
-        && para.controls.iter().enumerate().any(|(control, _)| {
-            super::composer::owned_rowbreak_tac_height(para, control).is_some()
-        });
-    super::para_has_no_stored_line_segs(para)
-        && !has_standalone_fragment_owner
-        && !has_composed_object_row
-        && !para.text.contains('\t')
-        && para
-            .controls
-            .iter()
-            .any(|c| matches!(c, Control::Table(t) if t.common.treat_as_char))
-        && para.controls.iter().all(|c| match c {
-            Control::Table(t) => {
-                // Captions and cell notes have their own placement/reservation owner.
-                t.caption.is_none()
-                    && !t.cells.iter().any(|cell| {
-                        cell.paragraphs.iter().any(|p| {
-                            p.controls
-                                .iter()
-                                .any(|c| matches!(c, Control::Footnote(_) | Control::Table(_)))
-                        })
-                    })
-                    && (t.common.treat_as_char
-                        || (matches!(
-                            t.common.text_wrap,
-                            crate::model::shape::TextWrap::InFrontOfText
-                                | crate::model::shape::TextWrap::BehindText
-                        ) && matches!(
-                            t.common.vert_rel_to,
-                            crate::model::shape::VertRelTo::Para
-                        ) && matches!(
-                            t.common.vert_align,
-                            crate::model::shape::VertAlign::Top
-                                | crate::model::shape::VertAlign::Inside
-                        ) && matches!(
-                            t.common.horz_rel_to,
-                            crate::model::shape::HorzRelTo::Column
-                                | crate::model::shape::HorzRelTo::Para
-                        )))
-            }
-            c => super::composer::control_is_width_neutral_marker(c),
-        })
 }
