@@ -3,6 +3,42 @@
 use crate::model::{control::Control, paragraph::Paragraph};
 
 impl super::LayoutEngine {
+    /// 끝 행을 지나기 전에 아직 남은 병합 칸의 실제 최소와 내용 유닛을 보존한다.
+    /// 일반 칸의 완료나 작은 빈 꼬리 흡수는 다른 칸의 이 공간을 없애지 않는다.
+    pub(crate) fn reflow_ending_span_remainder(
+        &self,
+        table: &crate::model::table::Table,
+        end_row: usize,
+        accepted: &[crate::renderer::pagination::StraddleCellCarry],
+        styles: &crate::renderer::style_resolver::ResolvedStyleSet,
+    ) -> Option<f64> {
+        table
+            .cells
+            .iter()
+            .enumerate()
+            .filter(|(_, cell)| {
+                cell.row_span > 1
+                    && usize::from(cell.row) + usize::from(cell.row_span) == end_row
+                    && self.cell_uses_plain_reflow_units(cell, table)
+            })
+            .filter_map(|(index, cell)| {
+                let owner = accepted.iter().find(|owner| owner.cell_index == index)?;
+                let physical = owner.accepted_physical_height?;
+                let units = self.cell_units(cell, table, styles);
+                let end = owner.fragment_cut?.1.min(units.len());
+                let remaining_content =
+                    self.cell_cut_visible_height(cell, table, styles, end, units.len());
+                let minimum = if cell.height < 0x8000_0000 {
+                    super::hwpunit_to_px(cell.height as i32, self.dpi)
+                } else {
+                    0.0
+                };
+                let remaining = (minimum - physical).max(remaining_content);
+                (remaining > 0.5).then_some(remaining)
+            })
+            .reduce(f64::max)
+    }
+
     /// 내용이 끝난 뒤 한 줄도 되지 않는 최소 공간만 남으면 빈 조각을 만들지 않는다.
     /// 줄이 남은 컷에는 적용하지 않으며, 큰 빈 최소는 기존 물리 원장으로 이어진다.
     pub(crate) fn reflow_blank_tail_is_line_sliver(

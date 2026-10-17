@@ -1860,6 +1860,19 @@ impl TypesetEngine {
             // 늘리지 않는다. 다음 스캔이 이 컷에서 실제 수용할 유닛을 선택한다.
             (tail > 0.5 && tail_band_continues).then_some(tail)
         }));
+        // 완료 일반 칸의 잔여와 같은 끝 행에 걸친 병합 칸의 잔여는 별도 소유다.
+        let next_start_row_height_override = match (
+            next_start_row_height_override,
+            layout_engine.reflow_ending_span_remainder(
+                row_geometry_table,
+                end_row,
+                &accepted_straddle_cells,
+                styles,
+            ),
+        ) {
+            (Some(ordinary), Some(spanning)) => Some(ordinary.max(spanning)),
+            (ordinary, spanning) => ordinary.or(spanning),
+        };
         #[cfg(not(target_arch = "wasm32"))]
         if std::env::var_os("RHWP_DIAG_ROW_TAIL").is_some() {
             eprintln!(

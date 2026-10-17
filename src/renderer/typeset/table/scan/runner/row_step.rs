@@ -81,6 +81,8 @@ impl TypesetEngine {
         let scan_start_row = r;
         let consumed_before_row = consumed;
         let reflow_minimum = layout_engine.reflow_row_physical_minimum(table, r, styles);
+        let continuing_reflow_minimum =
+            layout_engine.row_has_continuing_reflow_minimum(table, r, styles);
         let plain_reflow_line_units =
             layout_engine.row_has_plain_reflow_line_units(table, r, styles);
         let physical_minimum_splittable =
@@ -89,8 +91,7 @@ impl TypesetEngine {
         let ordinary_row_can_split = !rowspan_touched[r]
             || (mt.allows_row_break_split() && can_intra_split && row_units_splittable);
         let owns_plain_row_frame = ordinary_row_can_split
-            && (reflow_minimum.is_some()
-                || layout_engine.row_has_continuing_reflow_minimum(table, r, styles))
+            && (reflow_minimum.is_some() || continuing_reflow_minimum)
             && plain_reflow_line_units;
         let avail_for_rows = if owns_plain_row_frame {
             reflow_frame_avail_for_rows.map_or(avail_for_rows, |height| avail_for_rows.min(height))
@@ -713,6 +714,7 @@ impl TypesetEngine {
                     && row_total > rest + 0.5
                     && res.consumed_height + padding <= rest + 0.5
                     && rest > 0.5
+                    && (r == cursor_row || rest >= MIN_TOP_KEEP_PX)
                 {
                     consumed += cs_before + rest;
                     end_row = r + 1;
@@ -1508,7 +1510,11 @@ impl TypesetEngine {
                 let available = (avail_for_rows - consumed_before_row - cs_before).max(0.0);
                 // 일반 칸의 독립 최소 또는 계속되는 병합 칸의 최소가 빈 띠를
                 // 소유한다. 내용이 큰 것만으로 쪽 하단까지 늘리지 않는다.
-                let minimum = reflow_minimum.unwrap_or(available);
+                let minimum = if continuing_reflow_minimum {
+                    available.max(reflow_minimum.unwrap_or(0.0))
+                } else {
+                    reflow_minimum.unwrap_or(available)
+                };
                 let remaining = if scan_start_row == cursor_row {
                     start_row_height_override.unwrap_or(minimum)
                 } else {
@@ -1521,7 +1527,10 @@ impl TypesetEngine {
                 } else {
                     accepted_height
                 };
-                if frame_height > accepted_height {
+                if frame_height > accepted_height
+                    || continuing_reflow_minimum
+                    || reflow_minimum.is_some_and(|minimum| minimum >= accepted_height)
+                {
                     consumed += frame_height - accepted_height;
                     end_row_height_override = Some(frame_height);
                 }
@@ -1573,6 +1582,6 @@ fn ordinary_band_content_fits(
     rest: f64,
 ) -> bool {
     !end_cut.is_empty()
-        && (content_height >= MIN_TOP_KEEP_PX || complete_plain_reflow)
+        && (content_height >= MIN_TOP_KEEP_PX || (complete_plain_reflow && rest >= MIN_TOP_KEEP_PX))
         && aligned_content_bottom <= rest + 0.5
 }
