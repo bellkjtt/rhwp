@@ -27,6 +27,7 @@ mod stored_span_row_owner;
 mod stored_terminal_row_frame;
 mod stored_text_frame_owner;
 mod stored_zero_origin;
+mod tac_host_end;
 pub(super) mod unit_diagnostics;
 mod wrapper_cell_viewport;
 pub(super) use stored_nested_host_flow::StoredNestedHostFlow;
@@ -9488,7 +9489,11 @@ impl LayoutEngine {
             if let Some(spacing) = tac_host_closing_spacing
                 .filter(|_| cp_idx + 1 < cell.paragraphs.len() && owns_tac_host_end)
             {
-                para_y += spacing;
+                para_y = tac_host_end::close(
+                    &cell_node.children[paragraph_children_start..],
+                    para_y,
+                    spacing,
+                );
             }
 
             if let Some(bottom) = tac_flow_bottom {

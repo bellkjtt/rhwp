@@ -46,6 +46,10 @@ pub(in crate::renderer::typeset) fn stored_frame_prefix_consumed_before_page(
     let Some(first) = st.current_items.first() else {
         return false;
     };
+    let complete_tac_source = |para: &Paragraph| {
+        matches!(para.controls.as_slice(), [crate::model::control::Control::Table(table)]
+            if table.common.treat_as_char)
+    };
     let (owner, start) = match first {
         PageItem::FullParagraph { para_index } => (*para_index, 0),
         PageItem::PartialParagraph {
@@ -53,6 +57,10 @@ pub(in crate::renderer::typeset) fn stored_frame_prefix_consumed_before_page(
             start_line,
             ..
         } => (*para_index, *start_line),
+        PageItem::Table {
+            para_index,
+            control_index: 0,
+        } if paragraphs.get(*para_index).is_some_and(complete_tac_source) => (*para_index, 0),
         _ => return false,
     };
     let Some(para) = paragraphs.get(owner) else {
@@ -61,7 +69,8 @@ pub(in crate::renderer::typeset) fn stored_frame_prefix_consumed_before_page(
     let valid_source = |para: &Paragraph| {
         !para.stored_text_partition_is_dirty()
             && !para.cell_format_vpos_dirty
-            && para.controls.is_empty()
+            && (para.controls.is_empty() || complete_tac_source(para))
+            && para.column_type == crate::model::paragraph::ColumnBreakType::None
             && !para.line_segs.is_empty()
             && para
                 .line_segs
@@ -108,19 +117,29 @@ pub(in crate::renderer::typeset) fn stored_frame_prefix_consumed_before_page(
             end_line,
             ..
         } => *para_index == before_index && *end_line == before.line_segs.len(),
+        PageItem::Table {
+            para_index,
+            control_index: 0,
+        } => *para_index == before_index && complete_tac_source(before),
         _ => false,
     };
     let last = before.line_segs.len() - 1;
-    complete
-        && (1..=last).any(|line| {
-            position(before, line) == 0
-                && position(before, line - 1) > 0
-                && !before.line_segs[line].is_first_line_of_page()
-        })
+    // 실제 쪽이 같은 저장 프레임의 중간에서 시작하면 다음 자동 reset은
+    // 이미 소비한 prefix를 다시 쪽 나눌 근거가 아니다.
+    // 완전한 TAC 표도 저장 줄 소유자이므로 텍스트 항목과 함께 확인한다.
+    let continued_source_frame = position(before, 0) > 0
         && position(para, 0)
-            == position(before, last)
-                .saturating_add(before.line_segs[last].line_height)
-                .saturating_add(before.line_segs[last].line_spacing)
+            >= position(before, last).saturating_add(before.line_segs[last].line_height);
+    complete
+        && (continued_source_frame
+            || ((1..=last).any(|line| {
+                position(before, line) == 0
+                    && position(before, line - 1) > 0
+                    && !before.line_segs[line].is_first_line_of_page()
+            }) && position(para, 0)
+                == position(before, last)
+                    .saturating_add(before.line_segs[last].line_height)
+                    .saturating_add(before.line_segs[last].line_spacing)))
 }
 
 /// 위쪽에서 시작한 큰 개체 줄도 끝까지 소비했다면 다음 저장 프레임의 경계를 따른다.
