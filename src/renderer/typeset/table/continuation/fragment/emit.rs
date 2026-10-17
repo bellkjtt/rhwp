@@ -1633,12 +1633,8 @@ impl TypesetEngine {
                 let row = end_row.checked_sub(1)?;
                 // 블록 컷은 여러 행의 셀 슬롯이다. 마지막 일반 행의 최소와
                 // 빼서 시작 행 잔여로 넘기면 이미 소비한 행의 빈 띠를 재생성한다.
-                // 끝 컷의 일반 내용이 모두 소비되면 걸침 칸의 잔여는
-                // 그 칸의 독립 장부가 소유한다. 완료 행의 최소 높이 차이로
-                // 다음 쪽에 같은 일반 행을 다시 만들지 않는다.
                 if split_block_start.is_some()
                     || split_end_limit <= 0.0
-                    || (complete_physical_end_cut && crossing_span_owns_tail)
                     || !layout_engine.row_uses_reflow_physical_frame(table, row)
                 {
                     return None;
@@ -1800,7 +1796,6 @@ impl TypesetEngine {
                 table, end_row.saturating_sub(1),
                 if end_row - 1 == cursor_row { start_cut } else { &[] }, &next_cut, styles,
             ) && !closes_original_body_frame && !complete_source_row_frame && !first_fragment_blank_band && !source_frame_trailing_trim_applied && stored_row_frame.is_none()
-                && !(complete_physical_end_cut && crossing_span_owns_tail)
                 && (!layout_engine.row_uses_reflow_physical_frame(table, end_row.saturating_sub(1))
                     || crossing_span_owns_tail))
             .and_then(|limit| {
@@ -1861,18 +1856,11 @@ impl TypesetEngine {
         } else {
             source_frame_band.max(reserved_straddle_end_band) + unreserved_page_end_band
         };
-        // 일반 셀의 내용을 모두 소비했고 별도로 인증된 행 상자도 남지
-        // 않았다면 다음 원본 행에서 재개한다. 걸침 셀의 유닛과 수용 공간은
-        // 위의 독립 장부가 보존하므로 완료 행을 빈 조각으로 다시 열지 않는다.
-        let has_intra_row_tail = split_end_limit > 0.0
-            && !(complete_physical_end_cut
-                && crossing_span_owns_tail
-                && next_start_row_height_override.is_none());
         continuation.straddle_page_bands =
             crate::renderer::layout::LayoutEngine::straddle_page_bands_after_fragment(
                 row_geometry_table,
                 &accepted_straddle_cells,
-                if has_intra_row_tail {
+                if split_end_limit > 0.0 {
                     end_row.saturating_sub(1)
                 } else {
                     end_row
@@ -1883,7 +1871,7 @@ impl TypesetEngine {
             end_row,
             split_block_start,
             next_source_cut,
-            has_intra_row_tail,
+            split_end_limit > 0.0,
         );
         continuation.start_row_height_override = next_start_row_height_override;
         if let Some(((_, row, cut, height), _)) = stored_rowspan_frame {

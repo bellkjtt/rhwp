@@ -5476,6 +5476,14 @@ impl LayoutEngine {
                 let required_height = line_req.max(object_req);
                 let combined: f64 = (r..r + span).map(|i| row_heights[i]).sum::<f64>()
                     + hwpunit_to_px(1, self.dpi) * table.inner_cell_spacing_hu(span) as f64;
+                #[cfg(not(target_arch = "wasm32"))]
+                if std::env::var_os("RHWP_DIAG_ROWH").is_some() {
+                    eprintln!(
+                        "DIAG_SPANH layout id={} r={r} c={} span={span} declared={:.6} lines={line_based:.6} objects={object_based:.6} required={required_height:.6} combined={combined:.6}",
+                        table.common.instance_id, cell.col,
+                        hwpunit_to_px(cell.height as i32, self.dpi)
+                    );
+                }
                 if required_height > combined {
                     let deficit = required_height - combined;
                     row_heights[r + span - 1] += deficit;
