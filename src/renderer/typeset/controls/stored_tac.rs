@@ -42,6 +42,8 @@ pub(in crate::renderer::typeset) struct StoredTacPage {
     pub vpos_lazy_base: Option<i32>,
     /// 실제 수용한 직전 문단의 소유·끝 줄과 뒤 간격을 제외한 내용 하단.
     pub previous_content_bottom: Option<(usize, usize, f64)>,
+    /// 바로 이전 실제 쪽의 마지막 원문 소유 문단과 소비한 끝 줄.
+    pub previous_page_tail: Option<(usize, usize)>,
     pub side_wrap_empty: bool,
     pub stored_table_column_base: Option<i32>,
     /// 원본 단 첫 글줄과 물리 앵커가 함께 인증한 영점 축.
@@ -454,6 +456,7 @@ pub(super) fn prepare(
     previous_spacing_after: f64,
     next_para: Option<&Paragraph>,
     next_spacing_before: f64,
+    explicit_page_break_before: bool,
     available_height: impl Fn() -> f64,
     dpi: f64,
 ) -> Option<StoredTacPlan> {
@@ -617,7 +620,42 @@ pub(super) fn prepare(
                                         ))
                         })
                 });
-            if restarted_column_line {
+            let continued_column_line = single_saved_line
+                && !explicit_page_break_before
+                && page.empty_column
+                && page.current_height == 0.0
+                && page.vpos_col_anchor == 0.0
+                && para.column_type == crate::model::paragraph::ColumnBreakType::None
+                && !para.line_segs[0].is_first_line_of_page()
+                && previous_para.is_some_and(|previous| {
+                    if previous.stored_text_partition_is_dirty()
+                        || previous.cell_format_vpos_dirty
+                        || !page.previous_page_tail.is_some_and(|(owner, end)| {
+                            owner.checked_add(1) == Some(para_idx)
+                                && end == previous.line_segs.len()
+                        })
+                    {
+                        return false;
+                    }
+                    previous.line_segs.last().is_some_and(|last| {
+                        !crate::renderer::typeset::is_synthetic_line_seg(last)
+                            && last.vertical_pos > 0
+                            && last.line_height > 0
+                            && last.line_spacing >= 0
+                            && last
+                                .vertical_pos
+                                .checked_add(last.line_height)
+                                .and_then(|end| end.checked_add(last.line_spacing))
+                                .and_then(|end| {
+                                    end.checked_add(crate::renderer::px_to_hwpunit(
+                                        previous_spacing_after + fmt.spacing_before,
+                                        dpi,
+                                    ))
+                                })
+                                == Some(para.line_segs[0].vertical_pos)
+                    })
+                });
+            if restarted_column_line || continued_column_line {
                 // 원본에 남은 옛 host vpos는 새 쪽 개체의 출력 원점이 아니다.
                 // 뒤 저장 줄이 새 개체 줄의 전체 전진과 일치하는 0축을 소유한다.
                 saved_origin = flow_origin;

@@ -578,6 +578,10 @@ pub(super) fn try_place_stored_tac_paragraph(
             .get(para_idx + 1)
             .and_then(|next| styles.para_styles.get(next.para_shape_id as usize))
             .map_or(0.0, |shape| shape.spacing_before),
+        styles
+            .para_styles
+            .get(para.para_shape_id as usize)
+            .is_some_and(|style| style.page_break_before),
         || st.available_height(),
         dpi,
     ) else {

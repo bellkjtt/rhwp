@@ -120,6 +120,26 @@ impl TypesetState {
             vpos_lazy_base: self.data.vpos_lazy_base,
             side_wrap_empty: self.data.side_wrap_exclusions.is_empty(),
             previous_content_bottom: self.previous_text_content_bottom(paragraphs),
+            previous_page_tail: (self.data.col_count == 1 && self.data.current_items.is_empty())
+                .then(|| {
+                    let page = self.data.pages.iter().rev().nth(1)?;
+                    if page.section_index != self.data.section_index {
+                        return None;
+                    }
+                    let item = page.column_contents.last()?.items.last()?;
+                    let (owner, end) = match item {
+                        PageItem::FullParagraph { para_index }
+                        | PageItem::Table { para_index, .. } => (
+                            *para_index,
+                            paragraphs.get(*para_index)?.line_segs.len(),
+                        ),
+                        PageItem::PartialParagraph { para_index, end_line, .. } =>
+                            (*para_index, *end_line),
+                        _ => return None,
+                    };
+                    Some((owner, end))
+                })
+                .flatten(),
             stored_zero_column_origin: !self.data.current_endnote_flow
                 && !self.data.vpos_ladder_dirty
                 && self.data.current_start_height == 0.0
