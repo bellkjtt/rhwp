@@ -72,8 +72,8 @@ pub(super) fn can_rejoin_stored_word_tail(
     project_stored_soft_wraps(para, frame, styles, dpi, supported_inline_picture).is_some()
 }
 
-/// 같은 frame에서 자동 줄을 다시 구성한다. 어절 조각은 캐시 유효성의 근거가 아니다.
-/// 호출자는 본문 후속 축까지 함께 발행하거나 기존 지역 어절 계약을 입증한다.
+/// 같은 frame에서 자동 줄을 다시 구성한다. 줄 수 감소는 캐시 무효화 근거가 아니다.
+/// 호출자는 현재 마커 기하·공백 메트릭 등 갱신 이유와 후속 축 소유를 먼저 확인한다.
 pub(crate) fn project_stored_soft_wraps(
     para: &Paragraph,
     frame: &LayoutFrame,
@@ -121,8 +121,8 @@ pub(crate) fn project_stored_soft_wraps(
         return None;
     }
     let mut probe = frame.clone();
-    let mut input = para.clone();
-    input.line_segs.clear();
-    let rows = line_breaking::layout_paragraph_in_frame(&input, &mut probe, styles, dpi)?;
+    // 채움은 새 줄을 만들지만 원본의 줄별 들여쓰기 기록도 소비한다. 저장 줄을
+    // 비워 입력의 근거까지 없애면 명시적으로 꺼진 들여쓰기가 다시 적용된다.
+    let rows = line_breaking::layout_paragraph_in_frame(para, &mut probe, styles, dpi)?;
     (rows.len() < para.line_segs.len()).then(|| (rows, probe.project_space_metrics()))
 }

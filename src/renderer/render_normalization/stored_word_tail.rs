@@ -92,7 +92,13 @@ pub(crate) fn normalize(
                         && line.column_start == extent.start
                         && line.segment_width == extent.end - extent.start
                 });
-            if source_matches {
+            // 현재 측정으로 더 적은 줄에 들어간다는 사실만으로 정상 저장 줄을
+            // 무효화하지 않는다. 원문 문자에 없는 목록 마커는 문서 순서에서
+            // 해소한 실제 기하를 갱신해야 하며, 같은 결과가 채움·높이에 참여한다.
+            let refreshes_marker_metrics =
+                crate::renderer::layout::list_marker_geometry(&paragraph, styles)
+                    .is_some_and(|marker| marker.marker_visible);
+            if source_matches && refreshes_marker_metrics {
                 let first = paragraph.line_segs[0].vertical_pos;
                 let frame = box_.frame(first);
                 if let Some((lines, spaces)) =
