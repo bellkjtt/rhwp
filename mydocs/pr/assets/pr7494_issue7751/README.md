@@ -1,6 +1,6 @@
-# PR #7494·#7751 최종 Native/fresh WASM 시각 증거
+# PR #7494·#7751 14단계 Native/fresh WASM 시각 증거
 
-실제 렌더링 소스는 `2afc3bf8b` 위에 적용한13단계 공통 색조·지연 로딩 보정이다. compat2024, Print,96dpi. 입력·기준 PDF는12단계와 같다. 모든 그림은 해당 소스로 새 출력한 Native Skia PNG 또는 fresh WASM Canvas PNG다. SVG 래스터가 아니다.
+최종 실제 렌더링 소스는 `465fd10fded3bec623d3b884461b3aa6bba9e227`다. 새 devel `b7a538803`의 기본 PDF feature를 포함해 Native와 fresh WASM을 모두 새로 빌드했다. compat2024, Print,96dpi. 입력·기준 PDF는12단계와 같다. Native/fresh WASM 대표 review·overlay는 해당 소스로 새 출력한 Skia PNG·Canvas PNG이며 SVG 래스터가 아니다. Direct PDF3쪽은 별도 실제 PDF를 래스터화했고, DOM 전후 비교의 출처는 아래에 구분한다.
 
 원본: `samples/2025 행정업무운영 편람(최종).hwp`, SHA-256 `40d6d05eac4d55bdc4b0c62c42d93af104d5123b447581246f36fd15de7bd46f`.
 
@@ -8,7 +8,11 @@
 
 전383쪽 raw 최저는 Native93.07066%,fresh WASM92.98362%다. 90% 미만·누락·고정 devel 대비0.01%p 이상 하락은 양쪽 모두0쪽이다. 평균이나 색상 경계 보정 후 진단값으로 판정하지 않았다.
 
-검증 기준 devel은 `fe5725dc384689b45d60ef8ea4c83138bc2701d8`이다. 기준 산출물의 실제 생산 SHA는 `552514f423ec91f1b7171f6e6b0882a4efe034f2`이며, 두 SHA 사이 renderer/paint/parser/model/document_core 소스가 같음을 확인했다. 실제로 실행하지 않은 SHA로 기준 산출물의 출처를 바꾸지 않았다.
+검증 기준 devel은 `b7a5388034ee66f58a7e1d5363974e83b6374f57`이다. 기준 산출물의 실제 생산 SHA는 `552514f423ec91f1b7171f6e6b0882a4efe034f2`이며, 두 SHA 사이 renderer/paint/model/document_core/serializer와 HWP parser 소스가 같음을 확인했다. PDF parser·PDF API와 기본 feature의 차이는 구분했다. 실제로 실행하지 않은 SHA로 기준 산출물의 출처를 바꾸지 않았다.
+
+## 직접 판독의 재검토 결과
+
+289쪽을 추가 확대 판독해 묶음 화살표의 가로 원점이 독립 Print보다 약26.3px 왼쪽인 것을 확인했다. 묶이지 않은 선은 정상 위치다. 고정 devel에도 같은 가로 차이가 있지만, 현재 #7751 보정 대상 문서이므로 이관하거나 점수로 면제하지 않는다. **raw99.6%와 전체 테스트 통과만으로 PR 준비 완료로 판정하지 않으며 그룹 원점을 보정한 뒤 재검증한다.**
 
 ## 대표 페이지 raw와 PNG
 
@@ -20,6 +24,7 @@
 | 224 | 99.77352 | 99.75272 | [PNG](native_review_224.png) | [PNG](wasm_review_224.png) |
 | 226 | 99.79541 | 99.81998 | [PNG](native_review_226.png) | [PNG](wasm_review_226.png) |
 | 241 | 98.23048 | 98.27806 | [PNG](native_review_241.png) | [PNG](wasm_review_241.png) |
+| 289 | 99.59859 | 99.57324 | [PNG](native_review_289.png) | [PNG](wasm_review_289.png) |
 | 290 | 99.45606 | 99.44102 | [PNG](native_review_290.png) | [PNG](wasm_review_290.png) |
 | 297 | 99.23751 | 99.24374 | [PNG](native_review_297.png) | [PNG](wasm_review_297.png) |
 | 375 | 99.37858 | 99.42850 | [PNG](native_review_375.png) | [PNG](wasm_review_375.png) |
@@ -57,27 +62,29 @@ Native383쪽의raw는12단계와모두같다. WASM은101/103/290/304쪽의이미
 최대0.00029%p의미세차이가있고render tree는같았다.90%미만이나devel대비0.01%p
 이상하락은없었다. 새source의PNG로위대표review·overlay를다시생성했다.
 
-직접PDF3쪽PNG는12단계실제출력증거이며새source전체직접PDF지원의대용이아니다.
-13단계일반그림색조5개는실제직접PDF로변환해독립Print와모두raw100%였다.
+직접 PDF3쪽 PNG와 일반 그림 색조5개도14단계 실제 제품으로 새로 변환·비교했다. 모두 raw100%였다. 전383쪽 Direct PDF 지원을 뜻하지 않는다.
+
+전383쪽 Native와 WASM의 새 PNG·render tree는 각각13단계 생산본과 모두 byte-identical이었다.
+최신 실제 DOM/Canvas 브라우저8건도 다시 통과했다. DOM 색조의 이전/Print/보정 비교 PNG는
+13단계 실제 screenshot 증거이며,14단계의550개 DOM 픽셀 관측과 같은 결과임을 확인했다.
 
 ## 실제 빌드의 소스 지문
 
-`stage13-native-provenance.json`·`stage13-fresh-wasm-provenance.json`의지문이며,
-Native binary7a454c9c255bdc861e0fc226dd8fa12dff1f909d9aff4b3f51d7eb32ae34a628,
-fresh WASM9e5951b793647689466c72a0aa369e56dbc63ed174e59e171fcce1a838e4228c이다.
+실제 source `465fd10fded3bec623d3b884461b3aa6bba9e227`, 기본 devel `b7a5388034ee66f58a7e1d5363974e83b6374f57`.
+`stage14-native-provenance.json`·`stage14-fresh-wasm-provenance.json`에 명령·환경·종료코드·출처를 보존했다.
+공용 `target/pr-review`·jobs8·WASM codegen16/no-opt host 경로다.
 
-| 제품 파일 | SHA-256 |
-| --- | --- |
-| src/paint/resources.rs | `d7f17b183b20b7cb72e07d4e280b9eacdc3f461fe692ce9b564c21db58f807ad` |
-| src/renderer/image_resolver.rs | `b3fb38ddd21d6b421be07778cce9b9b25c6c54ddd1bae2c94e6e19591ba68d7d` |
-| src/renderer/image_resolver/picture_adjustments.rs | `126e725845df1af6cd68c959dff3ec65a12a2c14ae7cfdb9bcc759a5248064e1` |
+- Native binary SHA-256: `6f3a4fb6d556b4d3e51fb4e85b7c43c4488e9e14474dd187b80853d5b5aa4662`.
+- fresh WASM SHA-256: `fb816b2b654458cec0b5a6a7ecdc20b9be5ed64eed04e169c6f8628507790ad6`.
+- 전체 TSV·내용/소유 감사·브라우저·Direct PDF 증거는 ignored 실행 폴더에 보존하고,
+  merge 후 핵심 증거는 `/home/tsjang/rhwp-review-evidence/pr7494-20261016/`에 이관한다.
 
 ## PNG SHA-256
 
 | 파일 | SHA-256 |
 | --- | --- |
-| direct_pdf_overlay_003.png | `17ca4dd08928253454d2c77a7ea74048795c08de117e37e9d2cb3af7755622ad` |
-| direct_pdf_review_003.png | `cd98d9ee315b03582a782a2677523ca60cefb3a43bbd19c488b70798038635b6` |
+| direct_pdf_overlay_003.png | `734ee88c16a6bbb7cc48e7aeb93bfa3706c394c8bad114b28c761cdbacd1c7f0` |
+| direct_pdf_review_003.png | `7fe8677c20e068c6db85ad773cc14a1731235f2574e1f5d5fb96a7e0b749b97e` |
 | dom_color_review.png | `e32b21aebb8fa57f3ddaf51fcfd7b6225419d6e325fd765fc8aadc03759d1361` |
 | native_overlay_130.png | `44bb001b395fc8fe4288bedf9f0033158caa4c851c033e59403de31c1ed6bf66` |
 | native_overlay_375.png | `1406e515da28a0ad0348ba3be976376dac52fa7428fe6fe0cc85ca2b7136700a` |
@@ -87,6 +94,7 @@ fresh WASM9e5951b793647689466c72a0aa369e56dbc63ed174e59e171fcce1a838e4228c이다
 | native_review_224.png | `e20dbe004e8d3d75086af1df735040be77c8c35c5db0894ade7d441aeb7526b6` |
 | native_review_226.png | `d8fff850e80708f6d09ff0916f74da33b33a9fe75bf88023408c7f342c410cca` |
 | native_review_241.png | `4a26e9f0013d48ea24275856983fbed3a5429bf3528531a057e0aa2e33963995` |
+| native_review_289.png | `eae4e9026078abe91d108cd06073aac35828cd553addab2ec59b22396132d0dc` |
 | native_review_290.png | `e2f8c451cbd406bbaeaa2e8fa4608a5cc36c4065b9131e731cfb8eb2a3a9691c` |
 | native_review_297.png | `ca49bf2fcbdf8cccd00d7afc6716ddeb5e20ac417b6a76c9e5a3ff85cdd02a43` |
 | native_review_375.png | `47e4651e94ae87669251171ac171be1c7f48071f46b217b3ca22e7b415b92e01` |
@@ -99,6 +107,7 @@ fresh WASM9e5951b793647689466c72a0aa369e56dbc63ed174e59e171fcce1a838e4228c이다
 | wasm_review_224.png | `6395aafe8e94f324cf52bbe08fed69b90549c11d9b41e7a92680d89d4e02dd22` |
 | wasm_review_226.png | `bc6461db1b946995d69eaa4e927f29022e76b005bdcaf6a35130882bca88a7ed` |
 | wasm_review_241.png | `a389343daed190d4f66d2b13f92ebe2b7a1fa162c9b324e7e186ed49058763d8` |
+| wasm_review_289.png | `40c846eaac4c53543191f71f29463d0f95d0878e4047eebae0a620c28827fe8f` |
 | wasm_review_290.png | `a50254b654484ba1362d4393f95595c3cc6133cdc03264e701de692646bab36b` |
 | wasm_review_297.png | `e1bc2fdfefe2b4d2be1552aa01b6772c15e235a22d1bfa1abff51fa973a97bb8` |
 | wasm_review_375.png | `c66b4e5541911850d1e2baf51f63940c5e224f6fdb4ce69772e118be5c966432` |

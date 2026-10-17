@@ -449,8 +449,9 @@ Native 선행 진단과 최종 fresh WASM 출력은 구분하고, 보정 코드�
 
 공통 조판·paint·font/resource 또는 실제 출력 소비 경로를 바꾸면
 [출력 백엔드 소비 경로 검증](../verification/renderer_backend_verification.md)에 따라 영향받는
-Canvas·SVG·Native PNG 등의 실제 산출물과 정상 대조군을 추가로 확인한다. Native/fresh WASM
-Visual Sweep의 PNG는 SVG raster이므로 Studio Canvas나 Native Skia PNG 검증을 대신하지 않는다.
+Canvas·SVG·Native PNG 등의 실제 산출물과 정상 대조군을 추가로 확인한다. 기본 PNG 경로의
+Visual Sweep은 Native Skia와 fresh WASM Canvas에서 직접 출력한다. 별도로 선택한 SVG 진단
+경로의 래스터 PNG는 Canvas·Native Skia의 실제 소비 경로 검증을 대신하지 않는다.
 공통 함수 이후 context·font 선택·합성 경로도 추적하며, 모든 backend 전수 검증 대신 변경한 값의
 실제 소비 경로로 범위를 정한다. 기존 renderer baseline의 report-only 결과와 필수 게이트를 구분한다.
 
