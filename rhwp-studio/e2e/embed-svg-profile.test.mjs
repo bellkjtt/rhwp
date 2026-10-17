@@ -17,6 +17,7 @@ runTest('SDK SVG 인쇄 profile', async ({ page }) => {
     try {
       const bytes = await fetch('/samples/field-01.hwp').then(r => r.arrayBuffer());
       await editor.loadFile(bytes, 'field-01.hwp');
+      const pageCount = await editor.pageCount();
       const win = editor.element.contentWindow;
       const numberPositions = [];
       const visit = (node) => {
@@ -40,8 +41,8 @@ runTest('SDK SVG 인쇄 profile', async ({ page }) => {
       let invalid = false;
       try { await editor.getPageSvg(1, { profile: 'invalid-profile' }); } catch { invalid = true; }
       return {
-        evidence: collect ? await Promise.all([0, 1, 2].map(index => editor.getPageSvg(index, { profile: 'print' }))) : null,
-        legacyEqual: omitted === legacy, profiles, invalid, numberPositions,
+        evidence: collect ? await Promise.all(Array.from({ length: pageCount }, (_, index) => editor.getPageSvg(index, { profile: 'print' }))) : null,
+        legacyEqual: omitted === legacy, profiles, invalid, numberPositions, pageCount,
         valuesUnchanged: before === JSON.stringify(win.__wasm.getFieldList()),
         undoUnchanged: undoBefore === win.rhwpStudio.automation.getContext().canUndo,
       };
@@ -56,6 +57,7 @@ runTest('SDK SVG 인쇄 profile', async ({ page }) => {
     delete result.evidence;
   }
   console.log(JSON.stringify(result));
+  assert(result.pageCount === 3, 'TC9: SDK 문서 전체 쪽수도 독립 Print와 일치');
   assert(result.numberPositions.map(p => p.text).join(',') === '01,02,03,04,05'
       && result.numberPositions.every(p => Math.abs(p.x - 86.673024) <= 2)
       && result.numberPositions.every((p, index, items) => index === 0 || items[index - 1].y < p.y),
