@@ -244,6 +244,40 @@ runTest('편집 undo 계약 실동작 (Task #2301)', async ({ page }) => {
   assert(await hitCount(page, 'gamma') === 0, 'undo 후 gamma 0건');
   await screenshot(page, 'undo-01-find-replace');
 
+  // #7984: 소문자 확장 양방향과 ASCII 대조군에서 원문 뒤 글자를 보존한다.
+  for (const [text, query] of [['İX', 'i\u0307'], ['i\u0307X', 'İ'], ['aX', 'A']]) {
+    setTestCase(`#7984 모두 바꾸기와 undo/redo: ${JSON.stringify({ text, query })}`);
+    await createNewDocument(page);
+    await clickEditArea(page);
+    await typeText(page, text);
+    await page.keyboard.down('Control');
+    await page.keyboard.press('F2');
+    await page.keyboard.up('Control');
+    await page.waitForSelector('.find-dialog', { visible: true });
+    await page.evaluate((query) => {
+      const inputs = [...document.querySelectorAll('.find-dialog-input')];
+      inputs[0].value = query;
+      inputs[1].value = 'Z';
+      document.querySelector('#find-case-sensitive').checked = false;
+      const button = [...document.querySelectorAll('.find-dialog button, .dialog-btn')]
+        .find(b => b.offsetParent !== null && b.textContent.trim() === '모두 바꾸기');
+      if (!button) throw new Error('모두 바꾸기 버튼을 찾지 못함');
+      button.click();
+    }, query);
+    const read = () => page.evaluate(() => window.__wasm.getTextRange(0, 0, 0, 99));
+    assert(await read() === 'ZX', `치환 후 원문 X 보존: ${JSON.stringify({ text, query, actual: await read() })}`);
+    assert(await undoDepth(page) > 0, '#7984 치환은 history에 기록된다');
+    await page.keyboard.press('Escape');
+    await pressUndo(page);
+    assert(await read() === text, '#7984 undo는 원문을 복원한다');
+    await page.keyboard.down('Control');
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('KeyZ');
+    await page.keyboard.up('Shift');
+    await page.keyboard.up('Control');
+    assert(await read() === 'ZX', '#7984 redo도 원문 X를 보존한다');
+  }
+
   // ── 케이스 2: 그림 속성 다이얼로그 undo (#2027) ─────────
   setTestCase('picture-props: 쪽 영역 제한 토글 → performUndo 복원(개체 모드 키 차단 우회)');
   await clearSelections(page);
