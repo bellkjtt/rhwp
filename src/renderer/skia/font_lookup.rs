@@ -279,12 +279,9 @@ pub(super) fn match_system_family_style(
         let matched = if has_system_family(system_families, family) {
             font_mgr.match_family_style(family, style)
         } else {
-            // PDF가 요청한 name ID 6을 실제 프로그램으로 확인한다. OS가
-            // 다른 family를 폴백으로 돌려주면 그 결과를 수용하지 않는다.
-            font_mgr
-                .match_family_style(family, style)
-                .filter(|face| face.post_script_name().as_deref() == Some(family))
-                .or_else(|| system_families.postscript_face(font_mgr, family))
+            // 설치된 style set의 name ID 6만 조회한다. 없는 이름을 OS에
+            // 질의하면 headless CoreText의 다운로드 IPC를 유발할 수 있다.
+            system_families.postscript_face(font_mgr, family)
         };
         cache.borrow_mut().insert(key, matched.clone());
         matched

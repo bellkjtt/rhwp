@@ -751,6 +751,8 @@ pub(crate) fn assign_numbering_markers(
 /// (`numbering_marker_text_style`, 첫 run)과 같은 입력 — 첫 글자의 글자 모양과 언어 — 이다.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ListMarkerGeometry {
+    /// 실제 마커를 그리는 같은 글자 모양의 크기. 첫 물리 줄 높이에 참여한다.
+    pub font_size_px: f64,
     /// 첫 줄 시작에 더하는 양.
     pub first_line_px: f64,
     /// 이어지는 줄 시작에 더하는 양.
@@ -878,6 +880,7 @@ fn list_marker_geometry_for(
         _ => 0.0,
     };
     ListMarkerGeometry {
+        font_size_px: style.effective_font_size(),
         first_line_px,
         rest_line_px,
         marker_dx_px: align_dx - area_px,

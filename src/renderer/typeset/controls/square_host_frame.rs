@@ -77,11 +77,23 @@ pub(super) fn stored_host_origin(
             let rows = plan.text_rows.as_ref()?;
             if rows.len() != para.line_segs.len()
                 || rows.iter().zip(&para.line_segs).any(|(row, source)| {
-                    row.text_start != source.text_start
-                        || row.line_height != source.line_height
-                        || row.line_spacing != source.line_spacing
+                    row.text_start != source.text_start || row.line_height != source.line_height
                 })
             {
+                return None;
+            }
+            // 같은 문자 소속의 fresh 피치는 저장 간격과 반올림이 다를 수 있다.
+            // 숫자 일치 대신 실제 행 점유가 다음 저장 원점 안에 드는지 확인한다.
+            // 줄 수·높이 변경이나 실제 겹침은 저장 축을 재사용할 근거가 아니다.
+            let next = paragraphs.get(owner + 1)?.line_segs.first()?;
+            let source_advance = next
+                .vertical_pos
+                .checked_sub(para.line_segs.first()?.vertical_pos)?;
+            let start = rows.first()?.vertical_pos;
+            if rows.iter().any(|row| {
+                i64::from(row.vertical_pos) - i64::from(start) + i64::from(row.line_height)
+                    > i64::from(source_advance)
+            }) {
                 return None;
             }
         } else {

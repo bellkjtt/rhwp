@@ -3519,6 +3519,9 @@ fn layout_paragraph_in_frame_impl(
     };
     // 저장 기록이 끄는 것은 문단 들여쓰기뿐이다. 마커의 첫/후속 줄 차이는 유지한다.
     let (marker_hang_px, indent_px) = list_marker_breaker_box(para, styles, indent_px);
+    let marker_font_size = crate::renderer::layout::list_marker_geometry(para, styles)
+        .filter(|geometry| geometry.marker_visible)
+        .map_or(0.0, |geometry| geometry.font_size_px);
     let tab_fill = TabFill::for_paragraph(
         para_style,
         indent_px,
@@ -3729,7 +3732,12 @@ fn layout_paragraph_in_frame_impl(
                 attempted_trials.push(trial);
 
                 let mut segments = Vec::with_capacity(intervals.len());
-                let mut maximum_font_size = 0.0f64;
+                // 번호·글머리표도 첫 물리 줄의 글자다. 뒤 줄에는 참여하지 않는다.
+                let mut maximum_font_size = if start_char == 0 && frame.row_count() == first_row {
+                    marker_font_size
+                } else {
+                    0.0
+                };
                 let mut inline_metrics = (frame.row_count() == first_row)
                     .then_some(terminal_inline_metrics)
                     .flatten();

@@ -105,18 +105,10 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
             .unwrap_or(0),
     );
     frame.kopub_justified_space = justified_kopub_picture;
-    // 같은 메트릭의 정상 본문은 줄 수 감소만으로 stale가 아니다. 다만 이 프레임이
-    // 저장 run과 다른 공백 전진으로 채우는 경우에는 이전 줄 분할을 그대로 재사용할
-    // 수 없다. 그림 존재나 글꼴 이름만으로 판단하지 않고 실제 공백 전진을 대조한다.
-    let regenerated_spaces_change_metrics = frame.kopub_justified_space
-        && stored_word_tail::regenerated_spaces_change_metrics(
-            composed,
-            styles,
-            SpaceMetric::KoPubJustified,
-        );
+    // 같은 토큰 안의 자동 줄 경계도 현재의 같은 마커·글꼴·가용 폭으로 검증한다.
+    // 기하 miss 정책과 문자 분할의 유효성은 별개다. 명시적 개행·외부 배제와
+    // 실제 쪽/단 경계는 can_rejoin_stored_word_tail에서 계속 거절한다.
     let rejoinable_word_tail = !stored_geometry_policy.preserve_hwp3_origins
-        && (miss_policy == line_breaking::StoredRowMissPolicy::UnmodelledUnlessStale
-            || regenerated_spaces_change_metrics)
         && stored_word_tail::can_rejoin_stored_word_tail(
             para,
             &frame,
