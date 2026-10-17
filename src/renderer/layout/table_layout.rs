@@ -1,6 +1,7 @@
 //! 표 레이아웃 (layout_table + 셀 높이/줄범위 계산)
 
 mod nested_header_frame;
+mod reflowed_nested_row;
 mod row_block_cut;
 mod stored_body_closed_frame;
 mod stored_complete_block_cut;
@@ -15253,8 +15254,17 @@ impl LayoutEngine {
                             let row_has_plain_source_boundary = self
                                 .stored_plain_restart_cut(nt, ri, styles, false)
                                 .is_some();
+                            let row_has_fresh_plain_growth = driver.is_some_and(|index| {
+                                self.reflowed_nested_row_content_grew(
+                                    &row_cells,
+                                    &row_units[index],
+                                    index,
+                                    row_declared_px,
+                                )
+                            });
                             if let Some(driver_index) = driver.filter(|driver_index| {
                                 (row_is_auto_height
+                                    || row_has_fresh_plain_growth
                                     || driver_is_nested_table_rows
                                     || row_has_joint_source_boundary
                                     || row_has_plain_source_boundary
@@ -15308,7 +15318,7 @@ impl LayoutEngine {
                                             uh += terminal_band;
                                         }
                                     }
-                                    if row_has_plain_source_boundary {
+                                    if row_has_plain_source_boundary || row_has_fresh_plain_growth {
                                         if driver_unit.stored_frame_break_before {
                                             source_frame_start.clone_from(&start_cut);
                                         }
