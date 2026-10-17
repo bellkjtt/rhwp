@@ -3753,6 +3753,9 @@ fn layout_paragraph_in_frame_impl(
                     .fold(0.0, f64::max);
                 for (interval_index, interval) in intervals.into_iter().enumerate() {
                     let available_width_px = interval_width(interval_index, &interval);
+                    // 들여쓰기·내어쓰기는 물리 행의 첫 구간만 소유한다.
+                    // 같은 행에서 개체 반대편 구간으로 이어져도 다시 차감하지 않는다.
+                    let interval_indent_px = if interval_index == 0 { indent_px } else { 0.0 };
                     // 같은 물리 줄의 다른 구간에 온전한 낱말이 들어가면 그대로 보존한다.
                     // 넓은 구간을 채운 뒤 좁은 옆 구간 때문에 글자 단위로 쪼개지 않는다.
                     if cursor.fallback_char_idx.is_none() {
@@ -3799,7 +3802,7 @@ fn layout_paragraph_in_frame_impl(
                             terminal_tokens,
                             &text_chars,
                             available_width_px,
-                            indent_px,
+                            interval_indent_px,
                             tab_fill,
                             korean_break_unit,
                             condense_min_space,
@@ -3823,7 +3826,7 @@ fn layout_paragraph_in_frame_impl(
                             &tokens,
                             &text_chars,
                             available_width_px,
-                            indent_px,
+                            interval_indent_px,
                             tab_fill,
                             korean_break_unit,
                             condense_min_space,
@@ -3930,8 +3933,8 @@ fn layout_paragraph_in_frame_impl(
                 } else {
                     indentation_pattern.1
                 };
-                for segment in &mut segments {
-                    if indented {
+                for (index, segment) in segments.iter_mut().enumerate() {
+                    if indented && index == 0 {
                         segment.source_tag |= LineSeg::TAG_INDENTATION;
                     } else {
                         segment.source_tag &= !LineSeg::TAG_INDENTATION;
@@ -3946,9 +3949,9 @@ fn layout_paragraph_in_frame_impl(
         if para.line_segs.is_empty() && supports_tac_table_band_frame_controls(para) {
             frame.absorb_whitespace_only_rows(&para.text, first_row);
         }
-        let mut lines = frame.project_line_segs_since(first_row);
-        mark_indented_lines(&mut lines, 0, para_style, &para.line_segs, frame_width_hwp);
-        Some(lines)
+        // 실제 행에 확정한 플래그를 그대로 투영한다. 평탄화한 segment 번호로
+        // 첫/후속 줄을 다시 추측하면 같은 물리 행의 뒤 구간에 내어쓰기가 붙는다.
+        Some(frame.project_line_segs_since(first_row))
     })();
 
     let kerning_failed = kerning_break_session

@@ -14245,7 +14245,7 @@ impl LayoutEngine {
                 });
             // 항목이 있어도 Square 호스트처럼 실제 글줄 흐름이 생략될 수 있다.
             // 앞뒤 간격은 실제 paragraph layout이 반환한 소비 결과로 각각 판단한다.
-            let (host_before_consumed, host_after_consumed, host_trailing_consumed) = self
+            let (host_before_consumed, _, _) = self
                 .paragraph_spacing_consumed
                 .borrow()
                 .get(&(page_content.section_index, para_index))
@@ -14438,6 +14438,15 @@ impl LayoutEngine {
             if let Some(ret) = table_ctl_out.early_return {
                 return ret;
             }
+            // Square 호스트는 위의 표 배치 안에서 실제 글줄을 그리며 소비 장부를
+            // 갱신한다. 배치 전 사본으로 뒤 간격을 판단하면 마지막 줄간격을 중복한다.
+            // 앞 간격은 앞서 판단했고, 뒤쪽은 방금 완료한 배치의 결과를 읽는다.
+            let (_, host_after_consumed, host_trailing_consumed) = self
+                .paragraph_spacing_consumed
+                .borrow()
+                .get(&(page_content.section_index, para_index))
+                .copied()
+                .unwrap_or_default();
             // ── 표 아래 간격 ──
             // out-of-flow로 그려진 표(머리말/꼬리말 자리)는 본문 흐름 간격을 추가하지 않는다.
             let is_outside_body = if let Some(Control::Table(t)) = para.controls.get(control_index)

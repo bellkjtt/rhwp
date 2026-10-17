@@ -6164,15 +6164,23 @@ impl LayoutEngine {
             // **본문 흐름 한정**이다 — 표 셀 안 문단은 한글이 들여쓰기를 적용한다
             // (오라클 7문서: 2777015 · 156548319 · 156658621 · 156428389 등 모두 셀 안
             // Center 문단이고 한글 x 가 `indent/2` 반영값과 0.0~0.4px 로 일치).
-            let line_indent = crate::renderer::equation_tac_flow::paragraph_line_indent_for_source(
-                indent,
-                line_idx,
-                para,
-                composed.lines.len(),
-                cell_ctx.is_none(),
-                col_area.width - margin_left - margin_right,
-                self.dpi,
-            );
+            let line_indent = if physical_frame_rows {
+                // 프레임 채움이 실제 행의 첫 구간에 확정한 들여쓰기를 소비한다.
+                // 합성 LineSeg도 같은 결과이며, 평탄화한 구간 번호로 재판정하지 않는다.
+                para.and_then(|p| p.line_segs.get(line_idx))
+                    .filter(|row| row.tag & LineSeg::TAG_INDENTATION != 0)
+                    .map_or(0.0, |_| indent.abs())
+            } else {
+                crate::renderer::equation_tac_flow::paragraph_line_indent_for_source(
+                    indent,
+                    line_idx,
+                    para,
+                    composed.lines.len(),
+                    cell_ctx.is_none(),
+                    col_area.width - margin_left - margin_right,
+                    self.dpi,
+                )
+            };
             let styled_margin_left = margin_left + line_indent;
 
             // [Task #489] Picture/Shape Square wrap (어울림) 시 LINE_SEG.cs/sw 적용.
@@ -6381,8 +6389,11 @@ impl LayoutEngine {
                 && cell_ctx.is_none()
                 && cs_is_own_margin
                 && stored_tac_assignment.is_some();
-            let (effective_margin_left, effective_margin_right) = if physical_frame_rows
-                || stored_inline_own_margin
+            let (effective_margin_left, effective_margin_right) = if physical_frame_rows {
+                // 프레임 구간에는 문단 여백·배제가 이미 들어 있지만, 채움이
+                // 별도로 차감한 들여쓰기는 글자 원점과 가용 폭에도 한 번 적용한다.
+                (line_indent, 0.0)
+            } else if stored_inline_own_margin
                 || hwp3_password_stored_segment_line_box
                 || stored_segment_line_box_cannot_hold_margins
             {
@@ -6409,7 +6420,7 @@ impl LayoutEngine {
             // (저장 LINE_SEG 두 줄 모두 cs=200 sw=8076).
             //
             // 첫 줄은 내어쓰기의 기준선이므로 건드리지 않고, 이어지는 줄에만 적용한다.
-            let effective_margin_left = if line_indent > 0.0 {
+            let effective_margin_left = if line_indent > 0.0 && !physical_frame_rows {
                 let min_line_w = max_fs.max(1.0);
                 let avail = effective_col_w - effective_margin_left - effective_margin_right;
                 if avail < min_line_w {
@@ -6659,7 +6670,15 @@ impl LayoutEngine {
             };
             // 번호/글머리표 마커: 줄마다 마커 기하가 정한 양만큼 본문 시작을 옮기고
             // 가용폭을 줄인다 (행잉·자동 내어쓰기).
-            let num_offset = marker_geometry.map_or(0.0, |g| g.line_px(line_idx));
+            let num_offset = if physical_frame_rows
+                && para
+                    .and_then(|p| p.line_segs.get(line_idx))
+                    .is_some_and(|row| !row.is_first_segment())
+            {
+                0.0
+            } else {
+                marker_geometry.map_or(0.0, |g| g.line_px(line_idx))
+            };
             let available_width = line_avail_w_override
                 .map(|w| w - inline_offset - num_offset)
                 .unwrap_or(

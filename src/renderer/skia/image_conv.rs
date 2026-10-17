@@ -413,8 +413,9 @@ pub(super) fn draw_image_bytes(
             }
         };
         // 전체 원본의 축소에는 가는 선을 보존하는 저역 통과를 적용한다.
-        // crop의 strict 경계와 전처리한 binary의 기존 sampler는 유지한다.
-        let reduced = (src.is_none()
+        // crop의 strict 경계와 binary·빠른 미리보기의 명시적 nearest를 유지한다.
+        let reduced = (sampling.filter_mode != FilterMode::Nearest
+            && src.is_none()
             && !binary_preprocessed
             && !matrix.has_perspective()
             && scale_x.is_finite()
