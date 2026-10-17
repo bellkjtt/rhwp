@@ -2,7 +2,7 @@
 
 ## 최종 판정
 
-**머지 보류 — 최신 devel의 PDF 기본 feature 변경을 리베이스했고 새 head 검증 중.** 이전 head의 로컬 통과 결과는 역사적 증거이며 현재 head 완료로 표시하지 않는다.
+**머지 보류 — #7964가 포함된 최신 devel로 리베이스했고 새 head 검증 중.** 이전 source751/baseb7 전체 회귀10,770 PASS는 역사적 증거이며 현재 head 완료로 표시하지 않는다.
 
 ## 접수 정보
 
@@ -45,3 +45,7 @@
 ## PR 직전 base 갱신
 
 새 base `b7a5388034ee66f58a7e1d5363974e83b6374f57`와 통합 head `a7aac1a9ce5b2b902471ecd8f234f7d72834812d`의 [7단계 재검증](../../working/task_m100_536_integration_review_stage7.md)을 따른다. 원 head와 1–6단계 실행 기록은 그대로 보존한다. TSV 원본은 사용자 후속 지시에 따라 검토 asset으로 바이트 그대로 커밋하고 PR 본문에서 정확한 head SHA의 raw 링크로 연결한다.
+
+## 최신 devel #7964 반영
+
+기준 `9415b920c8dec299e8ada69b01dbd1c3c044f1f1`, 리베이스 직후 head `ec742f167991fd8c5efcd01ab7e8fe752c0a070e`의 [8단계](../../working/task_m100_536_integration_review_stage8.md)를 따른다. 이미지 캐시와 한컴 색조를 함께 보존하는 충돌 해소·raw 실루엣 재검증을 진행한다. 앞의 base/통과 수치는 각 당시 실행 기록이며 새 source 결과와 구분한다.

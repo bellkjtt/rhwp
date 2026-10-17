@@ -39,3 +39,20 @@ TSV 본문 삽입·본문 크기 제한 시 SHA 고정 원본 링크 제출 지�
 
 현재 판정은 **새 base 반영·검증 진행 중**이며 PR은 아직 생성하지 않았다.
 실제 명령·로그·해시는 ignored `output/pr-review/seo-rii-20261017/latest-*`에 기록한다.
+
+## 실제 리베이스 결과
+
+리베이스를 완료했다. 직후 head는 `ec742f167991fd8c5efcd01ab7e8fe752c0a070e`이며164개
+commit의 수·순서·제목과 원 contributor author를 보존했다. 독립 merge-tree와 비교한 수동 해소
+경로는 `src/renderer/skia/image_conv.rs` 하나다. cache 도입·이산 효과·cache-hit sampling·진단
+commit의 같은 파일 충돌을 순서대로 해소했다. 나머지 자동 병합 결과는 독립 tree와 같다.
+
+한컴 색조 보정은 SVG/JPEG 정규화 뒤, decode 및 이산 효과 전의 cache miss에서 수행한다.
+보정 PNG는 같은 cache/배치 경로로 중립 효과·밝기0·대비0으로 재생한다. 원본 decode key에는
+색조 조건도 포함해, 먼저 중립 그림을 캐시한 뒤 같은 원본을 다른 밝기/대비로 그릴 때 보정을
+우회하지 않게 했다. 기존 이산 효과의 source pixel 처리·nearest sampling·실패 fallback과
+bounded cache 관측을 유지했다. 지원하지 않는 색조의 필터 합성 순서·linearRGB fallback도
+새 upstream과 대조해 보존했다. 실제 실행 결과는 다음 검증이 완료된 뒤 추가한다.
+
+`latest-rebase-audit.json`에 이전/현재164개 SHA mapping과 tree 대조를 보존한다.
+이전 전체 회귀는 source751/baseb7 결과이며 최신 리베이스 결과의 회귀 통과로 표시하지 않는다.
