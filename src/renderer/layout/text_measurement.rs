@@ -1807,8 +1807,8 @@ fn char_width_decision_with_hft_tracking<'a>(
     };
     // 보충 메트릭은 백엔드가 실제로 그리는 전진폭이라 그 값을 그대로 쓴다(#7084).
     let glyph_advance_px = if supplemented {
-        base_width_px * ratio
-            + glyph_letter_spacing(letter_spacing, base_width_px * ratio, font_size)
+        let advanced = (base_width_px + font_tracking) * ratio;
+        advanced + glyph_letter_spacing(letter_spacing, advanced, font_size)
     } else {
         let em_fraction = match em_exact {
             Some(em) if !dash_leader => em,
@@ -1820,15 +1820,22 @@ fn char_width_decision_with_hft_tracking<'a>(
         } else {
             0.0
         };
+        // HFT 굵기의 추가 전진도 같은 장치 격자·장평·원본 자간을 소비한다.
+        // glyph-fit walk는 include_hft_bold_tracking=false로 고유 폭을 유지한다.
+        let tracking_em = if font_size > 0.0 {
+            font_tracking / font_size
+        } else {
+            0.0
+        };
         hancom_device_advance_px(
-            em_fraction,
+            em_fraction + tracking_em,
             font_size,
             ratio,
             spacing_fraction,
             matches!(c, ' ' | '\u{00A0}'),
         )
     };
-    let mut final_width_px = glyph_advance_px + font_tracking * ratio + style.extra_char_spacing;
+    let mut final_width_px = glyph_advance_px + style.extra_char_spacing;
     final_width_px += crate::renderer::legacy_font_advances::bold_advance(
         style,
         c,

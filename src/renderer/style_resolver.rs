@@ -319,8 +319,12 @@ fn resolve_single_char_style(cs: &CharShape, doc_info: &DocInfo, dpi: f64) -> Re
         // 프로그램 자체를 확인한 표만 사용하며 표시용 TTF와 구분한다.
         // HWP3 ASCII 반각 여부는 기존 문서의 저장 줄 증인이 계속 결정한다.
         font_families_metric_face.push(
-            if decision.substitution_boundary == Some(FontSubstitutionBoundary::Hft) {
-                // 원본 HFT 프로그램의 폭과 설치 대체 face의 표시를 구분한다.
+            if decision.alt_type == Some(2)
+                && decision.requested_face.as_deref().is_some_and(|face| {
+                    crate::renderer::font_metrics_data::legacy_hft_metric_face(face).is_some()
+                })
+            {
+                // 표시 이름의 치환 여부와 원본 HFT 프로그램의 폭은 별개다.
                 decision
                     .requested_face
                     .as_deref()

@@ -35,7 +35,22 @@ static RANGES_1: [LatinRange; 1] = [LatinRange {
     widths: &ASCII_1,
 }];
 
-pub(super) static METRICS: [FontMetric; 2] = [
+// 한양신명조 HFT의 정체·굵게 Type3 /Widths는 동일하다.
+// 독립 한컴 Print: hft-full-ascii-saved-2020.pdf, stage2394 폭 추출 기록.
+static ASCII_2: [u16; 95] = [
+    1000, 325, 423, 450, 602, 920, 814, 386, 395, 374, 524, 567, 235, 572, 244, 390, 500, 500, 500,
+    500, 500, 500, 500, 500, 500, 500, 276, 292, 729, 570, 734, 511, 920, 794, 704, 690, 749, 677,
+    654, 742, 784, 337, 450, 792, 645, 959, 777, 748, 629, 755, 703, 648, 774, 773, 780, 1037, 754,
+    769, 599, 362, 397, 352, 429, 500, 382, 509, 556, 485, 543, 482, 352, 588, 560, 277, 314, 557,
+    274, 858, 564, 516, 534, 548, 405, 486, 351, 562, 581, 840, 590, 574, 474, 418, 280, 421, 500,
+];
+static RANGES_2: [LatinRange; 1] = [LatinRange {
+    start: 0x0020,
+    end: 0x007e,
+    widths: &ASCII_2,
+}];
+
+pub(super) static METRICS: [FontMetric; 3] = [
     FontMetric {
         name: "신명 디나루 (HFT)",
         bold: false,
@@ -52,11 +67,20 @@ pub(super) static METRICS: [FontMetric; 2] = [
         latin_ranges: &RANGES_1,
         hangul: None,
     },
+    FontMetric {
+        name: "한양신명조 (HFT)",
+        bold: false,
+        italic: false,
+        em_size: 1000,
+        latin_ranges: &RANGES_2,
+        hangul: None,
+    },
 ];
 
 /// HFT로 해소한 선언 face에만 원본 프로그램의 메트릭 이름을 공급한다.
 pub(crate) fn metric_face_name(requested: &str) -> Option<&'static str> {
     match requested {
+        "한양신명조" | "HanyangSinMyeongJo" => Some("한양신명조 (HFT)"),
         "신명 디나루" => Some("신명 디나루 (HFT)"),
         "신명 신그래픽" => Some("신명 신그래픽 (HFT)"),
         _ => None,

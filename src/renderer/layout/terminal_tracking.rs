@@ -77,6 +77,21 @@ pub(super) fn terminal_tracking_for_alignment(
         if style.kerning {
             return 0.0;
         }
+        if super::text_measurement::has_hft_bold_tracking(&style) {
+            // 가시 끝 다음에는 HFT 굵기 전진도 소비할 다음 글자가 없다.
+            // 같은 측정 walk에서 원본 자간과 굵기 전진을 함께 제외한 끝을 쓴다.
+            let mut intrinsic = style.clone();
+            intrinsic.letter_spacing = 0.0;
+            if let Some(latin) = intrinsic.ascii_punct_latin.as_mut() {
+                latin.letter_spacing = 0.0;
+            }
+            let intrinsic_width =
+                super::text_measurement::compute_glyph_fit_positions(last, &intrinsic)
+                    .last()
+                    .copied()
+                    .unwrap_or(0.0);
+            return estimate_text_width_unrounded(last, &style) - intrinsic_width;
+        }
         return glyph_letter_spacing_advance(last, &style);
     }
     0.0
