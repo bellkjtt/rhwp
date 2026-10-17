@@ -346,6 +346,8 @@ web-sys = { version = "0.3", features = [
     "CanvasRenderingContext2d",
     "CanvasGradient",
     "CanvasPattern",
+    "DomMatrix",
+    "DomMatrixReadOnly",
     "HtmlCanvasElement",
     "HtmlImageElement",
     "ImageData",
