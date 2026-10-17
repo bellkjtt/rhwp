@@ -3,6 +3,28 @@
 use crate::model::{control::Control, paragraph::Paragraph};
 
 impl super::LayoutEngine {
+    /// 현재 행을 넘어 계속되는 병합 칸의 독립적인 빈 최소 공간.
+    /// 글줄이 재조판된다는 사실만으로 쪽 끝의 빈 띠를 소유하지 않는다.
+    pub(crate) fn row_has_continuing_reflow_minimum(
+        &self,
+        table: &crate::model::table::Table,
+        row: usize,
+        styles: &crate::renderer::style_resolver::ResolvedStyleSet,
+    ) -> bool {
+        table.cells.iter().any(|cell| {
+            if usize::from(cell.row) > row
+                || usize::from(cell.row) + usize::from(cell.row_span) <= row + 1
+                || cell.height >= 0x8000_0000
+                || !self.cell_uses_plain_reflow_units(cell, table)
+            {
+                return false;
+            }
+            let end = self.cell_units(cell, table, styles).len();
+            super::hwpunit_to_px(cell.height as i32, self.dpi)
+                > self.cell_cut_visible_height(cell, table, styles, 0, end) + 0.5
+        })
+    }
+
     /// 실제 재조판 요구가 선언을 넘으면 미지 행의 옛 배분을 버리고 같은 제약을 다시 푼다.
     /// 저장 프레임의 요구는 기존 순서대로 마지막 걸침 행에서 계속 보존한다.
     pub(crate) fn resolve_reflow_span_requirements(

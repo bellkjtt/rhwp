@@ -25367,8 +25367,8 @@ impl LayoutEngine {
             })
             .map(|cell| hwpunit_to_px(cell.height as i32, self.dpi))
             .fold(0.0, f64::max);
-        let zero_cut = vec![0; cells.len()];
-        let content = self.row_cut_content_height(table, row, &zero_cut, &[], styles);
+        // 선언 최소를 포함하는 행 프레임 대신 전체 내용 유닛의 점유와 비교한다.
+        let content = self.row_complete_cut_content_height(table, row, styles);
         (minimum > content + 0.5).then_some(minimum)
     }
 

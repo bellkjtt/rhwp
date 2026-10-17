@@ -89,7 +89,8 @@ impl TypesetEngine {
         let ordinary_row_can_split = !rowspan_touched[r]
             || (mt.allows_row_break_split() && can_intra_split && row_units_splittable);
         let owns_plain_row_frame = ordinary_row_can_split
-            && (reflow_minimum.is_some() || layout_engine.row_uses_reflow_physical_frame(table, r))
+            && (reflow_minimum.is_some()
+                || layout_engine.row_has_continuing_reflow_minimum(table, r, styles))
             && plain_reflow_line_units;
         let avail_for_rows = if owns_plain_row_frame {
             reflow_frame_avail_for_rows.map_or(avail_for_rows, |height| avail_for_rows.min(height))
@@ -1505,8 +1506,8 @@ impl TypesetEngine {
             let accepted_height = consumed - consumed_before_row - cs_before;
             if accepted_height > 0.0 {
                 let available = (avail_for_rows - consumed_before_row - cs_before).max(0.0);
-                // 별도 선언 최소가 없는 내용 행도 현재 쪽의 물리 하단까지
-                // 소유한다. 다음 쪽에 남은 글줄 컷은 늘리지 않는다.
+                // 일반 칸의 독립 최소 또는 계속되는 병합 칸의 최소가 빈 띠를
+                // 소유한다. 내용이 큰 것만으로 쪽 하단까지 늘리지 않는다.
                 let minimum = reflow_minimum.unwrap_or(available);
                 let remaining = if scan_start_row == cursor_row {
                     start_row_height_override.unwrap_or(minimum)
