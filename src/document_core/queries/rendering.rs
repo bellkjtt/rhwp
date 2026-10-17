@@ -5866,7 +5866,24 @@ impl DocumentCore {
                 math_tables.as_deref().unwrap_or(&section.paragraphs),
                 &self.styles,
             );
-            let math_geometry_changed = math_textboxes.is_some() || math_tables.is_some();
+            let stored_word_tails = (profile.hwp5_stored_pagination_layout()
+                || profile.hwpx_stored_layout())
+            .then_some(())
+            .filter(|_| !profile.session_edited() && !profile.legacy_hwp3_stored_geometry())
+            .and_then(|_| {
+                crate::renderer::render_normalization::stored_word_tail::normalize(
+                    math_textboxes
+                        .as_deref()
+                        .or(math_tables.as_deref())
+                        .unwrap_or(&section.paragraphs),
+                    &self.styles,
+                    pd,
+                    &Self::find_initial_column_def(&section.paragraphs),
+                    self.dpi,
+                )
+            });
+            let paragraph_geometry_changed =
+                stored_word_tails.is_some() || math_textboxes.is_some() || math_tables.is_some();
             let unplaced_rows =
                 normalize_widthless_rows && section_has_unplaced_stored_rows(&section.paragraphs);
             let widthless: Vec<usize> = section
@@ -5900,12 +5917,13 @@ impl DocumentCore {
                 && !has_cell_stack
                 && widthless.is_empty()
                 && inline_frames.is_empty()
-                && !math_geometry_changed
+                && !paragraph_geometry_changed
             {
                 out.push(None);
                 continue;
             }
-            let mut np = math_textboxes
+            let mut np = stored_word_tails
+                .or(math_textboxes)
                 .or(math_tables)
                 .unwrap_or_else(|| section.paragraphs.clone());
             let mut frame_changes = Vec::new();
@@ -5978,7 +5996,7 @@ impl DocumentCore {
                     if matches.binary_search(&i).is_ok()
                         || widthless.binary_search(&i).is_ok()
                         || frame_changes.binary_search(&i).is_ok()
-                        || math_geometry_changed
+                        || paragraph_geometry_changed
                     {
                         let mut c = crate::renderer::composer::compose_paragraph_in_context(
                             p,

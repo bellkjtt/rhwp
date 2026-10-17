@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 pub(crate) mod math_table;
 pub(crate) mod math_textbox;
+pub(crate) mod stored_word_tail;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum RenderPathEntry {

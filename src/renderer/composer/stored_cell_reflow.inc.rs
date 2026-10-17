@@ -105,10 +105,17 @@ pub(crate) fn recompose_stored_lines_in_frame_with_known_square_band(
             .unwrap_or(0),
     );
     frame.kopub_justified_space = justified_kopub_picture;
-    // 같은 토큰 안의 자동 줄 경계도 현재의 같은 마커·글꼴·가용 폭으로 검증한다.
-    // 기하 miss 정책과 문자 분할의 유효성은 별개다. 명시적 개행·외부 배제와
-    // 실제 쪽/단 경계는 can_rejoin_stored_word_tail에서 계속 거절한다.
+    // 일반 본문은 render-normalization이 새 줄과 후속 원점을 함께 발행한다.
+    // 셀 및 별도 그림 공백 메트릭의 기존 계약만 이 지역 프레임에서 해소한다.
+    let regenerated_spaces_change_metrics = frame.kopub_justified_space
+        && stored_word_tail::regenerated_spaces_change_metrics(
+            composed,
+            styles,
+            SpaceMetric::KoPubJustified,
+        );
     let rejoinable_word_tail = !stored_geometry_policy.preserve_hwp3_origins
+        && (miss_policy == line_breaking::StoredRowMissPolicy::UnmodelledUnlessStale
+            || regenerated_spaces_change_metrics)
         && stored_word_tail::can_rejoin_stored_word_tail(
             para,
             &frame,

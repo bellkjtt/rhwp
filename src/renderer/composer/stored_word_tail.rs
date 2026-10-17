@@ -1,8 +1,35 @@
 //! 현재 프레임에서 이어 붙일 수 있는 저장된 마지막 자동 줄바꿈.
 
-use super::{line_breaking, utf16_range_to_text_range, ResolvedStyleSet};
+use super::{
+    line_breaking, utf16_range_to_text_range, ComposedParagraph, ResolvedStyleSet, SpaceMetric,
+};
 use crate::model::paragraph::{LineSeg, Paragraph};
 use crate::renderer::layout_frame::LayoutFrame;
+
+/// 저장 run과 현재 채움이 서로 다른 공백 전진을 사용하면 줄 분할도 재검토해야 한다.
+/// 같은 공백 메트릭의 정상 본문은 더 적은 줄로 들어간다는 이유만으로 무효화하지 않는다.
+pub(super) fn regenerated_spaces_change_metrics(
+    composed: &ComposedParagraph,
+    styles: &ResolvedStyleSet,
+    metric: SpaceMetric,
+) -> bool {
+    composed
+        .lines
+        .iter()
+        .flat_map(|line| &line.runs)
+        .any(|run| {
+            if !run.text.contains(' ') {
+                return false;
+            }
+            let stored = run.text_style(styles);
+            let mut regenerated = stored.clone();
+            metric.apply_to_style(&mut regenerated);
+            let advance = |style: &crate::renderer::TextStyle| {
+                crate::renderer::layout::estimate_text_width_unrounded(" ", style)
+            };
+            (advance(&stored) - advance(&regenerated)).abs() > f64::EPSILON
+        })
+}
 
 /// 저장된 마지막 줄이 앞줄과 같은 영숫자·한글 어절이나 금칙 꼬리인지 확인한다.
 /// 명시적 개행·실제 쪽/단 경계·어울림 상자의 경계는 재조판으로 합치지 않는다.
@@ -15,6 +42,16 @@ pub(super) fn can_rejoin_stored_word_tail(
     dpi: f64,
     supported_inline_picture: bool,
 ) -> bool {
+    project_stored_word_tail(para, frame, styles, dpi, supported_inline_picture).is_some()
+}
+
+pub(crate) fn project_stored_word_tail(
+    para: &Paragraph,
+    frame: &LayoutFrame,
+    styles: &ResolvedStyleSet,
+    dpi: f64,
+    supported_inline_picture: bool,
+) -> Option<(Vec<LineSeg>, Vec<(u32, SpaceMetric)>)> {
     if para.line_segs.len() < 2
         || (!para.controls.is_empty() && !supported_inline_picture)
         || para.text.contains('\n')
@@ -26,7 +63,7 @@ pub(super) fn can_rejoin_stored_word_tail(
             .iter()
             .any(|line| line.tag & LineSeg::TAG_IMPLEMENTATION_PROPERTY != 0)
     {
-        return false;
+        return None;
     }
     let last = para.line_segs.last().unwrap();
     let previous = &para.line_segs[para.line_segs.len() - 2];
@@ -34,7 +71,7 @@ pub(super) fn can_rejoin_stored_word_tail(
         || last.is_first_line_of_column()
         || last.vertical_pos <= previous.vertical_pos
     {
-        return false;
+        return None;
     }
     let chars: Vec<_> = para.text.chars().collect();
     let (start, _) = utf16_range_to_text_range(
@@ -58,11 +95,11 @@ pub(super) fn can_rejoin_stored_word_tail(
             .copied()
             .all(char::is_alphanumeric)
     {
-        return false;
+        return None;
     }
     let mut probe = frame.clone();
     let mut input = para.clone();
     input.line_segs.clear();
-    line_breaking::layout_paragraph_in_frame(&input, &mut probe, styles, dpi)
-        .is_some_and(|rows| rows.len() < para.line_segs.len())
+    let rows = line_breaking::layout_paragraph_in_frame(&input, &mut probe, styles, dpi)?;
+    (rows.len() < para.line_segs.len()).then(|| (rows, probe.project_space_metrics()))
 }
