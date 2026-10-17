@@ -3,6 +3,30 @@
 use crate::model::{control::Control, paragraph::Paragraph};
 
 impl super::LayoutEngine {
+    /// 저장 프레임을 높이 컷으로 다시 해석하지 않는 일반 재조판 출처.
+    pub(crate) fn cell_has_plain_reflow_paragraphs(
+        cell: &crate::model::table::Cell,
+        table_reflowed: bool,
+    ) -> bool {
+        cell.paragraphs.iter().all(|paragraph| {
+            paragraph_has_plain_flow(paragraph)
+                && (table_reflowed || crate::renderer::para_has_no_stored_line_segs(paragraph))
+        })
+    }
+
+    pub(crate) fn cell_uses_plain_reflow_units(
+        &self,
+        cell: &crate::model::table::Cell,
+        table: &crate::model::table::Table,
+    ) -> bool {
+        Self::cell_has_plain_reflow_paragraphs(
+            cell,
+            self.render_normalization
+                .borrow()
+                .table_text_reflowed(table),
+        )
+    }
+
     /// 일반 칸이 없는 행의 종료 병합 칸이 실제 수용 공간에서 모두 끝났는지 확인한다.
     /// 계속되는 다른 병합 칸의 높이와 내용 커서는 별도 원장에 남긴다.
     pub(crate) fn row_band_completes_ending_reflow_spans(
@@ -17,19 +41,12 @@ impl super::LayoutEngine {
         {
             return false;
         }
-        let reflowed = self
-            .render_normalization
-            .borrow()
-            .table_text_reflowed(table);
         let mut has_ending_owner = false;
         for (index, cell) in table.cells.iter().enumerate().filter(|(_, cell)| {
             cell.row_span > 1 && usize::from(cell.row) + usize::from(cell.row_span) == row + 1
         }) {
             has_ending_owner = true;
-            if !cell.paragraphs.iter().all(|paragraph| {
-                paragraph_has_plain_flow(paragraph)
-                    && (reflowed || crate::renderer::para_has_no_stored_line_segs(paragraph))
-            }) {
+            if !self.cell_uses_plain_reflow_units(cell, table) {
                 return false;
             }
             let Some(carry) = accepted.iter().find(|carry| carry.cell_index == index) else {
