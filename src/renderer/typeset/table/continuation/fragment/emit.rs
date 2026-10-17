@@ -1631,7 +1631,12 @@ impl TypesetEngine {
             })
             .or_else(|| {
                 let row = end_row.checked_sub(1)?;
-                if split_end_limit <= 0.0 || !layout_engine.row_uses_reflow_physical_frame(table, row) {
+                // 블록 컷은 여러 행의 셀 슬롯이다. 마지막 일반 행의 최소와
+                // 빼서 시작 행 잔여로 넘기면 이미 소비한 행의 빈 띠를 재생성한다.
+                if split_block_start.is_some()
+                    || split_end_limit <= 0.0
+                    || !layout_engine.row_uses_reflow_physical_frame(table, row)
+                {
                     return None;
                 }
                 let carried = (row == cursor_row).then_some(start_row_height_override).flatten();
