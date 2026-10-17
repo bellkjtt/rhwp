@@ -24886,6 +24886,7 @@ impl LayoutEngine {
                     start_row_height_override,
                     end_cut,
                     false,
+                    end_row_height_override,
                     height,
                     resolved_row_heights,
                     carried,
@@ -24921,6 +24922,7 @@ impl LayoutEngine {
         start_row_height_override: Option<f64>,
         end_cut: &[usize],
         end_cut_is_block: bool,
+        end_row_height_override: Option<f64>,
         cell_height: f64,
         resolved_row_heights: &[f64],
         straddle_page_bands: &[crate::renderer::pagination::StraddleCellCarry],
@@ -25202,6 +25204,7 @@ impl LayoutEngine {
                     // covers its last row, even if a later fragment row is cut.
                     &[],
                     false,
+                    None,
                     0.0,
                     resolved_row_heights,
                     straddle_page_bands,

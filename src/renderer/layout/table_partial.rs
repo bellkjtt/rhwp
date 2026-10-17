@@ -1333,6 +1333,7 @@ impl LayoutEngine {
                     start_row_height_override,
                     end_cut,
                     is_block_split,
+                    end_row_height_override,
                     cell_h,
                     resolved_row_heights,
                     straddle_page_bands,
