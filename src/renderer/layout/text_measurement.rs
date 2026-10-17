@@ -1562,6 +1562,7 @@ fn char_width_decision_with_hft_tracking<'a>(
         .map(|em| quantize_hwp_px(font_size * em));
     // 글리프 전진폭 / 글자 크기. 메트릭 갈래는 HU 로 내리기 전 값을 쓴다.
     let mut em_exact: Option<f64> = None;
+    let mut source_hft_metric = false;
     let (base_width_raw, width_source, metric, character_match) = if let Some(w) = font_space_width
     {
         (w, "useFontSpace", None, "notApplicable")
@@ -1588,6 +1589,7 @@ fn char_width_decision_with_hft_tracking<'a>(
         let display_family = latin.map_or(&style.font_family, |l| &l.font_family);
         let measured_family =
             crate::renderer::legacy_font_advances::measurement_face(metric_family, display_family);
+        source_hft_metric = font_metrics_data::is_legacy_hft_metric_face(measured_family);
         let mut embedded = measure_char_width_embedded_decision_for_font(
             measured_family,
             style.bold,
@@ -1597,9 +1599,9 @@ fn char_width_decision_with_hft_tracking<'a>(
             latin.map_or(style.font_metric_trusted, |l| l.font_metric_trusted),
             latin.is_none() && style.hft_hangul_face,
         );
-        // 원본 HFT의 부분 측정 표는 미수집 ASCII를 glyph 결측으로 증명하지 않는다.
-        // 확인한 원본 폭을 우선하고, 그 밖에는 기존 표시 face의 폭을 보존한다.
-        if c.is_ascii_graphic()
+        // 부분 표의 미수집은 글리프 부재가 아니다. 확인한 원본 폭이 없으면
+        // 기존 표시 face의 폭을 보존한다. ASCII 밖의 전각 괄호도 반각으로 줄이지 않는다.
+        if (c.is_ascii_graphic() || source_hft_metric)
             && embedded.width_source == "metricCharacterMiss"
             && measured_family != display_family
         {
@@ -1614,7 +1616,7 @@ fn char_width_decision_with_hft_tracking<'a>(
             );
             if display_metric.width_px.is_some() {
                 embedded = display_metric;
-                embedded.width_source = "unmeasuredSourceAsciiDisplayMetric";
+                embedded.width_source = "unmeasuredSourceDisplayMetric";
             }
         }
         if let Some(width) = digit_width {
@@ -1797,9 +1799,7 @@ fn char_width_decision_with_hft_tracking<'a>(
         && style.bold
         && !c.is_whitespace()
         && !c.is_control()
-        && metric
-            .as_ref()
-            .is_some_and(|found| font_metrics_data::is_legacy_hft_metric_face(found.metric.name))
+        && source_hft_metric
     {
         font_size * 0.05
     } else {
