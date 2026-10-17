@@ -10,7 +10,7 @@ last_verified: 2026-10-17
 ## 승인 범위와 시작점
 
 사용자 요청: 열린 PR을 체리픽 통합한 뒤 개별 검토하고 필요하면 메인터너 보정한다.
-리뷰어 선행 지정 요청에 따라 두 PR 모두 `jangster77` 요청을 게시하고 API로 확인했다.
+리뷰어 선행 지정 요청에 따라 세 PR 모두 `jangster77` 요청을 게시하고 API로 확인했다.
 기본 작업공간이 clean하므로 별도 worktree 없이 `review/donggyun112-20261017`에서 진행한다.
 기준 devel은 `f9d2ab17ab438c6bed97d91c3c2a98a5be27e573`이다.
 
@@ -74,3 +74,10 @@ API로 확인했다. 원 기능·검사 6개 커밋을 앞선 후보 위에 누�
 fresh WASM과 실제 Chrome의 검색·모두 바꾸기 및 앞선 두 PR E2E를 재검증한다.
 Cargo는 공용 `target/pr-review`에서 jobs 8로 순차 실행한다. 기존 성공을 새 Rust 후보의
 통과로 바꾸지 않고 source SHA·명령·종료 코드·로그를 새 원장으로 구분한다.
+
+## 최종 3개 PR 로컬 검증
+
+사용자 요청으로 최신 `7d01ef610f378157b79d36ef23e8ed4a3c8ab051`에 rebase했고 검증 head는 `2dee7730306dcc7f57615c87c25cb09af3c90f63`다.
+[추가 PR 검토](../pr/archives/pr_7988_review.md)에 재실행한 전체 회귀·fresh WASM·실제 브라우저의
+최종 결과를 기록했다. 최초 base와 producer는 이력으로 보존한다. 사용자 원격 게시 승인은 받았고
+통합 PR의 실제 code CI·문서 trailing·최종 CI는 별도 원격 단계다.
