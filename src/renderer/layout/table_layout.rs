@@ -18245,20 +18245,21 @@ impl LayoutEngine {
         let inner_width =
             crate::renderer::composer::cell_inner_text_width(width, left, right, self.dpi);
         let comp = self.compose_cell_unit_paragraph(para, cell.text_direction, inner_width, styles);
-        // 문단을 닫은 컷의 뒤 간격은 다음 문단에 속한다. 문단 중간 컷은
-        // 같은 문단의 다음 줄 전진량을 보존한다. 선언 셀 높이는 이 줄 소속을
-        // 결정하지 않으므로 빈 물리 띠의 유무로 간격을 바꾸지 않는다.
-        if closing.vis_end != comp.lines.len() {
-            return 0.0;
-        }
+        // CellUnit 전진은 다음 줄 원점까지의 간격을 보존한다. 현재 조각의
+        // 점유는 마지막 줄 상자에서 끝나므로 문단 중간 컷도 뒤 줄간격을 뺀다.
+        // 문단 뒤 여백은 실제 문단을 닫은 컷에서만 제외한다.
         let Some(line) = comp.lines.get(closing.vis_end - 1) else {
             return 0.0;
         };
-        let after = styles
-            .para_styles
-            .get(para.para_shape_id as usize)
-            .map(|style| style.spacing_after)
-            .unwrap_or(0.0);
+        let after = if closing.vis_end == comp.lines.len() {
+            styles
+                .para_styles
+                .get(para.para_shape_id as usize)
+                .map(|style| style.spacing_after)
+                .unwrap_or(0.0)
+        } else {
+            0.0
+        };
         (hwpunit_to_px(line.line_spacing.max(0), self.dpi) + after).min(closing.height)
     }
 

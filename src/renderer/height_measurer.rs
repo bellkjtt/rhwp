@@ -4811,7 +4811,9 @@ impl HeightMeasurer {
                         let line_start = line_heights.len();
                         let mut comp =
                             crate::renderer::composer::compose_paragraph_in_context(p, styles);
-                        if cell.text_direction == 0 && !self.is_native_hwp5
+                        // 상세 컷 원장도 행 높이와 실제 배치가 사용한 셀 너비에서 합성한다.
+                        // 저장 줄 없는 HWP5를 단일 줄로 세면 분할 가능한 첫 행을 통째 이월한다.
+                        if cell.text_direction == 0
                             && !self.stored_geometry_policy.preserve_hwp3_origins
                             && crate::renderer::para_has_no_stored_line_segs(p)
                         {
