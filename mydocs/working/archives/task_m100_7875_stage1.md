@@ -1,12 +1,13 @@
 # #7875 1단계 — 프로젝트 적합성과 WASM 라이브러리 주장 검증
 
-Issue: [#7875](https://github.com/edwardkim/rhwp/issues/7875)  
+Issue: [#7875](https://github.com/edwardkim/rhwp/issues/7875)
+
 원 PR: [#7876](https://github.com/edwardkim/rhwp/pull/7876)
 
 ## 목적과 현재 단계
 
 사용자의 지시에 따라 체리픽보다 프로젝트 적합성·문제 재현을 먼저 확인했다.
-이 문서는 적용 전 조사와 보정 계획이며, 최종 PR 승인이나 전체 검증 완료 기록이 아니다.
+이 문서는 적용 전 조사와 보정 계획이다. 적용과 완료된 검증 결과는 [2단계](task_m100_7875_stage2.md)에 기록했다.
 
 - 기준 devel: `515bd72dcde0eecdeece333666b675354b7fa91d`.
 - 원 PR head: `b273e3fc44dd713f33d22846faa6fb1d98f01d3b`, 기능 1커밋·2파일.
@@ -18,7 +19,7 @@ Issue: [#7875](https://github.com/edwardkim/rhwp/issues/7875)
 ## 프로젝트 범위 판정
 
 `Cargo.toml`의 `[lib]`는 Rust 라이브러리 우선과 내부 CLI·Native·tools의 rlib 재사용을 명시한다.
-[로드맵의 업스트림·다운스트림 경계](../../ROADMAP.md#업스트림과-다운스트림의-경계)는 공통 엔진·Web/WASM 재사용과 공용 API 호환 개선을 업스트림 범위로 둔다.
+[로드맵의 업스트림·다운스트림 경계](../../../ROADMAP.md#업스트림과-다운스트림의-경계)는 공통 엔진·Web/WASM 재사용과 공용 API 호환 개선을 업스트림 범위로 둔다.
 JS export를 선택적으로 끄는 범용 호환 개선은 이 범위에 맞는다.
 
 다만 [#5446의 메인터너 결정](https://github.com/edwardkim/rhwp/issues/5446#issuecomment-5327810241)은
@@ -120,14 +121,14 @@ wasm-bindgen <소비-app.wasm> --target nodejs --out-dir <case-output>
 7. 정확한 제출 code CI가 녹색인 뒤 원 PR 번호 기준 archive review·구현 기록과 오늘할일을 같은 통합 PR의 trailing 문서로 포함한다.
    merge가 승인되고 실제 완료되면 첫 기여자에게 존댓말로 감사·환영·실제 보정과 결과를 안내하며 fork branch를 보존한다.
 
-## 진행 중 증거 위치와 미검증
+## 적용 전 단계의 증거 위치와 미검증
 
 작업 중 원본 로그·각 JSON·raw consumer WASM과 frozen web/Node 패키지는
-`output/pr-review/pr7876-20261017/`에 있다. 제품 source는 아직 기준 devel과 같다.
+`output/pr-review/pr7876-20261017/`에 있다. 이 1단계 완료 시 제품 source는 기준 devel과 같았다.
 기본 패키지 비교 기준도 기준 source에서 wrapper `--target web --no-opt`로 생성 완료했다(exit 0, 6분 35초). Docker는 이 호스트에 없다.
 이는 최적화된 Docker 배포 빌드 성공을 뜻하지 않는다.
 원 PR의 과거 green CI는 최신 통합 head의 증거가 아니며 현재 원 PR은 feature 목록 충돌 상태다.
-기본 산출물 보존·보정 후 소비 앱·최종 lint/회귀/CI·merge는 아직 완료로 판정하지 않는다.
+이 단계에서는 보정 후 소비 앱·최종 lint/회귀/CI·merge를 완료로 판정하지 않았다. 이후 실행 결과는 [2단계](task_m100_7875_stage2.md)를 따른다.
 
 ## 적용 전 기본 패키지 지문
 
