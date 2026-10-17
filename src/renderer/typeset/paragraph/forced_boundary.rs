@@ -118,6 +118,14 @@ pub(in crate::renderer::typeset) fn prepare_forced_page_boundary(
         // full-fit early return보다 앞의 같은 chain에 넣어야 reset tail을 통째로
         // 배치해 separator와 겹치는 우회가 없다.
         .or(native_hwp5_existing_footnote_reset_line);
+    if std::env::var("RHWP_DIAG_SPLIT_BUDGET").is_ok() && forced_page_break_line.is_some() {
+        // 물리 예산 부족과 저장 경계 강제를 구분한다. 내용·동작은 바꾸지 않는다.
+        eprintln!(
+            "DIAG_FORCED_BOUNDARY section={} pi={para_idx} current={:.3} fit={:.3} total={:.3} available={available:.3} lines={} base={current_page_vpos_base:?} dirty={} stored_page={stored_page_start_line:?} anchored={anchored_stored_body_reset_line:?} internal={internal_forced_page_break_line:?} selected={forced_page_break_line:?}",
+            st.section_index, st.current_height, fmt.height_for_fit, fmt.total_height,
+            fmt.line_count(), st.vpos_ladder_dirty,
+        );
+    }
     ForcedPageBoundary {
         native_hwp5_existing_footnote_reset_line,
         current_page_vpos_base,
