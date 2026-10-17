@@ -50,7 +50,22 @@ static RANGES_2: [LatinRange; 1] = [LatinRange {
     widths: &ASCII_2,
 }];
 
-pub(super) static METRICS: [FontMetric; 3] = [
+// 명시적 대체 글꼴이 없는 한양중고딕의 Type3 프로그램 폭이다.
+// HWP5 법령의 명시적 HY중고딕 TrueType 대체 프로그램과 구분한다.
+static ASCII_3: [u16; 95] = [
+    1000, 248, 420, 535, 529, 867, 643, 240, 288, 281, 369, 518, 246, 518, 245, 263, 500, 500, 500,
+    500, 500, 500, 500, 500, 500, 500, 247, 245, 583, 519, 582, 524, 999, 632, 629, 699, 693, 649,
+    594, 751, 689, 246, 470, 631, 539, 803, 692, 749, 637, 754, 692, 636, 584, 688, 632, 904, 619,
+    619, 585, 253, 283, 253, 448, 500, 256, 534, 527, 483, 531, 532, 255, 529, 529, 195, 196, 473,
+    195, 809, 529, 539, 535, 531, 310, 480, 255, 531, 479, 697, 470, 466, 485, 310, 237, 306, 500,
+];
+static RANGES_3: [LatinRange; 1] = [LatinRange {
+    start: 0x0020,
+    end: 0x007e,
+    widths: &ASCII_3,
+}];
+
+pub(super) static METRICS: [FontMetric; 4] = [
     FontMetric {
         name: "신명 디나루 (HFT)",
         bold: false,
@@ -75,12 +90,21 @@ pub(super) static METRICS: [FontMetric; 3] = [
         latin_ranges: &RANGES_2,
         hangul: None,
     },
+    FontMetric {
+        name: "한양중고딕 (HFT)",
+        bold: false,
+        italic: false,
+        em_size: 1000,
+        latin_ranges: &RANGES_3,
+        hangul: None,
+    },
 ];
 
 /// HFT로 해소한 선언 face에만 원본 프로그램의 메트릭 이름을 공급한다.
 pub(crate) fn metric_face_name(requested: &str) -> Option<&'static str> {
     match requested {
         "한양신명조" | "HanyangSinMyeongJo" => Some("한양신명조 (HFT)"),
+        "한양중고딕" | "HanyangJungGothic" => Some("한양중고딕 (HFT)"),
         "신명 디나루" => Some("신명 디나루 (HFT)"),
         "신명 신그래픽" => Some("신명 신그래픽 (HFT)"),
         _ => None,
