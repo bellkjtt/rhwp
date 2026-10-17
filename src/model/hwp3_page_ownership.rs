@@ -1,10 +1,10 @@
-//! HWP3 자연 쪽 경계를 같은 HWPX 저장 조판 정보에만 결부한다.
+//! HWP3 자연 쪽 경계와 제어 문자 축을 같은 HWPX 저장 정보에 결부한다.
 //!
 //! 표준 pageBreak로 방출하면 한컴 재조판에 강제 개행이 추가된다. 기존 출처
 //! 마커 안에 보조 정보를 두고, 글자/문단 속성 또는 구역 XML이 바뀌면 버린다.
 use super::{
     document::{Document, Section},
-    paragraph::ColumnBreakType,
+    paragraph::{ColumnBreakType, Paragraph},
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -23,6 +23,82 @@ struct SectionOwnership {
     xml_sha256: String,
     paragraph_count: usize,
     natural_breaks: Vec<usize>,
+    #[serde(default)]
+    control_axes: Vec<ControlAxis>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct ControlAxis {
+    paragraph: usize,
+    visible_text_sha256: String,
+    placeholders: Vec<usize>,
+    offsets: Vec<u32>,
+    char_count: u32,
+    axis_shift: u32,
+}
+
+impl ControlAxis {
+    fn from_paragraph(index: usize, para: &Paragraph) -> Option<Self> {
+        let placeholders: Vec<_> = para
+            .text
+            .chars()
+            .enumerate()
+            .filter_map(|(index, ch)| (ch == '\u{fffc}').then_some(index))
+            .collect();
+        if placeholders.is_empty()
+            || placeholders.len() > para.controls.len()
+            || para.char_offsets.len() != para.text.chars().count()
+        {
+            return None;
+        }
+        let visible: String = para.text.chars().filter(|ch| *ch != '\u{fffc}').collect();
+        Some(Self {
+            paragraph: index,
+            visible_text_sha256: digest(visible.as_bytes()),
+            placeholders,
+            offsets: para.char_offsets.clone(),
+            char_count: para.char_count,
+            axis_shift: para.hwpx_axis_shift,
+        })
+    }
+
+    fn restore(&self, para: &mut Paragraph) {
+        let visible: String = para.text.chars().filter(|ch| *ch != '\u{fffc}').collect();
+        let Some(length) = visible.chars().count().checked_add(self.placeholders.len()) else {
+            return;
+        };
+        if self.visible_text_sha256 != digest(visible.as_bytes())
+            || self.placeholders.len() > para.controls.len()
+            || self
+                .placeholders
+                .last()
+                .is_none_or(|&index| index >= length)
+            || !self.placeholders.windows(2).all(|pair| pair[0] < pair[1])
+            || self.offsets.len() != length
+            || self
+                .offsets
+                .last()
+                .is_some_and(|&offset| offset >= self.char_count)
+            || !self.offsets.windows(2).all(|pair| pair[0] <= pair[1])
+        {
+            return;
+        }
+        let mut chars = visible.chars();
+        let mut placeholders = self.placeholders.iter().copied().peekable();
+        let mut text = String::with_capacity(visible.len() + self.placeholders.len() * 3);
+        for index in 0..length {
+            if placeholders.peek() == Some(&index) {
+                text.push('\u{fffc}');
+                placeholders.next();
+            } else if let Some(ch) = chars.next() {
+                text.push(ch);
+            }
+        }
+        para.text = text;
+        para.char_offsets.clone_from(&self.offsets);
+        para.char_count = self.char_count;
+        para.hwpx_axis_shift = self.axis_shift;
+    }
 }
 
 #[derive(Deserialize, Serialize)]
@@ -51,6 +127,12 @@ impl PageOwnership {
                     (para.page_break_synthesized && para.column_type == ColumnBreakType::Page)
                         .then_some(index)
                 })
+                .collect(),
+            control_axes: section
+                .paragraphs
+                .iter()
+                .enumerate()
+                .filter_map(|(index, para)| ControlAxis::from_paragraph(index, para))
                 .collect(),
         });
     }
@@ -94,6 +176,11 @@ impl PageOwnership {
             let para = &mut section.paragraphs[index];
             para.column_type = ColumnBreakType::Page;
             para.page_break_synthesized = true;
+        }
+        for axis in &saved.control_axes {
+            if let Some(para) = section.paragraphs.get_mut(axis.paragraph) {
+                axis.restore(para);
+            }
         }
     }
 }
