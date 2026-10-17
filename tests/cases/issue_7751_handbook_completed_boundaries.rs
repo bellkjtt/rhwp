@@ -313,6 +313,98 @@ fn issue_7751_whole_table_tail_margin_preserves_qa_sequence_and_print_frames() {
             "Q&A 내용의 누락·중복: {marker}"
         );
     }
+    // 같은 입력의 독립 Print p289 B 경로를 CTM 적용 후 96dpi 좌상단으로 변환했다.
+    // 문단 여백을 누락했던 그룹도 표/문단 소유를 보존하며 화살표 각각이 제 위치에 있어야 한다.
+    let diagrams: Vec<_> = descendants(&previous.root)
+        .into_iter()
+        .filter(|node| {
+            matches!(&node.node_type, RenderNodeType::Group(group)
+            if group.section_index == Some(10) && group.para_index == Some(28))
+                && node.children.iter().any(|child| {
+                    matches!(&child.node_type,
+                RenderNodeType::Line(line) if line.cell_index == Some(11)
+                && line.cell_para_index == Some(2))
+                })
+        })
+        .collect();
+    assert_eq!(diagrams.len(), 2, "Q14 두 묶음의 소유·누락·중복");
+    for diagram in diagrams {
+        let RenderNodeType::Group(group) = &diagram.node_type else {
+            unreachable!()
+        };
+        let expected: &[(f64, f64)] = match group.control_index {
+            Some(1) => &[
+                (258.76, 669.214667),
+                (335.477333, 683.933333),
+                (373.536, 720.269333),
+                (451.192, 681.853333),
+                (478.862667, 718.190667),
+            ],
+            Some(0) => &[
+                (256.522667, 782.964),
+                (366.804, 781.204),
+                (479.501333, 830.658667),
+            ],
+            _ => panic!("Q14 묶음 제어 소유"),
+        };
+        let arrows: Vec<_> = diagram
+            .children
+            .iter()
+            .filter_map(|child| {
+                if let RenderNodeType::Line(line) = &child.node_type {
+                    Some(line)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert_eq!(arrows.len(), expected.len(), "묶음 내부 화살표의 누락·중복");
+        for (arrow, &(x, y)) in arrows.into_iter().zip(expected) {
+            assert_eq!(
+                (
+                    arrow.section_index,
+                    arrow.para_index,
+                    arrow.cell_index,
+                    arrow.cell_para_index,
+                    arrow.outer_table_control_index
+                ),
+                (Some(10), Some(28), Some(11), Some(2), Some(0)),
+                "화살표의 표·셀·문단 소유 보존"
+            );
+            near(arrow.x1, x, "독립 Print 묶음 화살표 시작 x");
+            near(arrow.y1, y, "독립 Print 묶음 화살표 시작 y");
+            assert_eq!(arrow.style.end_arrow, rhwp::renderer::ArrowStyle::Arrow);
+            assert!(arrow.x2 >= arrow.x1, "화살표는 오른쪽 또는 아래로 진행한다");
+        }
+        assert!(diagram.bbox.y >= q14_start.bbox.y);
+        assert!(diagram.bbox.y + diagram.bbox.height <= q14_start.bbox.y + q14_start.bbox.height);
+    }
+
+    // 중첩 표 안의 일반 화살표는 이미 Print 위치였다. 그룹 보정으로 함께 밀면 안 된다.
+    let mut pending = vec![q14_start];
+    let mut ordinary = Vec::new();
+    while let Some(node) = pending.pop() {
+        if matches!(node.node_type, RenderNodeType::Group(_)) {
+            continue;
+        }
+        if let RenderNodeType::Line(line) = &node.node_type {
+            if line.style.start_arrow != rhwp::renderer::ArrowStyle::None
+                || line.style.end_arrow != rhwp::renderer::ArrowStyle::None
+            {
+                ordinary.push(node);
+            }
+        }
+        pending.extend(node.children.iter());
+    }
+    ordinary.sort_by(|a, b| a.bbox.y.total_cmp(&b.bbox.y));
+    assert_eq!(ordinary.len(), 2, "중첩 표 일반 화살표의 누락·중복");
+    for (arrow, (x, y)) in ordinary
+        .into_iter()
+        .zip([(364.885333, 795.922667), (366.164, 847.437333)])
+    {
+        near(arrow.bbox.x, x, "그룹 밖 화살표의 독립 Print x");
+        near(arrow.bbox.y, y, "그룹 밖 화살표의 독립 Print y");
+    }
 }
 
 #[test]
@@ -441,4 +533,42 @@ fn issue_7751_form_tables_preserve_outer_margins_and_prefix_alignment() {
             && (left.bbox.height - other.bbox.height).abs() < 1e-9,
         "바깥여백은 원점을 바꾸며 셀 크기를 바꾸지 않는다"
     );
+}
+
+#[test]
+fn issue_7751_paragraph_relative_cell_rectangle_matches_print_and_stays_inside_picture() {
+    let core = open();
+    let page = core.build_page_render_tree(134).expect("135쪽");
+    let owner = table(&page.root, 3, 47);
+    let rectangles: Vec<_> = descendants(owner)
+        .into_iter()
+        .filter(|node| {
+            matches!(&node.node_type, RenderNodeType::Rectangle(rectangle)
+            if rectangle.section_index == Some(3) && rectangle.para_index == Some(47)
+            && rectangle.control_index == Some(0) && rectangle.cell_index == Some(0)
+            && rectangle.cell_para_index == Some(1)
+            && rectangle.outer_table_control_index == Some(0))
+        })
+        .collect();
+    assert_eq!(
+        rectangles.len(),
+        1,
+        "원본 강조 사각형의 표·셀·문단 소유·누락·중복"
+    );
+    let rectangle = rectangles[0];
+    let pictures: Vec<_> = descendants(owner)
+        .into_iter()
+        .filter(|node| matches!(node.node_type, RenderNodeType::Image(_)))
+        .collect();
+    assert_eq!(pictures.len(), 1, "강조할 원본 화면 그림");
+    let picture = pictures[0];
+    assert!(rectangle.bbox.x >= picture.bbox.x && rectangle.bbox.y >= picture.bbox.y);
+    assert!(rectangle.bbox.x + rectangle.bbox.width <= picture.bbox.x + picture.bbox.width);
+    assert!(rectangle.bbox.y + rectangle.bbox.height <= picture.bbox.y + picture.bbox.height);
+    assert!(compact(&text(owner)).contains("기능분류체계관리"));
+    // 독립 Print p135의 빨간 S 경로, CTM 적용 후 96dpi 좌상단 좌표와 크기.
+    near(rectangle.bbox.x, 112.198667, "일반 사각형 문단 기준 x");
+    near(rectangle.bbox.y, 358.365333, "일반 사각형 문단 기준 y");
+    near(rectangle.bbox.width, 66.968, "원본 강조 너비");
+    near(rectangle.bbox.height, 43.836, "원본 강조 높이");
 }

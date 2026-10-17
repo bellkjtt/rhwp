@@ -75,3 +75,48 @@
 실제SHA-256은 `stage15-native-producer-sources.json`으로 고정했다. 이 후속 커밋이
 같은 byte를 포함하며 소스 의미 변경을 추가하지 않는다. Frozen bin/rlib·명령·오류코드는
 `stage15-native-provenance.json`, `stage15-build-results.json`에 남겼다.
+
+## 全383쪽 재검증과 정식 회귀
+
+| 범위 | Native raw | fresh WASM raw |
+| --- | ---: | ---: |
+| 최저 | 93.07066 | 92.98362 |
+| 135쪽 | 98.05498 | 98.03088 |
+| 289쪽 | 99.74756 | 99.72209 |
+| 90% 미만·누락·고정 devel 대비0.01%p 이상 하락 | 0 | 0 |
+
+두 backend 모두14단계 대비135·289쪽의x만 바뀌었고 나머지381쪽은 render tree와
+점수가 같다. 전체11개 노드(사각형1·그룹2와 자식선8)의 가로 좌표 외에 세로·크기·
+문구·소유·노드 순서 차이는0건이다. 전383쪽 Native/WASM의 내용·소유 일치 감사도
+내부usize sentinel 대응 외에는 차이0건이며11쪽 각주1개를 유지했다.
+
+Native와fresh WASM의135·289쪽overlay를 직접 열어 강조 사각형과 그룹 화살표의
+개선·일반 화살표 보존을 판독했다. 135쪽 독립 Print의빨간S경로 bbox는
+(112.198667,358.365333,66.968,43.836)px, Native는
+(112.32,358.506667,67.04,43.72)px다. 원본3구역47문단 셀0의문단1은 좌우여백각1000
+(1/2 HWPUNIT), 저장column_start500HU이며 문단은Center지만 도형은Para/Left다.
+이 일반 사각형도 그룹과 같은 문단 기준을 소비해 개선됐고 문서ID 분기가 없다.
+
+같은 동작의 우선 검증은99%대289쪽 그룹으로 하며,135쪽은 다른도형종류·문단Center/
+도형Left라는 원본 경계가 있는98%대 완료 페이지다. 두 쪽 모두양쪽98%·전쪽90%·
+직접 판독을 충족한 뒤 `tests/cases/issue_7751_handbook_completed_boundaries.rs`에 추가했다.
+기존QA검사는두그룹8화살표의독립좌표±2px·표/셀/문단소유·화살표종류·누락/중복을
+확인하고, 정상일반화살표2개의위치를유지한다. 새135쪽검사는사각형의독립좌표/크기±2px,
+원본화면그림안포함과문구보존을함께보호한다.
+
+정식 파일을 frozen14 라이브러리로 컴파일(exit0)·실행하자 기존4PASS/새경계2FAIL
+(exit101)이었고 원인은각각26.29px/6.55px의독립Print x차이였다. frozen15로 동일
+파일을컴파일(exit0)·실행하자6PASS/0FAIL(exit0)였다. 기존중첩글상자·TAC6건,
+그룹수준roundtrip2건, 그룹그림crop2건도모두PASS였다. 이10건은정상대조이며
+합성자료의통과를독립Print의시각일치로확대해보고하지않는다.
+
+기존Direct PDF의289쪽Line화살표는손실없는replay미지원이라는명시적오류(exit1)를
+확인했다. 이 경로를부분출력성공으로세지않으며 이번셀앵커결함과구분한다.
+63쪽Path연결선·130쪽SVGpayload의거부와함께지원한계를기록하고기존guard를완화하지않는다.
+
+첫선택Native비교명령은9PNG대383PDF에--pages를빠뜨려누락guard가거부했다.
+명령을고쳐같은새PNG9개로성공했고제품결함/회귀실패로세지않았다.
+WASM빌드는542a8bcbf에서exit0, publicJS/WASM동기화해시일치를확인한뒤이번wrapper가
+생성한trackedJS만복구했다. frozenpackage와실제출처는stage15-fresh-wasm-provenance에보존했다.
+
+필수전체회귀·Skia·lint·Studio·브라우저대조군의최종검증은이회귀추가head에서이어간다.
