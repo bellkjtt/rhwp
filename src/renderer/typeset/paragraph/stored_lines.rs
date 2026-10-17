@@ -1,10 +1,127 @@
-//! 저장 줄 사다리의 문단 간격 복원 가능성 판정.
+//! 저장 줄 사다리의 간격·프레임 소유 유효성 판정.
 //!
-//! 문단과 해석된 스타일을 읽어 기존 판정만 반환한다. 실제 spacing 트림과
-//! dirty 전환·페이지 전진은 호출자가 수행한다. 기존 경험적 조건의 타당성을
-//! 이번 구조 이동으로 새로 승인하는 것은 아니다.
+//! 문단·스타일과 실제 수용한 앞뒤 프레임을 읽어 판정을 반환한다.
+//! 실제 spacing 트림과 dirty 전환·페이지 전진은 호출자가 수행한다.
 
 use crate::model::paragraph::Paragraph;
+
+/// 현재 실제 페이지가 저장 프레임의 중간부터 시작하는지 실제 앞뒤 소유로 확인한다.
+/// 저장 prefix가 이전 실제 페이지에서 소비됐으면 다음 자동 reset도 재배분 대상이다.
+pub(in crate::renderer::typeset) fn stored_frame_prefix_consumed_before_page(
+    st: &super::super::TypesetState,
+    paragraphs: &[Paragraph],
+    para_idx: usize,
+) -> bool {
+    use crate::renderer::pagination::PageItem;
+    if st.col_count != 1
+        || st.profile.session_edited()
+        || st.profile.hwp3_layout()
+        || !(st.profile.hwpx_stored_layout() || st.profile.hwp5_stored_pagination_layout())
+        || paragraphs.get(para_idx).is_none_or(|para| {
+            para.column_type != crate::model::paragraph::ColumnBreakType::None
+                || para
+                    .line_segs
+                    .first()
+                    .is_some_and(|line| line.is_first_line_of_page())
+        })
+    {
+        return false;
+    }
+    let Some(previous_page) = st
+        .pages
+        .iter()
+        .rev()
+        .nth(1)
+        .filter(|page| page.section_index == st.section_index)
+    else {
+        return false;
+    };
+    let Some(previous) = previous_page
+        .column_contents
+        .last()
+        .and_then(|col| col.items.last())
+    else {
+        return false;
+    };
+    let Some(first) = st.current_items.first() else {
+        return false;
+    };
+    let (owner, start) = match first {
+        PageItem::FullParagraph { para_index } => (*para_index, 0),
+        PageItem::PartialParagraph {
+            para_index,
+            start_line,
+            ..
+        } => (*para_index, *start_line),
+        _ => return false,
+    };
+    let Some(para) = paragraphs.get(owner) else {
+        return false;
+    };
+    let valid_source = |para: &Paragraph| {
+        !para.stored_text_partition_is_dirty()
+            && !para.cell_format_vpos_dirty
+            && para.controls.is_empty()
+            && !para.line_segs.is_empty()
+            && para
+                .line_segs
+                .iter()
+                .all(|line| !super::is_synthetic_line_seg(line))
+            && para
+                .source_line_seg_vertical_pos
+                .as_ref()
+                .is_none_or(|source| source.len() == para.line_segs.len())
+    };
+    let position = |para: &Paragraph, index: usize| {
+        para.source_line_seg_vertical_pos
+            .as_ref()
+            .map_or(para.line_segs[index].vertical_pos, |source| source[index])
+    };
+    if !valid_source(para)
+        || start >= para.line_segs.len()
+        || position(para, start) <= 0
+        || para.line_segs[start].is_first_line_of_page()
+    {
+        return false;
+    }
+    if start > 0 {
+        // 현재 조각 바로 앞 줄을 이전 실제 페이지가 소유했고, 저장 축은 이어진다.
+        return matches!(previous,
+            PageItem::PartialParagraph { para_index, end_line, .. }
+            if *para_index == owner && *end_line == start)
+            && position(para, start) > position(para, start - 1)
+            && (0..start).any(|line| position(para, line) == 0);
+    }
+    let Some(before_index) = owner.checked_sub(1) else {
+        return false;
+    };
+    let Some(before) = paragraphs
+        .get(before_index)
+        .filter(|para| valid_source(para))
+    else {
+        return false;
+    };
+    let complete = match previous {
+        PageItem::FullParagraph { para_index } => *para_index == before_index,
+        PageItem::PartialParagraph {
+            para_index,
+            end_line,
+            ..
+        } => *para_index == before_index && *end_line == before.line_segs.len(),
+        _ => false,
+    };
+    let last = before.line_segs.len() - 1;
+    complete
+        && (1..=last).any(|line| {
+            position(before, line) == 0
+                && position(before, line - 1) > 0
+                && !before.line_segs[line].is_first_line_of_page()
+        })
+        && position(para, 0)
+            == position(before, last)
+                .saturating_add(before.line_segs[last].line_height)
+                .saturating_add(before.line_segs[last].line_spacing)
+}
 
 /// 위쪽에서 시작한 큰 개체 줄도 끝까지 소비했다면 다음 저장 프레임의 경계를 따른다.
 /// 저장 시작 위치의 수치 문턱으로 그 줄의 물리 점유를 대신하지 않는다.

@@ -57,6 +57,8 @@ impl TypesetEngine {
                     crate::renderer::typeset::paragraph::stored_lines::stored_page_boundary_invalidated_by_reflow(
                         profile, st.col_count, &st.current_items, paragraphs,
                         para_idx, st.current_height, self.dpi,
+                    ) || crate::renderer::typeset::paragraph::stored_lines::stored_frame_prefix_consumed_before_page(
+                        st, paragraphs, para_idx,
                     );
                 // 현재 문단의 vpos가 직전 문단의 마지막 vpos보다 작은 경우 — 컬럼/페이지 reset 시그널.
                 // - 단일 단: cv == 0 만 인정 (Task #321 보수적 기준 유지).
