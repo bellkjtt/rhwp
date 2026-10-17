@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, OnceLock};
 
 use skia_safe::{FontMgr, FontStyle, Typeface};
 
@@ -9,7 +10,34 @@ use crate::renderer::{
     internal_font_family_members,
 };
 
-pub(super) type SystemFontFamilies = HashSet<String>;
+#[derive(Clone, Default)]
+pub(super) struct SystemFontFamilies {
+    names: HashSet<String>,
+    postscript_faces: Arc<OnceLock<HashMap<String, Typeface>>>,
+}
+
+impl SystemFontFamilies {
+    fn postscript_face(&self, font_mgr: &FontMgr, requested: &str) -> Option<Typeface> {
+        // family와 다른 식별자다. FULL_NAME이나 추측한 접미사를 색인하지 않는다.
+        self.postscript_faces
+            .get_or_init(|| {
+                let mut faces = HashMap::new();
+                for family in 0..font_mgr.count_families() {
+                    let mut styles = font_mgr.new_style_set(family);
+                    for style in 0..styles.count() {
+                        if let Some(face) = styles.new_typeface(style) {
+                            if let Some(name) = face.post_script_name() {
+                                faces.entry(name).or_insert(face);
+                            }
+                        }
+                    }
+                }
+                faces
+            })
+            .get(requested)
+            .cloned()
+    }
+}
 
 pub(super) fn font_style_for_text(style: &crate::renderer::TextStyle) -> FontStyle {
     let weight = match style.css_font_weight() {
@@ -212,15 +240,19 @@ thread_local! {
 }
 
 pub(super) fn collect_system_families(font_mgr: &FontMgr) -> SystemFontFamilies {
-    font_mgr.family_names().collect()
+    SystemFontFamilies {
+        names: font_mgr.family_names().collect(),
+        ..Default::default()
+    }
 }
 
 pub(super) fn has_system_family(system_families: &SystemFontFamilies, family: &str) -> bool {
     // Skia의 실제 family 조회는 ASCII 대소문자를 구분하지 않는다.
     // 설치 이름 HyhwpEQ를 요청 HYhwpEQ의 사전 필터에서 제외하면
     // 측정 face 대신 대체 글꼴로 표시하게 된다. 없는 이름은 계속 제외한다.
-    system_families.contains(family)
+    system_families.names.contains(family)
         || system_families
+            .names
             .iter()
             .any(|installed| installed.eq_ignore_ascii_case(family))
 }
@@ -231,7 +263,7 @@ pub(super) fn match_system_family_style(
     family: &str,
     style: FontStyle,
 ) -> Option<Typeface> {
-    if !has_system_family(system_families, family) {
+    if system_families.names.is_empty() {
         return None;
     }
 
@@ -244,7 +276,16 @@ pub(super) fn match_system_family_style(
             return cached;
         }
 
-        let matched = font_mgr.match_family_style(family, style);
+        let matched = if has_system_family(system_families, family) {
+            font_mgr.match_family_style(family, style)
+        } else {
+            // PDF가 요청한 name ID 6을 실제 프로그램으로 확인한다. OS가
+            // 다른 family를 폴백으로 돌려주면 그 결과를 수용하지 않는다.
+            font_mgr
+                .match_family_style(family, style)
+                .filter(|face| face.post_script_name().as_deref() == Some(family))
+                .or_else(|| system_families.postscript_face(font_mgr, family))
+        };
         cache.borrow_mut().insert(key, matched.clone());
         matched
     })
@@ -270,7 +311,7 @@ mod tests {
     #[test]
     fn missing_family_is_filtered_before_system_lookup() {
         let font_mgr = FontMgr::default();
-        let system_families = SystemFontFamilies::new();
+        let system_families = SystemFontFamilies::default();
 
         assert!(match_system_family_style(
             &font_mgr,
@@ -283,8 +324,8 @@ mod tests {
 
     #[test]
     fn system_family_membership_matches_skia_family_lookup() {
-        let mut system_families = SystemFontFamilies::new();
-        system_families.insert("AppleGothic".to_string());
+        let mut system_families = SystemFontFamilies::default();
+        system_families.names.insert("AppleGothic".to_string());
 
         assert!(has_system_family(&system_families, "AppleGothic"));
         assert!(has_system_family(&system_families, "applegothic"));
