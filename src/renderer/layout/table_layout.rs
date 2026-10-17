@@ -24941,7 +24941,9 @@ impl LayoutEngine {
                 straddle_page_bands,
             );
         let straddles_end = cell_row < end_row
-            && (cell_end > end_row || (cell_end == end_row && !end_cut.is_empty()));
+            && (cell_end > end_row
+                || (cell_end == end_row
+                    && (!end_cut.is_empty() || end_row_height_override.is_some())));
         // HWP5 저장 pagination의 2행/2문단 계약에서는 문단 하나가 행 하나의 owner다.
         if start_cut.is_empty()
             && start_row_height_override.is_none()

@@ -1217,7 +1217,8 @@ impl LayoutEngine {
             let straddles_fragment_start = cell_row < start_row && cell_end_row > start_row;
             let straddles_fragment_end = cell_row < render_range_end
                 && (cell_end_row > render_range_end
-                    || (cell_end_row == render_range_end && !end_cut.is_empty()));
+                    || (cell_end_row == render_range_end
+                        && (!end_cut.is_empty() || end_row_height_override.is_some())));
             // [#6024] block-split 조각이라도 **컷이 비어 있는 쪽 경계**(행 경계
             // 컷)의 straddle rowspan 셀은 split-block 범위(is_in_split_row)에
             // 잡히지 않는다 — 그대로 두면 연속 조각이 병합 셀 내용을 처음부터

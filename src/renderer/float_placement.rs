@@ -6057,11 +6057,9 @@ pub(crate) fn rowbreak_fragment_frame_bottom(
     dpi: f64,
     body_filling_source_frame: bool,
 ) -> f64 {
-    // 한 행에 속한 셀의 반복 프레임은 기존 본문 끝 inset을 공유한다.
-    // 다행·다열이라는 이유만으로 이 계약을 버리지 않는다. 걸친 셀의
-    // 물리 잔여와 본문 전체를 선언한 개체 상자에는 inset을 중복 계상하지 않는다.
-    let has_spanning_cells = table.cells.iter().any(|cell| cell.row_span > 1);
-    if body_filling_source_frame || has_spanning_cells {
+    // 선언 개체가 이미 소유한 본문 프레임에는 inset을 다시 넣지 않는다.
+    // 다른 칸의 rowspan 유무는 현재 조각의 실제 본문 하단 계약을 바꾸지 않는다.
+    if body_filling_source_frame {
         body_bottom - hwpunit_to_px(i32::from(table.outer_margin_bottom), dpi)
     } else {
         single_cell_page_fragment_bottom(table, body_bottom, dpi)

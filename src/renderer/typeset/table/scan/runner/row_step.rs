@@ -84,7 +84,7 @@ impl TypesetEngine {
         let ordinary_row_can_split = !rowspan_touched[r]
             || (mt.allows_row_break_split() && can_intra_split && mt.is_row_splittable(r));
         let owns_plain_row_frame = ordinary_row_can_split
-            && (reflow_minimum.is_some() || layout_engine.row_has_continuing_reflow_span(table, r))
+            && layout_engine.row_uses_reflow_physical_frame(table, r)
             && layout_engine.row_has_plain_reflow_line_units(table, r, styles);
         let avail_for_rows = if owns_plain_row_frame {
             reflow_frame_avail_for_rows.map_or(avail_for_rows, |height| avail_for_rows.min(height))
@@ -298,7 +298,7 @@ impl TypesetEngine {
                                 row_start_cut,
                             }
                             .padding();
-                            need - padding >= MIN_TOP_KEEP_PX
+                            (need - padding >= MIN_TOP_KEEP_PX || owns_plain_row_frame)
                                 && layout_engine.row_aligned_content_bottom(
                                     table, r, need, row_total, styles,
                                 ) <= avail_for_rows - consumed - cs_before + 0.5
@@ -887,6 +887,7 @@ impl TypesetEngine {
                     && ordinary_band_content_fits(
                         &res.end_cut,
                         res.consumed_height,
+                        owns_plain_row_frame,
                         layout_engine.row_aligned_content_bottom(
                             table,
                             r,
@@ -1455,7 +1456,7 @@ impl TypesetEngine {
             // 실제 수용한 높이만 소유하며 예약과 paint가 이 같은 상자를 쓴다.
             end_row_height_override = Some(consumed);
         }
-        // 재조판 행의 선언 최소와 이어지는 병합 칸의 앞 상자는 실제 수용한 높이다.
+        // 재조판 행의 앞 상자는 내용 컷과 별개인 쪽 끝의 빈 띠도 함께 소유한다.
         // 같은 값을 예약 결과와 PageItem에 실어 paint가 더 작은 상자로
         // 다시 계산한 뒤 잔여에서 더 큰 높이를 빼는 일을 막는다.
         if !keep_scanning
@@ -1468,8 +1469,8 @@ impl TypesetEngine {
             let accepted_height = consumed - consumed_before_row - cs_before;
             if accepted_height > 0.0 {
                 let available = (avail_for_rows - consumed_before_row - cs_before).max(0.0);
-                // 별도 선언 최소가 없어도 뒤 행까지 이어지는 병합 칸은
-                // 현재 쪽의 물리 하단까지 소유한다. 남은 글줄 컷은 늘리지 않는다.
+                // 별도 선언 최소가 없는 내용 행도 현재 쪽의 물리 하단까지
+                // 소유한다. 다음 쪽에 남은 글줄 컷은 늘리지 않는다.
                 let minimum = reflow_minimum.unwrap_or(available);
                 let remaining = if scan_start_row == cursor_row {
                     start_row_height_override.unwrap_or(minimum)
@@ -1518,7 +1519,7 @@ impl TypesetEngine {
 }
 
 /// [#5585] 일반 행 밴드 컷의 내용이 남은 쪽(`rest`)에 들어가는가. 25px 고아 기준은 다른
-/// 행내 분할과 같다.
+/// 행내 분할과 같다. 실제 재조판 일반 글줄의 완전 소비는 작은 한 줄도 허용한다.
 ///
 /// 들어가는지는 그려지는 내용의 끝(`aligned_content_bottom`)으로 판정한다. 가운데·아래 정렬
 /// 칸은 내용의 자리가 쪽 경계 너머의 선언 높이로 정해지므로, 내용 높이가 남은 쪽에
@@ -1528,8 +1529,11 @@ impl TypesetEngine {
 fn ordinary_band_content_fits(
     end_cut: &[usize],
     content_height: f64,
+    complete_plain_reflow: bool,
     aligned_content_bottom: f64,
     rest: f64,
 ) -> bool {
-    !end_cut.is_empty() && content_height >= MIN_TOP_KEEP_PX && aligned_content_bottom <= rest + 0.5
+    !end_cut.is_empty()
+        && (content_height >= MIN_TOP_KEEP_PX || complete_plain_reflow)
+        && aligned_content_bottom <= rest + 0.5
 }
