@@ -54,8 +54,8 @@ pub use model::event::DocumentEvent;
 pub use parser::{parse_document, parse_document_with_password, DocumentParser};
 pub use serializer::{serialize_document, DocumentSerializer};
 
-// 아래 두 export 는 `wasm-api` 를 켰을 때만 JS 로 나간다. 끄면 start 로 등록하지 않으므로
-// rhwp 를 링크한 앱의 start 를 대신하지 않는다. 두 함수 자체는 Rust API 로 남는다.
+// 아래 두 함수는 항상 Rust API로 남는다. `wasm-api`를 켰을 때만 JS export와 자동 start를
+// 등록하며, 끄면 소비 앱의 일반 Rust main이 자동 진입점으로 선택되는 것을 방해하지 않는다.
 
 /// WASM panic hook 초기화 (한 번만 실행)
 #[cfg_attr(feature = "wasm-api", wasm_bindgen(start))]
