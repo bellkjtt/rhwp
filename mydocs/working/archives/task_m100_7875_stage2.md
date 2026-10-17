@@ -6,7 +6,7 @@ Issue: [#7875](https://github.com/edwardkim/rhwp/issues/7875)
 
 ## 검토 결론과 범위
 
-**메인터너 보정 후 수용 가능 — #7875 해결 범위의 로컬 검증을 완료했다. 원격 통합 PR의 CI·merge는 아직 수행하지 않았다.**
+**메인터너 보정 후 수용 가능 — #7875 해결 범위의 로컬 검증을 완료했다. 통합 PR #7981의 code candidate CI도 성공했다. 문서 trailing CI·merge는 별도 후속 게이트다.**
 [1단계](task_m100_7875_stage1.md)에서 프로젝트 적합성과 최신 devel의 실제 시작/export 문제를 먼저 재현한 뒤 적용했다.
 기존 git/path 라이브러리 소비의 범용 호환 개선에 해당한다. #5446의 신규 배포 채널 동결과 외부 Rust API 안정성 미확정 범위를 유지한다.
 
@@ -150,6 +150,6 @@ HWP5/HWPX 두 입력의 경로·bytes·SHA-256은 1단계 표에 고정했다. �
 작업 중 raw 로그·JSON·frozen 패키지는 ignored `output/pr-review/pr7876-20261017/`에 있다.
 전체 검사 전 output에는 pr-review만 있었음을 기록했다. 검사 종료 후 Cargo/Rust 및 열린 cwd/fd 참조가 없는 것을 확인하고 이번 검사로 생성된 중간 파일 178개(13,392,819 bytes)를 제거했다. 검증 증적과 tests/golden_svg는 보존했다.
 원 PR의 첫 기여 author/co-author와 fork를 보존했다. reviewer는 jangster77이고 관련 이슈도 같은 계정에 할당했다.
-아직 원격 통합 PR·해당 GitHub CI·merge는 수행하지 않았다.
-정확한 통합 code head CI 성공 후 원 PR #7876 기준 archive review/구현 기록과 오늘할일을 같은 PR의 trailing 문서 commit에 포함한다.
+원격 [통합 PR #7981](https://github.com/edwardkim/rhwp/pull/7981)을 생성했고 문서만 추가된 candidate `69f1b8e7ce2427fd642bec1b7a07a074f752264e`의 [Full CI](https://github.com/edwardkim/rhwp/actions/runs/39030725781)·CodeQL·Render Diff·Adapter·Proptest·Controller와 36 check가 성공했다. 최종 [개별 review](../../pr/archives/pr_7876_review.md)와 [실행 기록](../../pr/archives/pr_7876_review_impl.md)을 같은 PR의 문서 trailing commit으로 추가한다. trailing CI·merge는 아직 실행 전이다.
+정확한 통합 code head CI 성공을 확인한 뒤에만 원 PR #7876 기준 archive review/구현 기록과 오늘할일을 작성했다.
 merge 후 첫 기여자에게 감사와 환영·실제 보정/검증 범위를 존댓말로 안내하고 fork branch는 보존한다.
