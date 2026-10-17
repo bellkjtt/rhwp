@@ -461,8 +461,12 @@ parser·serializer 계약, 다른 문서까지 함께 제거하지 않는다. �
    원본 HWP/HWPX 및 독립 Print PDF의 파일명·경로·SHA-256·출처·한컴 버전, 재현 명령을 기록한다.
    backend별 실행 범위·최저 일치율·90% 미만 페이지·쪽수 불일치와 대표 review PNG의 직접 판독을
    연결한다. 측정하지 않은 backend나 페이지는 미검증으로 적는다. Native만으로 미달이 확인됐으면
-   이관할 수 있지만 fresh WASM까지 검증한 것으로 보고하지 않는다. TSV·로그·중간 JSON은 ignored
-   `output/pr-review/<id>/`에 보존하고 Git에 커밋하지 않는다.
+   이관할 수 있지만 fresh WASM까지 검증한 것으로 보고하지 않는다. 작업 중 TSV·로그·중간 JSON은
+   ignored `output/pr-review/<id>/`에 보존한다. 최종 근거 TSV는 본문에 전체 원문을 넣거나,
+   본문 크기 제한 시 `mydocs/pr/assets/issue_<이슈번호>/` 아래에 원본을 커밋해 링크한다.
+   source·입력·쪽·SHA-256을 연결한다.
+   [TSV 원본 보존·PR 링크](../verification/visual_sweep_guide.md#tsv-원문-본문-삽입과-저장소-링크)를 따른다.
+   로그·중간 JSON은 커밋하지 않는다.
 2. **기존 이슈 등록 여부를 확인하고 연결한다.** 이슈 URL·상태·담당 범위와 같은 원본·증상의
    일치 근거를 기록한다. 없을 때만 별도 이슈를 등록한다. 제목에 원본 파일명과 출력 결함을 넣고, 실패 근거·영향 페이지·
    원본과 Print PDF의 안정적인 증적 링크·고정 base/head 비교·기존 미달 판정·검사 제거 범위·

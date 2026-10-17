@@ -213,7 +213,12 @@
   편집 command·parser·model·serializer의 속성/저장 정보 변경도 실제 조판 소비 경로에 영향을 주면 적용한다.
   버전에 맞는 한컴 [Print PDF 출력 계약](mydocs/manual/mcp_hwp2024Convert_usage.md#기준-pdf-인쇄-계약)을 따른다.
   편집 동작은 동일하게 편집한 저장본을 Print 출력한다. 기준 PDF 부족은 미검증이며 비해당이 아니다.
-  TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존하고 Git에 커밋하지 않는다.
+  작업 중 TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존한다.
+  최종 제출용 TSV는 PR 본문에 파일별 `tsv` 코드 블록으로 전체 원문을 넣을 수 있다.
+  본문 크기 제한에 걸리면 원본을 `mydocs/pr/assets/issue_<이슈번호>/<문서이름>_silhouette.tsv`
+  등에 바이트 그대로 복사해 커밋하고 정확한 head SHA의 raw 다운로드 링크로 제출한다.
+  Native/fresh WASM과 base/후보는 하위 폴더나 파일명으로 구분한다. 실행 로그·중간 JSON은 커밋하지 않는다.
+  [TSV 원본 보존·링크](mydocs/manual/verification/visual_sweep_guide.md#tsv-원문-본문-삽입과-저장소-링크)를 따른다.
   영향 페이지의 Native/fresh WASM compare·standalone overlay·review를 산출해 직접 확인하고,
   source SHA·입력/기준 PDF·페이지·명령·대표 PNG·남은 차이를 결과보고에 연결한다. PR review를
   요청하기 전에는 대표 review·overlay PNG를 **PR 본문에서 실제 Markdown 이미지로 표시**한다.
