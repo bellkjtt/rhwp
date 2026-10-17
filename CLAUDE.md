@@ -160,7 +160,12 @@ Native/fresh WASM 양쪽 raw 일치율의 최솟값이 **100% → 99%대 → 98%
   편집 command·parser·model·serializer도 실제 조판 소비 경로에 영향을 주면 적용한다.
   기준 PDF는 저장 버전에 맞는 한컴 [Print 출력 계약](mydocs/manual/mcp_hwp2024Convert_usage.md#기준-pdf-인쇄-계약)을 따른다.
   편집 변경은 동일하게 편집한 저장본을 Print 출력한다. PDF 부족은 미검증이며 비해당이 아니다.
-  TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존하고 Git에 커밋하지 않는다.
+  작업 중 TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존한다.
+  최종 제출용 TSV는 PR 본문에 파일별 `tsv` 코드 블록으로 전체 원문을 넣을 수 있다.
+  본문 크기 제한에 걸리면 원본을 `mydocs/pr/assets/issue_<이슈번호>/<문서이름>_silhouette.tsv`
+  등에 바이트 그대로 복사해 커밋하고 정확한 head SHA의 raw 다운로드 링크로 제출한다.
+  Native/fresh WASM과 base/후보는 하위 폴더나 파일명으로 구분한다. 실행 로그·중간 JSON은 커밋하지 않는다.
+  [TSV 원본 보존·링크](mydocs/manual/verification/visual_sweep_guide.md#tsv-원문-본문-삽입과-저장소-링크)를 따른다.
 - 페이지별 TSV 명령·저장 위치는 [「실루엣 보조값만 빠르게 TSV 산출」](mydocs/manual/verification/visual_sweep_guide.md#실루엣-보조값만-빠르게-tsv-산출)를 따른다. Native/fresh WASM 예제를 각각 실행한다.
   검증 대상 전체 페이지의 Native/fresh WASM TSV에서 최저값·90% 미만·누락 쪽을 기록하고,
   미달/구조 차이/대표 경계만 비교 PNG를 추가 생성해 직접 판독한다. 대표 PR 이미지 제출은 유지한다.

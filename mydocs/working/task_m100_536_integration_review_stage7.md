@@ -2,9 +2,15 @@
 
 ## 사용자 지시와 실제 base 변경
 
-사용자가 TSV를 PR 본문에 직접 넣도록 지시했다. 원본 32개를 파일명·생산 SHA·SHA-256과 함께
-`tsv` 코드 블록으로 그대로 표시하고 게시 뒤 API에서 원문 바이트를 재대조한다. 별도 Gist를
-생성하거나 TSV를 Git에 커밋하지 않는다. 이 제출 방식은 이번 작업의 명시적 사용자 지시다.
+사용자의 후속 지시에 따라 TSV 원문을 PR 본문에 직접 넣을 수 있고 본문 크기 제한 시 asset 링크로
+제출하도록 지침과 템플릿에 병기한다. 이번 최종 TSV 원본 32개는 다운로드·영구 보존도 가능하게
+`mydocs/pr/assets/issue_536_seo_rii_20261017/` 아래에 바이트 그대로 커밋하고 PR 본문에서
+정확한 head SHA의 raw 다운로드 링크로 연결한다. 후보는 `native/`, `wasm/`, 기준은
+`base/native/`, `base/wasm/` 아래에 `<문서이름>_silhouette.tsv`로 보존한다.
+실제 source/producer SHA·입력/Print·페이지·TSV SHA-256·바이트 수를 연결하고 push 뒤 다운로드한
+원본을 재대조한다. 실행 로그·중간 JSON은 ignored output에 둔다.
+본문 직접 삽입과 크기 제한 시 링크 제출의 두 방식·예시를 AGENTS·CLAUDE·CONTRIBUTING·Visual Sweep 가이드·시각 검증 governance·fixture
+근거 문서 및 `.github/pull_request_template.md` 총 7곳에 일관되게 반영한다.
 
 PR 직전 확인에서 devel이 `fe5725dc384689b45d60ef8ea4c83138bc2701d8`에서
 `b7a5388034ee66f58a7e1d5363974e83b6374f57`로 전진했다. 새 commit은 #7953이며 PDF 가져오기를 기본 feature로
@@ -40,5 +46,39 @@ PR 직전 확인에서 devel이 `fe5725dc384689b45d60ef8ea4c83138bc2701d8`에서
    TSV 원문을 포함한 PR 생성 → code head CI → 같은 PR review/오늘할일 trailing → trailing CI →
    정상 merge·post_merge 순서를 유지한다. 부모 #536 전체를 종료하지 않는다.
 
-현재 상태는 **리베이스 완료 / 새 기본 feature의 검증 미완료**다. 6단계 통과와 구분한다.
+이 단계의 전체 회귀는 통과했다. 아래 추가 devel 전진에 따라 최신 base의 검증은 다음 단계로 이어간다. 6단계 통과와 구분한다.
 검증 로그는 ignored `output/pr-review/seo-rii-20261017/logs/rebased-*.log`에 기록한다.
+
+## 리베이스 후 확인한 실제 결과
+
+실제 producer는 `751e34e344d371d276917dccb06b93fa8e79eff7`, 기준은 위 `b7a538803`이다.
+전체 release-test nextest는 **10,770 PASS / 0 FAIL / 45 skipped**, 실행 729.865초이며,
+컴파일을 포함한 명령 전체는 1,491.2초였다. 원 변경 Native 집중은 **280 PASS**, 공식 Native Skia
+lib는 4개 binary 합계 **4,043 PASS / 12 ignored**다. missing-picture·Direct PDF와 새 PDF paint,
+feature-on FFI Clippy·빌드 및 실제 ABI 9종, format·Native Clippy도 모두 exit 0으로 확인했다.
+WASM Clippy도 exit0이다. 새 base 전진 후 아직 진행 중이던 이전 base workspace build와 그 뒤의 lint·doc·feature-off·fresh Studio 검증은 중복 실행을 피하기 위해 최신 base 단계로 넘겼다. 미완료 검사를 통과로 표시하지 않는다.
+
+8개 입력의 전체 1쪽씩 Native/fresh WASM16개 비교는 모두90% 이상·쪽수1:1·누락0이며,
+동일 backend 기준 devel 대비0.01%p 이상 하락은 없다. 이번32개 TSV에서는 raw와 색상 경계
+보정값이 모두 같다. WASM lseg-02-mixed의 새 base와 후보는 둘 다99.84053%이며 과거
+6단계의99.84066%를 새 측정값으로 재사용하지 않는다. fresh review16개와 수식 동일 좌표4배
+확대를 직접 판독했다. 수식 이름 크기는 개선됐고 기존 분자·괄호 간격은 남아 있다. 폼 Edit의
+기존 bevel·그림의 raster/테두리 차이도 해결 성과로 표시하지 않는다.
+
+실제 Native API IME 조합·undo/redo·저장·재열기는 같은7337바이트 입력을 재생성했고, live/reopen
+794×1123 RGBA의 SHA-256은 모두 `51c6088a280c146a80b7ca91664f7426a662dd422b4dce6b069594ad7b341722`로 같다.
+독립 Print 대비 screen100%, 실제 C ABI Direct PDF의 shape-group-02도100%이며 vector
+`ShadingType 2`·Image 객체 부재를 확인했다. 두 새 review도 직접 판독했다. representative PNG20개는
+이 새 출력으로 교체하고 source·파일 해시를 `rebased-visual-asset-plan.json`에 기록했다.
+
+원 로그·명령·producer/binary hash는 ignored `rebased-rust-gates.json`, `rebased-builds.json`,
+`rebased-visual-audit.json`, `rebased-direct-reading.json`, `rebased-native-consumers.json`에 있다.
+최종 TSV 원본32개와 README를 검토 asset에 보존하고 이 단계 commit에 포함한다. source751/b7의 원본이며 새 base의 TSV로 표시하지 않는다.
+
+## 추가 devel 전진 확인
+
+위 검증 중 `upstream/devel`이 #7964 merge인 `9415b920c8dec299e8ada69b01dbd1c3c044f1f1`로
+전진했다. 그림 색조·WMF crop·인쇄 용지·표/도형 배치·Direct PDF와 Visual Sweep raw 판정이
+바뀌었다. 사전 merge-tree는 `src/renderer/skia/image_conv.rs` 충돌을 검출했다. 현재 실행 결과는
+위751/b7 조합의 증거로 보존하며 새 base의 통합 검증으로 표시하지 않는다. 완료된 회귀·lint 결과를 commit하고 미완료 검증은 최신 base에서 수행한다. obsolete base의 workspace build만 해당 driver·자식 PID를 확인해 종료했으며, 전체 회귀를 중단한 것은 아니다. 최신 base로 rebase한다. 캐시·색조·sampling 소비를 함께 보존하는 해소와
+raw 기준 재비교·새 head 검증은 다음 단계에서 기록한다.

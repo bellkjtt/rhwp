@@ -171,7 +171,13 @@ TSV 성공 또는 `not_evaluated`는 측정 완료만 뜻한다. 평균·90% 이
 양쪽·앞뒤 글자·보기 번호·탭·줄 사이 간격까지 확인하고 점수와 직접 판독을 별도로 기록한다.
 확인된 결함은 점수 통과로 면제하지 않으며 출력 보정·재검증 후 완료·회귀 추가/변경·승인 여부를
 판정한다. 모든 역할은 [90% 통과 후 확대 판독](../pr_review/visual_fixture_evidence.md#90-통과-후-수식간격의-확대-판독)을 따른다.
-TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존하고 Git에 커밋하지 않는다.
+작업 중 TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존한다.
+최종 제출용 TSV는 파일별 전체 원문을 PR 본문의 `tsv` 코드 블록에 넣을 수 있다.
+본문 크기 제한에 걸리면 원본을 `mydocs/pr/assets/issue_<이슈번호>/<문서이름>_silhouette.tsv`
+등에 바이트 그대로 커밋하고 정확한 head SHA의 raw 링크로 제출한다. Native/fresh WASM과
+base/후보를 구분하고 다운로드한 원본의 해시를 대조한다.
+[TSV 보존·링크 절차](visual_sweep_guide.md#tsv-원문-본문-삽입과-저장소-링크)를 따른다.
+실행 로그·중간 JSON은 커밋하지 않는다.
 PR 본문에는 명령·source/build SHA·입력/PDF 해시·페이지 범위·최저값·미달/누락 쪽과 증적 출처를 기록한다.
 OVR·Skia·SVG 자기 비교·구조 회귀만으로 한컴 PDF Visual Sweep을 대신하지 않는다.
 

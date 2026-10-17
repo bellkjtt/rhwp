@@ -44,4 +44,4 @@
 
 ## PR 직전 base 갱신
 
-새 base `b7a5388034ee66f58a7e1d5363974e83b6374f57`와 통합 head `a7aac1a9ce5b2b902471ecd8f234f7d72834812d`의 [7단계 재검증](../../working/task_m100_536_integration_review_stage7.md)을 따른다. 원 head와 1–6단계 실행 기록은 그대로 보존한다. TSV 원본은 사용자 지시에 따라 PR 본문에 그대로 넣는다.
+새 base `b7a5388034ee66f58a7e1d5363974e83b6374f57`와 통합 head `a7aac1a9ce5b2b902471ecd8f234f7d72834812d`의 [7단계 재검증](../../working/task_m100_536_integration_review_stage7.md)을 따른다. 원 head와 1–6단계 실행 기록은 그대로 보존한다. TSV 원본은 사용자 후속 지시에 따라 검토 asset으로 바이트 그대로 커밋하고 PR 본문에서 정확한 head SHA의 raw 링크로 연결한다.

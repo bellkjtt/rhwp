@@ -17,7 +17,9 @@ last_verified: 2026-10-15
 쪽수·페이지 분할 변경은 전체 문서를 비교하며 평균값·높은 페이지 선별로 미달을 숨기지 않는다.
 기준 PDF는 [원본 저장 버전에 맞는 한컴 Print 출력](../mcp_hwp2024Convert_usage.md#기준-pdf-인쇄-계약)을 따른다.
 MCP는 저장 제품에 따라 engine 2020/2024를 명시하고, 수동 출력도 PDF 저장/내보내기 대신 인쇄를 쓴다.
-TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존하고 Git에 커밋하지 않는다.
+작업 중 TSV·실행 로그·중간 JSON은 ignored `output/pr-review/<id>/`에 보존한다.
+최종 제출용 TSV는 PR 본문에 전체 원문을 넣거나, 본문 크기 제한 시 원본 asset의 링크로 제출한다.
+아래 [본문 삽입·저장소 링크](#tsv-원문-본문-삽입과-저장소-링크)를 따른다. 실행 로그·중간 JSON은 Git에 커밋하지 않는다.
 **50 MiB(52,428,800바이트) 이상 기준 PDF는 로컬에만 보관하고 PR에 포함하지 않는다.**
 파일의 출처·바이트 수·SHA-256·전체 쪽수·명령과 전쪽 TSV·대표 PNG를 남기며,
 [대용량 PDF 보존 규칙](../pr_review/visual_fixture_evidence.md#원본-fixture와-기준-pdf-보존)을 따른다.
@@ -871,6 +873,50 @@ reviewer가 저장소를 찾아 열게 하지 않는다.
    재확인하고, `gh api repos/<head-owner>/<head-repo>/contents/<asset>?ref=<head-sha>`로 asset이 그 head에
    존재하는지 확인한다. GitHub PR 화면에서 이미지가 렌더링되는 것도 직접 확인한다.
 
+### TSV 원문 본문 삽입과 저장소 링크
+
+최종 제출용 `silhouette.tsv`는 다음 두 방식으로 제출할 수 있다. 생성·진단은 ignored
+`output/pr-review/<id>/`에서 한다.
+
+1. **본문에 직접 삽입**: 파일명·입력·Native/fresh WASM·base/후보와 실제 producer SHA를 적고,
+   각 파일의 `tsv` 코드 블록에 header·전체 페이지 행·원래 열과 수치를 그대로 넣는다.
+   TSV별 SHA-256·바이트 수를 연결하고 게시 뒤 API에서 원문·탭·개행·전체 행이 보존됐는지 확인한다.
+2. **본문 크기 제한 시 원본 링크**: 압축하지 않은 원본을 아래 asset 경로 등에 바이트 그대로
+   복사해 커밋하고, 정확한 PR head SHA의 raw 다운로드 링크를 본문에 넣는다.
+   요약 표나 일부 행으로 줄이지 않고 전체 원본을 내려받을 수 있게 한다.
+
+본문에 직접 넣더라도 다운로드·영구 보존을 위해 같은 원본의 asset 링크를 함께 제공할 수 있다.
+`issue_<이슈번호>`에는 실제 관련 이슈 번호를 쓰고 같은 이슈의 검토 묶음 식별자를 붙일 수 있다.
+
+```text
+mydocs/pr/assets/issue_536_seo_rii_20261017/
+  native/equation-lim-print2020_silhouette.tsv
+  wasm/equation-lim-print2020_silhouette.tsv
+  base/native/equation-lim-print2020_silhouette.tsv
+  base/wasm/equation-lim-print2020_silhouette.tsv
+```
+
+- Native와 fresh WASM, 비교 기준 base와 후보를 별도 폴더 또는 명확한 파일명으로 구분한다.
+  각 파일에는 검증 대상 전체 페이지의 header·행·열·원래 수치를 유지한다. 대표 페이지만 추리거나
+  수치를 반올림·재작성한 요약을 원본 TSV로 제출하지 않는다. 압축하지 않은 `.tsv` 원본을 연결한다.
+- PR 본문에서 실제 입력·기준 Print PDF·페이지·DPI·인쇄 profile·글꼴 조건, 검증 source와
+  Native binary/fresh WASM SHA, TSV의 SHA-256·바이트 수를 연결한다. asset을 담은 head와
+  실제 코드를 빌드한 producer SHA가 다르면 둘의 역할을 구분한다.
+- PR head repository와 정확한 head SHA의 raw 다운로드 URL을 사용한다. branch 이름이나 로컬
+  output 경로만 연결하지 않는다. 다음 `HEAD_SHA`를 실제 asset commit SHA로 치환한다.
+
+```markdown
+[Native TSV](https://raw.githubusercontent.com/edwardkim/rhwp/HEAD_SHA/mydocs/pr/assets/issue_536_seo_rii_20261017/native/equation-lim-print2020_silhouette.tsv)
+[fresh WASM TSV](https://raw.githubusercontent.com/edwardkim/rhwp/HEAD_SHA/mydocs/pr/assets/issue_536_seo_rii_20261017/wasm/equation-lim-print2020_silhouette.tsv)
+```
+
+- push 뒤 raw 파일을 실제 다운로드하여 생성 원본과 바이트·SHA-256이 같은지 확인한다.
+  PR 생성·본문 갱신 뒤 API로 본문의 head SHA·링크를 재조회한다. 최종 head가 바뀌면
+  실제 증거의 재사용 가능 여부와 URL을 다시 확인한다.
+- GitHub CLI의 PR 파일 첨부 업로드 기능이나 별도 Gist가 없어도 이 asset 링크로 제출한다.
+  실행 로그·중간 JSON·렌더 작업 디렉터리는 ignored output에 두며 Git에 커밋하지 않는다.
+  최종 TSV asset과 PR 링크는 post_merge의 output 전체 정리 이후에도 보존한다.
+
 ### 입력·페이지별 첨부 형식
 
 [PR #7551](https://github.com/edwardkim/rhwp/pull/7551)의 Native/fresh WASM review/overlay 표와
@@ -884,8 +930,10 @@ reviewer가 저장소를 찾아 열게 하지 않는다.
    검증 대상 전체 페이지의 **Native TSV와 fresh WASM TSV 원본 모두** PR 본문에 첨부하거나
    검토자가 내려받을 수 있는 동일 파일의 링크를 첨부한다. Native/fresh WASM 출력 경로를 구분한다.
    첨부 파일의 입력·출력 경로·검증 head를 명시한다.
-   요약 표·최저값·로컬 output 경로만으로 TSV 원본을 대신하지 않는다. TSV는 ignored output에
-   보존하고 Git에 커밋하지 않는다. 수정 전 비교를 실행했다면 source SHA와 같은 입력·페이지의 전후 값도 연결한다.
+   요약 표·최저값·로컬 output 경로만으로 TSV 원본을 대신하지 않는다. PR 본문에 파일별 전체 원문을
+   넣을 수 있으며, 본문 크기 제한 시 `mydocs/pr/assets/issue_<이슈번호>/` 아래에 원본을 커밋하고
+   정확한 head SHA의 raw 링크로 제출한다. 아래 [두 제출 방식](#tsv-원문-본문-삽입과-저장소-링크)을 따른다.
+   수정 전 비교를 실행했다면 base/후보를 구분하고 source SHA와 같은 입력·페이지의 전후 값도 연결한다.
 3. 대표 직접 증적: `### 입력명 · 기준 PDF pN ↔ rhwp pN` 아래 한 표로 같은 쪽의 두 출력 경로와
    review/standalone overlay를 대조한다. 첨부할 대표 입력·쪽이 여러 개일 때만 소제목/표/판독 묶음을 반복한다.
    이미지 설명에는 입력명·쪽·출력 경로를 넣고, 해당 쪽 수치·실제로 확인한 경계·남은 차이를 바로 아래에 적는다.
