@@ -742,8 +742,11 @@ python3 scripts/visual_sweep.py \
 있다. 이 값은 PDF raster와 rhwp SVG raster 양쪽에 같은 배율로 적용된다. 기본값은
 96dpi이며 0 이하 값은 허용하지 않는다.
 
-PDF PNG는 전체 문서에서 `pdftocairo -r <DPI> -png`로 생성한다. 같은 poppler-utils의
-Cairo backend를 공통으로 사용한다. 기존 Splash 경로 `pdftoppm -thinlinemode none`은
+PDF PNG는 전체 문서에서 `pdftocairo -r <DPI> -antialias none -png`로 생성한다.
+전체/선택 쪽 모두 같은 Poppler Cairo 설정을 사용한다. 한컴의 그라데이션처럼 빈틈없이
+인접한 얇은 면을 기본 antialias로 각각 합성하면 내부에 흰 이음매가 생겨 원래 RGB가
+밝아진다. 같은 색의 단일 면과 인접 띠가 같은 내부 RGB를 유지하도록 설정을 고정한다.
+문서별로 점수가 높은 설정을 고르지 않는다. 기존 Splash 경로 `pdftoppm -thinlinemode none`은
 분수 좌표에서 그림을 축소할 때 균일 RGB 64→63, 232→231, 255→254처럼 색이 바뀌는
 독립 재현이 확인됐다. Cairo 경로는 이 상수 면을 보존하며, 기존 한컴 Print의 파랑
 그라데이션 보존 검사도 함께 실행한다. 명령·쪽 선택·실행 신원은
@@ -752,7 +755,8 @@ Cairo backend를 공통으로 사용한다. 기존 Splash 경로 `pdftoppm -thin
 
 점수가 높은 renderer를 문서별로 고르지 않는다. 원본 PDF, 내용 이진화 임계값·raw 판정식·
 2px 공차·90%·98%·0.01%p 기준은 유지한다. 실행 manifest의
-`provenance.pdf_rasterizer`에 backend·정책·도구 버전·실행 파일과 helper 해시를 기록한다.
+`provenance.pdf_rasterizer`에 backend·정책·antialias·도구 버전·실행 파일과 helper 해시를 기록한다.
+기본 Cairo antialias의 이전 PNG·TSV도 보존하고 새 설정의 증거와 구분한다.
 이전 Splash의 `shape`/`solid`/`none` PNG·TSV는 출처를 유지하고 덮어쓰지 않는다.
 고정한 base/head의 Native/fresh WASM 전쪽을 모두 같은 Cairo 조건으로 다시 계산하며,
 서로 다른 renderer의 수치를 같은 baseline으로 섞지 않는다. source SHA·PNG 바이트가
