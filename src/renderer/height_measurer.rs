@@ -5597,20 +5597,25 @@ pub(crate) fn solve_rowspan_row_heights(
     let max_iter = row_heights.len() + constraints.len();
     for _ in 0..max_iter {
         let mut progress = add_declared_overflow(row_heights, true);
+        let mut next_assignment: Option<(usize, f64)> = None;
         for &(r, span, total_h) in constraints {
             let known_sum: f64 = (r..r + span).map(|i| row_heights[i]).sum();
             let unknown_rows: Vec<usize> =
                 (r..r + span).filter(|&i| row_heights[i] == 0.0).collect();
             if unknown_rows.len() == 1 {
                 let remaining = (total_h - known_sum).max(0.0);
-                if remaining > 0.0 {
-                    row_heights[unknown_rows[0]] = remaining;
-                    progress = true;
-                    // 이 행이 정해지면 앞의 짧은 제약도 미지 행 하나가 될 수
-                    // 있다. 긴 제약으로 다음 행을 채우기 전에 다시 확인한다.
-                    break;
+                let row = unknown_rows[0];
+                if remaining > 0.0 && next_assignment.is_none_or(|(prior, _)| row < prior) {
+                    // 앞 행을 먼저 확정해야 그 행에서 시작하는 짧은 병합
+                    // 경계를 다음 행의 긴 병합 최소보다 먼저 해석할 수 있다.
+                    // 같은 미지 행의 후보는 기존 걸침 수 오름차순을 따른다.
+                    next_assignment = Some((row, remaining));
                 }
             }
+        }
+        if let Some((row, height)) = next_assignment {
+            row_heights[row] = height;
+            progress = true;
         }
         if !progress {
             break;
