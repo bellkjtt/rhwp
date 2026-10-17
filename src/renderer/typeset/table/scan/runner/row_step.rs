@@ -876,6 +876,7 @@ impl TypesetEngine {
                             styles,
                         ),
                         physical_band,
+                        self.dpi,
                     );
                 if fresh_reflow_minimum_band {
                     // 내용 완료와 물리 최소 완료는 다르다. 빈 꼬리도 같은 행의
@@ -935,6 +936,7 @@ impl TypesetEngine {
                             styles,
                         ),
                         avail_for_rows - consumed - cs_before,
+                        self.dpi,
                     )
                 {
                     // [#5585] 일반 행의 밴드 컷: «쪽 경계에서 나눔»(값 2) 표에서 행 **내용과
@@ -1580,9 +1582,14 @@ fn ordinary_band_content_fits(
     complete_plain_reflow: bool,
     aligned_content_bottom: f64,
     rest: f64,
+    dpi: f64,
 ) -> bool {
     !end_cut.is_empty()
         && (content_height >= MIN_TOP_KEEP_PX
-            || (complete_plain_reflow && content_height <= rest + 0.5))
+            // 한컴은 짧은 한 줄이 물리 경계와 정확히 닿으면 이월한다.
+            // +1HU의 여유는 수용하므로 원본 단위로 엄격히 비교한다.
+            || (complete_plain_reflow
+                && crate::renderer::px_to_hwpunit(content_height, dpi)
+                    < crate::renderer::px_to_hwpunit(rest, dpi)))
         && aligned_content_bottom <= rest + 0.5
 }
