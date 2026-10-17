@@ -74,6 +74,7 @@ pub(super) fn inspect(
     forced_page_break_line: Option<usize>,
     current_page_vpos_base: Option<i32>,
     accepted_opening_owner: Option<usize>,
+    stored_frame_prefix_consumed: bool,
     available: f64,
     page: &WholeFitPage<'_>,
     dpi: f64,
@@ -189,6 +190,7 @@ pub(super) fn inspect(
     let boundary_already_consumed =
         accepted_opening_owner.is_some() && accepted_opening_owner == para_idx.checked_sub(1);
     let stored_vpos_rewind_base = !boundary_already_consumed
+        && !stored_frame_prefix_consumed
         && page.col_count == 1
         && !super::stored_lines::stored_page_boundary_invalidated_by_reflow(
             page.profile, page.col_count, page.current_items, paragraphs,

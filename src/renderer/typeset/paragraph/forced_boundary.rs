@@ -11,6 +11,8 @@ pub(in crate::renderer::typeset) fn prepare_forced_page_boundary(
     note_measure: &super::super::notes::footnotes::measure::BodyFootnoteMeasure<'_>,
 ) -> ForcedPageBoundary {
     let dpi = note_measure.engine.dpi;
+    let stored_frame_valid =
+        !super::stored_lines::stored_frame_prefix_consumed_before_page(st, paragraphs, para_idx);
     // native HWP5 본문은 기존 각주가 있는 page tail에서도 `vpos=0` reset으로
     // 다음 physical page를 기록할 수 있다. 일반 reset은 과분할 위험이 있으므로,
     // 실제 FootnoteArea 경계와 source/flow가 함께 맞을 때만 강제 경계로 쓴다.
@@ -34,6 +36,7 @@ pub(in crate::renderer::typeset) fn prepare_forced_page_boundary(
     // 유효 저장 앵커를 확인하고 실제 재조판으로 사라진 reset은 재사용하지 않는다.
     // 같은 원본 줄 사다리와 실제 흐름은 컨테이너 형식과 무관하게 같은 쪽을 소유한다.
     let anchored_stored_body_reset_line = (!st.profile.session_edited()
+        && stored_frame_valid
         && para_has_visible_text(para)
         && fmt.line_heights.len() == para.line_segs.len())
     .then(|| {
@@ -66,17 +69,18 @@ pub(in crate::renderer::typeset) fn prepare_forced_page_boundary(
     .filter(|break_line| {
         // HWPX의 reset은 local writer cursor도 재사용한다. 현재 flow와
         // anchor가 맞지 않는 reset은 physical page 경계로 승격하지 않는다.
-        !st.profile.hwpx_stored_layout()
-            || st.current_items.is_empty()
-            || stored_body_reset_fragment_matches_current_flow(
-                st,
-                para,
-                0,
-                *break_line,
-                current_page_vpos_base.unwrap_or(0),
-                fmt.spacing_before,
-                dpi,
-            )
+        stored_frame_valid
+            && (!st.profile.hwpx_stored_layout()
+                || st.current_items.is_empty()
+                || stored_body_reset_fragment_matches_current_flow(
+                    st,
+                    para,
+                    0,
+                    *break_line,
+                    current_page_vpos_base.unwrap_or(0),
+                    fmt.spacing_before,
+                    dpi,
+                ))
     });
     let stored_page_start_line = (!st.profile.session_edited())
         .then(|| boundary::stored_page_start_line(para, fmt.line_count(), 0))
