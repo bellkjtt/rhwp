@@ -55,3 +55,12 @@ HWP3의 Equation은 원본 수식 상자의 ref_pos=0을 공통 IR의 TAC로 옮
 현재 HWP3→RHWP HWPX 왕복의 새 출력은 기존 Print 입력과 header.xml의
 DOUBLE_SLIM 폭 표기가 달라 새 Print/전쪽 검증을 진행한다. 위 원본/한컴
 변환본의 통과를 왕복본 시각 검증으로 대신하지 않는다.
+
+## 정식 검사와 lint 실제 결과
+
+source `2d83ac0a8973f0d82be45c545dde1112532baafb`에서 새 검사2개가 모두 통과했다.
+release-test build39.05초, 실제 검사0.345초, exit0이다.
+같은 source의 필수 lint8단계도 모두 exit0이며 source 해시 불변을 확인했다.
+고정 base는 `b7a5388034ee66f58a7e1d5363974e83b6374f57`이고 build jobs8, target/pr-review를
+공유해 순차 실행했다. 로그/receipt는 ignored output의 stage2327과 stage2330이다.
+이는 RHWP 왕복 HWPX의 새 미달이나 나머지 전체 회귀를 면제하지 않는다.
