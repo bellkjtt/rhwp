@@ -799,8 +799,7 @@ pub(crate) fn shrunk_cell_horizontal_padding(
         // 70833 pi=83 4행: 3줄 56.0(말미 5.33 포함) > 안높이 55.4 로 여백을 깎아 한/글보다
         // 5.7px 왼쪽에서 시작하고 줄 끝이 달라졌다. 말미를 빼면 50.7 ≤ 55.4 다.
         wrapped_height_hu -= last_line_spacing_hu.max(0);
-        let wrapped_height =
-            wrapped_height_hu as f64 * dpi / crate::renderer::HWPUNIT_PER_INCH;
+        let wrapped_height = wrapped_height_hu as f64 * dpi / crate::renderer::HWPUNIT_PER_INCH;
         if std::env::var_os("RHWP_DIAG_SHRINK").is_some() {
             println!(
                 "D_SHRINK cell_w={cell_w:.1} avail={available:.1} inner_h={inner_height_px:.15} wrapped_h={wrapped_height:.15} max_line_w={max_line_w:.1}"
