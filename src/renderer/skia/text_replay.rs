@@ -108,8 +108,9 @@ impl SkiaTextReplay<'_> {
                     super::hft_outline::HftOutlineReplay::new(&face)
                 })
                 .flatten();
-                let font_for_text =
-                    |sample: &str, size: f32| fonts::for_text(&typeface_chain, sample, size, style);
+                let font_for_text = |sample: &str, size: f32| {
+                    fonts::for_text(&typeface_chain, sample, size, style, self.font_mgr)
+                };
                 let baseline_y = if baseline > 0.0 {
                     bbox.y + baseline
                 } else {
