@@ -54,13 +54,21 @@ fn direct_metric_alias_trace_uses_the_registered_rule_identity() {
         })
         .collect();
     assert!(!rules.is_empty(), "직접 등록 메트릭 별칭을 실제로 실행한다");
-    for rule in rules {
+    // 모든 선택을 먼저 조회해 일부 규칙의 정상 응답이 뒤 규칙의 오류를 가리지 않게 한다.
+    let traces: Vec<_> = rules
+        .iter()
+        .map(|rule| {
+            let source = rule["sourceFace"].as_str().unwrap();
+            let core = document_with_face(source);
+            let raw = core
+                .get_font_decision_trace_native(0, r#"{"maxCharacters":16}"#)
+                .unwrap();
+            let trace: serde_json::Value = serde_json::from_str(&raw).unwrap();
+            (rule, trace)
+        })
+        .collect();
+    for (rule, trace) in traces {
         let source = rule["sourceFace"].as_str().unwrap();
-        let core = document_with_face(source);
-        let raw = core
-            .get_font_decision_trace_native(0, r#"{"maxCharacters":16}"#)
-            .unwrap();
-        let trace: serde_json::Value = serde_json::from_str(&raw).unwrap();
         let records: Vec<_> = trace["records"]
             .as_array()
             .unwrap()
