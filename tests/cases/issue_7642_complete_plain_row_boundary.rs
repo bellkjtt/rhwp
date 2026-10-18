@@ -82,6 +82,7 @@ fn collect(
     body: Option<&Value>,
     cell: Option<&Value>,
     found: &mut Vec<(usize, usize, usize)>,
+    followers: &mut Vec<(usize, f64)>,
 ) {
     let body = if node["type"] == "Body" {
         Some(node)
@@ -100,16 +101,22 @@ fn collect(
         }
     }
     if node["type"] == "TextRun" {
-        let cell = cell.expect("본문의 모든 내용은 표 셀에 속한다");
-        contained(node, cell);
-        let row = cell["row"].as_u64().unwrap() as usize;
-        let col = cell["col"].as_u64().unwrap() as usize;
-        assert_eq!(node["text"], format!("ROW {row} CELL {col}"));
-        found.push((row, col, page));
+        if node["text"] == "AFTER TABLE FOLLOWER" {
+            assert!(cell.is_none(), "표 뒤 본문을 셀 내용으로 흡수하지 않는다");
+            contained(node, body.expect("후속 본문의 소유"));
+            followers.push((page, edge(node, "y")));
+        } else {
+            let cell = cell.expect("행 표식은 표 셀에 속한다");
+            contained(node, cell);
+            let row = cell["row"].as_u64().unwrap() as usize;
+            let col = cell["col"].as_u64().unwrap() as usize;
+            assert_eq!(node["text"], format!("ROW {row} CELL {col}"));
+            found.push((row, col, page));
+        }
     }
     if let Some(children) = node["children"].as_array() {
         for child in children {
-            collect(child, page, body, cell, found);
+            collect(child, page, body, cell, found, followers);
         }
     }
 }
@@ -121,6 +128,17 @@ fn target_baseline(node: &RenderNode) -> Option<(f64, f64)> {
         }
     }
     node.children.iter().find_map(target_baseline)
+}
+
+fn table_bottom(node: &Value) -> Option<f64> {
+    let own = (node["type"] == "Table").then(|| edge(node, "y") + edge(node, "h"));
+    node["children"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(table_bottom)
+        .chain(own)
+        .reduce(f64::max)
 }
 
 #[test]
@@ -136,8 +154,9 @@ fn complete_plain_row_keeps_print_ownership_at_exact_and_one_unit_budgets() {
         let rendered = pages(&input);
         assert_eq!(rendered.len(), 8, "{stem}: 독립 Print 전쪽 수");
         let mut found = Vec::new();
+        let mut followers = Vec::new();
         for (page, tree) in rendered.iter().enumerate() {
-            collect(tree, page + 1, None, None, &mut found);
+            collect(tree, page + 1, None, None, &mut found, &mut followers);
         }
         let expected: Vec<_> = row_pages
             .iter()
@@ -147,6 +166,14 @@ fn complete_plain_row_keeps_print_ownership_at_exact_and_one_unit_budgets() {
         assert_eq!(
             found, expected,
             "{stem}: 내용 순서·셀 소유·누락·중복·쪽 소유"
+        );
+        assert_eq!(followers.len(), 1, "후속 본문의 누락·중복 방지");
+        assert_eq!(followers[0].0, 8, "독립 Print의 후속 본문 쪽 소유");
+        assert!(found.iter().all(|(_, _, page)| *page < followers[0].0));
+        assert!(
+            table_bottom(&rendered[followers[0].0 - 1]).expect("표의 끝 조각")
+                <= followers[0].1 + 0.11,
+            "표의 끝 조각과 후속 본문이 겹치지 않는다"
         );
 
         // 완료 페이지 두 backend raw 100% 및 확대 판독 후의 중요한 시작 기준선.
