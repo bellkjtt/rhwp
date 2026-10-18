@@ -681,10 +681,9 @@ fn parse_paragraph_body(
     let mut preceding_run_char_shape_id: Option<u32> = None;
     // [#5961] HWP5 문단 축에서만 자리를 차지하는 앞머리 슬롯 수.
     //
-    // 아래 `secPr` arm 이 `\u{0002}` 를 밀어 넣는 슬롯들 — 구역 정의와 그 안에 실려 온
-    // 첫 단 정의 — 은 HWPX 문단에는 대응 요소가 없다(`hp:secPr` 은 구역 머리 run 소속,
-    // secPr 안의 `hp:colPr` 은 템플릿이 흡수). 그 슬롯을 만들어 넣은 주체가 파서
-    // 자신이므로 개수는 추측이 아니라 사실이다.
+    // secPr 안에만 있는 첫 단 정의를 별도 컨트롤로 만든 슬롯과, 명시적인
+    // rhwp-origin 생산자가 템플릿에서 생략한 구역 슬롯만 센다. 일반 한컴 원본의
+    // secPr 존재 자체를 축 생략의 근거로 사용하지 않는다.
     //
     // 이 값은 `text_start` 를 **고치는 데 쓰지 않는다**. `Paragraph::hwpx_axis_shift` 에
     // 실어 두고 읽는 쪽에서만 올려 본다 — 파일 축을 옮기면 재수출이 흘러내린다.
@@ -806,7 +805,12 @@ fn parse_paragraph_body(
                         // 모든 chars 를 line 0 에 packing. \u{0002} 추가로 8 utf16 정합.
                         para.controls.push(Control::SectionDef(Box::new(sd)));
                         text_parts.push("\u{0002}".to_string());
-                        if !HWPX_PARAGRAPH_AXIS.with(|c| c.get()) {
+                        // 명시적 구역 정의는 일반 한컴 저장본에서도 실제 8유닛이다.
+                        // 템플릿 슬롯을 생략한 생산자 마커가 있을 때만 올려 읽는다.
+                        if !HWPX_PARAGRAPH_AXIS.with(|c| c.get())
+                            && (HWPX_HWP5_ORIGIN_SOURCE.with(|c| c.get())
+                                || hwpx_hwp3_origin_source())
+                        {
                             hwp5_only_leading_slots += 1;
                         }
                         // colPr이 있으면 ColumnDef 컨트롤 추가 (초기 단 정의) + 8 utf16.
