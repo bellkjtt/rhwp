@@ -34,10 +34,10 @@ impl<'a> ParagraphMetricScope<'a> {
         lang: usize,
         index: usize,
     ) -> super::TextStyle {
-        let lang = self.2.get(index).map_or(lang, |&ch| {
-            super::punctuation_slots::metric_slot(ch, lang, styles, id)
-        });
-        let mut style = super::resolved_to_text_style(styles, id, lang);
+        let mut style = self.2.get(index).map_or_else(
+            || super::resolved_to_text_style(styles, id, lang),
+            |&ch| super::punctuation_slots::character_style(ch, lang, styles, id),
+        );
         if !self.allows(index) {
             style.supplemental_metrics = None;
         }

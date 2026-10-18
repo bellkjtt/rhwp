@@ -118,6 +118,7 @@ fn inject_char_overlap_text(composed: &mut ComposedParagraph, para: &Paragraph) 
                 text,
                 char_style_id,
                 lang_index: 0,
+                neutral_space_origin: None,
                 char_overlap: Some(CharOverlapInfo {
                     border_type: co.border_type,
                     inner_char_size: co.inner_char_size,
@@ -215,6 +216,7 @@ pub(super) fn insert_control_text_run(
                         text: after,
                         char_style_id: style_id,
                         lang_index: lang_idx,
+                        neutral_space_origin: None,
                         char_overlap: None,
                         footnote_marker: None,
                         display_text: None,

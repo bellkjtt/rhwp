@@ -397,6 +397,7 @@ fn convert_pua_enclosed_numbers(composed: &mut ComposedParagraph) {
                             text: buf.clone(),
                             char_style_id: run.char_style_id,
                             lang_index: run.lang_index,
+                            neutral_space_origin: None,
                             char_overlap: None,
                             footnote_marker: None,
                             display_text: None,
@@ -411,6 +412,7 @@ fn convert_pua_enclosed_numbers(composed: &mut ComposedParagraph) {
                         text: ch.to_string(),
                         char_style_id: run.char_style_id,
                         lang_index: run.lang_index,
+                        neutral_space_origin: None,
                         char_overlap: Some(CharOverlapInfo {
                             border_type,
                             inner_char_size: 0,
@@ -432,6 +434,7 @@ fn convert_pua_enclosed_numbers(composed: &mut ComposedParagraph) {
                     text: buf,
                     char_style_id: run.char_style_id,
                     lang_index: run.lang_index,
+                    neutral_space_origin: None,
                     char_overlap: None,
                     footnote_marker: None,
                     display_text: None,

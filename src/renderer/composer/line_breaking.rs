@@ -1501,9 +1501,10 @@ fn resolved_letter_spacing_px(
             let style_id = find_active_char_shape(char_shapes, utf16_pos);
             // [#7418] 영문 슬롯으로 재는 구두점은 자간도 영문 슬롯 값이다(`char_width_decision`).
             let char_lang = char_lang_slot(*ch, &mut lang, punct_latin_slot(styles, style_id));
-            let char_lang = super::punctuation_slots::metric_slot(*ch, char_lang, styles, style_id);
+            let spacing_lang =
+                super::punctuation_slots::metric_slot(*ch, char_lang, styles, style_id);
             // 자간이 없는 대부분의 문자에서는 스타일 복제와 재측정을 피한다.
-            if resolved_letter_spacing(styles, style_id, char_lang) == 0.0 {
+            if resolved_letter_spacing(styles, style_id, spacing_lang) == 0.0 {
                 return 0.0;
             }
             let style = metric_scope.style(styles, style_id, char_lang, idx);

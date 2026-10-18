@@ -49,6 +49,8 @@ pub struct ComposedTextRun {
     pub char_style_id: u32,
     /// 언어 카테고리 (0=한국어, 1=영어, 2=한자, 3=일본어, 4=기타, 5=기호, 6=사용자)
     pub lang_index: usize,
+    /// 중립 공백의 반각 전진을 소유한 원래 언어. 표시·자간 슬롯과 구분한다.
+    pub neutral_space_origin: Option<usize>,
     /// 글자겹침 정보 (CharOverlap 컨트롤에서 생성된 런인 경우)
     pub char_overlap: Option<CharOverlapInfo>,
     /// 각주/미주 마커 (Some이면 위첨자로 렌더링, 텍스트 흐름에 포함)
@@ -77,6 +79,9 @@ impl ComposedTextRun {
 
     pub(crate) fn text_style(&self, styles: &ResolvedStyleSet) -> TextStyle {
         let mut style = resolved_to_text_style(styles, self.char_style_id, self.lang_index);
+        if let Some(origin) = self.neutral_space_origin {
+            punctuation_slots::apply_space_origin(&mut style, styles, self.char_style_id, origin);
+        }
         if mapped_symbol_fonts::owns_shadowed_circle_font(self) {
             // 표시 기호 한 글자만 실제 프로그램을 선택한다. 본문과 IR의 글꼴은 보존한다.
             style.font_family = format!(

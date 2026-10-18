@@ -85,6 +85,7 @@ fn split_composed_line_by_width(
                         text: std::mem::take(text),
                         char_style_id: t.char_style_id,
                         lang_index: t.lang_index,
+                        neutral_space_origin: None,
                         char_overlap: t.char_overlap.clone(),
                         footnote_marker: t.footnote_marker,
                         display_text: None,
