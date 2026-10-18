@@ -468,8 +468,12 @@ impl SkiaTextReplay<'_> {
                             }
                             continue;
                         }
-                        // Preserve advances and decorations without drawing whitespace glyph outlines.
-                        if cluster.chars().all(char::is_whitespace) {
+                        // 공백·개체 마커는 원문 위치와 장식을 보존하되 글리프를 그리지 않는다.
+                        // U+FFFC의 실제 개체는 별도 paint op가 소유한다. 문자 인덱스를
+                        // 제거하면 뒤 cluster의 저장 위치가 달라지므로 그대로 건너뛴다.
+                        if cluster.starts_with('\u{FFFC}')
+                            || cluster.chars().all(char::is_whitespace)
+                        {
                             continue;
                         }
                         if cluster == "-" {
