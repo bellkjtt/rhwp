@@ -72,5 +72,24 @@ PDF 아래쪽 원점에서 CSS 위쪽 원점으로 변환한다: `x=e*96/72`,
 PDF 높이가 원본보다 2px 작아 확대 차이가 남으므로 이 회귀의 적격 자료에 포함하지 않았다.
 그 원본·PDF와 진단 결과는 ignored output에 보존한다.
 
-수정 전 FAIL / 수정 후 PASS 실행과 새 suite 자동 수집 확인은 검증 뒤 작업 기록에 추가한다.
-현재 README 작성 시점에는 새 Rust 검사 실행이 대기 중이며 PASS로 표시하지 않는다.
+## 정식 회귀 실행
+
+`e579f10ecd6fda96c14a7ef40394247ebe4efbb7`의 자동 수집 suite에서 새 검사가 통과했다.
+같은 테스트 실행 파일의 CLI만 바꿔 아래를 확인했다.
+
+| 실제 CLI 소스 | 결과 | 확인한 의미 |
+| --- | --- | --- |
+| `7bccb3d635e2e9d1c6b891719df0927232770e33` | FAIL, exit 101 | `minimum-28500`의 행·쪽 소유 불일치 |
+| `e579f10ecd6fda96c14a7ef40394247ebe4efbb7` | PASS, exit 0 | 두 입력의 관계·독립 기준선 검사 |
+
+52건 집중 실행은 50건 PASS, 다른 표 예산 검사 2건 FAIL이다. 전체 통과가 아니다.
+첫 새 검사 실행은 표 뒤 본문까지 셀 내용이라고 가정해 실패했고, 원본의
+`AFTER TABLE FOLLOWER`를 별도 본문으로 검사하도록 정정했다. 이 본문의 한 번 보존,
+독립 Print의 8쪽 소유, 표의 끝 조각 뒤 배치도 현재 검사에 포함된다.
+
+실행 원문은 ignored
+`output/pr-review/issue7642/failed-inputs-20261008/stage15-current-validation/`의
+`stage3444-batched-flow-native-build/nextest.log`와
+`stage3448-new-contract-proof/{receipt.json,before.log,after.log}`에 있다.
+이 실행 결과는 위 source `7d685cc178`의 전쪽 Native/fresh WASM 캡처를 새 head에서
+재산출했다는 의미가 아니다. 최종 후보의 양쪽 전쪽 시각 증거는 별도로 갱신한다.
