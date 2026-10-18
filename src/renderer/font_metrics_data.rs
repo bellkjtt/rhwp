@@ -17,6 +17,9 @@ mod legacy_hft;
 #[path = "font_metric_hci_poppy.rs"]
 mod hci_poppy;
 
+#[path = "font_metric_hci_tulip.rs"]
+mod hci_tulip;
+
 #[path = "font_metric_math_alphabet.rs"]
 mod math_alphabet;
 
@@ -381,6 +384,7 @@ impl FontMetrics {
             .chain(han_santteut::METRICS.iter())
             .chain(legacy_hft::METRICS.iter())
             .chain(hci_poppy::METRICS.iter())
+            .chain(hci_tulip::METRICS.iter())
     }
 }
 

@@ -11,6 +11,7 @@ fn primary(chain: &str) -> &str {
 
 pub(super) fn uses_latin_slot(
     families: &[String],
+    latin_metric_face: Option<&str>,
     legacy_latin: bool,
     hangul_hft: bool,
     declared_latin_hft: bool,
@@ -22,9 +23,14 @@ pub(super) fn uses_latin_slot(
     if hangul == latin {
         return false;
     }
+    // 표시 대체 face에 한글이 있다고 원본 영문 프로그램까지 한글 글꼴로 보지 않는다.
     let latin_only_substitute = legacy_latin
-        && crate::renderer::font_metrics_data::find_metric(latin, bold, italic)
-            .is_some_and(|found| found.metric.hangul.is_none());
+        && crate::renderer::font_metrics_data::find_metric(
+            latin_metric_face.unwrap_or(latin),
+            bold,
+            italic,
+        )
+        .is_some_and(|found| found.metric.hangul.is_none());
     // 한글 HFT의 표시용 치환이 영문에 선언한 별도 HFT 프로그램을 덮지 않는다.
     // 영문을 치환하지 않았고 등록된 ASCII 폭 표가 있을 때만 그 슬롯을 쓴다.
     // 메트릭 이름의 기존 별칭도 해소한다. 한양신명조의 실측 ASCII 표는

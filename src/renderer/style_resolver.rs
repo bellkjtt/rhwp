@@ -371,6 +371,7 @@ fn resolve_single_char_style(cs: &CharShape, doc_info: &DocInfo, dpi: f64) -> Re
 
     let ascii_punct_latin_slot = ascii_punctuation::uses_latin_slot(
         &font_families,
+        font_families_metric_face[1].as_deref(),
         latin_slot_legacy,
         font_families_hft_hangul[0],
         latin_declared_hft,

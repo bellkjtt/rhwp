@@ -1619,11 +1619,9 @@ fn char_width_decision_with_hft_tracking<'a>(
                 .as_deref()
                 .unwrap_or(&style.font_family),
         };
-        let digit_width =
-            crate::renderer::legacy_font_advances::digit_width(metric_family, c, font_size);
         let display_family = latin.map_or(&style.font_family, |l| &l.font_family);
         let measured_family =
-            crate::renderer::legacy_font_advances::measurement_face(metric_family, display_family);
+            crate::renderer::legacy_font_advances::measurement_face(metric_family);
         source_hft_metric = font_metrics_data::is_legacy_hft_metric_face(measured_family);
         let mut embedded = measure_char_width_embedded_decision_for_font(
             measured_family,
@@ -1653,14 +1651,6 @@ fn char_width_decision_with_hft_tracking<'a>(
                 embedded = display_metric;
                 embedded.width_source = "unmeasuredSourceDisplayMetric";
             }
-        }
-        if let Some(width) = digit_width {
-            embedded.width_px = Some(width);
-            // 검증된 프로그램 폭을 선택했으면 장치 격자의 em 비율도 같은
-            // 프로그램을 소비한다. 표시 대체 글꼴의 비율을 다시 쓰지 않는다.
-            embedded.em_fraction = (font_size > 0.0).then_some(width / font_size);
-            embedded.width_source = "verifiedLegacyDigit";
-            embedded.character_match = "hit";
         }
         // Paint에 전달한 선언 체인에서만 결측 글리프를 찾는다. 일반 OS 폴백이나
         // DB에 존재한다는 사실만으로 설치를 추정하지 않는다. 원 face의 hit와
