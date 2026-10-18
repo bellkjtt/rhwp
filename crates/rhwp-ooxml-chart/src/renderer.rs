@@ -2742,12 +2742,16 @@ fn render_legend(svg: &mut String, chart: &OoxmlChart, x: f64, y: f64, w: f64, _
     let font = label_font_px(chart);
 
     svg.push_str("<g class=\"hwp-chart-legend\">\n");
-    // 가운데 정렬: 항목 개수로 총 너비 계산
-    let item_w = 100.0_f64.min((w / items.len().max(1) as f64).max(60.0));
-    let total_w = item_w * items.len() as f64;
-    let start_x = x + (w - total_w) / 2.0;
-    for (i, (label, color, kind)) in items.iter().enumerate() {
-        let ix = start_x + item_w * i as f64;
+    // 기호·간격·라벨의 점유 폭으로 한 줄 범례를 가운데 정렬한다.
+    // 항목마다 같은 폭을 예약하면 짧은 이름 사이가 지나치게 벌어진다.
+    // 전체 폭과 실제 전진은 같은 항목별 측정 결과를 소비한다.
+    let item_widths: Vec<f64> = items
+        .iter()
+        .map(|(label, _, _)| 18.0 + label_text_width(label, font))
+        .collect();
+    let total_w: f64 = item_widths.iter().sum();
+    let mut ix = x + (w - total_w) / 2.0;
+    for ((label, color, kind), item_w) in items.iter().zip(item_widths) {
         push_legend_swatch(svg, ix, y + 11.0, *color, *kind);
         svg.push_str(&format!(
             "<text x=\"{:.2}\" y=\"{:.2}\" font-family=\"sans-serif\" font-size=\"{:.2}\" fill=\"{}\">{}</text>\n",
@@ -2757,6 +2761,7 @@ fn render_legend(svg: &mut String, chart: &OoxmlChart, x: f64, y: f64, w: f64, _
             hancom_default::TEXT_COLOR,
             xml_escape(label)
         ));
+        ix += item_w;
     }
     svg.push_str("</g>\n");
 }
