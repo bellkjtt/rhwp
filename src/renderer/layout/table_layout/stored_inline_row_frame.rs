@@ -30,8 +30,6 @@ impl LayoutEngine {
             || !matches!(table.page_break, TablePageBreak::RowBreak)
             || cell.row_span != 1
             || cell.dirty_flag
-            || cell.col != 0
-            || cell.col_span != table.col_count
             || Self::row_has_prior_rowspan_cover(table, usize::from(cell.row))
         {
             return None;
@@ -72,9 +70,10 @@ impl LayoutEngine {
         })
     }
 
-    /// 원본 한 줄의 상자가 자식 표 전체와 일치할 때만 그 행 유닛의 합을 돌려준다.
-    /// 같은 원장은 측정과 실제 부분 배치가 소비하므로 선언 높이로 컷을 다시 만들지 않는다.
-    pub(super) fn stored_inline_row_frame_height(
+    /// 각 셀의 원본 한 줄이 소유한 자식 표의 실제 점유 높이를 돌려준다.
+    /// 열 전체를 병합하지 않은 셀도 독립된 호스트 줄을 소유한다.
+    /// 같은 행 유닛의 전진량과 명시적으로 계상한 후행 간격을 구분하며 컷은 다시 만들지 않는다.
+    pub(super) fn stored_inline_row_frame_content_height(
         &self,
         table: &Table,
         cell: &Cell,
@@ -101,15 +100,25 @@ impl LayoutEngine {
             return None;
         }
         let height: f64 = group.iter().map(|unit| unit.height).sum();
+        // 이 플래그는 다음 저장 줄이 호스트 높이+줄간격에서 시작한다는
+        // 원본 등식으로 계상한 간격이다. 다음 흐름의 전진 공간을 자식 표의
+        // 잉크 높이로 비교하면 온전한 한 줄도 저장 상자를 넘었다고 오판한다.
+        let trailing = group
+            .last()
+            .filter(|unit| unit.host_trailing_spacing_charged)
+            .map_or(0.0, |_| {
+                crate::renderer::hwpunit_to_px(paragraph.line_segs[0].line_spacing.max(0), self.dpi)
+            });
+        let content_height = height - trailing;
         let spacing = styles
             .para_styles
             .get(paragraph.para_shape_id as usize)
             .map_or(0.0, |style| style.spacing_before + style.spacing_after);
         let stored_height = crate::renderer::hwpunit_to_px(frame.line_height_hu, self.dpi);
-        (height.is_finite()
-            && height > 0.0
-            && height <= stored_height + spacing + super::ROW_CUT_CAPACITY_FP_EPSILON_PX)
-            .then_some(height)
+        (content_height.is_finite()
+            && content_height > 0.0
+            && content_height <= stored_height + spacing + super::ROW_CUT_CAPACITY_FP_EPSILON_PX)
+            .then_some(content_height)
     }
 
     /// 조각 첫 유닛이 소유하며 측정에 포함된 원본 표 호스트의 앞 간격이다.

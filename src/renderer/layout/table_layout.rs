@@ -21098,7 +21098,7 @@ impl LayoutEngine {
                 // 줄의 쪽 시작을 유지한다. 현재 잔여에는 안 들어가지만 새 밴드에는
                 // 전부 들어가는 원본 표에만 적용하며 큰 표의 행 분할은 보존한다.
                 let stored_inline_row_frame_break = self
-                    .stored_inline_row_frame_height(table, cell, &units, j, styles)
+                    .stored_inline_row_frame_content_height(table, cell, &units, j, styles)
                     .is_some_and(|height| {
                         height <= avail_height + ROW_CUT_CAPACITY_FP_EPSILON_PX
                             && h + height > avail_height + ROW_CUT_CAPACITY_FP_EPSILON_PX
@@ -21518,7 +21518,15 @@ impl LayoutEngine {
                 if self.should_defer_overflowing_top_and_bottom_entry(u, j, start, h, cell_avail) {
                     break;
                 }
-                let strict_saved_frame_break = u.stored_frame_break_before;
+                // 블록 스캔도 셀별 같은 원본 호스트 점유를 소비한다. 다른 행의
+                // 높이를 차감한 cell_avail과 블록 전체 예산을 혼용하지 않는다.
+                let inline_owner_break = self
+                    .stored_inline_row_frame_content_height(table, cell, &units, j, styles)
+                    .is_some_and(|height| {
+                        height <= cell_avail + ROW_CUT_CAPACITY_FP_EPSILON_PX
+                            && h + height > cell_avail + ROW_CUT_CAPACITY_FP_EPSILON_PX
+                    });
+                let strict_saved_frame_break = u.stored_frame_break_before || inline_owner_break;
                 if j > start
                     && u.hard_break_before
                     && (strict_saved_frame_break
