@@ -181,6 +181,7 @@ pub(super) fn prepare_table_control(
     ) {
         st.advance_column_or_new_page();
     }
+    let frame = st.inline_flow_input(0.0, false);
     table_entry::uses_decoration_placement(
         para,
         table,
@@ -191,6 +192,8 @@ pub(super) fn prepare_table_control(
         st.table_control_page().col_count,
         has_tac,
         host_col_w,
+        *frame.body,
+        frame.page_height,
         dpi,
         || st.base_available_height(),
         original_hwpx,

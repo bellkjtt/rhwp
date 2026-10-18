@@ -6831,8 +6831,7 @@ impl LayoutEngine {
                             usize::from(meta.row),
                             usize::from(meta.row_span),
                             fold_row,
-                        )
-                            && child.bbox.height > fold + 1.0
+                        ) && child.bbox.height > fold + 1.0
                         {
                             child.bbox.height -= fold;
                         }
