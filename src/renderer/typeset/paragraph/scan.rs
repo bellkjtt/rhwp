@@ -381,9 +381,9 @@ pub(in crate::renderer::typeset) fn stored_body_reset_fragment_matches_current_f
                         | crate::model::shape::TextWrap::InFrontOfText))
         });
     if page.profile.session_edited()
-        // 앞선 내용의 재조판으로 달라진 흐름은 저장 reset의 물리 쪽 소유를
-        // 입증하지 않는다. 명시적 page-start는 별도 경계 경로가 계속 소유한다.
-        || page.vpos_ladder_dirty
+        // 앞선 재조판 이력만으로 현재 저장 조각의 소유를 버리지 않는다.
+        // 아래에서 현재 실제 원점과 저장 첫 줄의 일치, 편집되지 않은
+        // 연속 prefix와 본문 안의 마지막 점유 끝을 함께 확인한다.
         || para.stored_text_partition_is_dirty()
         || para.cell_format_vpos_dirty
         || page.col_count != 1
