@@ -1,7 +1,7 @@
 import { CanvasKitBundledFontFamily } from './canvaskit/font-style-selection.ts';
 import { textRequiresComplexShaping } from './canvaskit/nominal-text-replay.ts';
 import { singleDigitGeometry } from './canvaskit/boxed-digit-geometry.ts';
-import { imageRectIsReduced } from './canvaskit/image-reduction.ts';
+import { imageRectIsReduced, imageRectUsesCubic } from './canvaskit/image-reduction.ts';
 import CanvasKitInit from 'canvaskit-wasm';
 import { blake3 } from '@noble/hashes/blake3.js';
 import type {
@@ -2646,7 +2646,8 @@ export class CanvasKitLayerRenderer {
         && ((crop?.width ?? imageWidth) > dstW * 1.2 || (crop?.height ?? imageHeight) > dstH * 1.2
           || imageRectIsReduced(canvas, image, src, this.canvasKit.XYWHRect(dstX, dstY, dstW, dstH)));
       this.drawImageRect(canvas, image, src, this.canvasKit.XYWHRect(dstX, dstY, dstW, dstH), opacity,
-        explicitFiltering ?? (binaryEffectWasApplied ? 'nearest' : 'linear'), useMipmaps);
+        explicitFiltering ?? (binaryEffectWasApplied ? 'nearest' : 'linear'), useMipmaps,
+        op.imageInterpolation === undefined);
     };
 
     const fillMode = op.fillMode ?? 'fitToSize';
@@ -2685,11 +2686,21 @@ export class CanvasKitLayerRenderer {
   }
 
   private drawImageRect(canvas: SkCanvas, image: SkImage, source: Rect, dest: Rect, opacity = 1,
-    filtering: 'nearest' | 'linear' = 'linear', useMipmaps = false): void {
+    filtering: 'nearest' | 'linear' = 'linear', useMipmaps = false, allowCubic = true): void {
     const paint = new this.canvasKit.Paint();
     paint.setAntiAlias?.(true);
     if (opacity < 1) {
       paint.setAlphaf(opacity);
+    }
+    if (allowCubic && filtering === 'linear' && useMipmaps
+      && imageRectUsesCubic(canvas, image, source, dest)
+      && typeof canvas.drawImageRectCubic === 'function') {
+      try {
+        canvas.drawImageRectCubic(image, source, dest, 0, 0.5, paint);
+      } finally {
+        paint.delete?.();
+      }
+      return;
     }
     let sampled = image;
     let temporary: SkImage | null = null;

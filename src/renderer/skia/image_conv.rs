@@ -1,7 +1,8 @@
 use resvg::{tiny_skia, usvg};
 use skia_safe::{
-    canvas::SrcRectConstraint, color_filters, image::RequiredProperties, Color, ColorSpace, Data,
-    FilterMode, IRect, Image, Matrix, MipmapMode, Paint, Rect, SamplingOptions, TileMode,
+    canvas::SrcRectConstraint, color_filters, image::RequiredProperties, Color, ColorSpace,
+    CubicResampler, Data, FilterMode, IRect, Image, Matrix, MipmapMode, Paint, Rect,
+    SamplingOptions, TileMode,
 };
 use std::sync::{Arc, OnceLock};
 
@@ -414,7 +415,24 @@ pub(super) fn draw_image_bytes(
         };
         // 전체 원본의 축소에는 가는 선을 보존하는 저역 통과를 적용한다.
         // crop의 strict 경계와 binary·빠른 미리보기의 명시적 nearest를 유지한다.
-        let reduced = (sampling.filter_mode != FilterMode::Nearest
+        let cubic = sampling.mipmap_mode == MipmapMode::Linear
+            && src.is_none()
+            && !binary_preprocessed
+            && super::super::image_resolver::png_sampling::interpolation(bytes).is_none()
+            && !matrix.has_perspective()
+            && matrix.skew_x() == 0.0
+            && matrix.skew_y() == 0.0
+            && matrix.scale_x() > 0.0
+            && matrix.scale_y() > 0.0
+            && super::super::cubic_sampling::modest_reduction(
+                (f64::from(image.width()), f64::from(image.height())),
+                (
+                    f64::from(dst.width() * scale_x),
+                    f64::from(dst.height() * scale_y),
+                ),
+            );
+        let reduced = (!cubic
+            && sampling.filter_mode != FilterMode::Nearest
             && src.is_none()
             && !binary_preprocessed
             && !matrix.has_perspective()
@@ -425,7 +443,9 @@ pub(super) fn draw_image_bytes(
             .then(|| image.with_default_mipmaps())
             .flatten();
         let actual_image = reduced.as_ref().unwrap_or(&image);
-        let options = if reduced.is_some() {
+        let options = if cubic {
+            SamplingOptions::from(CubicResampler::catmull_rom())
+        } else if reduced.is_some() {
             SamplingOptions::new(FilterMode::Linear, MipmapMode::Linear)
         } else {
             sampling.options()

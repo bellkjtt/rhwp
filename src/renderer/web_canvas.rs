@@ -4,6 +4,8 @@
 //! web-sys를 통해 CanvasRenderingContext2d에 직접 그린다.
 
 #[cfg(target_arch = "wasm32")]
+mod cubic_reduction;
+#[cfg(target_arch = "wasm32")]
 mod image_reduction;
 
 #[cfg(target_arch = "wasm32")]
@@ -404,6 +406,7 @@ pub struct WebCanvasRenderer {
     metric_descriptor_mismatch: std::cell::Cell<bool>,
     hft_outline_fonts: Option<super::hft_outline::HftOutlineFonts>,
     hft_outline_enabled: bool,
+    high_quality_images: bool,
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -434,6 +437,7 @@ impl WebCanvasRenderer {
             metric_descriptor_mismatch: std::cell::Cell::new(false),
             hft_outline_fonts: None,
             hft_outline_enabled: false,
+            high_quality_images: false,
         })
     }
 
@@ -504,6 +508,10 @@ impl WebCanvasRenderer {
 
     /// 레이어 트리를 Canvas에 렌더링
     pub fn render_layer_tree(&mut self, tree: &PageLayerTree) {
+        self.high_quality_images = matches!(
+            tree.profile,
+            crate::paint::RenderProfile::Print | crate::paint::RenderProfile::HighQuality
+        );
         self.hft_outline_enabled = matches!(
             tree.profile,
             crate::paint::RenderProfile::Print | crate::paint::RenderProfile::HighQuality
@@ -1084,6 +1092,22 @@ impl WebCanvasRenderer {
     }
 
     fn render_image(&mut self, bbox: &BoundingBox, img: &ImageNode, restore_transform: bool) {
+        let previous = self.high_quality_images;
+        self.high_quality_images &= !matches!(
+            img.effect,
+            crate::model::image::ImageEffect::BlackWhite
+                | crate::model::image::ImageEffect::Pattern8x8
+        );
+        self.render_image_with_sampling(bbox, img, restore_transform);
+        self.high_quality_images = previous;
+    }
+
+    fn render_image_with_sampling(
+        &mut self,
+        bbox: &BoundingBox,
+        img: &ImageNode,
+        restore_transform: bool,
+    ) {
         // [#7193] 그림은 틀(bbox)에서 안쪽 여백을 뺀 자리에 그린다.
         let eff_bbox = img.transform.effective_image_bbox(&img.paint_bbox(bbox));
         self.open_shape_transform(&img.transform, &eff_bbox);
@@ -2708,6 +2732,13 @@ impl Renderer for WebCanvasRenderer {
             canvas
         });
         if let Some(canvas) = decoded {
+            if self.high_quality_images
+                && self.ctx.image_smoothing_enabled()
+                && super::image_resolver::png_sampling::interpolation(data).is_none()
+                && cubic_reduction::draw(&self.ctx, &canvas, key, (x, y, w, h))
+            {
+                return;
+            }
             let _quality = image_reduction::ReductionQuality::for_full_image(
                 &self.ctx,
                 f64::from(canvas.width()),

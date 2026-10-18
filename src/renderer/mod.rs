@@ -84,6 +84,8 @@ mod stroke_pattern;
 pub(crate) mod table_row_frame;
 // Q4-D1 registers the exact-source-bound vertical owner while all product
 // layout/publication callers remain closed until their own approved slices.
+#[cfg(any(feature = "native-skia", target_arch = "wasm32"))]
+pub(crate) mod cubic_sampling;
 #[allow(dead_code)]
 pub(crate) mod shaping_vertical;
 #[cfg(all(not(target_arch = "wasm32"), feature = "native-skia"))]
