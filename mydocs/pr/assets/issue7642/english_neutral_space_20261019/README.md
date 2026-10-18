@@ -4,7 +4,7 @@
 - 기준: `pdf/issue7642-exam-print/exam-02-exam_eng-hwp-print-2020.pdf`, 원본 그대로 한컴 2020 Print, SHA-256 `08b34c32089b73b5535bd59c38171e698e0b11932c66c4172c54b01a796b2102`.
 - 출력 source: `9636eebe9d786ec9c82a42a8597e43b5722feafd`. Native binary SHA-256 `bbbbedb088d4896b1ab18624411bbb72569f070b528014fd47bae05a27db0186`.
 - fresh WASM SHA-256 `5ea06ccdfccf7e43b159c12e2cafffba9a8c79fce4e5179c875cfe387276ff0b`, root/Studio 네 파일 동일.
-- Print 프로필, compat 2020, 96 DPI, 좌상단 원점 CSS px, 전체 8쪽. 기본 시스템 글꼴과 `assets/fonts`를 공급했다.
+- Print 프로필, 실제 CLI `--compat 2022`(비2024 기본 조판 경로), 기준 PDF는 한컴 2020 Print, 96 DPI, 좌상단 원점 CSS px, 전체 8쪽. 기본 시스템 글꼴과 `assets/fonts`를 공급했다.
 - 전쪽 원본 TSV: [Native](native-silhouette.tsv), [fresh WASM](wasm-silhouette.tsv). 최저 raw는 각각 **97.10866% / 96.88952%**이며 쪽수 8/8이다.
 - base `224a326063a5aeab5a1ca8dcaa92918f55843ffc`와 같은 원본/PDF/폰트/도구 비교에서 0.1%p 이상 하락한 쪽은 0이다. base producer `6ed1682c3267ea786734eb2e75252916a861d1fd`와 해당 base의 엔진 경로가 동일함을 Git diff로 확인했다.
 
