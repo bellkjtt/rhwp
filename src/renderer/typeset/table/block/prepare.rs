@@ -436,10 +436,12 @@ impl TypesetEngine {
             unconstrained_host_placement
                 .filter(|_| placement_para_start_height + fmt.height_for_fit <= available)
                 .map(|placement| {
-                    // 저장 글 앞 앵커는 entry의 from_stored_head_host에서 이미
-                    // 앞 간격 이전 문단 원점으로 만든다. 계산 줄·글 끝 앵커와
-                    // 달리 첫 조각 변환에서 그 간격을 한 번 더 빼지 않는다.
+                    // 저장 글줄과 공유한 원점이 있는 글 앞 앵커는 entry에서
+                    // 이미 앞 간격 이전 문단 원점으로 만들었다. 같은 간격을
+                    // 다시 빼지 않는다. 원점 인증이 없는 기존 흐름 앵커와
+                    // 계산 줄·글 끝 앵커는 기존 첫 조각 변환을 유지한다.
                     let anchor_includes_before = fmt.computed_host_lines.is_some()
+                        || placement.stored_host_origin.is_none()
                         || !crate::renderer::float_placement::ParagraphFloatPlacement::stored_head_host_lines_are_valid(
                             para, table, ctrl_idx,
                         );
