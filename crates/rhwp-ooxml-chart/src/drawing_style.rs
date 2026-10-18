@@ -81,11 +81,7 @@ pub(crate) fn resolve(xml: &[u8], chart: &mut OoxmlChart) {
     let (mut series_count, mut axis_count) = (0, 0);
     let (mut series, mut axis) = (None, None);
     let mut line = None::<Line>;
-    loop {
-        let event = match reader.read_event_into(&mut buf) {
-            Ok(event) => event,
-            Err(_) => break,
-        };
+    while let Ok(event) = reader.read_event_into(&mut buf) {
         match &event {
             Event::Start(e) | Event::Empty(e) => {
                 let name = e.local_name().as_ref().to_string();

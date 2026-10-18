@@ -40,10 +40,7 @@ impl LayoutEngine {
             .filter(|wp| wp.table_para_index == table_para_index)
             .collect();
 
-        let table_para = match paragraphs.get(table_para_index) {
-            Some(p) => p,
-            None => return None,
-        };
+        let table_para = paragraphs.get(table_para_index)?;
         // 표 문단의 LINE_SEG에서 기준 vertical_pos — 후속 어울림 문단 배치에만 쓴다.
         // 저장 줄이 없는 host 도 자기 글자는 아래에서 그려야 하므로 여기서 끝내지 않는다.
         let table_base_vpos = table_para.line_segs.first().map(|s| s.vertical_pos);
