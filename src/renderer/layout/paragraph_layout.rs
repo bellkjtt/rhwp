@@ -2256,6 +2256,7 @@ fn compute_line_extra_spacing(
     leading_space_count: usize,
     trailing_space_limit: usize,
     leading_space_plan: &LeadingSpacePlan<'_>,
+    soft_wrap_separator_width: f64,
     terminal_tracking: f64,
     styles: &ResolvedStyleSet,
     centered_measure: Option<&CenteredTextLineMeasure>,
@@ -2272,8 +2273,12 @@ fn compute_line_extra_spacing(
     available_width: f64,
     tab_width: f64,
 ) -> (f64, f64, f64) {
-    let fit_width = centered_measure.map_or(total_text_width, |measure| measure.width(0.0))
-        + leading_space_plan.field_fit_adjustment(styles);
+    // 자동 줄바꿈이 소비한 구분 공백은 그 전진을 보존하지만 가시 본문을
+    // 압축할 근거가 아니다. 가운데 정렬은 이미 자체 점유 측정을 공유한다.
+    let fit_width = centered_measure.map_or(
+        (total_text_width - soft_wrap_separator_width).max(0.0),
+        |measure| measure.width(0.0),
+    ) + leading_space_plan.field_fit_adjustment(styles);
     let fit_char_count = centered_measure.map_or(total_char_count, |measure| measure.char_count);
     // 음수 자간은 마지막 글자의 advance도 줄이지만 실제 glyph 잉크 폭은 줄이지 않는다.
     // 나눔정렬에서 advance만 셀 끝에 맞추면 정상 폭으로 그린 마지막 glyph가 clip을
@@ -6969,6 +6974,20 @@ impl LayoutEngine {
                     .map(|(pos, _, _)| *pos)
                     .max(),
             );
+            let soft_wrap_separator_width = if !is_last_line_of_para && !has_forced_break {
+                trailing_space_width_after_last_inline_object(
+                    comp_line,
+                    line_tac_offsets_for_width
+                        .iter()
+                        .map(|(pos, _, _)| *pos)
+                        .max(),
+                    styles,
+                    true,
+                )
+            } else {
+                // 문단 끝·명시 개행의 작성 공백과 밑줄 친 공백은 유지한다.
+                0.0
+            };
             let (extra_word_sp, extra_char_sp, extra_dash_sp) = if is_hancom_company_pua_logo_line {
                 // 이 줄의 trailing space는 뒤의 treat-as-char logo 그림 앞 공백이다.
                 // 회사명 자체에는 자간을 추가하지 않고 이 공백 하나가 남는 폭을 전부
@@ -6992,6 +7011,7 @@ impl LayoutEngine {
                     leading_space_plan.leading_spaces,
                     trailing_space_limit,
                     &leading_space_plan,
+                    soft_wrap_separator_width,
                     terminal_tracking_for_alignment(
                         comp_line,
                         styles,
@@ -11203,6 +11223,7 @@ mod issue_2809_split_alignment_tests {
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
             0.0,
+            0.0,
             &ResolvedStyleSet::default(),
             None,
             Alignment::Split,
@@ -11242,6 +11263,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&trailing_line, None),
+            0.0,
             0.0,
             &styles,
             None,
@@ -11287,6 +11309,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
+            0.0,
             0.0,
             &styles,
             None,
@@ -11341,6 +11364,7 @@ mod issue_2809_split_alignment_tests {
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
             0.0,
+            0.0,
             &ResolvedStyleSet::default(),
             None,
             Alignment::Justify,
@@ -11366,6 +11390,7 @@ mod issue_2809_split_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line, None),
+            0.0,
             0.0,
             &ResolvedStyleSet::default(),
             None,
@@ -11416,6 +11441,7 @@ mod issue_4657_distribute_alignment_tests {
             0,
             usize::MAX,
             &LeadingSpacePlan::new(&line(text), None),
+            0.0,
             0.0,
             &ResolvedStyleSet::default(),
             None,
