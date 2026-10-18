@@ -29,6 +29,23 @@ impl EqParser {
                 style,
             };
         };
+        // 문서 수식의 선두 PILE은 행렬 본문 자체를 공급하는 구문이다.
+        // 이 구문 뒤의 칸/행 토큰은 바깥 행렬의 닫힘까지 소비한다. 묶인
+        // {PILE{...}} 또는 다른 내용 뒤의 PILE은 일반 셀 표현식으로 남는다.
+        // 2024 Print의 네 행렬 종류·세 정렬과 바깥 후속 항에서 확인했다.
+        if self.document_terms && self.current_type() == TokenType::Command {
+            let command = self.current_value().to_ascii_uppercase();
+            if matches!(classify_command(&command), EqCommandClass::Pile) {
+                self.pos += 1;
+                let body = self.parse_pile(pile_align(&command));
+                self.pos = end;
+                self.expect(TokenType::RBrace);
+                return EqNode::Matrix {
+                    rows: vec![vec![body]],
+                    style,
+                };
+            }
+        }
         let mut rows: Vec<Vec<EqNode>> = vec![vec![]];
         let mut current_cell = Vec::new();
         let mut over_run = 0u32;

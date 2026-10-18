@@ -47,6 +47,7 @@ pub mod svg_render;
 pub mod symbols;
 pub mod tokenizer;
 mod uncached_flow_metrics;
+mod stored_alignment_metrics;
 mod variable_outline;
 
 /// 한글 수식은 수학 글꼴의 누락 글리프 대신 본문 명조 계열을 사용한다.
@@ -168,6 +169,9 @@ pub(crate) fn normalized_simple_math_metrics(
         // DYAD 글자 줄의 저장 높이는 표시 글리프보다 큰 예약 영역일 수 있다.
         // paint가 보존하는 그 영역을 일반 글자 캐시 재발행으로 줄이지 않는다.
         return None;
+    }
+    if let Some(metrics) = stored_alignment_metrics::metrics(equation, &intrinsic) {
+        return Some(metrics);
     }
     let single_box_line =
         simple_box_height(&intrinsic, fs).is_some() && is_simple_box_expression(&intrinsic);
