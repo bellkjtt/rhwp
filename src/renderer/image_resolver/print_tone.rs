@@ -66,6 +66,7 @@ pub(super) fn bitmap_bytes_to_png(data: &[u8]) -> Option<Vec<u8>> {
         image::DynamicImage::ImageRgba8(decoded)
             .write_to(&mut Cursor::new(&mut output), image::ImageFormat::Png)
             .ok()?;
+        super::png_sampling::mark_print_bitmap(&mut output);
         Some(output)
     })
 }

@@ -9,11 +9,6 @@ export function drawImageRectWithReduction(
   destination: Rect,
   paint: Paint,
 ): void {
-  if (imageRectUsesCubic(canvas, image, source, destination)
-    && typeof canvas.drawImageRectCubic === 'function') {
-    canvas.drawImageRectCubic(image, source, destination, 0, 0.5, paint);
-    return;
-  }
   const reduced = imageRectIsReduced(canvas, image, source, destination);
   if (!reduced || typeof image.makeCopyWithDefaultMipmaps !== 'function'
     || typeof canvas.drawImageRectOptions !== 'function') {

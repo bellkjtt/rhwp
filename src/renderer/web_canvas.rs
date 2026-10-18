@@ -2734,7 +2734,7 @@ impl Renderer for WebCanvasRenderer {
         if let Some(canvas) = decoded {
             if self.high_quality_images
                 && self.ctx.image_smoothing_enabled()
-                && super::image_resolver::png_sampling::interpolation(data).is_none()
+                && super::image_resolver::png_sampling::print_bitmap_reconstruction(data)
                 && cubic_reduction::draw(&self.ctx, &canvas, key, (x, y, w, h))
             {
                 return;

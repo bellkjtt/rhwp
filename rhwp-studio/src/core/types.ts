@@ -1380,6 +1380,8 @@ export interface LayerImageOp {
   bbox: LayerBounds;
   /** Explicit source sampling; absent preserves the output profile policy. */
   imageInterpolation?: 'nearest' | 'linear';
+  /** 실제 Print 색 전달 payload의 축소 재구성 계약. */
+  imageReconstruction?: 'catmullRom';
   mime?: string;
   base64?: string;
   imageRef?: number | string;

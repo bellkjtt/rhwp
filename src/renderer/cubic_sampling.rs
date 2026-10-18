@@ -3,6 +3,7 @@
 //! 이 범위에서 선형 필터의 두 표본은 얇은 선을 흰 배경에 희석한다.
 //! Native Skia와 CanvasKit은 Catmull–Rom을 직접 사용하고 Canvas2D는
 //! 같은 네 표본 식을 장치 격자에 계산한다. 더 큰 축소는 기존 저역 통과를 쓴다.
+//! 호출자는 실제 한컴 2024 색 확장 payload 표식을 확인한 뒤 이 경로를 선택한다.
 
 pub(crate) fn modest_reduction(source: (f64, f64), device: (f64, f64)) -> bool {
     [source.0, source.1, device.0, device.1]

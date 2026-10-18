@@ -2647,7 +2647,7 @@ export class CanvasKitLayerRenderer {
           || imageRectIsReduced(canvas, image, src, this.canvasKit.XYWHRect(dstX, dstY, dstW, dstH)));
       this.drawImageRect(canvas, image, src, this.canvasKit.XYWHRect(dstX, dstY, dstW, dstH), opacity,
         explicitFiltering ?? (binaryEffectWasApplied ? 'nearest' : 'linear'), useMipmaps,
-        op.imageInterpolation === undefined);
+        op.imageReconstruction === 'catmullRom' && op.imageInterpolation === undefined);
     };
 
     const fillMode = op.fillMode ?? 'fitToSize';
@@ -2686,7 +2686,7 @@ export class CanvasKitLayerRenderer {
   }
 
   private drawImageRect(canvas: SkCanvas, image: SkImage, source: Rect, dest: Rect, opacity = 1,
-    filtering: 'nearest' | 'linear' = 'linear', useMipmaps = false, allowCubic = true): void {
+    filtering: 'nearest' | 'linear' = 'linear', useMipmaps = false, allowCubic = false): void {
     const paint = new this.canvasKit.Paint();
     paint.setAntiAlias?.(true);
     if (opacity < 1) {

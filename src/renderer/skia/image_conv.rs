@@ -418,7 +418,7 @@ pub(super) fn draw_image_bytes(
         let cubic = sampling.mipmap_mode == MipmapMode::Linear
             && src.is_none()
             && !binary_preprocessed
-            && super::super::image_resolver::png_sampling::interpolation(bytes).is_none()
+            && super::super::image_resolver::png_sampling::print_bitmap_reconstruction(bytes)
             && !matrix.has_perspective()
             && matrix.skew_x() == 0.0
             && matrix.skew_y() == 0.0
