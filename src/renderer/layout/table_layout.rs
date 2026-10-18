@@ -6554,9 +6554,14 @@ impl LayoutEngine {
             // 가시 표 상단 = v_offset + outer_margin_top. 한컴 PDF (exam_math.hwp 바탕쪽 쪽번호 박스) 정합.
             // [#6598] `Para` 도 저장 기준점으로 옮긴 경우에는 바깥여백 위를 더한다 —
             // 한/글 실측 171.5 = 저장 상단 138.4 + v_offset 31.41 + om_top 1.88.
-            // 기준점을 안 옮긴 문단 기준 표는 종전대로 0 이다(근거 없이 넓히지 않는다).
+            // 앞 host 글 조각에서 받은 문단 상단도 바깥 상자의 원점이다.
+            // 그 글의 내용 바닥은 push floor이며, 문단 오프셋에 위여백이
+            // 들어 있다는 뜻은 아니다. 저장 앵커 재선택 여부와 분리한다.
             let om_top_px = if matches!(vert_rel_to, crate::model::shape::VertRelTo::Paper)
                 || para_stored_anchor_y.is_some()
+                || (matches!(vert_rel_to, crate::model::shape::VertRelTo::Para)
+                    && matches!(table_text_wrap, TextWrap::TopAndBottom)
+                    && self.table_push_floor.get().is_some())
                 || (matches!(vert_rel_to, crate::model::shape::VertRelTo::Para)
                     && matches!(
                         table_text_wrap,
