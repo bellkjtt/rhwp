@@ -786,6 +786,7 @@ impl TypesetState {
             current_height: self.data.current_height,
             has_items: !self.data.current_items.is_empty(),
             vpos_ladder_dirty: self.data.vpos_ladder_dirty,
+            stored_vpos_base: self.data.vpos_page_base,
             current_footnote_height: self.data.current_footnote_height,
             footnote_safety_margin: self.data.footnote_safety_margin,
             current_zone_y_offset: self.data.current_zone_y_offset,

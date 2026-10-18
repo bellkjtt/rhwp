@@ -22,6 +22,8 @@ pub(in crate::renderer::typeset) struct LineScanPage {
     pub current_height: f64,
     pub has_items: bool,
     pub vpos_ladder_dirty: bool,
+    /// 첫 항목에서 임시 유추한 원점과 구분되는 확정 저장 프레임의 축.
+    pub stored_vpos_base: Option<i32>,
     pub current_footnote_height: f64,
     pub footnote_safety_margin: f64,
     pub current_zone_y_offset: f64,
@@ -384,6 +386,10 @@ pub(in crate::renderer::typeset) fn stored_body_reset_fragment_matches_current_f
         // 앞선 재조판 이력만으로 현재 저장 조각의 소유를 버리지 않는다.
         // 아래에서 현재 실제 원점과 저장 첫 줄의 일치, 편집되지 않은
         // 연속 prefix와 본문 안의 마지막 점유 끝을 함께 확인한다.
+        // 재조판된 쪽의 임시 로컬 원점에 맞는다는 사실만으로 원래의
+        // 물리 reset을 복원하지 않는다. 확정 프레임의 같은 축이어야 한다.
+        || (page.vpos_ladder_dirty
+            && page.stored_vpos_base != Some(current_page_vpos_base))
         || para.stored_text_partition_is_dirty()
         || para.cell_format_vpos_dirty
         || page.col_count != 1

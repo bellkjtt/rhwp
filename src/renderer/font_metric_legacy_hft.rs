@@ -7,6 +7,9 @@
 
 use super::{FontMetric, LatinRange};
 
+#[path = "font_metric_konghan_hft.rs"]
+mod konghan;
+
 static ASCII_0: [u16; 95] = [
     400, 500, 400, 660, 660, 1000, 1000, 400, 500, 500, 500, 1000, 400, 500, 400, 500, 660, 660,
     660, 660, 660, 660, 660, 660, 660, 660, 500, 500, 500, 1000, 500, 660, 1000, 782, 713, 764,
@@ -65,7 +68,7 @@ static RANGES_3: [LatinRange; 1] = [LatinRange {
     widths: &ASCII_3,
 }];
 
-pub(super) static METRICS: [FontMetric; 4] = [
+pub(super) static METRICS: [FontMetric; 5] = [
     FontMetric {
         name: "신명 디나루 (HFT)",
         bold: false,
@@ -98,6 +101,7 @@ pub(super) static METRICS: [FontMetric; 4] = [
         latin_ranges: &RANGES_3,
         hangul: None,
     },
+    konghan::METRIC,
 ];
 
 /// HFT로 해소한 선언 face에만 원본 프로그램의 메트릭 이름을 공급한다.
@@ -107,6 +111,7 @@ pub(crate) fn metric_face_name(requested: &str) -> Option<&'static str> {
         "한양중고딕" | "HanyangJungGothic" => Some("한양중고딕 (HFT)"),
         "신명 디나루" => Some("신명 디나루 (HFT)"),
         "신명 신그래픽" => Some("신명 신그래픽 (HFT)"),
+        "중간공한" | "Konghan Normal" => Some("중간공한 (HFT)"),
         _ => None,
     }
 }
