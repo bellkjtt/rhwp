@@ -168,4 +168,65 @@ impl LayoutEngine {
         }
         Some((first.para_idx, before))
     }
+
+    /// 다음 저장 쪽의 TAC를 소비하지 않아도 현재 쪽의 행 상자는 본문 끝을 소유한다.
+    /// 내용 컷과 빈 물리 띠를 분리하며, 원점0 재시작·닫힌 원본 호스트를 함께 확인한다.
+    pub(crate) fn stored_inline_restart_row_end_frame(
+        &self,
+        table: &Table,
+        row: usize,
+        start: &[usize],
+        end: &[usize],
+        available: f64,
+        styles: &ResolvedStyleSet,
+    ) -> Option<f64> {
+        if !start.is_empty()
+            || !available.is_finite()
+            || !self.stored_row_boxes_exceed_first_frame(table)
+        {
+            return None;
+        }
+        let cells = Self::row_cut_cell_order(table, row);
+        if cells.is_empty() || cells.len() != end.len() {
+            return None;
+        }
+        let mut owns_restart = false;
+        let mut declared = 0.0_f64;
+        for (&index, &cut) in cells.iter().zip(end) {
+            let cell = table.cells.get(index)?;
+            if cell.row_span != 1 || cell.height > i32::MAX as u32 || cell.dirty_flag {
+                return None;
+            }
+            declared = declared.max(crate::renderer::hwpunit_to_px(cell.height as i32, self.dpi));
+            let units = self.cell_units(cell, table, styles);
+            if cut > units.len() {
+                return None;
+            }
+            if cut == units.len() {
+                continue;
+            }
+            let next = units.get(cut)?;
+            let before = units.get(cut.checked_sub(1)?)?;
+            if !next.hard_break_before
+                || !next.page_frame_reset_before
+                || next.nested_row != Some(0)
+                || next.vis_start != 0
+                || before.para_idx == next.para_idx
+            {
+                return None;
+            }
+            let frame = self.stored_inline_owner_frame(table, cell, next.para_idx)?;
+            if frame.line_top_hu != 0 {
+                return None;
+            }
+            // 같은 유닛의 실제 자식 행·후행 간격을 소유 호스트 상자와 대조한다.
+            self.stored_inline_row_frame_content_height(table, cell, &units, cut, styles)?;
+            owns_restart = true;
+        }
+        let content = self.row_cut_content_height(table, row, start, end, styles);
+        (owns_restart
+            && available > content + crate::renderer::hwpunit_to_px(2, self.dpi)
+            && available < declared)
+            .then_some(available)
+    }
 }
