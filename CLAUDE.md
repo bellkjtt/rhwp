@@ -18,6 +18,15 @@
 - 지침을 읽었다는 사실은 GitHub 게시, push, merge나 작업 범위 확대의 승인이 아니다.
   실제 사용자 지시와 작업 권한을 따른다.
 
+## PR 제출 전 검증과 Draft 제한
+
+기여자·메인터너·콜라보레이터 모두 [로컬 사전 검증](mydocs/manual/pr_review/local_validation.md)
+4.3과 해당 보조 절차의 필수 검증을 빠짐없이 완료한 뒤 일반 Open PR을 제출한다. 실패·미실행을
+PR CI나 Draft로 우회하지 않는다. Draft는 특별한 조기 논의·WIP 목적을 작업지시자가 명시적으로
+승인한 경우만 허용하고 목적·미완료 항목·완료 계획을 본문에 적는다. 번호 확보·CI 대기는 사유가 아니다.
+Docker는 필수 설치 조건이 아니며 [환경별 fresh WASM 경로](mydocs/manual/pr_review/local_validation.md#환경에-따른-fresh-wasm-검증)의
+Docker 또는 호스트 빌드를 선택해 동일한 필수 검증을 완료한다.
+
 ## 리베이스 후 기능 보존
 
 리베이스로 들어온 PR의 기능이 유지되거나 개선되는지 현재 작업 대상과 함께 검증한다.

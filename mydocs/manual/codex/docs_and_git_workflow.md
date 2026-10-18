@@ -324,9 +324,11 @@ PR 댓글 톤은 과장하지 않는다. "정말 감사합니다", "정성스러
 - PR 번호는 원격 head branch를 push한 뒤 GitHub에서 PR 생성이 성공할 때 채번된다. Issue와
   PR은 같은 번호 공간을 쓰지만, 아직 생성하지 않은 PR 번호를 예측해 `pr_N_*` 파일명으로
   사용하지 않는다.
-- 구현과 로컬 검증이 끝난 merge 후보는 별도의 Draft 지시가 없으면 Open PR로 생성한다.
-  Draft는 완료되지 않은 WIP를 공유하거나 조기 검토를 받는 목적을 작업지시자가 명시적으로 승인한
-  경우에만 쓴다. 번호 확보 자체는 Draft 생성 근거가 아니다.
+- PR 제출 전에 [로컬 사전 검증](../pr_review/local_validation.md) 4.3과 해당 보조 절차를 빠짐없이
+  완료한다. 일반 제출은 검증을 마친 Open PR이며, 특별한 사유 없는 Draft 생성은 금지한다.
+  Draft는 미완성 설계·WIP의 조기 논의 목적을 작업지시자가 명시적으로 승인한 경우에만 쓴다.
+  일반 PR 생성 승인, 번호 확보·CI 시작·대기나 필수 검증 실패·미완료는 예외 사유가 아니다.
+  예외 Draft도 목적·미완료 항목·완료 계획을 적고 Ready 전환 전에 필수 검증을 모두 완료한다.
 - collaborator self PR은 PR 생성으로 번호 `N`을 받은 뒤 **정확한 code head의 GitHub Actions CI
   성공을 먼저 확인**한다. 그 뒤 `pr_N_review.md`와 필요한 review_impl·오늘할일에 code SHA,
   CI run URL과 실제 결과를 기록하고 같은 PR branch의 문서-only trailing commit으로 push한다.
@@ -334,10 +336,11 @@ PR 댓글 톤은 과장하지 않는다. "정말 감사합니다", "정성스러
   CI를 완료로 기록하거나 로컬 검증으로 대체하지 않는다. 상세 순서는
   [collaborator self PR](../pr_review/collaborator_self_merge.md#821-pr-채번과-오늘할일-생성갱신-시점)을 따른다.
 - 실수로 승인 없이 PR을 열었으면 작업지시자 지시에 따라 즉시 close하고, 후속 진행은 승인 대기 상태로 되돌린다.
-- PR 직전 전체 CI 성격의 긴 검증(`cargo test --verbose`, `cargo clippy -- -D warnings` 등)은
-  focused test와 visual sweep 결과를 공유한 뒤 작업지시자 승인을 받은 경우에만 실행한다.
-- 작업 전체에 대한 자동 승인 또는 `/Goal` 자동 진행 지시가 있어도 PR CI 전체 테스트 승인을
-  대체하지 않는다. PR CI는 별도 명시 승인이 필요하다.
+- PR 직전의 긴 전체 회귀·lint도 `local_validation.md` 4.3의 필수 범위이면 위 `PR 준비` 지시에
+  포함된 실행 승인으로 완료한다. 이미 승인된 검증을 다시 묻거나 focused test만으로 대체하지 않는다.
+  새 범위의 검증이나 원격 작업은 기존 사용자 지시의 승인 범위를 확인한다.
+- PR 생성·CI 모니터링·merge·후속 처리는 세션에서 실제로 승인된 범위에 따라 수행한다. 이미
+  명시적으로 승인된 작업은 반복 확인하지 않으며, 로컬 검증 지시만으로 원격 승인까지 추정하지 않는다.
 
 ## Commit Rules
 
