@@ -61,3 +61,20 @@ CARGO_BUILD_JOBS=8 CARGO_TARGET_DIR=/home/tsjang/rhwp/target/pr-review scripts/w
 ![legal-native-p019 overlay](legal-native-p019-overlay.png)
 ![legal-wasm-p019 review](legal-wasm-p019-review.png)
 ![legal-wasm-p019 overlay](legal-wasm-p019-overlay.png)
+
+## 실제 Studio 합성 경로의 후속 보정
+
+앞의 직접 Canvas 출력만으로 DOM 합성 경로까지 검증했다고 판정하지 않았다. `stage4167`에서 실제 `PageRenderer`의 Print 페이지를 캡처하니 Canvas2D가 화면 전용 좁은 DOM 질의를 사용했다. 같은 평탄 영역의 독립 PDF RGB138/171에 대해 Canvas2D는134/166, CanvasKit은138/171이었다. 원본 픽셀을 공급하는 Screen 질의가 Print 색 전달·표본을 덮어쓰던 경계다.
+
+`PageRenderer.renderPage`는 Screen에서만 그 DOM 질의를 사용한다. Print·high-quality·fast-preview는 이미 있는 같은 프로필의 static canvas를 재사용하여 공통 payload와 표본을 소비하며, 비동기 자원 재렌더도 유지한다. 문서 ID·좌표로 분기하거나 DOM 그림을 숨긴 수정이 아니다. `print-bitmap-profile-routing.test.ts`는 실제 페이지 진입점의 질의·합성 선택·프로필 전달·재시도 수량을 검사한다. 수정 전1 PASS/3 FAIL, 수정 후4 PASS다. 이 대역 경로 검사와 실제 PNG의 색 검증을 구분한다.
+
+`stage4169`의 실제 페이지 합성 후 Canvas2D도138/171이 되었고, 비변환 crop 대조군은 PDF135와 출력134의 JPEG1단계 범위를 유지했다. 초기화 때 실제 받은 WASM SHA가 빌드와 같고 요청한 Canvas2D/CanvasKit이 fallback 없이 실행됐음을 확인했다. 실제 합성 전쪽 raw는 Canvas2D99.95956%, CanvasKit99.98227%다. Canvas2D의 편집용 여백 모서리 표시는 캡처에 그대로 남겼으며 Print 파일 내용으로 해석하지 않는다.
+
+공개 `export-svg --profile print --compat 2024`의 다섯 실제 PNG payload도 [true,false,true,false,false]이며, 이어서 SVG를 브라우저에서 그린 전1쪽 raw는99.97978%다. SVG 문자열만 검사하고 실제 glyph/그림 출력을 검증했다고 쓰지 않는다. Rust/WASM 엔진 파일은 이 Studio 보정으로 바뀌지 않아 D7의 전쪽 증거를 유지하고 frontend 검증은 새 TS 내용으로 다시 실행한다.
+
+![studio-canvas2d 실제 페이지 review](palette-studio-canvas2d-review.png)
+![studio-canvas2d 실제 페이지 overlay](palette-studio-canvas2d-overlay.png)
+![studio-canvaskit 실제 페이지 review](palette-studio-canvaskit-review.png)
+![studio-canvaskit 실제 페이지 overlay](palette-studio-canvaskit-overlay.png)
+![svg-browser 실제 페이지 review](palette-svg-browser-review.png)
+![svg-browser 실제 페이지 overlay](palette-svg-browser-overlay.png)
