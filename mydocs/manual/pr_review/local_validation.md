@@ -2,7 +2,7 @@
 kind: guide
 status: active
 canonical: mydocs/manual/pr_review_workflow.md
-last_verified: 2026-10-17
+last_verified: 2026-10-18
 ---
 
 # 로컬 사전 검증
@@ -17,6 +17,10 @@ PR별 review 문서에 남긴다. 같은 checkout·target·Cargo cache를 공유
 불필요한 산출물을 점검·정리한다. 검토별 저장 경로가 정리 범위를 제한하지 않는다. 삭제 전 사용·소유·
 증적 보존 확인, 활성 작업·공유 캐시의 보존과 정리 결과 기록은
 [merge 후속 처리](post_merge.md#77-branch-worktree-검토-전용-target-정리)를 따른다.
+
+기존 회귀 실패는 [해결 PR의 선행 분석](../codex/docs_and_git_workflow.md#기존-이슈와-해결-pr의-선행-분석)으로
+원 이슈·원 PR·실제 통합 및 후속 보정의 원인·기대값·검증 범위를 먼저 확인한다. 실패 항목마다
+현재 base/head와 대조하며, 리베이스로 반영한 기능의 실패도 같은 순서로 조사한다.
 
 기존 렌더링 회귀가 실패하면 검사부터 바꾸지 않는다. **원본 입력 출력 보정 → 독립 한컴 Print PDF와
 Native/fresh WASM의 관련 모든 페이지에서 90% 이상 확인 → 독립 기대값에 따라 필요한 검사 변경**
