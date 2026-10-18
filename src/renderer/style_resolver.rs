@@ -232,7 +232,11 @@ fn has_own_metric_table(face: &&str, bold: bool, italic: bool) -> bool {
 /// `use_font_space` 가 켜진 run 에서만 쓴다.
 ///
 /// [`measure_char_width_embedded_decision_for_font`]: crate::renderer::layout
-fn declared_space_advance_em(css_family_chain: &str, bold: bool, italic: bool) -> Option<f64> {
+pub(crate) fn declared_space_advance_em(
+    css_family_chain: &str,
+    bold: bool,
+    italic: bool,
+) -> Option<f64> {
     let primary = css_family_chain
         .split(',')
         .next()?

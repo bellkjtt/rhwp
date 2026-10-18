@@ -2395,8 +2395,10 @@ impl LayoutEngine {
                                     }
                                 }
                             }
-                            let svg_fragment =
-                                chart.render_svg(render_x, render_y, render_w, render_h);
+                            let svg_fragment = crate::ole_chart::render_ooxml_chart(
+                                &chart,
+                                [render_x, render_y, render_w, render_h],
+                            );
                             push_ole_raw_svg_render_node(
                                 tree,
                                 parent,
@@ -2426,8 +2428,10 @@ impl LayoutEngine {
                                             &mut chart, contents, preview, render_w, render_h,
                                         );
                                     }
-                                    let svg_fragment =
-                                        chart.render_svg(render_x, render_y, render_w, render_h);
+                                    let svg_fragment = crate::ole_chart::render_ooxml_chart(
+                                        &chart,
+                                        [render_x, render_y, render_w, render_h],
+                                    );
                                     push_ole_raw_svg_render_node(
                                         tree,
                                         parent,

@@ -153,6 +153,7 @@ pub fn parse_chart_xml(xml: &[u8]) -> Option<OoxmlChart> {
     if chart.series.is_empty() && chart.title.is_none() {
         return None;
     }
+    crate::drawing_style::resolve(xml, &mut chart);
 
     // 가로/세로 막대 최종 분기 (chart_type이 Column 상태면 barDir로 확정)
     if matches!(
@@ -880,7 +881,7 @@ fn handle_end(name: &[u8], chart: &mut OoxmlChart, st: &mut ParseState) {
     }
 }
 
-fn attr_val(e: &quick_xml::events::BytesStart, key: &str) -> Option<String> {
+pub(super) fn attr_val(e: &quick_xml::events::BytesStart, key: &str) -> Option<String> {
     for attr in e.attributes().flatten() {
         if attr.key.as_ref().as_bytes() == key.as_bytes() {
             return Some(attr.value.as_ref().to_string());
@@ -894,7 +895,7 @@ fn attr_f64(e: &quick_xml::events::BytesStart) -> Option<f64> {
     attr_val(e, "val").and_then(|s| s.parse().ok())
 }
 
-fn parse_rgb_hex(s: &str) -> Option<u32> {
+pub(super) fn parse_rgb_hex(s: &str) -> Option<u32> {
     let t = s.trim().trim_start_matches('#');
     if t.len() != 6 {
         return None;
@@ -904,7 +905,7 @@ fn parse_rgb_hex(s: &str) -> Option<u32> {
 
 /// 테마 색상 이름 → RGB (Office 2016 기본 + HWP 스타일 102 근사)
 /// accent1~6, dk1, lt1, dk2, lt2 등
-fn scheme_color(name: &str) -> Option<u32> {
+pub(super) fn scheme_color(name: &str) -> Option<u32> {
     match name {
         "accent1" => Some(0x70AD47), // 녹색 (HWP style 102 차트의 1번 시리즈)
         "accent2" => Some(0x4472C4), // 파랑 (2번 시리즈)
@@ -921,7 +922,7 @@ fn scheme_color(name: &str) -> Option<u32> {
 }
 
 /// DrawingML `lumMod`/`lumOff`는 RGB 채널이 아니라 HSL 명도에 적용한다.
-fn apply_luminance(rgb: u32, factor: f64, offset: f64) -> u32 {
+pub(super) fn apply_luminance(rgb: u32, factor: f64, offset: f64) -> u32 {
     let r = ((rgb >> 16) & 0xff) as f64 / 255.0;
     let g = ((rgb >> 8) & 0xff) as f64 / 255.0;
     let b = (rgb & 0xff) as f64 / 255.0;
