@@ -1,5 +1,6 @@
 //! 표 레이아웃 (layout_table + 셀 높이/줄범위 계산)
 
+mod cut_alignment;
 mod nested_header_frame;
 mod plain_cell_flow;
 mod reflowed_nested_row;
