@@ -898,7 +898,7 @@ pub(super) fn try_place_multicolumn_paragraph(
         st.col_count,
         st.current_column,
         st.current_endnote_flow,
-        st.layout.available_body_height(),
+        st.base_available_height(),
         dpi,
     );
     if col_breaks.len() <= 1 {

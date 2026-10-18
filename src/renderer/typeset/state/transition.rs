@@ -225,7 +225,15 @@ impl TypesetState {
 
     /// 기본 가용 높이 (각주/존 미차감)
     pub(in crate::renderer::typeset) fn base_available_height(&self) -> f64 {
-        self.data.layout.available_body_height()
+        // 본문 점유와 레거시 미주 흐름의 추가 예산을 구분한다. 전체 문단 fit,
+        // 줄 분할, 표 예약이 같은 물리 경계를 소비해야, 저장 쪽 표식이 없는
+        // 변환본의 마지막 글줄을 아래 여백에 넣고 다음 본문을 당기지 않는다.
+        // 미주의 기존 단 예산은 별도 흐름 계약이므로 여기서 제거하지 않는다.
+        if self.data.current_endnote_flow {
+            self.data.layout.available_body_height()
+        } else {
+            self.data.layout.physical_body_height()
+        }
     }
 
     /// 동일 표의 terminal fragment가 아직 current column에 있는지, 직전에 flush된

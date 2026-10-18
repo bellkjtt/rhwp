@@ -61,7 +61,7 @@ impl TypesetEngine {
             let max_vpos_px = hwpunit_to_px(max_vpos_end, self.dpi);
             if max_vpos_end > 0
                 && !prev_is_floating_anchor
-                && max_vpos_px <= st.layout.available_body_height()
+                && max_vpos_px <= st.base_available_height()
             {
                 // 사다리는 **한글의 쪽 경계** 기준이라, 한글이 이미 쪽을 끊은 자리에서는
                 // 직전 문단의 vpos 가 다음 쪽 상단 값이 되어 이 쪽이 실제로 소비한 높이를
@@ -229,7 +229,7 @@ impl TypesetEngine {
         // 본문영역을 넘어 바닥 여백에 그려지던 결함)
         let one_line = hwpunit_to_px(1500, self.dpi);
         if paper_overlay_tail_overflows_page
-            || candidate_offset > st.layout.available_body_height() - 4.0 * one_line
+            || candidate_offset > st.base_available_height() - 4.0 * one_line
         {
             st.push_new_page();
             // 새 페이지 첫 zone: 새 zone 디자인 spacing /2 만 (이전 zone 은 이전 페이지).
