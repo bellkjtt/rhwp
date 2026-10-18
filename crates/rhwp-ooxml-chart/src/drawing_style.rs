@@ -164,6 +164,11 @@ pub(crate) fn resolve(xml: &[u8], chart: &mut OoxmlChart) {
                             if let Some(target) = target {
                                 *target = attr("typeface");
                             }
+                        } else if names
+                            .ends_with(&["title", "tx", "rich", "p", "pPr", "defRPr", "latin"])
+                            || names.ends_with(&["title", "tx", "rich", "p", "r", "rPr", "latin"])
+                        {
+                            chart.title_font_family = attr("typeface");
                         }
                     }
                     _ => {}

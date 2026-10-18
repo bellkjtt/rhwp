@@ -2630,6 +2630,8 @@ fn legend_order_reversed(chart: &OoxmlChart) -> bool {
 enum SwatchKind {
     /// 막대/원형: 10×10 색 사각형 (현행 유지 — issue_1882 필터 문자열 보호)
     Square,
+    /// 계열 자체에 선언된 사각형 테두리를 범례 키도 함께 표시한다.
+    OutlinedSquare { rgb: u32, width_emu: Option<u32> },
     /// 무표식 라인·콤보 라인: 14px 색 선분 (현행 유지)
     LineOnly,
     /// 표식 라인·선+표식 분산형: 선분 + 중앙 마커 글리프 (—◆—)
@@ -2665,7 +2667,10 @@ fn swatch_kind(chart: &OoxmlChart, s: &OoxmlSeries, i: usize) -> SwatchKind {
                 SwatchKind::Blank
             }
         }
-        _ => SwatchKind::Square,
+        _ => match s.shape_line {
+            LineSpec::Solid { rgb, width_emu } => SwatchKind::OutlinedSquare { rgb, width_emu },
+            _ => SwatchKind::Square,
+        },
     }
 }
 
@@ -2745,6 +2750,15 @@ fn push_legend_swatch(svg: &mut String, ix: f64, cy: f64, color: u32, kind: Swat
                 ix,
                 cy - 6.0,
                 color_hex(color)
+            ));
+        }
+        SwatchKind::OutlinedSquare { rgb, width_emu } => {
+            svg.push_str(&format!(
+                "<rect x=\"{:.2}\" y=\"{:.2}\" width=\"10\" height=\"10\" fill=\"{}\" {}/>\n",
+                ix,
+                cy - 6.0,
+                color_hex(color),
+                line_attr(LineSpec::Solid { rgb, width_emu }, "stroke=\"none\"")
             ));
         }
         SwatchKind::LineOnly => swatch_line(svg),
