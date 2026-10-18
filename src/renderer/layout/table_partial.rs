@@ -1,5 +1,6 @@
 //! 페이지 분할 표 레이아웃 (layout_partial_table)
 
+mod row_band;
 mod tail_alignment;
 
 use super::super::composer::{compose_paragraph, ComposedParagraph};
@@ -5059,7 +5060,9 @@ impl LayoutEngine {
             // 공유하는 칸들이 실제로 남긴 여분의 **최솟값**을 모은다. 상자를 접어도 어느 칸의
             // 내용·아래여백도 잘리지 않는 상한이다.
             if let Some(fold_row) = fold_last_row {
-                if cell_row + cell.row_span as usize == fold_row + 1 && !is_repeated_header_cell {
+                if row_band::owns_fragment_bottom(cell_row, cell.row_span as usize, fold_row)
+                    && !is_repeated_header_cell
+                {
                     // 배치 커서(`para_y`)는 줄 상자 바닥과 다를 수 있다 — 상자 **안에 있던**
                     // 가시 자손의 바닥도 함께 본다. 상자 밖으로 나간 자손은 이 조각이 이미
                     // 잘라 낸 것이므로 세지 않는다(세면 접기가 영영 멈춘다).
@@ -6819,10 +6822,13 @@ impl LayoutEngine {
             // 두 사유(줄간격 · 쪽 상한) 중 **큰 쪽**만큼 접되, 실제로 남은 여분을 넘지 않는다.
             let fold = trail.max(cap_fold).min(fold_slack).max(0.0);
             if fold > 0.5 && partial_table_height > fold + 1.0 {
-                let fold_row_end = fold_row + 1;
                 for child in &mut table_node.children {
                     if let RenderNodeType::TableCell(meta) = &child.node_type {
-                        if usize::from(meta.row) + usize::from(meta.row_span) == fold_row_end
+                        if row_band::owns_fragment_bottom(
+                            usize::from(meta.row),
+                            usize::from(meta.row_span),
+                            fold_row,
+                        )
                             && child.bbox.height > fold + 1.0
                         {
                             child.bbox.height -= fold;
