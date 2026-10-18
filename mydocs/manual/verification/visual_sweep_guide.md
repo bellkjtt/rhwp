@@ -759,7 +759,7 @@ PDFium은 이 계약과 실제 한컴 Print의 파랑 그라데이션 보존을 
 [독립 계약과 전후 실행](../../working/task_m100_7642_stage2471.md)을 참고한다.
 
 점수가 높은 renderer를 문서별로 고르지 않는다. 원본 PDF, 내용 이진화 임계값·raw 판정식·
-2px 공차·90%·98%·0.01%p 기준은 유지한다. 실행 manifest의
+2px 공차·90%·98%·0.1%p 기준은 유지한다. 실행 manifest의
 `provenance.pdf_rasterizer`에 backend·정책·antialias·도구 버전·실행 Python·실제 PDFium
 라이브러리와 helper 해시를 기록한다. 이전 Cairo/Splash PNG·TSV는 출처를 유지하고
 덮어쓰지 않는다. 고정한 base/head의 Native/fresh WASM 전쪽을 모두 같은 PDFium
