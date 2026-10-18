@@ -12404,36 +12404,6 @@ impl LayoutEngine {
         )
     }
 
-    /// 글줄 범위에 표현되지 않는 중첩 표도 선택된 컷의 정렬 점유에 포함한다.
-    pub(super) fn nested_cell_cut_content_height(
-        &self,
-        cell: &crate::model::table::Cell,
-        table: &crate::model::table::Table,
-        styles: &ResolvedStyleSet,
-        start: usize,
-        end: usize,
-    ) -> f64 {
-        let units = self.cell_units(cell, table, styles);
-        let lo = start.min(units.len());
-        let window = &units[lo..end.clamp(lo, units.len())];
-        if window.iter().any(|unit| {
-            unit.mixed_nested_fragment
-                || unit.nested_row.is_some()
-                || unit.nested_table_fragment.is_some()
-                || cell.paragraphs.get(unit.para_idx).is_some_and(|paragraph| {
-                    paragraph
-                        .controls
-                        .iter()
-                        .any(|control| matches!(control, Control::Table(_)))
-                })
-        }) {
-            window.iter().map(|unit| unit.height).sum::<f64>()
-                + self.mixed_nested_flow_extra_from_cut(cell, table, styles, lo, lo + window.len())
-        } else {
-            0.0
-        }
-    }
-
     /// 저장 행의 물리 상자와 이미 소비한 rowspan의 측정 제약을 구분한다.
     /// 온전한 자기 셀의 저장 상자가 있으면 그 상자가 남은 행의 높이를 소유한다.
     pub(crate) fn row_block_cut_physical_height(

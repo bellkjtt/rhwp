@@ -436,7 +436,16 @@ impl TypesetEngine {
             unconstrained_host_placement
                 .filter(|_| placement_para_start_height + fmt.height_for_fit <= available)
                 .map(|placement| {
-                    let applied_before = if placement_para_start_height > 0.0 {
+                    // 저장 글 앞 앵커는 entry의 from_stored_head_host에서 이미
+                    // 앞 간격 이전 문단 원점으로 만든다. 계산 줄·글 끝 앵커와
+                    // 달리 첫 조각 변환에서 그 간격을 한 번 더 빼지 않는다.
+                    let anchor_includes_before = fmt.computed_host_lines.is_some()
+                        || !crate::renderer::float_placement::ParagraphFloatPlacement::stored_head_host_lines_are_valid(
+                            para, table, ctrl_idx,
+                        );
+                    let applied_before = if anchor_includes_before
+                        && placement_para_start_height > 0.0
+                    {
                         fmt.spacing_before
                     } else {
                         0.0
