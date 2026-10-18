@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::io::Cursor;
 
 mod print_tone;
-pub(crate) use print_tone::{is_print_bitmap_candidate, print_bitmap_payload};
+pub(crate) use print_tone::print_bitmap_payload;
 
 use crate::model::image::ImageEffect;
 use crate::paint::{ResolvedImageKind, ResolvedImagePayload};
@@ -67,6 +67,9 @@ enum Conversion {
         grayscale: bool,
     },
     Hancom2024Bitmap,
+    Hancom2024BitmapPalette {
+        bounds: [u32; 4],
+    },
 }
 
 #[derive(Default)]
@@ -239,7 +242,7 @@ pub(crate) fn source_image_variant(image: &ImageNode) -> crate::paint::SourceIma
     use crate::paint::SourceImageVariant;
     if is_baked_blackwhite_image(image) {
         SourceImageVariant::BakedBlackWhitePng
-    } else if is_print_bitmap_candidate(image) {
+    } else if print_tone::requires_print_bitmap_transfer(image) {
         SourceImageVariant::Hancom2024Bitmap
     } else if image.data.as_deref().is_some_and(|data| {
         detect_image_mime_type(data) == "image/jpeg" && is_watermark_image(image)
