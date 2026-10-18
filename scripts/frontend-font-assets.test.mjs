@@ -56,7 +56,16 @@ function assertFontNotices(directory, expectedFiles, label) {
   const registry = JSON.parse(readFileSync(path.join(noticeDir, 'font-notices.json'), 'utf8'));
   const requiredNotices = new Set(['README.md', 'font-notices.json']);
   for (const filename of expectedFiles) {
-    const entries = registry.fonts.filter((entry) => entry.file === filename);
+    // 소스용 OTF도 배포 디렉터리에 포함되면 등록된 동일 바이트와 고지 전문을 대조한다.
+    const entries = [
+      ...registry.fonts.filter((entry) => entry.file === filename),
+      ...registry.repositoryOnlyFonts
+        .filter((entry) => entry.repositoryPath === `assets/fonts/${filename}`)
+        .map((entry) => ({
+          ...entry,
+          licenseFiles: entry.licenseFiles.map((file) => file.replace(/^assets\/fonts\/licenses\//, '')),
+        })),
+    ];
     assert.equal(entries.length, 1, `${label}/${filename} must have exactly one font notice`);
     const [entry] = entries;
     assert.equal(entry.sha256, sha256(path.join(directory, filename)));

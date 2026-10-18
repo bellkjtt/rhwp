@@ -152,6 +152,7 @@ export interface CanvasKitLayerRendererOptions {
   defaultFontUrl?: string;
   symbolFallbackFontUrl?: string;
   mathFallbackFontUrl?: string;
+  additionalMathFallbackFontUrl?: string;
   oldHangulFontUrl?: string;
   requirePreparedFontFamilies?: boolean;
 }
@@ -491,6 +492,8 @@ export class CanvasKitLayerRenderer {
     private readonly webgpuInitFailure: string | null = null,
     private readonly mathFallbackTypeface: Typeface | null = null,
     private readonly mathFallbackFamily: string | null = null,
+    private readonly additionalMathFallbackTypeface: Typeface | null = null,
+    private readonly additionalMathFallbackFamily: string | null = null,
   ) {
     this.glyphRunFonts = new CanvasKitGlyphRunFontCache(canvasKit);
     this.paragraphFonts = new CanvasKitParagraphFonts(canvasKit);
@@ -595,6 +598,28 @@ export class CanvasKitLayerRenderer {
     } catch (error) {
       console.warn('[CanvasKitLayerRenderer] 수학 기호 폴백 폰트 로딩 실패:', error);
     }
+    // 일반 수학 기호의 추가 face는 문서별 Typeface 캐시 초기화 뒤에도 유지한다.
+    // 원본 한컴 PUA face를 바꾸지 않으며, U+2AFD 등 LMM에 없는 기호만 보완한다.
+    let additionalMathFallbackTypeface: Typeface | null = null;
+    let additionalMathFallbackFamily: string | null = null;
+    if (normalizedFontFamily(mathFallbackFamily ?? '') !== normalizedFontFamily('Noto Sans Math')) {
+      try {
+        const response = await fetch(options.additionalMathFallbackFontUrl ?? 'fonts/NotoSansMath-Regular.woff2');
+        if (response.ok) {
+          const bytes = await readBoundedResponseArrayBuffer(response, {
+            maxBytes: CanvasKitLayerRenderer.MAX_BUNDLED_FONT_BYTES,
+          });
+          additionalMathFallbackTypeface = canvasKit.Typeface.MakeFreeTypeFaceFromData(bytes)
+            ?? canvasKit.Typeface.MakeTypefaceFromData(bytes);
+          const manager = canvasKit.FontMgr.FromData(bytes.slice(0));
+          try {
+            additionalMathFallbackFamily = manager && manager.countFamilies() > 0 ? manager.getFamilyName(0) : null;
+          } finally { manager?.delete(); }
+        }
+      } catch (error) {
+        console.warn('[CanvasKitLayerRenderer] 추가 수학 기호 face 준비 실패:', error);
+      }
+    }
     let oldHangulTypeface: CanvasKitLocalTypeface | null = null;
     const oldHangulFontUrl = options.oldHangulFontUrl
       ?? 'fonts/RHWPOldHangul-Regular.woff2';
@@ -647,6 +672,8 @@ export class CanvasKitLayerRenderer {
       webgpuInitFailure,
       mathFallbackTypeface,
       mathFallbackFamily,
+      additionalMathFallbackTypeface,
+      additionalMathFallbackFamily,
     );
     for (const source of paragraphFontSources) renderer.paragraphFonts.remember(source.face, source.bytes);
     return renderer;
@@ -1412,6 +1439,7 @@ export class CanvasKitLayerRenderer {
     this.defaultTypeface?.delete();
     this.symbolFallbackTypeface?.delete();
     this.mathFallbackTypeface?.delete();
+    this.additionalMathFallbackTypeface?.delete();
     this.defaultFontManager?.delete();
     this.oldHangulTypeface?.typeface?.delete?.();
     this.oldHangulTypeface?.fontManager?.delete?.();
@@ -4377,10 +4405,13 @@ export class CanvasKitLayerRenderer {
             maxTextLength: CanvasKitLayerRenderer.MAX_EQUATION_TEXT_LENGTH,
             lookupTypeface: family => this.findPreparedTypeface(family)?.typeface
               ?? (this.mathFallbackFamily && normalizedFontFamily(family) === normalizedFontFamily(this.mathFallbackFamily)
-                ? this.mathFallbackTypeface : null),
+                ? this.mathFallbackTypeface : null)
+              ?? (this.additionalMathFallbackFamily && normalizedFontFamily(family) === normalizedFontFamily(this.additionalMathFallbackFamily)
+                ? this.additionalMathFallbackTypeface : null),
             makeFillPaint: fillColor => this.makeFillPaint(fillColor),
             onFallback: (requestedFamily, resolvedFamily) => this.recordFontSubstitution({
-              requestedFamily, resolvedFamily, source: 'equationDeclaredFallback', kind: 'glyphCoverageFallback',
+              requestedFamily, resolvedFamily,
+              source: 'equationDeclaredFallback', kind: 'glyphCoverageFallback',
             }),
           }, canvas, layout.kind.text, layout.kind.fontFamily, x, y + layout.baseline,
           fontSize, color, layout.width);
@@ -4625,7 +4656,7 @@ export class CanvasKitLayerRenderer {
     }
     return drawEquationTextWithFonts({
       canvasKit: this.canvasKit,
-      typefaces: [this.findPreparedTypeface(fontFamily, { bold, italic })?.typeface ?? null, this.mathFallbackTypeface, this.defaultTypeface, this.symbolFallbackTypeface],
+      typefaces: [this.findPreparedTypeface(fontFamily, { bold, italic })?.typeface ?? null, this.mathFallbackTypeface, this.additionalMathFallbackTypeface, this.defaultTypeface, this.symbolFallbackTypeface],
       maxTextLength: CanvasKitLayerRenderer.MAX_EQUATION_TEXT_LENGTH,
       makeFillPaint: (fillColor) => this.makeFillPaint(fillColor),
     }, canvas, text, x, baselineY, fontSize, color, italic, bold, targetWidth, centered);
