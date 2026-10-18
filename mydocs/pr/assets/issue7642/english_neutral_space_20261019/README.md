@@ -2,8 +2,8 @@
 
 - 입력: `samples/exam_eng.hwp`, SHA-256 `7a5755a2f773fce4d295cbfeb1c5d722edb02c7f920bb067fa56940e8cd6a05b`.
 - 기준: `pdf/issue7642-exam-print/exam-02-exam_eng-hwp-print-2020.pdf`, 원본 그대로 한컴 2020 Print, SHA-256 `08b34c32089b73b5535bd59c38171e698e0b11932c66c4172c54b01a796b2102`.
-- 출력 source: `9636eebe9d786ec9c82a42a8597e43b5722feafd`. Native binary SHA-256 `bbbbedb088d4896b1ab18624411bbb72569f070b528014fd47bae05a27db0186`.
-- fresh WASM SHA-256 `5ea06ccdfccf7e43b159c12e2cafffba9a8c79fce4e5179c875cfe387276ff0b`, root/Studio 네 파일 동일.
+- 최신 출력 source: `d7d4d2ea6ed427f2f3bc8b59a936a5f99aca852b`. Native binary SHA-256 `fb3c6d537ad5ae92f57b66d8f77a86f14e53619b91136d3d0a4e932153cf143a`.
+- fresh WASM SHA-256 `24ff17cf6906c3779a268fd9b9bd43a8658fd493c5c3148242947d7488aa747c`, root/Studio 네 파일 동일.
 - Print 프로필, 실제 CLI `--compat 2022`(비2024 기본 조판 경로), 기준 PDF는 한컴 2020 Print, 96 DPI, 좌상단 원점 CSS px, 전체 8쪽. 기본 시스템 글꼴과 `assets/fonts`를 공급했다.
 - 전쪽 원본 TSV: [Native](native-silhouette.tsv), [fresh WASM](wasm-silhouette.tsv). 최저 raw는 각각 **97.10866% / 96.88952%**이며 쪽수 8/8이다.
 - base `224a326063a5aeab5a1ca8dcaa92918f55843ffc`와 같은 원본/PDF/폰트/도구 비교에서 0.1%p 이상 하락한 쪽은 0이다. base producer `6ed1682c3267ea786734eb2e75252916a861d1fd`와 해당 base의 엔진 경로가 동일함을 Git diff로 확인했다.
@@ -26,3 +26,7 @@
 추가 독립 MCP 공백 대조군 24조건에서도 한글/기호 em의 반각이 관찰됐다(`stage4096`). 같은·다른 영문 face, 다른 장평·상대 크기, 글자 위치 -12/0/+12를 포함하며, 합성 대조군은 이 실물 원본의 전쪽 검증을 대신하지 않는다.
 
 실행 명령·producer·입력/출력 해시·확대 판독은 작업 기록 `mydocs/working/task_m100_7642_stage3905.md`의 stage4082–4103을 따른다. 정식 suite의 최종 실행 결과는 해당 검증 완료 뒤 작업 기록에 별도로 연결한다.
+
+## 최종 후보 재출력
+
+`stage4144`에서 같은 원본·PDF의 전8쪽을 양쪽 재출력했다. 전체 최저와 완료5쪽 점수가 위 값으로 유지됐고, 이 폴더의 TSV·대표 PNG를 실제 최신 출력으로 갱신했다. 런타임 공백 보정 source는9636에서 도입됐으며, 그 당시 before/after 증거와 최신 재출력을 구분한다.

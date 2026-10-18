@@ -1,8 +1,6 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export const version: () => [number, number];
-export const init_panic_hook: () => void;
 export const __wbg_documentexport_free: (a: number, b: number) => void;
 export const __wbg_hwpdocument_free: (a: number, b: number) => void;
 export const __wbg_hwpviewer_free: (a: number, b: number) => void;
@@ -513,6 +511,8 @@ export const hwpviewer_renderPageSvgWithProfile: (a: number, b: number, c: numbe
 export const hwpviewer_setZoom: (a: number, b: number) => void;
 export const hwpviewer_updateViewport: (a: number, b: number, c: number, d: number, e: number) => void;
 export const hwpviewer_visiblePages: (a: number) => [number, number];
+export const version: () => [number, number];
+export const init_panic_hook: () => void;
 export const hwpviewer_pageCount: (a: number) => number;
 export const hwpviewer_setAnnotateMetricFont: (a: number, b: number) => void;
 export const __wbindgen_malloc: (a: number, b: number) => number;

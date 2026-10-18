@@ -555,3 +555,5 @@ samples/issue7419/tac_nested_two_line_cell_no_lineseg.hwpx	1	1
 # 입력·PDF SHA-256과 실행 job은 mydocs/pr/archives/pr_7600_review.md에 기록한다.
 samples/issue7593/repro-dyad-min-no-script.hwpx	1	1
 samples/issue7593/repro-equation-issue7593.hwpx	1	1
+# 독립 한컴2024 Print 합성 대조군: samples 밖이므로 명시 등록.
+pdf/issue7642-bitmap-crop-palette-print-20261019/bitmap-crop-palette-controls.hwpx	1	1

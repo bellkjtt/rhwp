@@ -2640,8 +2640,6 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly version: () => [number, number];
-    readonly init_panic_hook: () => void;
     readonly __wbg_documentexport_free: (a: number, b: number) => void;
     readonly __wbg_hwpdocument_free: (a: number, b: number) => void;
     readonly __wbg_hwpviewer_free: (a: number, b: number) => void;
@@ -3152,6 +3150,8 @@ export interface InitOutput {
     readonly hwpviewer_setZoom: (a: number, b: number) => void;
     readonly hwpviewer_updateViewport: (a: number, b: number, c: number, d: number, e: number) => void;
     readonly hwpviewer_visiblePages: (a: number) => [number, number];
+    readonly version: () => [number, number];
+    readonly init_panic_hook: () => void;
     readonly hwpviewer_pageCount: (a: number) => number;
     readonly hwpviewer_setAnnotateMetricFont: (a: number, b: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
