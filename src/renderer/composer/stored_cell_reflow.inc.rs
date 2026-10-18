@@ -748,8 +748,10 @@ pub(crate) fn shrunk_cell_horizontal_padding(
         // 줄바꿈이 줄 끝에 남기는 낭비를 반영하지 못해 낙관적이다(issue5169 `Cell5`:
         // 추정 52.3px vs 실제 4줄 83.2px). 폭 판정을 통과한 칸에서만 도는 경로라
         // 조합 비용은 그 칸들로 한정된다.
-        let mut wrapped_height = 0.0f64;
-        let mut last_line_spacing = 0.0f64;
+        // 줄 메트릭의 원본 단위에서 합산한다. 매 줄을 실수로 환산해 더하면
+        // 정확히 들어가는 여러 문단도 누적 오차 때문에 넘침으로 바뀔 수 있다.
+        let mut wrapped_height_hu = 0i64;
+        let mut last_line_spacing_hu = 0i64;
         let mut stored_fits_fewer_lines = false;
         for (idx, para) in paragraphs.iter().enumerate() {
             let mut comp = match composed_paras.get(idx) {
@@ -788,16 +790,17 @@ pub(crate) fn shrunk_cell_horizontal_padding(
                 // 실제 줄 피치는 `line_height + line_spacing` 이다. `line_height` 만
                 // 쓰면 줄간격이 빠져 높이를 과소평가한다(20099369 3쪽 칸: 1300 + 390
                 // = 1690 HWPUNIT = 22.53px, 렌더 실측 22.5px).
-                wrapped_height +=
-                    crate::renderer::hwpunit_to_px(line.line_height + line.line_spacing, dpi);
-                last_line_spacing = crate::renderer::hwpunit_to_px(line.line_spacing, dpi);
+                wrapped_height_hu += i64::from(line.line_height) + i64::from(line.line_spacing);
+                last_line_spacing_hu = i64::from(line.line_spacing);
             }
         }
         // [#7418] 칸의 **마지막** 줄 뒤에는 이을 줄이 없어 그 줄간격은 칸을 채우지 않는다 —
         // 행 높이 측정(`height_measurer`, 칸 마지막 줄의 말미 줄간격 제외)과 같은 규칙.
         // 70833 pi=83 4행: 3줄 56.0(말미 5.33 포함) > 안높이 55.4 로 여백을 깎아 한/글보다
         // 5.7px 왼쪽에서 시작하고 줄 끝이 달라졌다. 말미를 빼면 50.7 ≤ 55.4 다.
-        wrapped_height -= last_line_spacing.max(0.0);
+        wrapped_height_hu -= last_line_spacing_hu.max(0);
+        let wrapped_height =
+            wrapped_height_hu as f64 * dpi / crate::renderer::HWPUNIT_PER_INCH;
         if std::env::var_os("RHWP_DIAG_SHRINK").is_some() {
             println!(
                 "D_SHRINK cell_w={cell_w:.1} avail={available:.1} inner_h={inner_height_px:.15} wrapped_h={wrapped_height:.15} max_line_w={max_line_w:.1}"
