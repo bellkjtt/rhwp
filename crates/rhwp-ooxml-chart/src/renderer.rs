@@ -146,6 +146,13 @@ fn label_font_px(chart: &OoxmlChart) -> f64 {
     chart.text_size_pt.unwrap_or(hancom_default::LABEL_PT) * PX_PER_PT
 }
 
+fn legend_font_px(chart: &OoxmlChart) -> f64 {
+    chart
+        .legend_size_pt
+        .map(|size| size * PX_PER_PT)
+        .unwrap_or_else(|| label_font_px(chart))
+}
+
 fn data_label_font_px(chart: &OoxmlChart, series: &OoxmlSeries) -> f64 {
     series
         .data_label_size_pt
@@ -396,6 +403,7 @@ pub fn render_chart_svg_with_text_measure(
     // 플롯 아래 3.1L, 라벨 폭 + 1.3L 왼쪽 여백 (T=제목 글꼴, L=라벨 글꼴).
     let title_font = title_font_px(chart);
     let label_font = label_font_px(chart);
+    let legend_font = legend_font_px(chart);
     // 원형은 축·축 라벨이 없어 제목 아래 간격과 아래 여백이 다르다 (실측 2차원원형 지름 183 =
     // 프레임 높이 252.5 − 위 54.5 − 아래 15).
     let is_pie = chart.chart_type == OoxmlChartType::Pie;
@@ -421,19 +429,19 @@ pub fn render_chart_svg_with_text_measure(
         if legend_visible && !legend_right {
             legend_items(chart)
                 .iter()
-                .map(|(label, _, _)| 18.0 + measure(label, label_font, legend_family(chart)))
+                .map(|(label, _, _)| 18.0 + measure(label, legend_font, legend_family(chart)))
                 .collect()
         } else {
             Vec::new()
         },
         w - 16.0,
-        label_font,
+        legend_font,
     );
     let legend_h = legend_layout.height();
     let legend_w = if legend_right {
         let max_w = legend_items(chart)
             .iter()
-            .map(|(label, _, _)| measure(label, label_font, legend_family(chart)))
+            .map(|(label, _, _)| measure(label, legend_font, legend_family(chart)))
             .fold(0.0f64, f64::max);
         // 스와치 10 + 간격 8 + 글자 폭(10pt) + 오른쪽 여백 8 (플롯 최소폭은 아래 .max(10.0)이 방어)
         (max_w + 26.0).clamp(50.0, w * 0.30)
@@ -2786,7 +2794,7 @@ fn render_legend(
     layout: &crate::legend_layout::LegendLayout,
 ) {
     let items = legend_items(chart);
-    let font = label_font_px(chart);
+    let font = legend_font_px(chart);
     svg.push_str(&format!(
         "<g class=\"hwp-chart-legend\"><g font-family=\"{}\">\n",
         xml_escape(legend_family(chart))
@@ -2818,7 +2826,7 @@ fn render_legend_right(svg: &mut String, chart: &OoxmlChart, x: f64, y: f64, h: 
         return;
     }
     let items = legend_items(chart);
-    let font = label_font_px(chart);
+    let font = legend_font_px(chart);
     let row_h = font * 1.3;
     let total_h = row_h * items.len() as f64;
     let start_y = y + ((h - total_h) / 2.0).max(0.0);

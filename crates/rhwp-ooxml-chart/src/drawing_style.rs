@@ -142,6 +142,15 @@ pub(crate) fn resolve(xml: &[u8], chart: &mut OoxmlChart) {
                             }
                         }
                     }
+                    "defRPr" => {
+                        let names: Vec<_> = path.iter().map(String::as_str).collect();
+                        if names.ends_with(&["legend", "txPr", "p", "pPr", "defRPr"]) {
+                            chart.legend_size_pt = attr("sz")
+                                .and_then(|value| value.parse::<f64>().ok())
+                                .filter(|size| size.is_finite() && *size > 0.0)
+                                .map(|size| size / 100.0);
+                        }
+                    }
                     "latin" => {
                         let names: Vec<_> = path.iter().map(String::as_str).collect();
                         if names.ends_with(&["txPr", "p", "pPr", "defRPr", "latin"]) {

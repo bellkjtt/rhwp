@@ -62,6 +62,8 @@ pub struct OoxmlChart {
     pub text_font_family: Option<String>,
     pub title_font_family: Option<String>,
     pub legend_font_family: Option<String>,
+    /// 범례 자체의 글자 크기(pt). 생략하면 차트 기본 글자 크기를 상속한다.
+    pub legend_size_pt: Option<f64>,
     pub series: Vec<OoxmlSeries>,
     pub categories: Vec<String>,
     /// 시리즈 중 하나라도 보조축을 쓰면 true
