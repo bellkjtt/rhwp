@@ -7,6 +7,12 @@ use super::records::{Hwp3CharShape, Hwp3ParaShape};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io::{self, Read};
 
+/// 고정 줄 전진을 글자 점유와 뒤 여유로 한 번만 분해한다.
+/// 한컴의 정상 저장 줄처럼 점유 높이에 고정 전진 전체를 넣지 않는다.
+pub(super) fn fixed_line_metrics(text_height: i32, fixed: i32) -> (i32, i32) {
+    (text_height, fixed.saturating_sub(text_height))
+}
+
 pub(super) fn inline_equation_positions(para: &crate::model::paragraph::Paragraph) -> Vec<u32> {
     para.controls
         .iter()

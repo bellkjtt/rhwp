@@ -3354,8 +3354,7 @@ fn parse_paragraph_list_inner(
         // 가 lh=1440/ls=0 보다 60% 작은 시각 높이 → 페이지 회귀 해소).
         let (mut fallback_line_height, fallback_line_spacing) =
             if let Some(fixed) = fixed_line_spacing {
-                // fixed: lh=fixed, ls=fixed-th (추가 간격)
-                (fixed, fixed - fallback_text_height)
+                paragraph::fixed_line_metrics(fallback_text_height, fixed)
             } else {
                 // percent: lh=th, ls=th*(ratio-100)/100
                 (
@@ -3512,8 +3511,7 @@ fn parse_paragraph_list_inner(
                     // [Task #604 Stage D-2] HWP5 IR 정합: lh=th, ls 분리 인코딩
                     bl = (th as f32 * 0.85) as i32;
                     if let Some(fixed) = fixed_line_spacing {
-                        lh = fixed;
-                        ls = fixed - th;
+                        (lh, ls) = paragraph::fixed_line_metrics(th, fixed);
                     } else {
                         lh = th;
                         // [Task #741] TAC 그림 paragraph (treat_as_char=true) 의 line_spacing
