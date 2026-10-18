@@ -68,6 +68,13 @@
         "path_attr",
         "root_mod"
       ]
+    },
+    {
+      "path": "tests/cases/verified_png_sampling_contracts.rs",
+      "allowBlockers": [
+        "path_attr",
+        "root_mod"
+      ]
     }
   ],
   "exceptions": [
