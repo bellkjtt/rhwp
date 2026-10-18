@@ -11,8 +11,12 @@ pub(in crate::renderer::typeset) fn prepare_forced_page_boundary(
     note_measure: &super::super::notes::footnotes::measure::BodyFootnoteMeasure<'_>,
 ) -> ForcedPageBoundary {
     let dpi = note_measure.engine.dpi;
-    let stored_frame_valid =
-        !super::stored_lines::stored_frame_prefix_consumed_before_page(st, paragraphs, para_idx);
+    let stored_frame_valid = !super::stored_lines::stored_frame_prefix_consumed_before_page(
+        st,
+        paragraphs,
+        para_idx,
+        note_measure.styles,
+    );
     // native HWP5 본문은 기존 각주가 있는 page tail에서도 `vpos=0` reset으로
     // 다음 physical page를 기록할 수 있다. 일반 reset은 과분할 위험이 있으므로,
     // 실제 FootnoteArea 경계와 source/flow가 함께 맞을 때만 강제 경계로 쓴다.

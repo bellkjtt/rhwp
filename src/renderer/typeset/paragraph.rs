@@ -657,7 +657,7 @@ pub(super) fn place_after_failed_fit(
         line_count,
         available,
         &st.paragraph_split_entry_page(),
-        stored_lines::stored_frame_prefix_consumed_before_page(st, paragraphs, para_idx),
+        stored_lines::stored_frame_prefix_consumed_before_page(st, paragraphs, para_idx, styles),
         dpi,
     );
     if entry_fit.hangul2024_split_refit && !para_has_visible_text(para) && para.controls.is_empty()

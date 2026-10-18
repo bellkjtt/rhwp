@@ -50,7 +50,7 @@ pub(in crate::renderer::typeset) fn decide_whole_fit(
         forced_page_break_line,
         current_page_vpos_base,
         accepted_opening_owner,
-        stored_lines::stored_frame_prefix_consumed_before_page(st, paragraphs, para_idx),
+        stored_lines::stored_frame_prefix_consumed_before_page(st, paragraphs, para_idx, styles),
         available,
         &st.paragraph_whole_fit_page(),
         dpi,

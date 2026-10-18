@@ -11,6 +11,7 @@ pub(in crate::renderer::typeset) fn stored_frame_prefix_consumed_before_page(
     st: &super::super::TypesetState,
     paragraphs: &[Paragraph],
     para_idx: usize,
+    styles: &crate::renderer::style_resolver::ResolvedStyleSet,
 ) -> bool {
     use crate::renderer::pagination::PageItem;
     if st.col_count != 1
@@ -24,6 +25,23 @@ pub(in crate::renderer::typeset) fn stored_frame_prefix_consumed_before_page(
                     .first()
                     .is_some_and(|line| line.is_first_line_of_page())
         })
+    {
+        return false;
+    }
+    // 완전한 TAC 줄이 새 단의 원점에서 수용되고 뒤 저장 줄까지 같은
+    // 전진 끝으로 이어지면 새 저장 프레임이 이미 확립됐다. 옛 host의
+    // 양수 vpos만 보고 그 뒤 모든 쪽 경계를 무효화하지 않는다.
+    // 배치와 post_flow가 확인한 동일한 placement·줄 전진 결과를 읽는다.
+    if st.current_start_height == 0.0
+        && !st.current_endnote_flow
+        && crate::renderer::float_placement::restarted_tac::accepted_column_origin(
+            &st.current_items,
+            &st.inline_placements,
+            paragraphs,
+            styles,
+            st.layout.dpi,
+        )
+        .is_some_and(|(_, origin)| st.vpos_page_base == Some(origin))
     {
         return false;
     }
