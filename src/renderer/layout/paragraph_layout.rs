@@ -32,6 +32,7 @@ use crate::model::bin_data::BinDataContent;
 use crate::model::control::Control;
 use crate::model::paragraph::{LineSeg, MarkerHead, NumberingMarker, Paragraph};
 
+mod justification_spacing;
 mod leading_justification;
 mod leading_spaces;
 use leading_spaces::{natural_leading_positions, LeadingSpaces};
@@ -2477,6 +2478,17 @@ fn compute_line_extra_spacing(
                 // 줄바꿈은 LINE_SEG/리플로우가 결정하고, 그린 글자는 셀 경계에서만 클리핑한다.
                 (0.0, 0.0, 0.0)
             } else {
+                if alignment == Alignment::Justify && slack < 0.0 && !has_tabs {
+                    let (word, character) = justification_spacing::compress(
+                        leading_space_plan,
+                        styles,
+                        trailing_spaces,
+                        tab_width,
+                        slack,
+                        terminal_ink_overhang,
+                    );
+                    return (word, character, 0.0);
+                }
                 // 양쪽 정렬: 단어 간격 분배 (또는 음수 슬랙 시 압축)
                 let raw_ews = slack / rendered_space_slots as f64;
                 let space_base_w = estimate_text_width(
@@ -6966,6 +6978,7 @@ impl LayoutEngine {
                 Some(comp_line.char_start)
             };
             let leading_space_plan = LeadingSpacePlan::new(comp_line, first_inline_pos)
+                .with_inline_objects(&line_tac_offsets_for_width)
                 .with_body_fields(para.map_or(&[], |p| p.layout_field_values.as_slice()));
             let trailing_space_limit = trailing_space_limit_after_last_inline_object(
                 comp_line,
