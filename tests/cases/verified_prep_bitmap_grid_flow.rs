@@ -52,6 +52,7 @@ fn paragraphs(node: &RenderNode, out: &mut BTreeMap<usize, (String, f64)>) {
 // 내용 밴드가 남는다. 옅은 선은 일부 pixel center에서 임계값을 넘으므로
 // 이 수를 원래 수평선 여덟 개의 완전 검출이나 정확한 위치의 증거로 쓰지 않는다.
 // fixed screen 영역 대신 실제 그림 bbox의 너비 비율과 인접 행 관계를 쓴다.
+#[cfg(feature = "native-skia")]
 pub(crate) fn assert_print_grid_bands(output: &image::RgbaImage, bounds: BoundingBox) {
     let left = bounds.x.ceil().max(0.0) as u32;
     let top = bounds.y.floor().max(0.0) as u32;
