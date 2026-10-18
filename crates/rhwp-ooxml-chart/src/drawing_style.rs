@@ -96,6 +96,11 @@ pub(crate) fn resolve(xml: &[u8], chart: &mut OoxmlChart) {
                         series = Some(series_count);
                         series_count += 1;
                     }
+                    "idx" if path.iter().rev().nth(1).is_some_and(|name| name == "ser") => {
+                        if let Some(ser) = series.and_then(|i| chart.series.get_mut(i)) {
+                            ser.source_index = attr("val").and_then(|v| v.parse().ok());
+                        }
+                    }
                     "catAx" | "valAx" | "dateAx" | "serAx" => {
                         axis = Some(axis_count);
                         axis_count += 1;

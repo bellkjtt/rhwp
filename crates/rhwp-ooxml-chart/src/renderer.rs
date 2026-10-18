@@ -14,7 +14,8 @@ use super::LineSpec;
 /// 기본 시리즈 색상 팔레트 (시리즈 색상 미지정 시 순환 사용)
 ///
 /// 한컴 2022 기본 팔레트(`hncChartStyle colorIndex="0"`) — 앞 5색은 `pdf/chart/` 정답지
-/// PDF 픽셀 실측(막대 3시리즈 + 원형 4슬라이스 + ofPie 결합 슬라이스), 6번째 이후는
+/// PDF 픽셀 실측(막대 3시리즈 + 원형 4슬라이스 + ofPie 결합 슬라이스), 6번째는
+/// PrEP 원본과 저장 idx만 바꾼 독립 한컴 2024 Print로 확인했다. 7번째 이후는
 /// 코퍼스에 초과 샘플이 없어 미실측(Office 유사색 순서로 유추 배치).
 const DEFAULT_PALETTE: &[u32] = &[
     0xFF6183D7, // 파랑 (실측)
@@ -22,11 +23,11 @@ const DEFAULT_PALETTE: &[u32] = &[
     0xFFB0B0B0, // 회색 (실측)
     0xFFFCD801, // 노랑 (실측)
     0xFF27A172, // 초록계 (실측 — ofPie 결합 슬라이스, 원형대원형·가로막대 교차 일치)
-    0xFF5B9BD5, // 하늘 (유추 — [4]에서 강등)
+    0xFFA35CC2, // 보라 (독립 Print의 저장 계열 idx=5 범례)
     0xFF9013FE, 0xFF50E3C2,
 ];
 
-fn palette(i: usize) -> u32 {
+pub(crate) fn palette(i: usize) -> u32 {
     DEFAULT_PALETTE[i % DEFAULT_PALETTE.len()]
 }
 
@@ -2695,7 +2696,14 @@ fn legend_items(chart: &OoxmlChart) -> Vec<(String, u32, SwatchKind)> {
                     } else {
                         s.name.clone()
                     };
-                    let color = s.color.unwrap_or_else(|| palette(i));
+                    // 한컴 사용자 서식은 면색과 별도로 저장 idx의 기본 범례 키를 쓴다.
+                    // idx만 바꾼 Print 대조군에서 막대 면은 유지되고 범례 키만 바뀐다.
+                    let color = if let (Some(-1), Some(index)) = (chart.color_index, s.source_index)
+                    {
+                        palette(index as usize)
+                    } else {
+                        s.color.unwrap_or_else(|| palette(i))
+                    };
                     (label, color, swatch_kind(chart, s, i))
                 })
                 .collect();

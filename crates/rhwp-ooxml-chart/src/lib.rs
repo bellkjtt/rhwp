@@ -379,6 +379,8 @@ impl OoxmlChartType {
 /// 데이터 시리즈 (막대 한 묶음 또는 선 하나)
 #[derive(Debug, Clone, Default)]
 pub struct OoxmlSeries {
+    /// 저장 계열 식별자. 표시 순서나 현재 Vec 색인과 같다고 가정하지 않는다.
+    pub source_index: Option<u32>,
     /// 계열 자체의 `ser/spPr/ln`. 라벨·표식의 선과 구별한다.
     pub shape_line: LineSpec,
     pub name: String,
