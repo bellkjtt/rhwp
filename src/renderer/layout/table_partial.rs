@@ -4778,7 +4778,11 @@ impl LayoutEngine {
                         None => cp_idx + 1 < cell.paragraphs.len(),
                     };
                     if next_para_in_fragment && !nested_table_continues {
+                        // 저장 successor 전진량은 호스트 전체 줄의 슬롯이다.
+                        // 앞 조각이 입구를 소비했다면 현재 자식 컷의 전진 끝을
+                        // 보존하고, 전체 높이로 이미 소비한 앞부분을 다시 싣지 않는다.
                         if !self.profile.get().session_edited()
+                            && owns_paragraph_entry
                             && !self
                                 .render_normalization
                                 .borrow()
