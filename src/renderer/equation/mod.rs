@@ -43,11 +43,11 @@ mod radical_line_frame;
 pub(crate) mod radical_outline;
 mod relation_outline;
 mod round_stretch;
+mod stored_alignment_metrics;
 pub mod svg_render;
 pub mod symbols;
 pub mod tokenizer;
 mod uncached_flow_metrics;
-mod stored_alignment_metrics;
 mod variable_outline;
 
 /// 한글 수식은 수학 글꼴의 누락 글리프 대신 본문 명조 계열을 사용한다.
