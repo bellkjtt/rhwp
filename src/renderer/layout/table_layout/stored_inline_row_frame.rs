@@ -82,11 +82,33 @@ impl LayoutEngine {
         styles: &ResolvedStyleSet,
     ) -> Option<f64> {
         let first = units.get(index)?;
-        if !first.page_frame_reset_before || first.nested_row != Some(0) {
+        if !first.page_frame_reset_before || first.nested_row.is_some_and(|row| row != 0) {
             return None;
         }
         let frame = self.stored_inline_owner_frame(table, cell, first.para_idx)?;
         let paragraph = &cell.paragraphs[first.para_idx];
+        if first.nested_row.is_none() {
+            // 분할하지 않는 TAC 표는 같은 원본 한 줄을 단일 유닛으로
+            // 소유한다. 자식 행으로 펼쳤는지와 저장 쪽 재시작은 별개다.
+            // 실제 전진이 호스트 줄 높이+줄간격으로 닫힐 때만 인정한다.
+            if first.vis_start != 0
+                || first.vis_end != 1
+                || first.empty_spacer
+                || first.mixed_nested_fragment
+                || first.mixed_nested_trailing
+                || first.nested_table_fragment.is_some()
+                || units
+                    .get(index + 1)
+                    .is_some_and(|next| next.para_idx == first.para_idx)
+            {
+                return None;
+            }
+            let height = crate::renderer::hwpunit_to_px(frame.line_height_hu, self.dpi);
+            let advance = height
+                + crate::renderer::hwpunit_to_px(paragraph.line_segs[0].line_spacing, self.dpi);
+            return ((first.height - advance).abs() <= crate::renderer::hwpunit_to_px(2, self.dpi))
+                .then_some(height);
+        }
         let group: Vec<_> = units[index..]
             .iter()
             .take_while(|unit| unit.para_idx == first.para_idx && unit.nested_row.is_some())
@@ -209,7 +231,7 @@ impl LayoutEngine {
             let before = units.get(cut.checked_sub(1)?)?;
             if !next.hard_break_before
                 || !next.page_frame_reset_before
-                || next.nested_row != Some(0)
+                || next.nested_row.is_some_and(|row| row != 0)
                 || next.vis_start != 0
                 || before.para_idx == next.para_idx
             {

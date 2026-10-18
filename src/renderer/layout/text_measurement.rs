@@ -1038,7 +1038,7 @@ fn quantize_hwp_px(px: f64) -> f64 {
 ///
 /// KOPUS 배포본 `ttfs/kopub/KoPubDotum-{Light,Medium,Bold}.ttf` 의 `cmap`+`hmtx` 직독.
 /// 굵기 3종이 완전히 같아 한 벌만 둔다. 공백(첫 항목 290)은 일반 측정에서 **쓰지 않는다** —
-/// 아래 `kopub_char_width` 의 반각 갈래가 먼저 반환한다. `use_font_space` 가 켜진 run 만
+/// 아래 `kopub_char_advance_em` 의 반각 갈래가 먼저 반환한다. `use_font_space` 가 켜진 run 만
 /// [`kopub_declared_space_em`] 으로 이 값을 읽는다(#7387).
 static KOPUB_DOTUM_LATIN_0: [u16; 95] = [
     290, 300, 320, 590, 590, 874, 706, 180, 310, 310, 446, 590, 300, 570, 300, 446, 563, 563, 563,
@@ -1115,7 +1115,7 @@ pub(crate) fn kopub_declared_space_em(primary_name: &str) -> Option<f64> {
         .map(|family| f64::from(family.latin_table()[0]) / 1000.0)
 }
 
-fn kopub_char_width(primary_name: &str, bold: bool, c: char, font_size: f64) -> Option<f64> {
+fn kopub_char_advance_em(primary_name: &str, bold: bool, c: char) -> Option<f64> {
     let family = KoPubFamily::from_primary(primary_name)?;
     // KoPub 전용 전각 표가 공통 반각 판정(#6023)을 가리지 않아야 한다.
     // ｢｣ 등은 한컴 Print에서도 반각이며, 해당 글리프는 실제 메트릭 조회와
@@ -1140,7 +1140,7 @@ fn kopub_char_width(primary_name: &str, bold: bool, c: char, font_size: f64) -> 
     // 그 문서의 charPr 은 전부 `useFontSpace=0` 이다. 켜진 run 은 이 함수에 오기 전에
     // 글꼴 공백폭(`kopub_declared_space_em`, #7387)으로 갈린다.
     if c == ' ' {
-        return Some(quantize_hwp_px(font_size * 0.5));
+        return Some(0.5);
     }
     // [#7390] ASCII 는 종전에 **일률 0.5em** 이었다. 실제 KoPub 은 비례 글꼴이라
     // `i` 232 · `N`/`H` 718 처럼 3배 넘게 갈린다(1000em 기준). 아래 표는 KOPUS 배포본
@@ -1153,7 +1153,7 @@ fn kopub_char_width(primary_name: &str, bold: bool, c: char, font_size: f64) -> 
     {
         let units = family.latin_table()[index as usize];
         if units > 0 {
-            return Some(quantize_hwp_px(font_size * f64::from(units) / 1000.0));
+            return Some(f64::from(units) / 1000.0);
         }
     }
     if matches!(family, KoPubFamily::WorldDotum | KoPubFamily::WorldBatang) {
@@ -1170,15 +1170,15 @@ fn kopub_char_width(primary_name: &str, bold: bool, c: char, font_size: f64) -> 
             }
             _ => 872.0,
         };
-        return Some(quantize_hwp_px(font_size * units / 1000.0));
+        return Some(units / 1000.0);
     }
     // KoPub Dotum/Batang의 세 굵기 모두 U+203B cmap+hmtx 전진폭은900/1000em이다.
     // 한컴 Print의 장평98%·자간-3%에서도11.36px로 같으며 반각 fallback이 아니다.
     if c == '※' {
-        return Some(quantize_hwp_px(font_size * 0.9));
+        return Some(0.9);
     }
     if is_narrow_punctuation(c) {
-        return Some(quantize_hwp_px(font_size * 0.3));
+        return Some(0.3);
     }
     if is_cjk_char(c) || is_fullwidth_symbol(c) {
         // [#6389] KoPub돋움체 한글 전각은 872/1000em — 편람 kopub 오라클 PDF 의
@@ -1196,7 +1196,7 @@ fn kopub_char_width(primary_name: &str, bold: bool, c: char, font_size: f64) -> 
         } else {
             0.94
         };
-        return Some(quantize_hwp_px(font_size * factor));
+        return Some(factor);
     }
 
     None
@@ -1341,10 +1341,12 @@ fn measure_char_width_embedded_decision_for_font<'a>(
         .trim()
         .trim_matches('\'')
         .trim_matches('"');
-    if let Some(w) = kopub_char_width(primary_name, bold, c, font_size) {
+    if let Some(em) = kopub_char_advance_em(primary_name, bold, c) {
+        // 장평·자간을 적용할 장치 격자까지 원본 em 비율을 보존한다.
+        // 먼저 HU로 자르면 11pt·장평98% 등에서 한 격자를 더 잃는다.
         return EmbeddedWidthDecision {
-            width_px: Some(w),
-            em_fraction: None,
+            width_px: Some(quantize_hwp_px(font_size * em)),
+            em_fraction: Some(em),
             width_source: "kopubTable",
             metric: None,
             character_match: "hit",
