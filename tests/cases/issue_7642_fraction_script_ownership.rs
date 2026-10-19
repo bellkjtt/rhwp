@@ -1,5 +1,5 @@
 //! 독립 한컴 Print와 Native/fresh WASM 전체 TSV·확대 판독을 확인한 입력이다.
-//! 절대 화면 위치 대신 원본 소유, 첨자/분모 기준선과 최종 표시 잉크를 검사한다.
+//! 절대 화면 위치 대신 원본 소유, 첨자/분모 기준선과 최종 SVG 문자 방출 위치를 검사한다.
 //! 증적: mydocs/pr/assets/issue7642-extended-script-frame-20261012/README.md
 #![cfg(not(target_arch = "wasm32"))]
 
@@ -137,28 +137,52 @@ fn radical_indexes<'a>(value: &'a LayoutBox, out: &mut Vec<&'a LayoutBox>) {
     }
 }
 
-fn paint_paths(group: &usvg::Group, canvas: usvg::Transform, out: &mut Vec<usvg::Rect>) {
-    for node in group.children() {
-        match node {
-            usvg::Node::Group(group) => paint_paths(group, canvas, out),
-            // flattened의 윤곽은 text 로컬 좌표다. 실제 SVG의 변환을 적용한다.
-            usvg::Node::Text(text) => paint_paths(
-                text.flattened(),
-                canvas.pre_concat(text.abs_transform()),
-                out,
-            ),
-            usvg::Node::Path(path) => out.push(
-                path.abs_bounding_box()
-                    .transform(canvas)
-                    .expect("최종 표시 윤곽의 유효한 좌표 변환"),
-            ),
-            _ => {}
+// 사설 수식 face가 없는 CI에서도 실제 SVG의 문자 방출과 페이지 좌표를 검사한다.
+// PUA를 공개 글리프로 바꾸거나 대체 글꼴의 윤곽을 한컴 잉크로 간주하지 않는다.
+fn emitted_baselines(
+    svg: &roxmltree::Document<'_>,
+    owner: &RenderNode,
+    glyphs: &[&str],
+) -> Vec<f64> {
+    use std::str::FromStr;
+    let mut baselines = Vec::new();
+    for node in svg.descendants().filter(|node| node.has_tag_name("text")) {
+        if !glyphs.contains(&node.text().unwrap_or_default()) {
+            continue;
+        }
+        let mut ancestors: Vec<_> = node.ancestors().filter(|node| node.is_element()).collect();
+        ancestors.reverse();
+        let mut transform = usvg::Transform::default();
+        for ancestor in ancestors {
+            if let Some(value) = ancestor.attribute("transform") {
+                let t = svgtypes::Transform::from_str(value).expect("방출된 SVG의 유효한 변환");
+                transform = transform.pre_concat(usvg::Transform::from_row(
+                    t.a as f32, t.b as f32, t.c as f32, t.d as f32, t.e as f32, t.f as f32,
+                ));
+            }
+        }
+        let x = node.attribute("x").unwrap_or("0").parse::<f32>().unwrap();
+        let y = node.attribute("y").unwrap_or("0").parse::<f32>().unwrap();
+        let mut point = usvg::tiny_skia_path::Point::from_xy(x, y);
+        transform.map_point(&mut point);
+        let (x, y) = (f64::from(point.x), f64::from(point.y));
+        if x >= owner.bbox.x
+            && x <= owner.bbox.x + owner.bbox.width
+            && y >= owner.bbox.y
+            && y <= owner.bbox.y + owner.bbox.height
+        {
+            assert!(
+                node.attribute("font-family").is_some(),
+                "표시 face를 보존한다"
+            );
+            baselines.push(y);
         }
     }
+    baselines
 }
 
 #[test]
-fn fraction_subscript_keeps_its_source_owner_and_paints_below_the_denominator() {
+fn fraction_subscript_keeps_its_source_owner_and_emits_below_the_denominator() {
     let core = load("extended-base-script-2024.hwp");
     assert_eq!(core.page_count(), 1, "독립 Print 전체 쪽수");
     let addresses = source_addresses(&core, SUBSUP);
@@ -169,13 +193,7 @@ fn fraction_subscript_keeps_its_source_owner_and_paints_below_the_denominator() 
     let svg = core
         .render_page_svg_layer_with_profile_native(0, rhwp::paint::RenderProfile::Print)
         .unwrap();
-    // text backend의 실제 글리프도 윤곽으로 대조한다. 빈 fontdb는
-    // 아래첨자 자체를 누락하므로 표시 잉크의 검사 근거가 될 수 없다.
-    let mut options = usvg::Options::default();
-    options.fontdb_mut().load_system_fonts();
-    let painted = usvg::Tree::from_str(&svg, &options).unwrap();
-    let mut paths = Vec::new();
-    paint_paths(painted.root(), usvg::Transform::default(), &mut paths);
+    let painted = roxmltree::Document::parse(&svg).expect("최종 Print SVG");
     for &(section, paragraph, control, _) in &addresses {
         let found: Vec<_> = nodes
             .iter()
@@ -184,7 +202,7 @@ fn fraction_subscript_keeps_its_source_owner_and_paints_below_the_denominator() 
         assert_eq!(found.len(), 1, "원본 수식의 누락·중복 없는 단일 방출");
         let (node, eq) = *found[0];
         assert_eq!(eq.script, SUBSUP);
-        let (sub, sub_x, sub_y, base, base_y) = script_box(&eq.layout_box, 0.0, 0.0, true);
+        let (sub, _, sub_y, base, base_y) = script_box(&eq.layout_box, 0.0, 0.0, true);
         let mut denominator = Vec::new();
         scalar_baselines(base, base_y - base.y, "5", &mut denominator);
         assert_eq!(denominator.len(), 1, "근호 분모 5의 내용 보존");
@@ -195,25 +213,13 @@ fn fraction_subscript_keeps_its_source_owner_and_paints_below_the_denominator() 
             sub_letters[0] > denominator[0],
             "독립 Print의 아래첨자는 분모의 숫자 기준선 아래에 있다"
         );
-        let selected: Vec<_> = paths
-            .iter()
-            .filter(|path| {
-                let x = f64::from(path.x() + path.width() / 2.0) - node.bbox.x;
-                let y = f64::from(path.y() + path.height() / 2.0) - node.bbox.y;
-                x >= sub_x && x <= sub_x + sub.width && y >= sub_y && y <= sub_y + sub.height
-            })
-            .collect();
+        let emitted_sub = emitted_baselines(&painted, node, &["i", "𝑖", "\u{e0ed}"]);
+        let emitted_denom = emitted_baselines(&painted, node, &["5", "\u{e038}"]);
+        assert_eq!(emitted_sub.len(), 1, "최종 SVG의 원본 아래첨자 i 단일 방출");
+        assert_eq!(emitted_denom.len(), 1, "최종 SVG의 원본 분모 5 단일 방출");
         assert!(
-            !selected.is_empty(),
-            "실제 소유 아래첨자 상자 안에 최종 표시 잉크가 있어야 한다"
-        );
-        let bottom = selected
-            .iter()
-            .map(|p| f64::from(p.bottom()) - node.bbox.y)
-            .fold(f64::NEG_INFINITY, f64::max);
-        assert!(
-            bottom > denominator[0],
-            "최종 SVG도 분모 아래쪽의 i를 보존해야 한다"
+            emitted_sub[0] > emitted_denom[0],
+            "최종 SVG의 실제 변환 뒤에도 i 기준선은 분모 5보다 아래여야 한다"
         );
     }
 }

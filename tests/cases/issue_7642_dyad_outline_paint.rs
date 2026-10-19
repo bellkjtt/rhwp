@@ -128,10 +128,18 @@ fn print_svg(core: &DocumentCore) -> usvg::Tree {
     let svg = core
         .render_page_svg_layer_with_profile_native(0, rhwp::paint::RenderProfile::Print)
         .unwrap();
-    // text를 방출하는 backend도 실제 glyph 윤곽을 만든다. 빈 fontdb로
-    // 문자를 누락한 결과를 path backend의 표시 잉크와 비교하지 않는다.
+    // AB의 공개 수식 글꼴을 명시해 CI와 로컬에서 같은 윤곽을 검사한다.
+    // 시스템 글꼴이 없어서 누락된 문자를 장식 폭의 회귀로 오판하지 않는다.
     let mut options = usvg::Options::default();
-    options.fontdb_mut().load_system_fonts();
+    options
+        .fontdb_mut()
+        .load_font_file(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("assets/fonts/LatinModernMath-VariableOutline-subset.otf"),
+        )
+        .expect("저장소의 공개 수식 글꼴");
+    options.font_family = "Latin Modern Math".into();
+    options.fontdb_mut().set_serif_family("Latin Modern Math");
     usvg::Tree::from_str(&svg, &options).expect("실제 최종 Print SVG")
 }
 
