@@ -59,3 +59,28 @@ CI의 사설 글꼴 미설치로 수식 글자를 usvg가 누락한 검사 결�
 ![wasm root-index review](wasm-root-index-review.png)
 
 ![wasm root-index overlay](wasm-root-index-overlay.png)
+
+## 고정 devel과 추가 전쪽 대조
+
+코드 PR의 기준은 `224a326063a5aeab5a1ca8dcaa92918f55843ffc`, 실제 base producer는 런타임 동등성을 확인한 `6ed1682c3267ea786734eb2e75252916a861d1fd`다. 같은 원본·Print·96 DPI·시스템 글꼴·backend로 Native/fresh WASM 각각 6쪽을 비교했다. 모든 12개 페이지 쌍이 개선됐으며 쪽수 불일치·누락·측정 불가는 없다. base의 90% 미달로 발생한 exit 1은 측정 실패가 아니다. 후보는 전쪽 90% 이상이다.
+
+| backend | 입력 | 쪽 | base raw | 후보 raw |
+| --- | --- | ---: | ---: | ---: |
+| native | dyad | 1 | 82.88512% | 99.77969% |
+| native | fraction | 1 | 92.73837% | 100.00000% |
+| native | root-index | 1 | 98.37327% | 100.00000% |
+| native | root-index | 2 | 92.78212% | 99.98097% |
+| native | root-index | 3 | 84.36851% | 99.91615% |
+| native | root-index | 4 | 75.20913% | 100.00000% |
+| wasm | dyad | 1 | 82.22342% | 99.88334% |
+| wasm | fraction | 1 | 92.93997% | 100.00000% |
+| wasm | root-index | 1 | 98.39156% | 100.00000% |
+| wasm | root-index | 2 | 93.87706% | 99.98588% |
+| wasm | root-index | 3 | 87.82830% | 99.93071% |
+| wasm | root-index | 4 | 80.64814% | 100.00000% |
+
+| 입력 | base Native 원문 | base fresh WASM 원문 |
+| --- | --- | --- |
+| dyad | [TSV](base-native-dyad.tsv) | [TSV](base-wasm-dyad.tsv) |
+| fraction | [TSV](base-native-fraction.tsv) | [TSV](base-wasm-fraction.tsv) |
+| root-index | [TSV](base-native-root-index.tsv) | [TSV](base-wasm-root-index.tsv) |
